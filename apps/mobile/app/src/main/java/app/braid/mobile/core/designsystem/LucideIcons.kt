@@ -23,8 +23,9 @@ object LucideIcons {
         name: String,
         strokeWidth: Float,
         vararg paths: String,
+        filled: Boolean = false,
     ): ImageVector =
-        cache.getOrPut("$name@$strokeWidth") {
+        cache.getOrPut("$name@$strokeWidth@$filled") {
             ImageVector
                 .Builder(
                     name = name,
@@ -36,6 +37,7 @@ object LucideIcons {
                     paths.forEach { data ->
                         addPath(
                             pathData = addPathNodes(data),
+                            fill = if (filled) SolidColor(Color.Black) else null,
                             stroke = SolidColor(Color.Black),
                             strokeLineWidth = strokeWidth,
                             strokeLineCap = StrokeCap.Round,
@@ -59,6 +61,28 @@ object LucideIcons {
             strokeWidth,
             "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z",
             "m9 12 2 2 4-4",
+        )
+
+    fun listChecks(strokeWidth: Float = DEFAULT_STROKE) =
+        icon(
+            "ListChecks",
+            strokeWidth,
+            "M13 5h8",
+            "M13 12h8",
+            "M13 19h8",
+            "m3 17 2 2 4-4",
+            "m3 7 2 2 4-4",
+        )
+
+    fun fileText(strokeWidth: Float = DEFAULT_STROKE) =
+        icon(
+            "FileText",
+            strokeWidth,
+            "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
+            "M14 2v5a1 1 0 0 0 1 1h5",
+            "M10 9H8",
+            "M16 13H8",
+            "M16 17H8",
         )
 
     fun calendarDays(strokeWidth: Float = DEFAULT_STROKE) =
@@ -120,6 +144,8 @@ object LucideIcons {
 
     fun chevronDown(strokeWidth: Float = DEFAULT_STROKE) = icon("ChevronDown", strokeWidth, "m6 9 6 6 6-6")
 
+    fun chevronRight(strokeWidth: Float = DEFAULT_STROKE) = icon("ChevronRight", strokeWidth, "m9 18 6-6-6-6")
+
     fun arrowLeft(strokeWidth: Float = DEFAULT_STROKE) = icon("ArrowLeft", strokeWidth, "m12 19-7-7 7-7", "M19 12H5")
 
     fun check(strokeWidth: Float = DEFAULT_STROKE) = icon("Check", strokeWidth, "M20 6 9 17l-5-5")
@@ -134,6 +160,17 @@ object LucideIcons {
             "M10 11v6",
             "M14 11v6",
         )
+
+    /** O balão do botão "Buscar e criar" na barra inferior: a porta do chat com IA. */
+    fun messageSquare(
+        strokeWidth: Float = DEFAULT_STROKE,
+        filled: Boolean = false,
+    ) = icon(
+        "MessageSquare",
+        strokeWidth,
+        "M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z",
+        filled = filled,
+    )
 
     /** As duas bolhas de "Todas as conversas" no cabeçalho do chat. */
     fun messagesSquare(strokeWidth: Float = DEFAULT_STROKE) =

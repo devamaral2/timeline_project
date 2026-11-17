@@ -79,7 +79,7 @@ test("skips February 29 on years that do not have it", () => {
 test("places the occurrence at the local wall clock time, with its duration", () => {
   const window = occurrenceWindow(rule({ durationMinutes: 45 }), "2026-09-01");
   expect(window.startedAt.toISOString()).toBe("2026-09-01T10:00:00.000Z");
-  expect(window.finishedAt?.toISOString()).toBe("2026-09-01T10:45:00.000Z");
+  expect(window.estimatedFinishAt?.toISOString()).toBe("2026-09-01T10:45:00.000Z");
 });
 
 test("keeps the wall clock time across a daylight saving change", () => {
@@ -90,5 +90,5 @@ test("keeps the wall clock time across a daylight saving change", () => {
 });
 
 test("an occurrence without duration has no end", () => {
-  expect(occurrenceWindow(rule({}), "2026-09-01").finishedAt).toBeUndefined();
+  expect(occurrenceWindow(rule({}), "2026-09-01").estimatedFinishAt).toBeUndefined();
 });

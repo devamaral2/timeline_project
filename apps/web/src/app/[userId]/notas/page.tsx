@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { NotesScreen } from "@/components/notes/NotesScreen";
 
 export const metadata: Metadata = {
-  title: "Notas — Braid",
-  description: "Suas notas, soltas ou presas a eventos e tarefas.",
+  title: "Notas — Agente pessoal",
+  description: "Suas notas, soltas ou presas a tarefas.",
 };
 
 /** As notas carregam no cliente: a leitura exige a sessão, que só o navegador sabe renovar. */

@@ -1,5 +1,5 @@
 import { Controller, Delete, HttpCode, HttpStatus, Inject, Module, Param, UseGuards } from "@nestjs/common";
-import { TASK_REPOSITORY } from "../../infrastructure/persistence";
+import { TASK_REPOSITORY } from "../../infrastructure/persistence/index";
 import type { TaskRepository } from "../../domain/ports";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
@@ -15,7 +15,7 @@ export class DeleteTaskController {
   @UseGuards(GatewayIdentityGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   async execute(@Param("taskId") taskId: string, @CurrentUser() actor: AuthenticatedUser): Promise<void> {
-    await this.deleteTask.execute({ taskId }, actor);
+    await this.deleteTask.execute({ taskId: taskId }, actor);
   }
 }
 

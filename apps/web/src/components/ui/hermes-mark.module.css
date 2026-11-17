@@ -1,0 +1,5 @@
+/*
+ * O invólucro do robô na linha de status: 28 px, a medida da onda que ele
+ * substituiu. O desenho e os estados são do `hermes-bot.module.css`.
+ */
+.mark { display: grid; place-items: center; flex: none; width: 28px; height: 28px; font-size: 28px; }

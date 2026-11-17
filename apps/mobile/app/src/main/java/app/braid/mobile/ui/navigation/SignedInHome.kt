@@ -25,7 +25,7 @@ fun SignedInHome(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        BraidWordmark(style = MaterialTheme.typography.displaySmall, logoSize = 48.dp)
+        BraidWordmark(style = MaterialTheme.typography.displaySmall)
         Text(text = "Olá, ${user.name}", style = MaterialTheme.typography.titleLarge)
         Text(text = user.email, style = MaterialTheme.typography.bodyMedium)
         Button(onClick = onSignOut, modifier = Modifier.padding(top = 24.dp)) {

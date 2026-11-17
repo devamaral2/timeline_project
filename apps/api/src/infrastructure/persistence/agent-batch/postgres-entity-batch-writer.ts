@@ -1,11 +1,10 @@
 import { sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   EntityBatchConflictError,
+  TaskValidationError,
   RecurrenceNotFoundError,
+  RecurrenceOwnershipError,
   RecurrenceRevisionConflictError,
-  type Event,
-  type Task,
 } from "../../../domain";
 import type {
   EntityBatch,
@@ -14,36 +13,27 @@ import type {
   RecurrenceChange,
   StagedChange,
 } from "../../../domain/ports";
-import * as schema from "../database/schema";
-import { completeCurrentAiJob, getCurrentAiJob, setAiJobResult } from "../../ai-jobs/ai-job-context";
+import { completeCurrentJob } from "../../jobs/job-context";
 import {
-  insertEventAggregate,
-  softDeleteEvent,
-  updateEventAggregate,
-  type Tx,
-} from "../events/repositories/postgres-event.repository";
+  insertArtifact,
+  insertDerivations,
+  softDeleteArtifact,
+  updateArtifactAggregate,
+} from "../artifacts/repositories/postgres-artifact.repository";
+import { applySubtaskChanges } from "../tasks/repositories/task-relations";
 import {
   insertTaskAggregate,
-  softDeleteTaskTree,
+  softDeleteTask,
   updateTaskAggregate,
 } from "../tasks/repositories/postgres-task.repository";
-import {
-  insertNote,
-  softDeleteNote,
-  updateNoteAggregate,
-} from "../notes/repositories/postgres-note.repository";
 import {
   deleteRecurrenceAggregate,
   insertRecurrenceAggregate,
   updateRecurrenceAggregate,
 } from "../recurrences/repositories/postgres-recurrence.repository";
-import {
-  appendMessages,
-  insertConversation,
-  lockConversationForAppend,
-} from "../agent-chat/repositories/postgres-agent-conversation.repository";
+import type { Db, Tx } from "../shared/tx";
 
-type TargetTable = "events" | "tasks" | "notes";
+type TargetTable = "tasks" | "artifacts";
 
 interface LockedRow extends Record<string, unknown> {
   id: string;
@@ -51,112 +41,67 @@ interface LockedRow extends Record<string, unknown> {
 }
 
 export class PostgresEntityBatchWriter implements EntityBatchWriter {
-  constructor(private readonly db: NodePgDatabase<typeof schema>) {}
+  constructor(private readonly db: Db) {}
 
   async commit(batch: EntityBatch): Promise<EntityBatchResult> {
     return this.db.transaction(async (tx): Promise<EntityBatchResult> => {
-      // A conversa e travada antes de qualquer entidade: com a ordem de trava
-      // fixa, dois turnos simultaneos esperam um pelo outro em vez de se
-      // cruzarem. E e aqui que sai o `seq`, que so existe sob esta trava.
-      const nextSeq = await prepareConversation(tx, batch);
-
-      await lockTargets(tx, "events", batch.userId, batch.events);
       await lockTargets(tx, "tasks", batch.userId, batch.tasks);
-      await lockTargets(tx, "notes", batch.userId, batch.notes);
-      await lockReferences(tx, batch);
+      await lockTargets(tx, "artifacts", batch.userId, batch.artifacts);
 
-      // Notas primeiro: eventos e tarefas apontam para elas pelos vinculos (FK).
-      for (const note of created(batch.notes)) {
-        await insertNote(tx, note);
+      // Artefatos primeiro: as relacoes de uma tarefa apontam para eles.
+      for (const artifact of created(batch.artifacts)) {
+        await insertArtifact(tx, artifact);
       }
-      for (const change of batch.notes) {
-        if (change.op === "update") await updateNoteAggregate(tx, change.entity, batch.userId, change.expectedRevision);
+      for (const change of batch.artifacts) {
+        if (change.op === "update") {
+          await updateArtifactAggregate(tx, change.entity, batch.userId, change.expectedRevision);
+        }
       }
+      await insertDerivations(tx, batch.derivations ?? []);
 
       // A serie antes das ocorrencias: elas apontam para ela por `recurrence_id`.
       for (const recurrence of batch.recurrences ?? []) {
         await insertRecurrenceAggregate(tx, recurrence);
       }
-
       // Antes das ocorrencias novas: a serie revisada libera o dia da primeira delas.
       for (const change of batch.recurrenceChanges ?? []) {
         await applyRecurrenceChange(tx, batch.userId, change);
       }
 
-      for (const task of creationOrder(created(batch.tasks))) {
-        await insertTaskAggregate(tx, task);
-      }
-      for (const event of created(batch.events)) {
-        if (!(await insertEventAggregate(tx, event))) {
-          throw new EntityBatchConflictError(`Evento ${event.id} já existe`);
+      try {
+        for (const task of created(batch.tasks)) {
+          if (!(await insertTaskAggregate(tx, task))) {
+            throw new EntityBatchConflictError(`Tarefa ${task.id} já existe`);
+          }
         }
+        for (const change of batch.tasks) {
+          if (change.op === "update") {
+            await updateTaskAggregate(tx, change.entity, batch.userId, change.expectedRevision);
+          }
+        }
+        // Depois de todas as tarefas: uma ponta da hierarquia pode ser uma tarefa nova do lote.
+        await applySubtaskChanges(tx, batch.userId, batch.subtasks ?? []);
+      } catch (error) {
+        // Um alvo de relacao que sumiu entre preparar e gravar: o lote inteiro volta.
+        if (error instanceof TaskValidationError && /not found/.test(error.message)) {
+          throw new EntityBatchConflictError(error.message);
+        }
+        throw error;
       }
 
+      // O artefato apagado continua ligado à tarefa (soft delete); a leitura o esconde.
+      for (const change of batch.artifacts) {
+        if (change.op === "delete") await softDeleteArtifact(tx, change.id, batch.userId);
+      }
       for (const change of batch.tasks) {
-        if (change.op === "update") await updateTaskAggregate(tx, change.entity, batch.userId, change.expectedRevision);
-      }
-      for (const change of batch.events) {
-        if (change.op === "update") await updateEventAggregate(tx, change.entity, batch.userId, change.expectedRevision);
+        if (change.op === "delete") await softDeleteTask(tx, change.id, batch.userId);
       }
 
-      // A note apagada continua ligada ao alvo (soft delete); a leitura a esconde.
-      for (const change of batch.notes) {
-        if (change.op === "delete") await softDeleteNote(tx, change.id, batch.userId);
-      }
-      for (const change of batch.events) {
-        if (change.op === "delete") await softDeleteEvent(tx, change.id, batch.userId);
-      }
-      const deletedTaskIds = new Set<string>();
-      for (const change of batch.tasks) {
-        if (change.op !== "delete" || deletedTaskIds.has(change.id)) continue;
-        for (const id of await softDeleteTaskTree(tx, change.id, batch.userId)) deletedTaskIds.add(id);
-      }
-
-      // Por ultimo: um turno so vira conversa gravada depois que as entidades
-      // que ele afirma ter mudado passaram.
-      if (!batch.conversation || nextSeq === undefined) {
-        await completeCurrentAiJob(tx);
-        return {};
-      }
-
-      await appendMessages(
-        tx,
-        batch.conversation.conversationId,
-        batch.conversation.messages,
-        nextSeq,
-      );
-      const job = getCurrentAiJob();
-      if (job?.prepared) {
-        setAiJobResult({
-          ...(job.result as Record<string, unknown>),
-          conversationId: batch.conversation.conversationId,
-          assistantSeq: nextSeq + batch.conversation.messages.length - 1,
-        });
-      }
-      await completeCurrentAiJob(tx);
-      return {
-        conversation: {
-          firstSeq: nextSeq,
-          lastSeq: nextSeq + batch.conversation.messages.length - 1,
-        },
-      };
+      await batch.afterWrite?.(tx);
+      await completeCurrentJob(tx);
+      return {};
     });
   }
-}
-
-/**
- * Cria ou trava a conversa do turno e devolve o `seq` da primeira mensagem.
- * Sem turno de conversa (o caminho REST do agente), nao ha nada a fazer.
- */
-async function prepareConversation(tx: Tx, batch: EntityBatch): Promise<number | undefined> {
-  const append = batch.conversation;
-  if (!append) return undefined;
-
-  if (append.create) {
-    await insertConversation(tx, append.create);
-    return 1;
-  }
-  return lockConversationForAppend(tx, append.conversationId, batch.userId);
 }
 
 async function applyRecurrenceChange(tx: Tx, userId: string, change: RecurrenceChange): Promise<void> {
@@ -167,8 +112,12 @@ async function applyRecurrenceChange(tx: Tx, userId: string, change: RecurrenceC
       await deleteRecurrenceAggregate(tx, change.id, userId, change.fromDay);
     }
   } catch (error) {
-    // O turno inteiro volta: quem leu a serie antes de outra requisicao mexer nela tenta de novo.
-    if (error instanceof RecurrenceRevisionConflictError || error instanceof RecurrenceNotFoundError) {
+    // O lote inteiro volta: quem leu a serie antes de outra requisicao mexer nela tenta de novo.
+    if (
+      error instanceof RecurrenceRevisionConflictError ||
+      error instanceof RecurrenceNotFoundError ||
+      error instanceof RecurrenceOwnershipError
+    ) {
       throw new EntityBatchConflictError(error.message);
     }
     throw error;
@@ -177,12 +126,6 @@ async function applyRecurrenceChange(tx: Tx, userId: string, change: RecurrenceC
 
 function created<T>(changes: readonly StagedChange<T>[]): T[] {
   return changes.flatMap((change) => (change.op === "create" ? [change.entity] : []));
-}
-
-function targetIdOf<T extends { id: string }>(change: StagedChange<T>): string | undefined {
-  if (change.op === "update") return change.entity.id;
-  if (change.op === "delete") return change.id;
-  return undefined;
 }
 
 /**
@@ -197,8 +140,8 @@ async function lockTargets<T extends { id: string }>(
 ): Promise<void> {
   const expected = new Map<string, number>();
   for (const change of changes) {
-    const id = targetIdOf(change);
-    if (id && change.op !== "create") expected.set(id, change.expectedRevision);
+    if (change.op === "update") expected.set(change.entity.id, change.expectedRevision);
+    if (change.op === "delete") expected.set(change.id, change.expectedRevision);
   }
   if (expected.size === 0) return;
 
@@ -210,7 +153,6 @@ async function lockTargets<T extends { id: string }>(
     FOR UPDATE
   `);
   const found = new Map(locked.rows.map((row) => [row.id, Number(row.revision)]));
-
   for (const [id, revision] of expected) {
     if (!found.has(id)) {
       throw new EntityBatchConflictError(`${table}: ${id} não existe mais ou não pertence ao usuário`);
@@ -219,68 +161,4 @@ async function lockTargets<T extends { id: string }>(
       throw new EntityBatchConflictError(`${table}: ${id} foi alterado por outra requisição`);
     }
   }
-}
-
-/**
- * O banco nao confere que pai, dependencia ou note ligada a um evento ou tarefa
- * sao do mesmo usuario. Aqui confere, e `FOR SHARE` impede que sumam antes do commit.
- */
-async function lockReferences(tx: Tx, batch: EntityBatch): Promise<void> {
-  const createdTaskIds = new Set(created(batch.tasks).map((task) => task.id));
-
-  const createdNoteIds = new Set(created(batch.notes).map((note) => note.id));
-
-  const taskRefs = new Set<string>();
-  const noteRefs = new Set<string>();
-  const written = <T>(changes: readonly StagedChange<T>[]): T[] =>
-    changes.flatMap((change) => (change.op === "delete" ? [] : [change.entity]));
-
-  for (const task of written<Task>(batch.tasks)) {
-    if (task.parentTaskId) taskRefs.add(task.parentTaskId);
-    for (const id of task.dependsOnTaskIds) taskRefs.add(id);
-    for (const link of task.noteLinks) noteRefs.add(link.noteId);
-  }
-  for (const event of written<Event>(batch.events)) {
-    for (const id of event.taskIds) taskRefs.add(id);
-    for (const link of event.noteLinks) noteRefs.add(link.noteId);
-  }
-
-  await lockExisting(tx, "tasks", batch.userId, [...taskRefs].filter((id) => !createdTaskIds.has(id)));
-  await lockExisting(tx, "notes", batch.userId, [...noteRefs].filter((id) => !createdNoteIds.has(id)));
-}
-
-async function lockExisting(tx: Tx, table: "notes" | "tasks", userId: string, ids: string[]): Promise<void> {
-  if (ids.length === 0) return;
-
-  const locked = await tx.execute<{ id: string }>(sql`
-    SELECT id FROM ${sql.identifier(table)}
-    WHERE id IN ${ids} AND user_id = ${userId} AND deleted_at IS NULL
-    ORDER BY id
-    FOR SHARE
-  `);
-  const found = new Set(locked.rows.map((row) => row.id));
-  const missing = ids.filter((id) => !found.has(id));
-  if (missing.length > 0) {
-    throw new EntityBatchConflictError(`${table} referenciados não existem: ${missing.join(", ")}`);
-  }
-}
-
-/** Pai e dependencias criados no mesmo lote precisam entrar antes (FK). */
-function creationOrder(tasks: readonly Task[]): Task[] {
-  const pending = new Map(tasks.map((task) => [task.id, task]));
-  const ordered: Task[] = [];
-
-  while (pending.size > 0) {
-    const ready = [...pending.values()].filter((task) =>
-      [task.parentTaskId, ...task.dependsOnTaskIds].every((id) => !id || !pending.has(id)),
-    );
-    if (ready.length === 0) {
-      throw new EntityBatchConflictError("As tarefas criadas formam um ciclo de pai ou dependência");
-    }
-    for (const task of ready) {
-      ordered.push(task);
-      pending.delete(task.id);
-    }
-  }
-  return ordered;
 }

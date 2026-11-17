@@ -120,7 +120,7 @@ internal fun NotesContent(
                     Text(
                         modifier = Modifier.weight(1f),
                         text = "Notas",
-                        style = MaterialTheme.typography.displayMedium,
+                        style = MaterialTheme.typography.headlineLarge,
                     )
                     Box {
                         IconButton(onClick = { optionsOpen = true }) {
@@ -142,18 +142,6 @@ internal fun NotesContent(
                         }
                     }
                 }
-                Text(
-                    text =
-                        if (notes == null) {
-                            " "
-                        } else if (notes.size == 1) {
-                            "1 nota"
-                        } else {
-                            "${notes.size} notas"
-                        },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
         when {
@@ -209,7 +197,7 @@ internal fun NotesContent(
                             )
                             Text(
                                 text = group.label,
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.3.sp),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
                             )
                             Text(
                                 text = group.notes.size.toString(),

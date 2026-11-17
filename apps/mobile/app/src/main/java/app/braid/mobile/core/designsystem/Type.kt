@@ -82,21 +82,28 @@ private fun display(
     letterSpacing = (-0.01).em,
 )
 
+/** O título de página (Agenda, Notas): Newsreader 500, 32/1,1, −0,015em. */
+private val pageTitle =
+    display(32f, 35.2f).copy(
+        fontWeight = FontWeight.Medium,
+        letterSpacing = (-0.015).em,
+    )
+
 /**
  * A escala de `design system/Tipografia-html/`: display na Newsreader,
  * títulos, corpo e rótulos na Figtree. O espaçamento aberto dos rótulos em
- * maiúsculas (`label` +0,12em, `tag` +0,1em) só entra junto do `uppercase()`,
- * em quem usa — os mesmos estilos também servem texto corrido pequeno.
+ * maiúsculas saiu: rótulos e selos são frase, em 12sp no mínimo, como no web.
  */
 val BraidTypography =
     Typography(
         // display-lg: detalhe do evento, assinatura.
         displayLarge = display(52f, 52f),
-        // display-md: título de página no celular.
-        displayMedium = display(40f, 40f),
+        // display-md: título de página no celular — 32, peso 500, como a
+        // receita `title` de `components/ui/page.module.css` no web.
+        displayMedium = pageTitle,
         // numeral: duração no cartão.
         displaySmall = display(30f, 30f),
-        headlineLarge = display(32f, 35f),
+        headlineLarge = pageTitle,
         // display-sm: cabeçalho de dia.
         headlineMedium = display(26f, 28.6f),
         headlineSmall = display(22f, 25f),
@@ -154,15 +161,15 @@ val BraidTypography =
             TextStyle(
                 fontFamily = BraidSansFont,
                 fontWeight = FontWeight.Medium,
-                fontSize = 11.sp,
-                lineHeight = 14.sp,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
             ),
         // tag: selos.
         labelSmall =
             TextStyle(
                 fontFamily = BraidSansFont,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 10.sp,
-                lineHeight = 14.sp,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
             ),
     )

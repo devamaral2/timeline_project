@@ -69,7 +69,6 @@ internal fun LoginContent(
     ) {
         BraidWordmark(
             style = MaterialTheme.typography.displaySmall,
-            logoSize = 48.dp,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(

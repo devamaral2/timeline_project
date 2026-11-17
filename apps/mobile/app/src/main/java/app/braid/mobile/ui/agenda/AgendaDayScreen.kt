@@ -35,7 +35,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -205,8 +204,8 @@ internal fun DayHeading(
         }
         Text(
             modifier = Modifier.padding(bottom = 3.dp),
-            text = "$eventCount ${if (eventCount == 1) "evento" else "eventos"}".uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, letterSpacing = 1.2.sp, fontWeight = FontWeight.Medium),
+            text = "$eventCount ${if (eventCount == 1) "evento" else "eventos"}",
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

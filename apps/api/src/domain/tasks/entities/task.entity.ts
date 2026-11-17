@@ -1,228 +1,388 @@
 import {
-  DEFAULT_WORK_ITEM_STATUS,
-  type WorkItemStatus,
-} from "../../work-items/types/work-item-status";
+  AGENT_KINDS,
+  AGENT_STATUSES,
+  HUMAN_KINDS,
+  HUMAN_STATUSES,
+  PRIORITIES,
+  type Actor,
+  type TaskKind,
+  type TaskPriority,
+  type TaskStatus,
+} from "../../sets";
+import { defaultTaskDurationMinutesFor } from "../types/default-task-duration";
 import {
-  DEFAULT_WORK_ITEM_PRIORITY,
-  type WorkItemPriority,
-} from "../../work-items/types/work-item-priority";
-import { TagList } from "../../events/value-objects/tag-list";
+  DEFAULT_TASK_NOTIFICATION_OFFSETS_MINUTES,
+  isNotificationOffsetMinutes,
+  type NotificationOffsetMinutes,
+} from "../types/notification-offset-minutes";
+import { normalizeArtifactLinks, type ArtifactLink } from "../types/artifact-link";
+import { TagList } from "../value-objects/tag-list";
 import { TaskId } from "../value-objects/task-id";
 import { TaskValidationError } from "../errors/task.errors";
 import { detachOccurrence, type OccurrenceLink } from "../../recurrences/types/occurrence-link";
-import { normalizeNoteLinks, type NoteLink } from "../../notes/types/note-link";
-import type { NotificationOffsetMinutes } from "../../notifications/types/notification-offset-minutes";
+
+export const MAX_TASK_LOCATION_LENGTH = 300;
+export const DEFAULT_TASK_KIND: TaskKind = "common";
+export const DEFAULT_TASK_PRIORITY: TaskPriority = "medium";
+
+/** O bloco de uma tarefa na agenda dura no maximo isto; acima disso, e uma tarefa longa. */
+export const MAX_TASK_BLOCK_DAYS = 31;
+const MAX_TASK_BLOCK_MS = MAX_TASK_BLOCK_DAYS * 24 * 60 * 60 * 1000;
 
 export interface TaskCreateProps {
   id?: string;
   userId: string;
-  parentTaskId?: string;
+  /** Quem executa. Ausente e uma pessoa. */
+  actor?: Actor;
+  kind?: TaskKind;
+  /** Ausente numa tarefa de pessoa, ela e de referencia: so marca um horario. */
+  status?: TaskStatus;
+  priority?: TaskPriority;
   name: string;
-  description: string;
-  status?: WorkItemStatus;
-  priority?: WorkItemPriority;
-  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
-  tags: string[];
-  startedAt?: Date;
-  estimatedFinishAt?: Date;
-  finishedAt?: Date;
-  dependsOnTaskIds?: string[];
-  /** As notes da tarefa, na ordem em que aparecem. */
-  noteLinks?: NoteLink[];
-  occurrence?: OccurrenceLink;
-}
-
-export interface TaskRehydrateProps extends TaskCreateProps {
-  revision: number;
-}
-
-export interface TaskReviseChanges {
-  parentTaskId?: string | null;
-  name?: string;
   description?: string;
-  status?: WorkItemStatus;
-  priority?: WorkItemPriority;
+  /**
+   * Onde acontece, em texto livre que o Google Maps entende. So tarefa de pessoa tem, e so quando alguem o informa:
+   * ausente ou vazio, a tarefa fica sem local.
+   */
+  location?: string;
+  /** Inicio planejado. */
+  startedAt?: Date;
+  /** Fim planejado: o fim do bloco ou, na tarefa longa, o prazo. */
+  estimatedFinishAt?: Date;
+  /** Conclusao real. */
+  finishedAt?: Date;
   notifyOffsetsMinutes?: NotificationOffsetMinutes[];
   tags?: string[];
-  startedAt?: Date;
-  estimatedFinishAt?: Date;
-  finishedAt?: Date;
-  dependsOnTaskIds?: string[];
-  noteLinks?: NoteLink[];
+  longRunning?: boolean;
+  /** Pequeno: resumo, agente interno do passo, contexto de tela. */
+  data?: Record<string, unknown>;
+  /** Os artefatos da tarefa, na ordem em que aparecem. */
+  artifactLinks?: ArtifactLink[];
+  occurrence?: OccurrenceLink;
+  /** Ausente, e o agora. */
+  now?: Date;
+}
+
+export interface TaskRehydrateProps extends Omit<TaskCreateProps, "now"> {
+  actor: Actor;
+  kind: TaskKind;
+  revision: number;
+  createdAt: Date;
+  updatedAt: Date;
+  /** A tarefa principal desta. A hierarquia nao e campo da tarefa: aqui e so leitura. */
+  parentId?: string;
+  /** As subtarefas desta. Idem: so leitura. */
+  subtaskIds?: string[];
+}
+
+/** `null` apaga o campo. Sem status, a tarefa volta a ser de referencia. */
+export interface TaskReviseChanges {
+  kind?: TaskKind;
+  status?: TaskStatus | null;
+  priority?: TaskPriority;
+  name?: string;
+  description?: string;
+  /** `null` ou vazio tira o local. */
+  location?: string | null;
+  startedAt?: Date | null;
+  estimatedFinishAt?: Date | null;
+  finishedAt?: Date | null;
+  notifyOffsetsMinutes?: NotificationOffsetMinutes[];
+  tags?: string[];
+  longRunning?: boolean;
+  artifactLinks?: ArtifactLink[];
 }
 
 interface TaskBuildProps {
   id: string;
   userId: string;
-  parentTaskId: string | undefined;
+  actor: Actor;
+  kind: TaskKind;
+  status: TaskStatus | undefined;
+  priority: TaskPriority;
   name: string;
   description: string;
-  status: WorkItemStatus;
-  priority: WorkItemPriority;
-  notifyOffsetsMinutes: NotificationOffsetMinutes[];
-  tags: string[];
+  location: string | undefined;
   startedAt: Date | undefined;
   estimatedFinishAt: Date | undefined;
   finishedAt: Date | undefined;
-  dependsOnTaskIds: string[];
-  noteLinks: NoteLink[];
+  notifyOffsetsMinutes: NotificationOffsetMinutes[];
+  tags: string[];
+  longRunning: boolean;
+  data: Record<string, unknown>;
+  artifactLinks: ArtifactLink[];
+  parentId: string | undefined;
+  subtaskIds: string[];
   occurrence: OccurrenceLink | undefined;
   revision: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** O local como fica guardado: sem espacos nas pontas, e ausente quando nao sobra texto. */
+function locationOf(text: string | null | undefined): string | undefined {
+  return text?.trim() || undefined;
+}
+
+function includes<T extends string>(values: readonly T[], value: unknown): value is T {
+  return values.includes(value as T);
+}
+
+function unique(ids: readonly string[]): string[] {
+  return Array.from(new Set(ids));
 }
 
 /**
- * Tarefa. `parentTaskId` e a subtarefa: uma tarefa aponta para a tarefa de que
- * e filha, e quem nao aponta para ninguem e uma tarefa de topo. Nao ha limite
- * de profundidade — o que a entidade barra e a auto-referencia direta; ciclos
- * mais longos sao barrados na hora de escolher o pai (`assert-parent-task.ts`
- * em apps/api), que e o unico caminho capaz de cria-los.
+ * Algo que uma pessoa ou um agente faz ou vai fazer. E a unica entidade de
+ * acao: com status, a tarefa e acompanhada (o que antes era so uma tarefa com status); sem
+ * status, so marca um horario na agenda.
+ *
+ * Este agregado guarda os artefatos da tarefa. A hierarquia entre tarefas (a
+ * relacao `subtask`) nao e campo de nenhuma delas: o agregado so a le, em
+ * `parentId` e `subtaskIds`, e quem a muda e o lote, sem revisar ninguem.
  */
 export class Task {
   readonly id: string;
   readonly userId: string;
-  readonly parentTaskId: string | undefined;
+  readonly actor: Actor;
+  readonly kind: TaskKind;
+  readonly status: TaskStatus | undefined;
+  readonly priority: TaskPriority;
   readonly name: string;
   readonly description: string;
-  readonly status: WorkItemStatus;
-  readonly priority: WorkItemPriority;
-  readonly notifyOffsetsMinutes: readonly NotificationOffsetMinutes[];
-  readonly tags: string[];
+  /** Ausente: ninguem informou onde a tarefa acontece. */
+  readonly location: string | undefined;
   readonly startedAt: Date | undefined;
   readonly estimatedFinishAt: Date | undefined;
   readonly finishedAt: Date | undefined;
-  readonly dependsOnTaskIds: readonly string[];
-  readonly noteLinks: readonly NoteLink[];
+  readonly notifyOffsetsMinutes: readonly NotificationOffsetMinutes[];
+  readonly tags: string[];
+  readonly longRunning: boolean;
+  readonly data: Readonly<Record<string, unknown>>;
+  readonly artifactLinks: readonly ArtifactLink[];
+  /** A tarefa principal: no maximo uma. */
+  readonly parentId: string | undefined;
+  /** As subtarefas. */
+  readonly subtaskIds: readonly string[];
   /** Presente quando a tarefa e uma ocorrencia de uma serie. */
   readonly occurrence: OccurrenceLink | undefined;
   readonly revision: number;
+  readonly createdAt: Date;
+  /** A ultima gravacao: cada revisao a avanca. */
+  readonly updatedAt: Date;
 
   private constructor(props: TaskBuildProps) {
     this.id = props.id;
     this.userId = props.userId;
-    this.parentTaskId = props.parentTaskId;
-    this.name = props.name;
-    this.description = props.description;
+    this.actor = props.actor;
+    this.kind = props.kind;
     this.status = props.status;
     this.priority = props.priority;
-    this.notifyOffsetsMinutes = props.notifyOffsetsMinutes;
-    this.tags = props.tags;
+    this.name = props.name;
+    this.description = props.description;
+    this.location = props.location;
     this.startedAt = props.startedAt;
     this.estimatedFinishAt = props.estimatedFinishAt;
     this.finishedAt = props.finishedAt;
-    this.dependsOnTaskIds = props.dependsOnTaskIds;
-    this.noteLinks = props.noteLinks;
+    this.notifyOffsetsMinutes = props.notifyOffsetsMinutes;
+    this.tags = props.tags;
+    this.longRunning = props.longRunning;
+    this.data = props.data;
+    this.artifactLinks = props.artifactLinks;
+    this.parentId = props.parentId;
+    this.subtaskIds = props.subtaskIds;
     this.occurrence = props.occurrence;
     this.revision = props.revision;
+    this.createdAt = props.createdAt;
+    this.updatedAt = props.updatedAt;
+  }
+
+  /** Tarefa de referencia: sem status, so marca um horario. So existe para pessoa. */
+  get isReference(): boolean {
+    return this.status === undefined;
   }
 
   private static build(props: TaskBuildProps): Task {
-    if (props.startedAt && props.finishedAt && props.finishedAt < props.startedAt) {
-      throw new TaskValidationError("finishedAt must be equal to or after startedAt");
-    }
     if (!Number.isInteger(props.revision) || props.revision < 1) {
       throw new TaskValidationError("Task revision must be an integer >= 1");
     }
-    if (props.dependsOnTaskIds.includes(props.id)) {
-      throw new TaskValidationError("Task cannot depend on itself");
+    if (!includes(PRIORITIES, props.priority)) {
+      throw new TaskValidationError(`Invalid task priority: ${props.priority}`);
     }
-    if (props.parentTaskId === props.id) {
-      throw new TaskValidationError("Task cannot be its own parent");
+    if (props.actor === "human") {
+      if (!includes(HUMAN_KINDS, props.kind)) {
+        throw new TaskValidationError(`Invalid kind for a human task: ${props.kind}`);
+      }
+      if (props.status !== undefined && !includes(HUMAN_STATUSES, props.status)) {
+        throw new TaskValidationError(`Invalid status for a human task: ${props.status}`);
+      }
+    } else {
+      if (!includes(AGENT_KINDS, props.kind)) {
+        throw new TaskValidationError(`Invalid kind for a agent task: ${props.kind}`);
+      }
+      if (!includes(AGENT_STATUSES, props.status)) {
+        throw new TaskValidationError("A agent task always has one of the agent statuses");
+      }
+    }
+
+    if (props.location !== undefined && props.location.length > MAX_TASK_LOCATION_LENGTH) {
+      throw new TaskValidationError(`Task location is longer than ${MAX_TASK_LOCATION_LENGTH} characters`);
+    }
+    if (props.actor !== "human" && props.location !== undefined) {
+      throw new TaskValidationError("Only a human task has a location");
+    }
+
+    if (props.longRunning) {
+      if (props.actor !== "human") throw new TaskValidationError("Only a human task can be long-running");
+      if (props.status === undefined) throw new TaskValidationError("A long-running task always has a status");
+      if (props.status === "missed") throw new TaskValidationError("A long-running task is never missed");
+      if (props.occurrence) throw new TaskValidationError("A long-running task does not repeat");
+      if (!props.estimatedFinishAt && props.notifyOffsetsMinutes.length > 0) {
+        throw new TaskValidationError("A long-running task without a deadline has no notifications");
+      }
+    } else {
+      if (props.status === undefined && !props.startedAt) {
+        throw new TaskValidationError("A reference task requires startedAt");
+      }
+      if (props.startedAt && props.estimatedFinishAt) {
+        const span = props.estimatedFinishAt.getTime() - props.startedAt.getTime();
+        if (span < 0) throw new TaskValidationError("estimatedFinishAt must be equal to or after startedAt");
+        if (span > MAX_TASK_BLOCK_MS) {
+          throw new TaskValidationError(`A task longer than ${MAX_TASK_BLOCK_DAYS} days must be long-running`);
+        }
+      }
+    }
+
+    if (!props.notifyOffsetsMinutes.every(isNotificationOffsetMinutes)) {
+      throw new TaskValidationError("Invalid notification offset");
+    }
+    if (props.parentId === props.id || props.subtaskIds.includes(props.id)) {
+      throw new TaskValidationError("A task cannot be its own subtask");
+    }
+    if (typeof props.data !== "object" || props.data === null || Array.isArray(props.data)) {
+      throw new TaskValidationError("Task data must be an object");
+    }
+    if (props.updatedAt.getTime() < props.createdAt.getTime()) {
+      throw new TaskValidationError("updatedAt must be equal to or after createdAt");
     }
 
     return new Task({
       ...props,
       tags: TagList.create(props.tags),
-      dependsOnTaskIds: Array.from(new Set(props.dependsOnTaskIds)),
-      noteLinks: normalizeNoteLinks(props.noteLinks),
+      notifyOffsetsMinutes: Array.from(new Set(props.notifyOffsetsMinutes)),
+      artifactLinks: normalizeArtifactLinks(props.artifactLinks),
+      subtaskIds: unique(props.subtaskIds),
     });
   }
 
+  /**
+   * Uma tarefa de referencia nova nunca fica sem fim planejado: sem ele,
+   * estimamos pela duracao tipica do `kind`. Uma tarefa longa nasce `todo`.
+   */
   static create(props: TaskCreateProps): Task {
+    const actor = props.actor ?? "human";
+    const kind = props.kind ?? DEFAULT_TASK_KIND;
+    const longRunning = props.longRunning ?? false;
+    const now = props.now ?? new Date();
+    const status = props.status ?? (longRunning ? "todo" : undefined);
+    const reference = status === undefined;
+    const estimatedFinishAt =
+      props.estimatedFinishAt ??
+      (reference && props.startedAt
+        ? new Date(props.startedAt.getTime() + defaultTaskDurationMinutesFor(kind) * 60_000)
+        : undefined);
+
     return Task.build({
       id: props.id ?? TaskId.create(),
       userId: props.userId,
-      parentTaskId: props.parentTaskId,
+      actor,
+      kind,
+      status,
+      priority: props.priority ?? DEFAULT_TASK_PRIORITY,
       name: props.name,
-      description: props.description,
-      status: props.status ?? DEFAULT_WORK_ITEM_STATUS,
-      priority: props.priority ?? DEFAULT_WORK_ITEM_PRIORITY,
-      notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? [],
-      tags: props.tags,
+      description: props.description ?? "",
+      location: locationOf(props.location),
       startedAt: props.startedAt,
-      estimatedFinishAt: props.estimatedFinishAt,
+      estimatedFinishAt,
       finishedAt: props.finishedAt,
-      dependsOnTaskIds: props.dependsOnTaskIds ?? [],
-      noteLinks: props.noteLinks ?? [],
+      notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? (reference ? DEFAULT_TASK_NOTIFICATION_OFFSETS_MINUTES : []),
+      tags: props.tags ?? [],
+      longRunning,
+      data: props.data ?? {},
+      artifactLinks: props.artifactLinks ?? [],
+      parentId: undefined,
+      subtaskIds: [],
       occurrence: props.occurrence,
       revision: 1,
+      createdAt: now,
+      updatedAt: now,
     });
   }
 
+  /** Nao reaplica nenhum default de tarefa nova: a linha volta como foi gravada. */
   static rehydrate(props: TaskRehydrateProps): Task {
     return Task.build({
       id: props.id ?? TaskId.create(),
       userId: props.userId,
-      parentTaskId: props.parentTaskId,
+      actor: props.actor,
+      kind: props.kind,
+      status: props.status,
+      priority: props.priority ?? DEFAULT_TASK_PRIORITY,
       name: props.name,
-      description: props.description,
-      status: props.status ?? DEFAULT_WORK_ITEM_STATUS,
-      priority: props.priority ?? DEFAULT_WORK_ITEM_PRIORITY,
-      notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? [],
-      tags: props.tags,
+      description: props.description ?? "",
+      location: locationOf(props.location),
       startedAt: props.startedAt,
       estimatedFinishAt: props.estimatedFinishAt,
       finishedAt: props.finishedAt,
-      dependsOnTaskIds: props.dependsOnTaskIds ?? [],
-      noteLinks: props.noteLinks ?? [],
+      notifyOffsetsMinutes: props.notifyOffsetsMinutes ?? [],
+      tags: props.tags ?? [],
+      longRunning: props.longRunning ?? false,
+      data: props.data ?? {},
+      artifactLinks: props.artifactLinks ?? [],
+      parentId: props.parentId,
+      subtaskIds: props.subtaskIds ?? [],
       occurrence: props.occurrence,
       revision: props.revision,
+      createdAt: props.createdAt,
+      updatedAt: props.updatedAt,
     });
   }
 
-  /** Toda revisao e uma edicao do usuario, e por isso destaca a ocorrencia da serie. */
-  revise(changes: TaskReviseChanges): Task {
+  /**
+   * Toda revisao e uma edicao do usuario, e por isso destaca a ocorrencia da
+   * serie. So tarefas de pessoa sao revisadas: as de agente mudam pelo proprio
+   * agente.
+   */
+  revise(changes: TaskReviseChanges, now: Date = new Date()): Task {
+    if (this.actor !== "human") throw new TaskValidationError("A agent task cannot be edited");
+    const pick = <T>(change: T | null | undefined, current: T | undefined): T | undefined =>
+      change === undefined ? current : (change ?? undefined);
+
     return Task.build({
       id: this.id,
       userId: this.userId,
-      parentTaskId: changes.parentTaskId !== undefined ? (changes.parentTaskId ?? undefined) : this.parentTaskId,
+      actor: this.actor,
+      kind: changes.kind ?? this.kind,
+      status: pick(changes.status, this.status),
+      priority: changes.priority ?? this.priority,
       name: changes.name ?? this.name,
       description: changes.description ?? this.description,
-      status: changes.status ?? this.status,
-      priority: changes.priority ?? this.priority,
+      location: changes.location === undefined ? this.location : locationOf(changes.location),
+      startedAt: pick(changes.startedAt, this.startedAt),
+      estimatedFinishAt: pick(changes.estimatedFinishAt, this.estimatedFinishAt),
+      finishedAt: pick(changes.finishedAt, this.finishedAt),
       notifyOffsetsMinutes: changes.notifyOffsetsMinutes ?? [...this.notifyOffsetsMinutes],
       tags: changes.tags ?? this.tags,
-      startedAt: changes.startedAt !== undefined ? changes.startedAt : this.startedAt,
-      estimatedFinishAt:
-        changes.estimatedFinishAt !== undefined ? changes.estimatedFinishAt : this.estimatedFinishAt,
-      finishedAt: changes.finishedAt !== undefined ? changes.finishedAt : this.finishedAt,
-      dependsOnTaskIds: changes.dependsOnTaskIds ?? [...this.dependsOnTaskIds],
-      noteLinks: changes.noteLinks ?? [...this.noteLinks],
+      longRunning: changes.longRunning ?? this.longRunning,
+      data: { ...this.data },
+      artifactLinks: changes.artifactLinks ?? [...this.artifactLinks],
+      parentId: this.parentId,
+      subtaskIds: [...this.subtaskIds],
       occurrence: detachOccurrence(this.occurrence),
       revision: this.revision + 1,
-    });
-  }
-
-  /** Como `Event.withSeriesNotes`: a serie liga as notes, e a ocorrencia continua sendo dela. */
-  withSeriesNotes(noteIds: readonly string[]): Task {
-    const known = new Set(this.noteLinks.map((link) => link.noteId));
-    const added = noteIds.filter((noteId) => !known.has(noteId)).map((noteId) => ({ noteId, fromRecurrence: true }));
-    return Task.build({
-      id: this.id,
-      userId: this.userId,
-      parentTaskId: this.parentTaskId,
-      name: this.name,
-      description: this.description,
-      status: this.status,
-      priority: this.priority,
-      notifyOffsetsMinutes: [...this.notifyOffsetsMinutes],
-      tags: this.tags,
-      startedAt: this.startedAt,
-      estimatedFinishAt: this.estimatedFinishAt,
-      finishedAt: this.finishedAt,
-      dependsOnTaskIds: [...this.dependsOnTaskIds],
-      noteLinks: [...this.noteLinks, ...added],
-      occurrence: this.occurrence,
-      revision: this.revision,
+      createdAt: this.createdAt,
+      // Um relogio que volta nao faz a edicao parecer anterior a criacao.
+      updatedAt: now.getTime() < this.createdAt.getTime() ? this.createdAt : now,
     });
   }
 }

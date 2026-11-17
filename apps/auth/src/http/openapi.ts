@@ -33,7 +33,7 @@ const protectedErrors = {
 const string = (description: string, maxLength?: number): OpenApiSchema => ({ type: "string", description, ...(maxLength === undefined ? {} : { maxLength }) });
 const token = (description: string): OpenApiSchema => ({ ...string(description, 1024), format: "password", writeOnly: true });
 const dateTime = (description: string): OpenApiSchema => ({ type: "string", format: "date-time", description });
-const directPermissionsSchema = { type: "array", maxItems: 64, description: "Concessões ou negações diretas, sem duplicar uma permissão.", items: { type: "object", required: ["permission", "effect"], additionalProperties: false, properties: { permission: { type: "string", pattern: "^(?:\\*:manage|(?:event|tag|user|invite|role|grant):(?:create|read|update|delete|manage))$", description: "Permissão concreta no formato `recurso:ação` ou o superadmin `*:manage`." }, effect: { type: "string", enum: ["allow", "deny"] } } } } as const;
+const directPermissionsSchema = { type: "array", maxItems: 64, description: "Concessões ou negações diretas, sem duplicar uma permissão.", items: { type: "object", required: ["permission", "effect"], additionalProperties: false, properties: { permission: { type: "string", pattern: "^(?:\\*:manage|(?:task|tag|user|invite|role|grant):(?:create|read|update|delete|manage))$", description: "Permissão concreta no formato `recurso:ação` ou o superadmin `*:manage`." }, effect: { type: "string", enum: ["allow", "deny"] } } } } as const;
 
 const operations: Record<string, Record<string, OpenApiOperation>> = {
   "/health/live": {

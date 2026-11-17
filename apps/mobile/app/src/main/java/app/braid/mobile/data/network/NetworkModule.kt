@@ -4,13 +4,10 @@ import app.braid.mobile.BuildConfig
 import app.braid.mobile.data.auth.AuthApi
 import app.braid.mobile.data.auth.AuthClient
 import app.braid.mobile.data.auth.AuthGateway
-import app.braid.mobile.data.chat.AgentChatGateway
-import app.braid.mobile.data.chat.AgentChatHistoryGateway
-import app.braid.mobile.data.chat.AgentChatHistoryRepository
-import app.braid.mobile.data.chat.ChatApi
-import app.braid.mobile.data.chat.ChatSocketFactory
-import app.braid.mobile.data.chat.DurableChatRepository
-import app.braid.mobile.data.chat.OkHttpChatSocketFactory
+import app.braid.mobile.data.chat.JobsApi
+import app.braid.mobile.data.chat.ProcessApi
+import app.braid.mobile.data.chat.ProcessGateway
+import app.braid.mobile.data.chat.ProcessRepository
 import app.braid.mobile.data.events.DurableVoiceRepository
 import app.braid.mobile.data.events.EventGateway
 import app.braid.mobile.data.events.EventRepository
@@ -58,11 +55,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideAgentChatGateway(repository: DurableChatRepository): AgentChatGateway = repository
-
-    @Provides
-    @Singleton
-    fun provideAgentChatHistoryGateway(repository: AgentChatHistoryRepository): AgentChatHistoryGateway = repository
+    fun provideProcessGateway(repository: ProcessRepository): ProcessGateway = repository
 
     @Provides
     @Singleton
@@ -149,21 +142,31 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideChatApi(
+    fun provideJobsApi(
         json: Json,
         @Named("apiClient") client: OkHttpClient,
-    ): ChatApi =
+    ): JobsApi =
         Retrofit
             .Builder()
             .baseUrl(BuildConfig.API_BASE_URL.withTrailingSlash())
             .client(client)
             .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
             .build()
-            .create(ChatApi::class.java)
+            .create(JobsApi::class.java)
 
     @Provides
     @Singleton
-    fun provideChatSocketFactory(factory: OkHttpChatSocketFactory): ChatSocketFactory = factory
+    fun provideProcessApi(
+        json: Json,
+        @Named("apiClient") client: OkHttpClient,
+    ): ProcessApi =
+        Retrofit
+            .Builder()
+            .baseUrl(BuildConfig.API_BASE_URL.withTrailingSlash())
+            .client(client)
+            .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(ProcessApi::class.java)
 
     @Provides
     @Singleton

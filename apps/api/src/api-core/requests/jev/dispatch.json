@@ -1,0 +1,73 @@
+{
+  "_when": "JEV de entrada do pedido por passos (ADR 003): uma chamada, uma pergunta por operação × entidade, todas respondidas em paralelo pelo provedor.",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "model": "jev-latest",
+  "timeoutMs": 8000,
+  "minCertainty": 0.92,
+  "_uncertainPolicy": "fallback: resposta incerta em qualquer pergunta manda o pedido ao fallback, que é o Hermes; ignore: pergunta incerta conta como nenhum.",
+  "uncertainPolicy": "fallback",
+  "questions": {
+    "task_create": {
+      "type": "choice",
+      "instructions": "Quantas TAREFAS NOVAS o pedido quer criar? Tarefa é tudo o que a pessoa faz ou vai fazer. Relatos de atividades realizadas, em andamento ou planejadas ('almocei', 'comendo arroz', 'vou nadar', 'volto para casa para ver um filme', 'dormi às 23h') são tarefas novas, um por atividade. Toda refeição é uma tarefa nova, mesmo quando o pedido só cita alimentos e quantidades ('vou comer 200g de arroz daqui 3 min'). Algo a fazer, com ou sem prazo ('preciso pagar o aluguel', 'lembrar de ligar para o dentista'), também é uma tarefa nova. Recorrências ('toda segunda', 'todo dia') não contam aqui. Artefatos não contam. Subtarefas novas de uma tarefa que JÁ EXISTE ('acrescenta reservar o hotel na viagem', 'quebra a mudança em empacotar e contratar o frete') não contam aqui: são uma alteração dessa tarefa.",
+      "criteria": {
+        "none": "Nenhuma tarefa nova.",
+        "one": "Exatamente uma tarefa nova.",
+        "many": "Duas ou mais tarefas novas."
+      }
+    },
+    "task_edit": {
+      "type": "choice",
+      "instructions": "Quantas TAREFAS JÁ EXISTENTES o pedido quer alterar (horário, prazo, concluir, prioridade, nome, status)? 'Parei de trabalhar', 'terminei a reunião', 'mude o jantar para as 21h', 'já paguei o aluguel' alteram tarefas existentes. Dividir uma tarefa existente em partes ou acrescentar subtarefas a ela ('quebra a mudança em empacotar e contratar o frete', 'adiciona a subtarefa reservar o hotel na viagem') também altera essa tarefa: conta uma por tarefa dividida. Recorrências não contam aqui.",
+      "criteria": {
+        "none": "Nenhuma tarefa existente é alterada.",
+        "one": "Exatamente uma tarefa existente é alterada.",
+        "many": "Duas ou mais tarefas existentes são alteradas."
+      }
+    },
+    "artifact_create": {
+      "type": "choice",
+      "instructions": "Quantos ARTEFATOS DE TEXTO NOVOS o pedido quer criar? Um artefato de texto guarda uma observação, uma ideia ou uma lista. Refeições não contam aqui: o que foi, está sendo ou vai ser comido ou bebido, com ou sem alimentos e quantidades ('300g de arroz com 200g de feijão'), é uma tarefa nova, e os alimentos vão junto com ela.",
+      "criteria": {
+        "none": "Nenhum artefato novo.",
+        "one": "Exatamente um artefato novo.",
+        "many": "Dois ou mais artefatos novos."
+      }
+    },
+    "artifact_edit": {
+      "type": "choice",
+      "instructions": "Quantos ARTEFATOS JÁ EXISTENTES o pedido quer alterar (acrescentar texto, renomear, corrigir)?",
+      "criteria": {
+        "none": "Nenhum artefato existente é alterada.",
+        "one": "Exatamente um artefato existente é alterada.",
+        "many": "Dois ou mais artefatos existentes são alteradas."
+      }
+    },
+    "recurring_task_create": {
+      "type": "choice",
+      "instructions": "Quantas TAREFAS RECORRENTES NOVAS o pedido quer criar? Atividades ou coisas a fazer que se repetem ('corrida toda segunda às 7h', 'reunião todo dia útil às 10h', 'pagar o aluguel todo dia 5', 'regar as plantas toda semana').",
+      "criteria": {
+        "none": "Nenhuma tarefa recorrente nova.",
+        "one": "Exatamente uma tarefa recorrente nova.",
+        "many": "Duas ou mais tarefas recorrentes novas."
+      }
+    },
+    "recurring_task_edit": {
+      "type": "choice",
+      "instructions": "Quantas SÉRIES de TAREFAS RECORRENTES já existentes o pedido quer alterar (a regra ou o modelo da série inteira: 'mude a corrida de segunda para as 8h', 'agora é toda terça')? Alterar apenas UMA ocorrência isolada ('hoje a corrida foi às 8h') é uma edição de tarefa (task_edit), não de série.",
+      "criteria": {
+        "none": "Nenhuma tarefa recorrente existente é alterada.",
+        "one": "Exatamente uma tarefa recorrente existente é alterada.",
+        "many": "Duas ou mais tarefas recorrentes existentes são alteradas."
+      }
+    },
+    "query": {
+      "type": "choice",
+      "instructions": "O usuário pede para CONSULTAR dados da própria agenda ou dos artefatos ('o que tenho amanhã?', 'quanto treinei esta semana?', 'o que falta fazer?')? Relatos de atividades e pedidos de registro não são consultas.",
+      "criteria": {
+        "no": "Não pede consulta de dados.",
+        "yes": "Pede para consultar ou resumir dados já registrados."
+      }
+    }
+  }
+}

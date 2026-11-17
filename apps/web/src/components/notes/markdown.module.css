@@ -1,28 +1,28 @@
 /*
- * O markdown de uma nota, igual na leitura (detalhe da nota e do evento) e no
+ * O markdown de uma nota, igual na leitura (detalhe da nota e da tarefa) e no
  * preview do editor. Usa os tokens base (--foreground, --muted-foreground,
  * --border) e não os apelidos do shell (--ink, --muted): o editor abre em um
  * portal, fora do shell, onde --muted é uma cor de fundo.
  */
 .markdown {
-  --md-text: var(--muted-foreground);
+  --md-text: var(--foreground);
   --md-strong: var(--foreground);
   --md-line: var(--border);
   --md-wash: color-mix(in oklab, var(--foreground) 7%, transparent);
-  display: flex; flex-direction: column; gap: 14px; min-width: 0;
-  color: var(--md-text); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere;
+  display: flex; flex-direction: column; gap: 12px; min-width: 0; max-width: 62ch;
+  color: var(--md-text); font-size: 16px; line-height: 26px; overflow-wrap: anywhere;
 }
 .markdown > :first-child { margin-top: 0; }
 .markdown > :last-child { margin-bottom: 0; }
 .markdown :is(p, ul, ol, blockquote, pre, table, h2, h3, h4, h5, h6, hr) { margin: 0; }
 .markdown p { white-space: pre-wrap; }
 
-.markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { color: var(--md-strong); font-size: 13px; font-weight: 600; letter-spacing: .02em; line-height: 1.4; }
-.markdown h2 { font-size: 15px; }
-.markdown h2[data-level="1"] { font-family: var(--font-display); font-size: 19px; font-weight: 400; letter-spacing: 0; }
-.markdown :is(h2, h3, h4, h5, h6):not(:first-child) { margin-top: 6px; }
+.markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { color: var(--md-strong); font-size: 15px; font-weight: 600; line-height: 22px; }
+.markdown h2 { font-size: 18px; line-height: 26px; }
+.markdown h2[data-level="1"] { font-family: var(--font-display); font-size: 24px; font-weight: 400; line-height: 30px; }
+.markdown :is(h2, h3, h4, h5, h6):not(:first-child) { margin-top: 12px; }
 
-.markdown strong { color: var(--md-strong); font-weight: 600; }
+.markdown strong { color: var(--md-strong); font-weight: 700; }
 .markdown a { color: var(--md-strong); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--md-line); }
 .markdown a:hover { text-decoration-color: currentColor; }
 .markdown del { opacity: .7; }
@@ -31,7 +31,7 @@
 .markdown :is(ul, ol) { padding-left: 1.4em; display: flex; flex-direction: column; gap: 6px; }
 .markdown ul { list-style: disc; }
 .markdown ol { list-style: decimal; }
-.markdown li::marker { color: var(--md-text); }
+.markdown li::marker { color: var(--muted-foreground); }
 .markdown li :is(ul, ol) { margin-top: 6px; }
 .markdown li > p { display: inline; }
 .markdown ul:has(> li > input[type="checkbox"]) { list-style: none; padding-left: 0; }

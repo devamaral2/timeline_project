@@ -1,0 +1,236 @@
+/*
+ * As telas de detalhe de tarefa e de nota, no redesenho: duas colunas (o
+ * resumo à esquerda, o conteúdo e o campo do Hermes à direita), rótulos em
+ * mono com um fio, linhas com fio embaixo no lugar de cartões. Os tokens
+ * (--ink, --muted, --line, --card, --soft) vêm do shell e trocam sozinhos
+ * entre Névoa e Noite.
+ */
+/* O molde de duas colunas do registro aberto (tarefa e nota): a esquerda
+   resume (voltar, data em mono, titulo serifado, situacao, fatos e acoes) e a
+   direita leva o conteudo em secoes, fechando com o campo do Hermes. */
+.frame { overflow-wrap: anywhere; }
+.lead { gap: 28px; }
+.body { gap: 36px; }
+@media (min-width: 1100px) {
+  .lead { position: sticky; top: 24px; }
+}
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.navMenu { display: none; }
+/* Com o título no centro (o detalhe da nota), a mesma barra do detalhe de tarefa. */
+.nav[data-titled] { display: grid; grid-template-columns: 1fr auto 1fr; min-height: 44px; }
+.nav[data-titled] .back { justify-self: start; }
+.nav[data-titled] .navMenu { justify-self: end; }
+.navTitle { font-family: var(--font-mono); font-size: var(--font-size-xs); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.heading { display: flex; flex-direction: column; gap: 14px; }
+.display { composes: display from "../ui/page.module.css"; }
+.display[data-done="true"] { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+/* O valor que o Hermes acabou de mudar (`useChangeFlash`): um fio verde-água
+   passa por baixo dele e apaga. */
+.eyebrow[data-changed="true"], .display[data-changed="true"], .fact dd[data-changed="true"] { position: relative; }
+.eyebrow[data-changed="true"]::after, .display[data-changed="true"]::after, .fact dd[data-changed="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 2px; border-radius: 1px; background: var(--brand); transform-origin: left; animation: sweep 1600ms var(--ease-out) both; }
+@keyframes sweep {
+  0% { transform: scaleX(0); opacity: 1; }
+  25%, 70% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+.eyebrow { composes: eyebrow from "../ui/page.module.css"; }
+/* Os fatos do registro: rotulo a esquerda, valor a direita, um fio entre as linhas. */
+.facts { margin: 0; border-top: 1px solid var(--line); }
+.fact { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; padding: 6px 0; border-bottom: 1px solid var(--hairline); }
+.fact dt { flex: none; font-size: 13px; line-height: 20px; color: var(--muted); }
+.fact dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 8px; font-size: var(--font-size-sm); font-weight: 500; line-height: 20px; text-align: right; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.actionPill { composes: pill from "../ui/controls.module.css"; padding: 0 16px 0 14px; }
+.actionPill[data-danger="true"] { color: var(--destructive); }
+.actionPill:disabled { opacity: .55; cursor: not-allowed; }
+/* O horario na serifa: inicio — fim e, na ponta, a duracao. */
+.timeRow { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+.timeRow > p { margin: 0; display: flex; align-items: baseline; gap: 9px; font-family: var(--font-display); font-size: 28px; line-height: 28px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.timeRow > p > i { font-style: normal; color: var(--faint); }
+.timeRow > p small { margin: 0 4px 0 -6px; font-family: var(--font-sans); font-size: var(--font-size-xs); color: var(--muted); }
+.timeRow > p small:last-child { margin-right: 0; }
+.timeNote { margin: 0; font-size: var(--font-size-sm); color: var(--muted); }
+
+/* De onde o registro vem: o quadrado do tipo, duas linhas e a seta. */
+.originLink { display: flex; align-items: center; gap: 14px; min-height: 60px; color: var(--ink); }
+.originTile { position: relative; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 13px; color: var(--muted); }
+.originTile svg { width: 20px; height: 20px; }
+.originTile[data-live="true"] { border-color: var(--brand); }
+.originTile[data-live="true"]::after { content: ""; position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; border: 2px solid var(--background); border-radius: 50%; background: var(--brand); }
+.originText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.originText > span:first-child { font-size: 13px; line-height: 20px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.originText > span:last-child { font-size: 15px; font-weight: 600; line-height: 22px; }
+.originLink > svg:last-child { flex: none; width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
+.originLink:hover .originText > span:last-child { text-decoration: underline; text-underline-offset: 4px; }
+
+/* Molde antigo, de uma coluna so: as telas que ainda nao foram para as duas
+   colunas seguem aqui. */
+.screen {
+  /* width: 100% — no detalhe com a barra do Hermes o <main> vira coluna flex, e sem largura
+     explícita a coluna encolhe até o texto e fica centralizada, longe das bordas. */
+  width: 100%;
+  max-width: 680px;
+  margin-inline: auto;
+  padding-block: 6px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  overflow-wrap: anywhere;
+}
+
+.message { margin: 0; padding: 28px 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+/* Barra do topo */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.back { composes: eyebrow from "../ui/page.module.css"; align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.back:hover { color: var(--ink); }
+.back svg { width: 16px; height: 16px; stroke-width: 2; }
+.anchor { position: relative; }
+.iconButton { composes: iconButton from "../ui/controls.module.css"; }
+.iconButton svg { width: 20px; height: 20px; }
+.menu { composes: floating from "../ui/controls.module.css"; position: absolute; top: calc(100% + 4px); right: 0; z-index: var(--z-popover); min-width: 220px; padding: 6px; border-radius: 18px; transform-origin: top right; animation: menuIn 200ms var(--ease-out); }
+/* O menu abre a partir do botão que o chamou. */
+@keyframes menuIn { from { opacity: 0; transform: translateY(-6px) scale(.92); } }
+.menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--ink); font-size: 14px; text-align: left; cursor: pointer; }
+.menu button:hover, .menu button[aria-selected="true"] { background: var(--soft); }
+.menu button:disabled { opacity: .55; cursor: not-allowed; }
+.menu button[data-danger="true"] { color: var(--destructive); }
+.menu svg { width: 18px; height: 18px; }
+.menu .selectedMark { margin-left: auto; color: var(--ink); }
+
+/* Cabeçalho */
+.head { display: flex; flex-direction: column; gap: 12px; }
+.kindRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 22px; }
+.kind { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; font-weight: 500; }
+.kind svg { width: 18px; height: 18px; }
+.title { margin: 0; font-family: var(--font-display); font-size: 34px; font-weight: 400; line-height: 1.1; letter-spacing: -.01em; text-wrap: balance; }
+.title[data-done="true"] { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+/* As tags sao texto na cor da tag, sem fundo. */
+.tags { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0; padding: 0; list-style: none; }
+.tags li { font-size: 14px; font-weight: 500; }
+.stamp { margin: 0; color: var(--muted); font-size: 14px; }
+.rule { height: 1px; margin: 0; border: 0; background: var(--line); }
+
+/* Linhas de informação: ícone e duas linhas de texto */
+.meta { display: flex; flex-direction: column; gap: 16px; margin: 0; padding: 0; list-style: none; }
+.metaRow { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 12px; align-items: start; }
+.metaRow > svg { width: 20px; height: 20px; margin-top: 2px; color: var(--muted); }
+.metaMain, .metaSub { display: block; }
+.metaMain { color: var(--ink); font-size: 16px; line-height: 1.45; }
+.metaSub { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.metaMain[data-live="true"] { color: var(--brand-accent); font-variant-numeric: tabular-nums; }
+.tight { gap: 12px; }
+.tight .metaRow { grid-template-columns: 18px minmax(0, 1fr); }
+.tight .metaRow > svg { width: 18px; height: 18px; margin-top: 1px; }
+.tight .metaMain { font-size: 15px; }
+.reminders { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px 12px; margin: 0; padding: 0; list-style: none; }
+
+.prose { margin: 0; max-width: 62ch; font-size: 16px; line-height: 26px; white-space: pre-wrap; text-wrap: pretty; }
+.prose[data-clamped="true"] { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.readMore { min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--ink); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
+.descriptionBlock { display: flex; flex-direction: column; align-items: flex-start; }
+
+/* Seções: o rotulo em mono, a contagem apagada e o fio ate a margem */
+.section { display: flex; flex-direction: column; gap: 8px; }
+.sectionHead { composes: sectionLabel from "../ui/page.module.css"; }
+.label { margin: 0; font: inherit; letter-spacing: inherit; color: var(--muted); }
+.count { color: var(--faint); font-variant-numeric: tabular-nums; }
+
+/* Vínculos: um grupo por tipo; as linhas tem so o fio embaixo */
+.links { gap: 20px; }
+.linkGroup { display: flex; flex-direction: column; min-width: 0; margin: 0; padding: 0; border: 0; }
+.linkGroupHead { display: flex; align-items: baseline; gap: 10px; margin: 0; color: var(--muted); font-size: 13px; font-weight: 500; }
+.linkGroupHead .count { font-weight: 400; }
+.cardList { margin: 0; padding: 0; list-style: none; }
+.cardList > li { border-bottom: 1px solid var(--hairline); }
+.linkRow { display: grid; grid-template-columns: 20px minmax(0, 1fr) 16px; gap: 14px; align-items: center; width: 100%; min-height: 56px; padding: 8px 0; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.linkRow > svg:first-child { width: 20px; height: 20px; color: var(--muted); }
+.linkRow > svg:last-child { width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
+.linkRow:hover .linkTitle, .linkMain:hover .linkTitle { text-decoration: underline; text-underline-offset: 4px; }
+/* A nota vinculada entra como folha compacta (32), mais larga que o ícone solto. */
+.linkRow[data-kind="note"] { grid-template-columns: 32px minmax(0, 1fr) 16px; }
+.linkText { display: flex; flex-direction: column; min-width: 0; }
+.linkTitle { font-size: 15px; font-weight: 500; line-height: 22px; }
+.linkSub { overflow: hidden; color: var(--muted); font-size: 13px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.taskRow { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 14px; align-items: center; min-height: 56px; }
+.linkMain { display: grid; grid-template-columns: minmax(0, 1fr) 16px; gap: 14px; align-items: center; min-height: 56px; padding: 8px 0; color: var(--ink); }
+.linkMain > svg { width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
+.statusMini { position: relative; display: grid; place-items: center; width: 44px; height: 44px; margin: -12px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
+.statusMini:hover { background: var(--soft); }
+.statusMini:disabled { opacity: .6; cursor: wait; }
+.statusMini svg { width: 20px; height: 20px; }
+.statusMenu { top: calc(100% + 2px); left: -10px; right: auto; min-width: 220px; transform-origin: top left; }
+.statusMenuBig { left: 0; right: auto; min-width: 220px; transform-origin: top left; }
+.linkRow[data-readonly="true"] { cursor: default; }
+
+/* Listas de linhas */
+.card { margin: 0; padding: 0; list-style: none; }
+.card > li { border-bottom: 1px solid var(--hairline); }
+.relation { display: flex; align-items: center; gap: 14px; min-height: 56px; color: var(--ink); }
+.relation:hover .relationName { text-decoration: underline; text-underline-offset: 4px; }
+.relationIcon { flex: none; display: grid; place-items: center; }
+.relationIcon svg { width: 20px; height: 20px; }
+.relationText { display: flex; flex: 1; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 14px; min-width: 0; }
+.relationName { font-size: 15px; font-weight: 500; line-height: 22px; }
+.relationMeta { color: var(--muted); font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.relation > svg:last-child { flex: none; width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
+
+/* Status e prioridade da tarefa */
+.statusRow { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.statusButton { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px 0 11px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; }
+.statusButton:hover, .statusButton[aria-expanded="true"] { border-color: var(--muted); }
+.statusButton > svg:first-child { width: 20px; height: 20px; }
+.statusButton span { font-size: var(--font-size-sm); font-weight: 600; }
+.statusButton .caret { width: 14px; height: 14px; stroke-width: 2; color: var(--muted); }
+.statusButton[aria-expanded="true"] .caret { transform: rotate(180deg); }
+.dateLines { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; color: var(--muted); font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.dateLines p { margin: 0; }
+
+/* Origem: quem criou a entidade e como (só quando a entidade traz esse dado) */
+.origin { border-block: 1px solid var(--line); }
+.originHead { display: grid; grid-template-columns: 36px minmax(0, 1fr) 20px; gap: 12px; align-items: center; width: 100%; min-height: 64px; padding: 12px 0; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.originIcon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--brand-soft); color: var(--cyan); }
+.originIcon svg { width: 18px; height: 18px; }
+.originTitle, .originSub { display: block; }
+.originTitle { font-weight: 600; }
+.originSub { color: var(--muted); font-size: 14px; }
+.originChevron { display: grid; color: var(--muted); transition: transform .16s ease-out; }
+.originChevron svg { width: 20px; height: 20px; }
+.originHead[aria-expanded="true"] .originChevron { transform: rotate(180deg); }
+.originBody { display: flex; flex-direction: column; gap: 16px; padding-bottom: 16px; }
+.quote { margin: 0; font-family: var(--font-display); font-size: 18px; font-style: italic; line-height: 1.4; }
+.steps { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.step { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+.step > svg { width: 16px; height: 16px; margin-top: 2px; color: var(--muted); }
+.stepLabel, .stepTool { display: block; }
+.stepTool { color: var(--muted); font-family: var(--font-mono); font-size: 12.5px; }
+.stepTime { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.originKey { margin: 0; color: var(--muted); font-size: 14px; }
+.originKey code { color: var(--ink); font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .originChevron { transition: none; }
+}
+
+@media (max-width: 720px) {
+  .screen { gap: 28px; padding-block: 0 24px; }
+  .title { font-size: 30px; }
+  /* Duas colunas viram uma: o topo ganha o menu "mais acoes" no lugar das
+     pilulas, e o conteudo deixa a folga do campo do Hermes preso ao pe. */
+  .frame { row-gap: 22px; padding-top: 6px; padding-bottom: calc(260px + env(safe-area-inset-bottom)); }
+  /* Na edição não há o campo do Hermes: o rodapé de Descartar e Salvar fecha a tela. */
+  .frame[data-edit] { min-height: 100dvh; padding-bottom: 0; }
+  .frame[data-edit] .body { flex: 1; }
+  .lead { gap: 22px; }
+  .body { gap: 22px; }
+  .nav { margin-right: -12px; }
+  .navMenu { display: block; }
+  .actions { display: none; }
+  .heading { gap: 10px; }
+  .timeRow > p { font-size: var(--font-size-xl); line-height: 24px; gap: 8px; }
+  .prose { font-size: 15px; line-height: 25px; }
+  .relationMeta { display: none; }
+  .originLink { border-top: 1px solid var(--line); border-bottom: 1px solid var(--hairline); }
+}

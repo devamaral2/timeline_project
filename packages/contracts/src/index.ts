@@ -1,55 +1,23 @@
 /**
- * Shapes que a API HTTP fala. E o unico subpath que o frontend consome, sempre
- * com `import type` — o JS emitido aqui e vazio de proposito, para que o front
- * nao carregue nenhuma classe de dominio.
+ * Shapes que a API HTTP fala. E o unico subpath que os clientes consomem,
+ * sempre com `import type`: o JS emitido aqui e vazio de proposito, para que
+ * nenhum cliente carregue classe de dominio.
  */
-export type * from "./events/contracts/create-event.input";
-export type * from "./events/contracts/daily-overview.dto";
-export type * from "./events/contracts/event-detail.dto";
-export type * from "./events/contracts/tag-suggestion.dto";
-export type * from "./events/contracts/timeline-event-card.dto";
-export type * from "./events/contracts/timeline-event-page.dto";
-export type * from "./events/contracts/update-event.input";
-export type * from "./tasks/contracts/create-task.input";
-export type * from "./tasks/contracts/update-task.input";
-export type * from "./tasks/contracts/task-detail.dto";
-export type * from "./tasks/contracts/task-summary.dto";
-export type * from "./notes/contracts/note.dto";
-export type * from "./notes/contracts/create-note.input";
-export type * from "./notes/contracts/update-note.input";
-export type * from "./agent/contracts/agent-run.dto";
-export type * from "./agent/contracts/agent-chat.dto";
-export type * from "./agent/contracts/ai-job.dto";
-export type * from "./agent-chat/contracts/agent-conversation.dto";
-
-// Tipos de dados de dominio que os DTOs referenciam, reexportados para que o
-// front nunca precise importar o subpath raiz (onde vivem as classes). Sao os
-// payloads dos itens: `FoodItem` e `WorkoutSet` aqui sao os do modelo por
-// itens — nao ha mais subclasse de evento nem tipo legado com o mesmo nome.
-export type { EventPriority } from "./events/types/event-priority";
-export type { EventKind } from "./events/types/event-kind";
-export type { NotificationOffsetMinutes } from "./notifications/types/notification-offset-minutes";
-export type { TextNote } from "./notes/types/text-note";
-export type { FoodItem, FoodItemMacronutrients } from "./notes/types/food-item";
-export type {
-  MealItem,
-  MealRecipe,
-  MealRecipeIngredient,
-  MealRecipeSource,
-  MealTotals,
-} from "./notes/types/meal-item";
-export type { SleepItem } from "./notes/types/sleep-item";
-export type {
-  WorkoutCode,
-  WorkoutSet,
-  WorkoutSnapshotBase,
-  CardioWorkoutSnapshot,
-  WeightliftingWorkoutSnapshot,
-  FreeWorkoutSnapshot,
-  WorkoutSnapshot,
-  TrainingData,
-  WorkoutInput,
-  TrainingInputData,
-} from "./notes/types/training-data";
-export type * from "./recurrences/contracts/recurrence-rule";
-export type * from "./recurrences/contracts/recurrence.dto";
+export type * from "./tasks/task-types";
+export type * from "./tasks/task.dto";
+export type * from "./tasks/task.input";
+export type * from "./tasks/tag-suggestion.dto";
+export type * from "./tasks/place-suggestion.dto";
+export type * from "./tasks/notification-offset-minutes";
+export type * from "./artifacts/artifact.dto";
+export type * from "./artifacts/artifact.input";
+export type * from "./artifacts/types/agent-file-data";
+export type * from "./artifacts/types/food-data";
+export type * from "./artifacts/types/sleep-data";
+export type * from "./artifacts/types/text-data";
+export type * from "./artifacts/types/training-data";
+export type * from "./artifacts/types/workout-data";
+export type * from "./recurrences/recurrence-rule";
+export type * from "./recurrences/recurrence.dto";
+export type * from "./agent/agent-trace.dto";
+export type * from "./agent/request.dto";

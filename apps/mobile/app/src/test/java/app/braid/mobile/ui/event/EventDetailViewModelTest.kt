@@ -137,7 +137,7 @@ class EventDetailViewModelTest {
             notifyOffsetsMinutes = listOf(10.0),
             interruptions = listOf(interruption),
             revision = 1,
-            kind = "routine",
+            kind = "common",
             notes = listOf(textNote),
             taskIds = listOf("task-1"),
         )

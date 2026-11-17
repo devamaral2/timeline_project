@@ -1,0 +1,111 @@
+/* Linha única das listas (agenda e lista de tarefas). Pessoa e agente usam a
+   mesma grade, soltos no fundo; o agente leva o robô como assinatura à direita.
+   Cores só por token. */
+
+/* Quebra a linha só para o que vem embaixo (a gaveta das subtarefas, com largura toda). */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0 12px;
+  padding: 10px 0;
+  list-style: none;
+}
+
+/* O glifo de agente não é botão: ocupa a mesma caixa de 24px que sobra do
+   botão de pessoa, para o título cair na mesma coluna. */
+.glyphSlot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+.glyphButton {
+  flex: none;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -10px -10px -10px -10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.glyphButton:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.body:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 16px;
+  line-height: 22px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.when[data-overdue="true"] {
+  color: var(--destructive);
+}
+
+.tag {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.duration {
+  flex: none;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* A assinatura do agente: fecha a linha, na borda direita. */
+.agentMark {
+  flex: none;
+  margin-top: 2px;
+  color: var(--brand-accent);
+}

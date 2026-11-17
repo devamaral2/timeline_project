@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Circle } from "lucide-react";
-import { Logo, Wordmark } from "@/components/brand/Logo";
+import { Wordmark } from "@/components/brand/Logo";
 import { primaryButtonClass } from "@/components/ui/button-styles";
 import { cn } from "@/lib/utils";
 import { isStrongPassword, PASSWORD_REQUIREMENTS, passwordRequirements } from "./password-requirements";
@@ -84,8 +84,7 @@ export default function AcceptInvitePage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-8">
       <div className="flex w-full max-w-sm flex-col">
-        <header className="mb-6 flex items-center justify-center gap-3">
-          <Logo size={38} />
+        <header className="mb-6 flex items-center justify-center">
           <Wordmark className="text-xl" />
         </header>
 
@@ -185,7 +184,7 @@ function PasswordInput({ label, value, onChange }: { label: string; value: strin
         autoComplete="new-password"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 rounded-lg border border-input bg-card/40 px-3 text-sm text-foreground transition-colors focus:border-ring"
+        className="h-10 rounded-lg border border-input bg-card/40 px-3 text-sm text-foreground transition-colors focus:border-brand"
       />
     </label>
   );

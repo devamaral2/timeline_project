@@ -1,0 +1,79 @@
+/* A aba "Processo" do chat: o rastro de cada pedido. Mono para o que e dado (tempos, comandos, nomes
+   tecnicos), sans para o que e rotulo; fios em vez de caixas, como o resto da conversa. */
+.trace { --trace-talk: var(--strand-tinta); --trace-model: var(--brand); --trace-tool: var(--warning); flex: 1; min-width: 0; min-height: 0; overflow: hidden auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 28px; margin-right: -12px; padding: 20px 16px 8px 4px; color: var(--foreground); font-size: 13px; line-height: 20px; }
+.empty { margin: auto 0; padding: 24px 0; max-width: 36ch; color: var(--muted-foreground); font-size: 14px; line-height: 22px; text-wrap: pretty; }
+
+.turn { flex: none; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.turn + .turn { padding-top: 24px; border-top: 1px solid var(--border); }
+.turnHeader { min-width: 0; display: grid; gap: 6px; }
+.eyebrow { margin: 0; font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-foreground); }
+.turn[data-status="running"] .eyebrow { color: var(--brand-accent); }
+.turn[data-status="failed"] .eyebrow { color: var(--destructive); }
+.request { margin: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-size: 15px; font-weight: 600; line-height: 22px; overflow-wrap: anywhere; }
+.totals { margin: 2px 0 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-family: var(--font-mono); font-size: 12px; line-height: 18px; }
+.totals div { display: flex; gap: 6px; min-width: 0; }
+.totals dt { color: var(--muted-foreground); }
+.totals dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
+/* A linha do tempo: uma raia por tipo de trabalho, cada passo uma barra do tamanho do que durou. */
+.timeline { display: grid; gap: 4px; padding: 10px 0 6px; border-block: 1px solid var(--hairline); }
+.lane { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 8px; }
+.laneName { font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--muted-foreground); }
+.laneTrack { position: relative; height: 12px; border-radius: 2px; background: var(--secondary); }
+.bar { position: absolute; top: 0; bottom: 0; min-width: 3px; padding: 0; border: 0; border-radius: 2px; background: var(--trace-model); cursor: pointer; }
+/* O alvo do toque e maior que a barra, sem engrossar o desenho. */
+.bar::after { content: ""; position: absolute; inset: -8px -2px; }
+.lane[data-lane="talk"] .bar { background: var(--trace-talk); }
+.lane[data-lane="tool"] .bar { background: var(--trace-tool); }
+.lane .bar[data-status="failed"] { background: var(--destructive); }
+.bar[data-status="running"] { animation: tracePulse 1.2s ease-in-out infinite; }
+.bar[aria-pressed="true"] { outline: 2px solid var(--foreground); outline-offset: 1px; z-index: 1; }
+.bar:hover { filter: brightness(1.15); }
+.axis { display: flex; justify-content: space-between; margin-left: 92px; font-family: var(--font-mono); font-size: 11px; line-height: 14px; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+.waiting { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted-foreground); font-size: 13px; }
+.entries { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+.entry { min-width: 0; border-bottom: 1px solid var(--hairline); }
+.entry:last-child { border-bottom: 0; }
+.row { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 6px 0; color: inherit; text-align: left; cursor: pointer; }
+.mark { display: grid; place-items: center; flex: none; width: 18px; height: 18px; color: var(--muted-foreground); }
+.entry[data-kind="tool"] .mark { color: var(--trace-tool); }
+.entry[data-kind="thought"] .mark, .entry[data-kind="routing"] .mark, .entry[data-kind="agent"] .mark, .entry[data-kind="message"] .mark { color: var(--trace-model); }
+.entry[data-kind="request"] .mark, .entry[data-kind="answer"] .mark { color: var(--trace-talk); }
+.entry[data-status="failed"] .mark { color: var(--destructive); }
+.entry[data-status="pending"] .mark { color: var(--faint); }
+/* Dentro do shell todo svg nasce com 20px; aqui eles sao marcas de 16. */
+.trace .mark svg, .trace .waiting svg { width: 16px; height: 16px; stroke-width: 1.8; }
+.trace .chevron { width: 14px; height: 14px; stroke-width: 2; flex: none; color: var(--faint); transition: transform 140ms ease; }
+.entry[data-open="true"] .chevron { transform: rotate(90deg); }
+.trace [data-spin] { animation: traceSpin 1s linear infinite; }
+.rowText { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.rowLabel { flex: none; max-width: 100%; overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.entry[data-status="pending"] .rowLabel { color: var(--muted-foreground); font-weight: 500; }
+.rowSummary { flex: 1; min-width: 0; overflow: hidden; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); text-overflow: ellipsis; white-space: nowrap; }
+.rowDuration { flex: none; font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.row:hover .rowLabel { text-decoration: underline; text-underline-offset: 4px; }
+.row:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: var(--radius-xs); }
+
+.detail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 0 0 14px 28px; padding: 12px 0 2px 14px; border-left: 1px solid var(--border); }
+.detailViews { display: flex; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.detailViews button { min-height: 28px; padding: 0; border-bottom: 1px solid transparent; font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-foreground); cursor: pointer; }
+.detailViews button[aria-pressed="true"] { border-bottom-color: var(--foreground); color: var(--foreground); }
+.fields { margin: 0; display: grid; grid-template-columns: minmax(96px, max-content) minmax(0, 1fr); gap: 4px 16px; }
+.fields div { display: contents; }
+.fields dt { color: var(--muted-foreground); }
+.fields dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.fields dd[data-mono] { font-family: var(--font-mono); font-size: 12px; }
+.section { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.section h4 { margin: 0; font-family: var(--font-mono); font-size: 11px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted-foreground); }
+.section p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 21px; text-wrap: pretty; }
+.section pre, .raw { margin: 0; max-height: 280px; overflow: auto; padding: 10px 12px; border-radius: var(--radius-xs); background: var(--secondary); font-family: var(--font-mono); font-size: 12px; line-height: 18px; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+@keyframes traceSpin { to { transform: rotate(360deg); } }
+@keyframes tracePulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) {
+  .trace [data-spin], .bar[data-status="running"] { animation: none; }
+  .trace .chevron { transition: none; }
+}

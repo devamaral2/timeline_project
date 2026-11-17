@@ -8,6 +8,7 @@ dist/
 .idea/
 .env
 .env.local
+.env.rabbit
 .env*.local
 *.tsbuildinfo
 .harness-eval/

@@ -1,0 +1,57 @@
+/*
+ * O painel flutuante dos campos de edição (lista de escolha, calendário, hora): abre junto do botão no desktop e vira
+ * uma folha do pé no celular. É montado no <body>, fora do shell, então traz os próprios apelidos de token e o
+ * próprio anel de foco. Cor só por token, para o tema trocar junto.
+ */
+
+.layer {
+  --ink: var(--foreground);
+  --muted: var(--muted-foreground);
+  --line: var(--border);
+  --soft: var(--secondary);
+  position: fixed; inset: 0; z-index: var(--z-dialog); pointer-events: none;
+}
+.layer :focus-visible:not(input, textarea, select) { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.scrim { position: absolute; inset: 0; background: color-mix(in oklab, var(--background) 78%, transparent); pointer-events: auto; animation: fade var(--duration-fast) ease-out; }
+
+.panel {
+  position: absolute; display: flex; flex-direction: column; box-sizing: border-box; max-width: calc(100vw - 16px); overflow: hidden;
+  border: 1px solid var(--line); border-radius: 20px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-float);
+  font-size: var(--font-size-sm); line-height: 1.45; pointer-events: auto;
+  /* Antes de medir onde cabe, o painel fica invisível: não pisca no lugar errado. */
+  visibility: hidden;
+}
+.panel[data-ready] { visibility: visible; animation: pop var(--duration-fast) var(--ease-out); transform-origin: top left; }
+.handle { display: none; }
+
+/* Uma lista de escolha. */
+.options { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 6px; overflow-y: auto; overscroll-behavior: contain; list-style: none; }
+.option {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; border-radius: 14px; color: var(--ink);
+  font-size: 15px; line-height: 20px; cursor: pointer; user-select: none;
+  transition: background var(--duration-fast), transform var(--duration-fast) var(--ease-out);
+}
+.option:hover { background: var(--soft); }
+.option:active { transform: scale(.98); }
+.option[aria-selected="true"] { background: var(--secondary); font-weight: 600; }
+.option:focus-visible { outline-offset: -2px; }
+
+@keyframes fade { from { opacity: 0; } }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+@keyframes sheet { from { transform: translateY(100%); } }
+
+@media (max-width: 720px) {
+  .layer[data-sheet] .panel {
+    inset: auto 0 0 0; max-width: none; max-height: 78dvh; padding-bottom: env(safe-area-inset-bottom);
+    border-width: 1px 0 0; border-radius: 28px 28px 0 0; transform-origin: bottom center;
+  }
+  .layer[data-sheet] .panel[data-ready] { animation: sheet var(--duration-slow) var(--ease-out); }
+  .handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; margin: 8px 0 2px; border-radius: 2px; background: var(--line); }
+  .option { min-height: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim, .panel[data-ready], .layer[data-sheet] .panel[data-ready] { animation: none; }
+  .option { transition: none; }
+}

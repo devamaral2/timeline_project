@@ -101,7 +101,7 @@ test("delivers the joined final transcript exactly once", () => {
     ]),
   );
   act(() => result.current.stop());
-  // O Chrome ainda dispara o onend depois do ultimo resultado: nao pode virar um segundo evento.
+  // O Chrome ainda dispara o onend depois do ultimo resultado: nao pode virar uma segunda tarefa.
   act(() => FakeSpeechRecognition.instances[0].onend?.());
 
   expect(onFinalTranscript).toHaveBeenCalledTimes(1);
@@ -114,7 +114,7 @@ test("does not repeat a final result the browser delivers more than once", () =>
   const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript }));
 
   act(() => result.current.start());
-  // `results` e cumulativo: o Chrome reentrega o mesmo final a cada evento seguinte, e no
+  // `results` e cumulativo: o Chrome reentrega o mesmo final a cada disparo seguinte, e no
   // Android o `resultIndex` fica em zero. Doze reentregas repetiam a frase doze vezes.
   for (let attempt = 0; attempt < 12; attempt += 1) {
     act(() =>
@@ -150,7 +150,7 @@ test("keeps an earlier final when the browser appends a new one", () => {
   expect(onFinalTranscript).toHaveBeenCalledWith("vou lavar o carro  amanha");
 });
 
-test("does not create an event when nothing was heard", () => {
+test("does not create an task when nothing was heard", () => {
   const onFinalTranscript = vi.fn();
   const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript }));
 
@@ -189,4 +189,100 @@ test("aborts an in-flight session when the component unmounts", () => {
 
   expect(FakeSpeechRecognition.instances[0].aborted).toBe(true);
   expect(onFinalTranscript).not.toHaveBeenCalled();
+});
+
+test("shows everything heard so far, closed phrases and the one still coming", () => {
+  const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript: vi.fn() }));
+
+  act(() => result.current.start());
+  act(() =>
+    FakeSpeechRecognition.instances[0].emit([
+      { transcript: "comprar pão", isFinal: true },
+      { transcript: "e lei", isFinal: false },
+    ]),
+  );
+
+  expect(result.current.heard).toBe("comprar pão e lei");
+});
+
+test("starts listening as it mounts when asked to", () => {
+  const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript: vi.fn(), autoStart: true }));
+
+  expect(FakeSpeechRecognition.instances).toHaveLength(1);
+  expect(FakeSpeechRecognition.instances[0].started).toBe(true);
+  expect(result.current.listening).toBe(true);
+});
+
+test("cancel turns the microphone off and delivers nothing", () => {
+  const onFinalTranscript = vi.fn();
+  const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript }));
+
+  act(() => result.current.start());
+  act(() => FakeSpeechRecognition.instances[0].emit([{ transcript: "oi", isFinal: true }]));
+  act(() => result.current.cancel());
+
+  expect(FakeSpeechRecognition.instances[0].aborted).toBe(true);
+  expect(result.current.listening).toBe(false);
+  expect(result.current.heard).toBe("");
+  expect(onFinalTranscript).not.toHaveBeenCalled();
+
+  // O microfone pode ser ligado de novo depois.
+  act(() => result.current.start());
+  expect(FakeSpeechRecognition.instances).toHaveLength(2);
+});
+
+test("hands over what was said when the voice stops for long enough", () => {
+  vi.useFakeTimers();
+  try {
+    const onFinalTranscript = vi.fn();
+    const onSilenceTranscript = vi.fn();
+    const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript, onSilenceTranscript, silenceMs: 1500 }));
+
+    act(() => result.current.start());
+    act(() => FakeSpeechRecognition.instances[0].emit([{ transcript: "o que tenho hoje", isFinal: false }]));
+    act(() => { vi.advanceTimersByTime(1400); });
+    expect(onSilenceTranscript).not.toHaveBeenCalled();
+
+    // Voltou a falar: a contagem recomeca.
+    act(() => FakeSpeechRecognition.instances[0].emit([{ transcript: "o que tenho hoje de manhã", isFinal: true }]));
+    act(() => { vi.advanceTimersByTime(1400); });
+    expect(onSilenceTranscript).not.toHaveBeenCalled();
+
+    act(() => { vi.advanceTimersByTime(200); });
+    expect(onSilenceTranscript).toHaveBeenCalledTimes(1);
+    expect(onSilenceTranscript).toHaveBeenCalledWith("o que tenho hoje de manhã");
+    expect(onFinalTranscript).not.toHaveBeenCalled();
+    expect(result.current.listening).toBe(false);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("does not cut the session before anything was heard", () => {
+  vi.useFakeTimers();
+  try {
+    const onSilenceTranscript = vi.fn();
+    const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript: vi.fn(), onSilenceTranscript, silenceMs: 1500 }));
+
+    act(() => result.current.start());
+    act(() => { vi.advanceTimersByTime(10_000); });
+
+    expect(result.current.listening).toBe(true);
+    expect(onSilenceTranscript).not.toHaveBeenCalled();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("a tap on stop still uses the regular transcript callback", () => {
+  const onFinalTranscript = vi.fn();
+  const onSilenceTranscript = vi.fn();
+  const { result } = renderHook(() => useSpeechRecognition({ onFinalTranscript, onSilenceTranscript, silenceMs: 1500 }));
+
+  act(() => result.current.start());
+  act(() => FakeSpeechRecognition.instances[0].emit([{ transcript: "oi", isFinal: true }]));
+  act(() => result.current.stop());
+
+  expect(onFinalTranscript).toHaveBeenCalledWith("oi");
+  expect(onSilenceTranscript).not.toHaveBeenCalled();
 });

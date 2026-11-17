@@ -147,7 +147,7 @@ fun NotificationBell(
 @Suppress("ktlint:standard:function-naming")
 private fun SectionTitle(text: String) {
     Text(
-        text.uppercase(),
+        text,
         modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,

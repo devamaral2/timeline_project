@@ -1,0 +1,64 @@
+/*
+ * O campo do Hermes (um só desenho): a linha de status com o círculo num dos
+ * cinco estados, o cartão com o contexto (o registro aberto), o texto que
+ * quebra em linhas, a onda que liga a transcrição e a seta de enviar. No
+ * desktop fecha a coluna do conteúdo; no celular fica preso ao pé da tela.
+ * Os tokens (--card, --line, --ink, --muted) são os do shell.
+ */
+.bar { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.status { margin: 0; display: flex; align-items: center; gap: 12px; min-height: 28px; padding-left: 6px; font-size: var(--font-size-sm); line-height: 20px; color: var(--muted); }
+.status[data-state="error"] { color: var(--destructive); }
+.status > span:last-of-type { flex: 1; min-width: 0; }
+.dismiss { flex: none; display: grid; place-items: center; width: var(--control-md); height: var(--control-md); margin: -8px 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.dismiss:hover { color: var(--ink); }
+.dismiss svg { width: 16px; height: 16px; }
+
+.form { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 6px; border: 1px solid var(--line); border-radius: 28px; background: var(--card); transition: border-color var(--duration-fast); }
+.form:has(.input:focus) { border-color: var(--brand); }
+.context { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 5px 16px 5px 6px; border: 1px solid var(--line); border-radius: 22px; }
+.contextIcon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; color: var(--muted); }
+.contextIcon svg { width: 20px; height: 20px; stroke-width: 1.75; }
+.contextText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.contextText > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contextText > span:first-child { font-size: var(--font-size-xs); line-height: 18px; color: var(--muted); }
+.contextText > span:last-child { font-size: 15px; font-weight: 600; line-height: 22px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.row { display: flex; align-items: flex-end; gap: 2px; padding-left: 12px; }
+.input { flex: 1; min-width: 0; max-height: 132px; min-height: 44px; padding: 11px 0; border: 0; border-radius: 8px; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; line-height: 22px; resize: none; field-sizing: content; }
+.input:focus, .input:focus-visible { outline: 0 !important; border: 0; box-shadow: none; }
+.input::placeholder { color: var(--faint); opacity: 1; }
+.input:disabled { opacity: .6; }
+.voice, .send { flex: none; display: grid; place-items: center; width: var(--control-md); height: var(--control-md); padding: 0; border: 0; border-radius: 50%; cursor: pointer; }
+.voice { background: transparent; color: var(--muted); }
+.voice svg { width: 22px; height: 22px; }
+.voice[aria-pressed="true"] { background: color-mix(in oklab, var(--brand) 16%, transparent); color: var(--brand-accent); }
+.voice:disabled { opacity: .55; cursor: not-allowed; }
+.send { background: var(--primary); color: var(--primary-foreground); }
+.send svg { width: 20px; height: 20px; stroke-width: 2; }
+.send:disabled { border: 1px solid var(--line); background: transparent; color: var(--input); cursor: not-allowed; }
+.voice:focus-visible, .send:focus-visible, .dismiss:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* O que o processo fez: os passos e a mensagem do fim, acima da linha de status. */
+.result { display: flex; flex-direction: column; gap: 8px; padding: 0 6px 4px; }
+.steps { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.steps li { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-sm); color: var(--ink); }
+.steps li[data-status="succeeded"] .mark { color: var(--success); }
+.steps li[data-status="failed"] .mark { color: var(--destructive); }
+.mark { display: grid; place-items: center; width: 16px; height: 16px; color: var(--muted); }
+.mark svg { width: 14px; height: 14px; }
+.message { margin: 0; font-size: var(--font-size-sm); line-height: 1.5; color: var(--ink); }
+.message[data-failed="true"] { color: var(--destructive); }
+.reason { margin: 0; padding-inline: 6px; color: var(--muted); font-size: 13px; }
+.bar [data-spin] { animation: entityAiSpin 1s linear infinite; }
+@keyframes entityAiSpin { to { transform: rotate(360deg); } }
+@keyframes dock { from { opacity: 0; transform: translateY(14px); } }
+@media (prefers-reduced-motion: reduce) { .bar [data-spin] { animation: none; } }
+
+@media (max-width: 720px) {
+  /* Preso ao pé da tela; atrás dele o conteúdo se apaga no chão. */
+  .bar { position: fixed; z-index: var(--z-sticky); left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); width: auto; }
+  /* O botao do Hermes chega voando da barra inferior (`hermes-flight.ts`): o
+     icone de status so aparece no pouso e o resto do campo sobe para o lugar. */
+  .bar[data-hermes-flight] [data-hermes-mark] { visibility: hidden; }
+  .bar[data-hermes-flight] > :not(.status), .bar[data-hermes-flight] > .status > :not([data-hermes-mark]) { animation: dock 137ms 73ms ease-out backwards; }
+  .bar::before { content: ""; position: absolute; z-index: -1; left: -16px; right: -16px; top: -72px; bottom: calc(-16px - env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 30%); pointer-events: none; }
+}

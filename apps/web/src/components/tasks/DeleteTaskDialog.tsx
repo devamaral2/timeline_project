@@ -1,26 +1,37 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { destructiveButtonClass, outlineButtonClass } from "@/components/ui/button-styles";
-import { dialogOverlayClass, dialogPanelClass, dialogTitleClass } from "@/components/ui/dialog-styles";
-import { deleteTask } from "@/lib/tasks/task-api";
+import { AlertTriangle, X } from "lucide-react";
+import { ApiRequestError } from "@/lib/api/client-request";
+import { deleteTask } from "@/lib/api/tasks";
 import { cn } from "@/lib/utils";
+import {
+  destructiveButtonClass,
+  iconButtonClass,
+  outlineButtonClass,
+} from "@/components/ui/button-styles";
+import { dialogOverlayClass, dialogPanelClass, dialogTitleClass } from "@/components/ui/dialog-styles";
 
 interface DeleteTaskDialogProps {
   taskId: string;
   taskName: string;
-  /** Quantas subtarefas vao junto: apagar a tarefa apaga a arvore inteira. */
-  subtaskCount: number;
   onClose: () => void;
   onDeleted: () => void;
 }
 
-export function DeleteTaskDialog({ taskId, taskName, subtaskCount, onClose, onDeleted }: DeleteTaskDialogProps) {
-  const titleId = useId();
+export function DeleteTaskDialog({ taskId, taskName, onClose, onDeleted }: DeleteTaskDialogProps) {
   const [deleting, setDeleting] = useState(false);
+  /** A tarefa já não existe: a tela avisa e o único botão é voltar, como no caminho de sucesso. */
+  const [gone, setGone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -33,11 +44,19 @@ export function DeleteTaskDialog({ taskId, taskName, subtaskCount, onClose, onDe
   async function handleDelete() {
     setDeleting(true);
     setError(null);
+
     try {
       await deleteTask(taskId);
+
       onDeleted();
-    } catch {
-      setError("Não foi possível excluir a tarefa. Tente novamente.");
+      onClose();
+    } catch (cause) {
+      if (cause instanceof ApiRequestError && cause.kind === "not_found") {
+        setGone(true);
+        setError("Esta tarefa já não existe. Ela foi apagada em outro lugar.");
+      } else {
+        setError("Não foi possível excluir a tarefa. Tente novamente.");
+      }
       setDeleting(false);
     }
   }
@@ -47,29 +66,73 @@ export function DeleteTaskDialog({ taskId, taskName, subtaskCount, onClose, onDe
       className={dialogOverlayClass}
       role="alertdialog"
       aria-modal="true"
-      aria-labelledby={titleId}
-      onClick={(click) => {
-        if (click.target === click.currentTarget && !deleting) onClose();
+      aria-labelledby="delete-task-title"
+      onClick={(event) => {
+        if (event.target === event.currentTarget && !deleting) onClose();
       }}
-      onKeyDown={() => {}}
+      onKeyDown={(event) => {
+        if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ") && !deleting) {
+          event.preventDefault();
+          onClose();
+        }
+      }}
     >
-      <div className={cn(dialogPanelClass, "max-w-sm")}>
-        <div className="flex flex-col gap-4 px-5 py-5 sm:px-6">
+      <div
+        className={cn(dialogPanelClass, "max-w-sm overflow-y-auto p-5 sm:p-6")}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <AlertTriangle aria-hidden className="size-5 text-destructive" />
-            <h2 id={titleId} className={dialogTitleClass}>Excluir tarefa</h2>
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-destructive/10 text-destructive">
+              <AlertTriangle aria-hidden className="size-4.5" />
+            </span>
+            <h2 id="delete-task-title" className={dialogTitleClass}>
+              Excluir tarefa
+            </h2>
           </div>
-          <p className="text-sm text-muted-foreground">
-            “{taskName}” será excluída
-            {subtaskCount > 0 ? `, junto com ${subtaskCount === 1 ? "a subtarefa" : `as ${subtaskCount} subtarefas`}` : ""}.
-          </p>
-          {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-          <div className="flex justify-end gap-3">
-            <button type="button" onClick={onClose} disabled={deleting} className={outlineButtonClass}>Cancelar</button>
-            <button type="button" onClick={() => void handleDelete()} disabled={deleting} className={destructiveButtonClass}>
-              {deleting ? "Excluindo..." : "Excluir"}
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={deleting}
+            aria-label="Fechar"
+            className={iconButtonClass}
+          >
+            <X aria-hidden className="size-4" />
+          </button>
+        </div>
+
+        <p className="text-sm leading-6 text-muted-foreground">
+          Tem certeza que deseja excluir{" "}
+          <span className="font-medium text-foreground">&ldquo;{taskName}&rdquo;</span>? Essa ação não
+          pode ser desfeita.
+        </p>
+
+        {error ? <p role="alert" className="mt-3 text-xs text-destructive">{error}</p> : null}
+
+        <div className="mt-5 flex items-center justify-end gap-3">
+          {gone ? (
+            <button type="button" onClick={onDeleted} className={outlineButtonClass}>
+              Voltar
             </button>
-          </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={deleting}
+                className={outlineButtonClass}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={deleting}
+                className={destructiveButtonClass}
+              >
+                {deleting ? "Excluindo..." : "Excluir"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>,

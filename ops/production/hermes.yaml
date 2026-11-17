@@ -1,0 +1,92 @@
+# Hermes em producao (ADR 004). Aplicado a mao, nao pelo braid-deploy: a imagem
+# e publica (nousresearch/hermes-agent) e se atualiza sozinha pelo
+# hermes-update.sh, sem passar pelo commit exato do deploy das imagens braid-*.
+#
+# - Um unico pod: o volume /opt/data nao pode ser aberto por dois gateways, por
+#   isso a estrategia e Recreate (nunca RollingUpdate).
+# - Sem Ingress, Tunnel ou Traefik: o Service e ClusterIP e a NetworkPolicy so
+#   aceita a API.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hermes-data
+  namespace: braid
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests: {storage: 5Gi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hermes
+  namespace: braid
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: hermes}
+  template:
+    metadata:
+      labels: {app: hermes}
+    spec:
+      containers:
+        - name: hermes
+          image: nousresearch/hermes-agent:stable
+          # Always: o restart diario puxa a stable mais recente.
+          imagePullPolicy: Always
+          args: ["gateway", "run"]
+          env:
+            - {name: API_SERVER_ENABLED, value: "true"}
+            - {name: API_SERVER_HOST, value: "0.0.0.0"}
+          envFrom:
+            - secretRef: {name: hermes-env}
+          ports:
+            - {containerPort: 8642}
+          volumeMounts:
+            - {name: data, mountPath: /opt/data}
+          startupProbe:
+            httpGet: {path: /health, port: 8642}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /health, port: 8642}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /health, port: 8642}
+            periodSeconds: 20
+            failureThreshold: 6
+          resources:
+            requests: {cpu: 250m, memory: 1Gi}
+            limits: {cpu: "2", memory: 2Gi}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: hermes-data}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hermes
+  namespace: braid
+spec:
+  type: ClusterIP
+  selector: {app: hermes}
+  ports:
+    - {port: 8642, targetPort: 8642}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hermes-from-api-only
+  namespace: braid
+spec:
+  podSelector:
+    matchLabels: {app: hermes}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: api}
+      ports:
+        - {protocol: TCP, port: 8642}

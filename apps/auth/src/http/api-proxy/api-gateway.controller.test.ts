@@ -1,20 +1,24 @@
 import type { Request, Response } from "express";
 import { afterEach, describe, expect, it } from "vitest";
-import type { AuthorizationService, AccessRequest } from "../../auth-core/security/authorization.service";
+import { ACCESS_RESOURCES, type AuthorizationService, type AccessRequest } from "../../auth-core/security/authorization.service";
 import type { RuntimeEnv } from "../../config/env";
 import type { AuthenticatedActor } from "../../domain/users/user";
 import { startFakeHttpServer, type FakeHttpServer } from "../../testing/fake-http-server";
 import { ApiGatewayController, policyFor } from "./api-gateway.controller";
 
+const ROTA_ANTIGA = "/api/events"; // a rota antiga: o gateway deve recusá-la
+
 describe("policyFor", () => {
   it.each([
-    ["/api/events", "event"],
-    ["/api/tags", "tag"],
     ["/api/tasks", "task"],
-    ["/api/notes", "note"],
-    ["/api/notes/note-1", "note"],
+    ["/api/tasks/task-1", "task"],
+    ["/api/tags", "tag"],
+    ["/api/artifacts", "artifact"],
+    ["/api/artifacts/artifact-1", "artifact"],
     ["/api/recurrences", "recurrence"],
     ["/api/ai/chat", "agent"],
+    ["/api/requests", "agent"],
+    ["/api/requests/request-1/steps", "agent"],
   ])("maps %s to the %s resource", (path, resource) => {
     expect(policyFor("GET", path).resource).toBe(resource);
   });
@@ -25,13 +29,34 @@ describe("policyFor", () => {
     ["PATCH", "update"],
     ["PUT", "update"],
     ["DELETE", "delete"],
-  ])("maps %s on notes to the %s action", (method, action) => {
-    expect(policyFor(method, "/api/notes")).toEqual({ resource: "note", action });
+  ])("maps %s on artifacts to the %s action", (method, action) => {
+    expect(policyFor(method, "/api/artifacts")).toEqual({ resource: "artifact", action });
+  });
+
+  it.each([
+    ["GET", "read"],
+    ["POST", "execute"],
+  ])("maps %s on requests to the %s action of the agent resource", (method, action) => {
+    expect(policyFor(method, "/api/requests")).toEqual({ resource: "agent", action });
+  });
+
+  it("refuses the removed old task and note routes", () => {
+    expect(() => policyFor("GET", ROTA_ANTIGA)).toThrow(`No gateway policy for ${ROTA_ANTIGA}`);
+    expect(() => policyFor("POST", ROTA_ANTIGA)).toThrow(`No gateway policy for ${ROTA_ANTIGA}`);
+    expect(() => policyFor("GET", `${ROTA_ANTIGA}/task-1`)).toThrow(`No gateway policy for ${ROTA_ANTIGA}/task-1`);
+    expect(() => policyFor("GET", "/api/notes")).toThrow("No gateway policy for /api/notes");
+    expect(() => policyFor("GET", "/api/notes/note-1")).toThrow("No gateway policy for /api/notes/note-1");
   });
 
   it("refuses paths and methods without a policy", () => {
     expect(() => policyFor("GET", "/api/unknown")).toThrow("No gateway policy for /api/unknown");
-    expect(() => policyFor("TRACE", "/api/notes")).toThrow("No gateway policy for TRACE /api/notes");
+    expect(() => policyFor("TRACE", "/api/artifacts")).toThrow("No gateway policy for TRACE /api/artifacts");
+  });
+
+  it("keeps the access resources in step with the policy", () => {
+    expect(ACCESS_RESOURCES).toContain("artifact");
+    expect(ACCESS_RESOURCES).toEqual(["task", "tag", "artifact", "recurrence", "agent"]);
+    expect(ACCESS_RESOURCES).not.toContain("note");
   });
 });
 
@@ -66,14 +91,14 @@ describe("ApiGatewayController forwarding", () => {
     return { authorized, sent, received: upstream.requests };
   }
 
-  it("authorizes the note resource and proxies POST /api/notes to the API with the gateway identity", async () => {
-    const { authorized, sent, received } = await forward("POST", "/api/notes", { title: "Nota" });
+  it("authorizes the artifact resource and proxies POST /api/artifacts to the API with the gateway identity", async () => {
+    const { authorized, sent, received } = await forward("POST", "/api/artifacts", { title: "Nota" });
 
     expect(authorized).toEqual([
-      { userId: "user-1", sessionId: "session-1", resource: "note", action: "create", targetUserId: undefined },
+      { userId: "user-1", sessionId: "session-1", resource: "artifact", action: "create", targetUserId: undefined },
     ]);
     expect(received).toHaveLength(1);
-    expect(received[0]).toMatchObject({ method: "POST", path: "/api/notes" });
+    expect(received[0]).toMatchObject({ method: "POST", path: "/api/artifacts" });
     expect(received[0]?.headers["x-auth-gateway-key"]).toBe("gateway-key");
     expect(received[0]?.headers["x-auth-user-id"]).toBe("user-1");
     expect(received[0]?.headers["x-auth-session-id"]).toBe("session-1");
@@ -82,10 +107,29 @@ describe("ApiGatewayController forwarding", () => {
     expect(sent.body?.toString()).toBe("created");
   });
 
-  it("keeps the query string when proxying GET /api/notes", async () => {
-    const { authorized, received } = await forward("GET", "/api/notes?eventId=event-1", undefined);
+  it("keeps the query string when proxying GET /api/artifacts", async () => {
+    const { authorized, received } = await forward("GET", "/api/artifacts?taskId=task-1", undefined);
 
-    expect(authorized[0]).toMatchObject({ resource: "note", action: "read" });
-    expect(received[0]).toMatchObject({ method: "GET", path: "/api/notes?eventId=event-1" });
+    expect(authorized[0]).toMatchObject({ resource: "artifact", action: "read" });
+    expect(received[0]).toMatchObject({ method: "GET", path: "/api/artifacts?taskId=task-1" });
+  });
+
+  it("authorizes POST /api/requests as the agent execute action and checks the body userId", async () => {
+    const { authorized, received } = await forward("POST", "/api/requests", { userId: "user-2", text: "oi" });
+
+    expect(authorized[0]).toEqual({
+      userId: "user-1",
+      sessionId: "session-1",
+      resource: "agent",
+      action: "execute",
+      targetUserId: "user-2",
+    });
+    expect(received[0]).toMatchObject({ method: "POST", path: "/api/requests" });
+  });
+
+  it("authorizes GET /api/requests as the agent read action", async () => {
+    const { authorized } = await forward("GET", "/api/requests?status=open", undefined);
+
+    expect(authorized[0]).toMatchObject({ resource: "agent", action: "read" });
   });
 });

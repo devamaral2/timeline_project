@@ -1,5 +1,5 @@
-import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolve } from "node:path";
 
 const ROOT = resolve(new URL("../..", import.meta.url).pathname);
@@ -15,26 +15,33 @@ const INITIAL_VALUES = {
   AI_JOBS_CONCURRENCY: "4",
   AI_JOBS_LEASE_MS: "60000",
   AI_JOBS_MAX_ATTEMPTS: "4",
+  AI_JOBS_POLL_MS: "500",
+  // Rota do Hermes (ADR 004): desligada, e o Hermes local no loopback.
+  AI_AUTOMATION: "off",
+  HERMES_URL: "http://127.0.0.1:8642",
+  // ADR 0005: pasta de skills e agentes do Hermes, a mesma que o compose do Hermes monta em /opt/agent-files.
+  AGENT_FILES_DIR: resolve(homedir(), ".braid", "agent-files"),
 };
+// Chaves do .env.example que o carregador padrao usa quando existem, mas que nao impedem `pnpm dev` de subir.
+const DEFAULT_SCOPE_OPTIONAL_KEYS = new Set(["HERMES_API_KEY"]);
 const SCOPES = Object.freeze({
   "api-runtime": {
-    // A API valida a fila de jobs de IA no boot; sem estas duas ela nao sobe.
-    // Em producao nao ha .git no container, entao o prefixo vem do Environment.
-    required: [
-      "DATABASE_URL",
-      "AUTH_SERVICE_URL",
-      "AUTH_INTERNAL_SERVICE_KEY",
-      "RABBITMQ_URL",
-      "AI_JOBS_QUEUE_PREFIX",
-    ],
+    // A fila de jobs de IA e a tabela `jobs` da propria base (ADR 0013): nao
+    // ha broker nem prefixo de fila para configurar.
+    required: ["DATABASE_URL", "AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"],
     optional: [
       "OPENROUTER_API_KEY",
       "OPENROUTER_MODEL",
-      "OPENROUTER_AGENT_MODEL",
+      "AI_AUTOMATION",
+      "HERMES_URL",
+      "HERMES_API_KEY",
+      "AGENT_FILES_DIR",
+      "AGENT_CONFIG_OWNER_USER_ID",
       "JEV_API_KEY",
       "AI_JOBS_CONCURRENCY",
       "AI_JOBS_LEASE_MS",
       "AI_JOBS_MAX_ATTEMPTS",
+      "AI_JOBS_POLL_MS",
     ],
   },
   "auth-runtime": {
@@ -56,17 +63,37 @@ const SCOPES = Object.freeze({
       "AUTH_PASSWORD_WINDOW_SECONDS",
     ],
   },
+  // Container do Hermes (ADR 004): imagem de terceiros, sem o loader dentro.
+  // O valor chega por `secrets:exec` (local) ou pelo Secret `hermes-env` (VPS).
+  "hermes-runtime": {
+    required: ["HERMES_API_KEY", "OPENROUTER_API_KEY", "MCP_TOKEN"],
+    optional: [],
+  },
+  // Servidor MCP que o Hermes usa para criar entidades (ADR 004). Age sempre como
+  // MCP_OWNER_USER_ID. Em producao API_SERVICE_URL vem do Environment, porque o
+  // fallback do loader aponta para 127.0.0.1.
+  "mcp-runtime": {
+    required: ["MCP_TOKEN", "AUTH_INTERNAL_SERVICE_KEY", "MCP_OWNER_USER_ID"],
+    optional: ["API_SERVICE_URL"],
+  },
   "web-build": {
     required: ["BACKEND_URL", "AUTH_SERVICE_URL"],
     optional: ["NODE_ENV"],
   },
 });
 const LOCAL_OVERRIDE_KEYS = new Set([
+  "AGENT_CONFIG_OWNER_USER_ID",
   "WEB_PORT",
   "API_PORT",
   "API_HOST",
   "AUTH_PORT",
   "AUTH_HOST",
+  // Por worktree: a porta do MCP e o id do admin da base dessa worktree.
+  "MCP_PORT",
+  "MCP_OWNER_USER_ID",
+  // Liga a rota do Hermes so nesta worktree, sem mexer no 1Password.
+  "AI_AUTOMATION",
+  "HERMES_URL",
   "POSTGRES_HOST_PORT",
   "POSTGRES_DB",
   "AUTH_POSTGRES_DB",
@@ -78,30 +105,11 @@ const LOCAL_OVERRIDE_KEYS = new Set([
   "API_SERVICE_URL",
   "AUTH_INTERNAL_SERVICE_KEY",
   "COMPOSE_PROJECT_NAME",
-  "RABBITMQ_URL",
   "AI_JOBS_CONCURRENCY",
   "AI_JOBS_LEASE_MS",
   "AI_JOBS_MAX_ATTEMPTS",
+  "AI_JOBS_POLL_MS",
 ]);
-
-/** Remove os caracteres que o schema do prefixo (`[a-zA-Z0-9._-]`) rejeita. */
-export function queuePrefixFromBranch(branch) {
-  return (branch ?? "").replace(/[^a-zA-Z0-9._-]/g, "");
-}
-
-function currentBranchPrefix() {
-  try {
-    const branch = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
-      cwd: ROOT,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    }).trim();
-    // HEAD destacado devolve "HEAD", que não identifica nenhuma worktree.
-    return branch === "HEAD" ? "" : queuePrefixFromBranch(branch);
-  } catch {
-    return "";
-  }
-}
 
 function error(message) {
   return new Error(`[1Password] ${message}`);
@@ -203,6 +211,14 @@ export async function resolveEnvironmentWithClient(client, environmentId, keys, 
   return keys.map((key) => [key, variables.get(key) || fallbacks[key]]);
 }
 
+export function defaultScope() {
+  const keys = [...new Set(readEnvKeys())];
+  return {
+    required: keys.filter((key) => !DEFAULT_SCOPE_OPTIONAL_KEYS.has(key)),
+    optional: keys.filter((key) => DEFAULT_SCOPE_OPTIONAL_KEYS.has(key)),
+  };
+}
+
 export function scopeKeys(scope) {
   const definition = SCOPES[scope];
   if (!definition) throw error(`scope desconhecido: '${scope}'`);
@@ -233,16 +249,10 @@ export async function loadOnePasswordEnvironment(source = process.env) {
   if (!environmentId) throw error(`${ENVIRONMENT_ID_ENV} não está definido`);
 
   const scope = source.ONEPASSWORD_SCOPE;
-  const definition = scope ? scopeKeys(scope) : { required: [...new Set(readEnvKeys())], optional: [] };
+  const definition = scope ? scopeKeys(scope) : defaultScope();
   const keys = [...new Set([...definition.required, ...definition.optional])];
   const client = await createClient(token);
-  // O prefixo das filas é sempre o nome da branch (uma fila por worktree) e
-  // vem antes da checagem de obrigatórias: nunca depende do Environment.
-  const queuePrefix = currentBranchPrefix();
-  const localOverrides = {
-    ...readLocalOverrides(),
-    ...(queuePrefix ? { AI_JOBS_QUEUE_PREFIX: queuePrefix } : {}),
-  };
+  const localOverrides = readLocalOverrides();
   let variables;
   try {
     variables = readEnvironmentVariables(
@@ -276,11 +286,8 @@ export async function loadOnePasswordEnvironment(source = process.env) {
 
   const environment = { ...source, ...withFallbacks };
   delete environment.ONEPASSWORD_SCOPE;
-  const env = applyLocalOverrides(environment, localOverrides);
-  // Vence qualquer valor que o Environment do 1Password tenha para a chave.
-  if (queuePrefix) env.AI_JOBS_QUEUE_PREFIX = queuePrefix;
   return {
-    env,
+    env: applyLocalOverrides(environment, localOverrides),
     keys,
     environmentId,
   };

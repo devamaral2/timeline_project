@@ -1,7 +1,7 @@
-import type { MealItem } from "@/lib/api/contracts";
+import type { FoodData } from "@repo/contracts";
 import { failedMealMessage, pendingMealMessage } from "@/lib/notes/meal-generation";
 
-export function MealGenerationStatus({ data }: { data: MealItem }) {
+export function MealGenerationStatus({ data }: { data: Pick<FoodData, "generation" | "nutritionSource"> }) {
   if (data.generation?.status === "pending") {
     return <p role="status" className="text-sm text-muted-foreground">{pendingMealMessage}</p>;
   }

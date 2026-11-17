@@ -2,15 +2,17 @@
 # Provisiona (ou reaproveita) o ambiente isolado de UMA worktree. Idempotente.
 #
 # Passos (nenhum e opcional):
-#   1. .env.local com portas livres e nomes proprios (bases, fila, dominio)
-#   2. alias <slug>.braid.local: /etc/hosts + Caddy
+#   1. .env.local com portas livres e nomes proprios (bases, dominio)
+#   2. alias <slug>.braid.local: /etc/hosts + Caddy (HTTPS na 8443, CA local do Caddy)
 #   3. node_modules integros (pnpm install reaplicado + binarios conferidos)
 #   4. bases <slug> e <slug>_auth DENTRO do Postgres compartilhado (porta 54391)
-#   5. fila <slug>.health no RabbitMQ compartilhado
-#   6. migrations da API e do Auth
-#   7. usuario admin (senha de ADMIN_PASSWORD)
-#   8. build, sonda de saude (bases -> fila), servidores de dev e login de teste
-#   9. link para abrir no navegador
+#   5. migrations da API e do Auth
+#   6. usuario admin (senha de ADMIN_PASSWORD)
+#   7. build, sonda de saude (bases, tabela de jobs, admin) e servidores de dev
+#   8. API respondendo, login de teste e link para abrir no navegador
+#
+# A fila de jobs de IA e a tabela `jobs` da base da API (ADR 0013): nasce com as
+# migrations e some com a base, entao nao ha broker para subir nem fila a declarar.
 #
 # Uso: bash scripts/worktree/provision-env.sh   (de dentro da worktree;
 #      via `pnpm worktree:provision`, que injeta o ambiente do 1Password)
@@ -22,7 +24,7 @@ source "$SCRIPT_DIR/lib.sh"
 
 cd "$(worktree_root)"
 ENV_FILE=".env.local"
-CADDY_PORT="${CADDY_PORT:-8080}"
+CADDY_HTTPS_PORT="${CADDY_HTTPS_PORT:-8443}"
 # Mesmo e-mail fixo do `create-admin` (apps/auth) e da worktree principal.
 ADMIN_EMAIL="admin@admin.com"
 
@@ -45,11 +47,11 @@ done
 SLUG="$(worktree_slug)"
 DB_NAME="$(db_name_for_slug "$SLUG")"
 AUTH_DB_NAME="${DB_NAME}_auth"
-QUEUE="${SLUG}.health"
 HOST="${SLUG}.braid.local"
-APP_URL="http://${HOST}:${CADDY_PORT}"
+# HTTPS: fora de `localhost` o navegador so libera geolocalizacao e afins em origem segura.
+APP_URL="https://${HOST}:${CADDY_HTTPS_PORT}"
 
-step() { printf '\n[%s/9] %s\n' "$1" "$2"; }
+step() { printf '\n[%s/8] %s\n' "$1" "$2"; }
 
 # --- 1. .env.local -----------------------------------------------------------
 step 1 "Portas e .env.local da worktree '$SLUG'"
@@ -66,6 +68,8 @@ if [ -z "$(read_env_var "$ENV_FILE" WORKTREE_SLUG)" ]; then
   API_PORT="$(find_unreserved_port $((WEB_PORT + 1)))"
   RESERVED_PORTS="$RESERVED_PORTS $API_PORT"
   AUTH_PORT="$(find_unreserved_port $((API_PORT + 1)))"
+  RESERVED_PORTS="$RESERVED_PORTS $AUTH_PORT"
+  MCP_PORT="$(find_unreserved_port $((AUTH_PORT + 1)))"
   # Este arquivo guarda so configuracao local derivada. Segredos e URLs com
   # senha continuam vindo do 1Password (o carregador monta as URLs das bases).
   cat > "$ENV_FILE" <<EOT
@@ -75,11 +79,11 @@ API_PORT=${API_PORT}
 API_HOST=127.0.0.1
 AUTH_PORT=${AUTH_PORT}
 AUTH_HOST=127.0.0.1
+MCP_PORT=${MCP_PORT}
 POSTGRES_HOST_PORT=${SHARED_PG_PORT}
 POSTGRES_DB=${DB_NAME}
 AUTH_POSTGRES_DB=${AUTH_DB_NAME}
 AUTH_WEB_APP_URL=${APP_URL}
-RABBITMQ_HEALTH_QUEUE=${QUEUE}
 EOT
   echo "Escrevi $ENV_FILE."
 else
@@ -138,35 +142,17 @@ for db in "$DB_NAME" "$AUTH_DB_NAME"; do
   fi
 done
 
-# --- 5. fila no RabbitMQ -------------------------------------------------------
-step 5 "Fila '${QUEUE}' no RabbitMQ compartilhado"
-bash "$SCRIPT_DIR/rabbitmq.sh" up
-bash "$SCRIPT_DIR/rabbitmq.sh" queue "$SLUG" health
-# O carregador do 1Password define o prefixo a partir da branch; o slug so
-# entra se a worktree estiver com HEAD destacado.
-export AI_JOBS_QUEUE_PREFIX="${AI_JOBS_QUEUE_PREFIX:-$SLUG}"
-for kind in agent-turn transcript-event meal-note; do
-  bash "$SCRIPT_DIR/rabbitmq.sh" queue "$AI_JOBS_QUEUE_PREFIX" "$kind"
-done
-# Credentials remain outside the checkout; start-dev inherits the AMQP URL.
-RABBIT_CRED_FILE="${BRAID_RABBITMQ_ENV:-$HOME/.config/braid/rabbitmq.env}"
-export RABBITMQ_URL
-RABBITMQ_URL="$(RABBIT_USER="$(read_env_var "$RABBIT_CRED_FILE" RABBITMQ_DEFAULT_USER)" \
-  RABBIT_PASS="$(read_env_var "$RABBIT_CRED_FILE" RABBITMQ_DEFAULT_PASS)" \
-  RABBIT_PORT="$(read_env_var "$RABBIT_CRED_FILE" RABBITMQ_HOST_PORT)" \
-  node -e 'process.stdout.write(`amqp://${encodeURIComponent(process.env.RABBIT_USER)}:${encodeURIComponent(process.env.RABBIT_PASS)}@127.0.0.1:${process.env.RABBIT_PORT}`)')"
-
-# --- 6. migrations -------------------------------------------------------------
-step 6 "Migrations (API e Auth)"
+# --- 5. migrations -------------------------------------------------------------
+step 5 "Migrations (API e Auth)"
 pnpm db:migrate
 pnpm --filter @repo/auth run db:migrate
 
-# --- 7. admin ------------------------------------------------------------------
-step 7 "Usuario admin ${ADMIN_EMAIL}"
+# --- 6. admin ------------------------------------------------------------------
+step 6 "Usuario admin ${ADMIN_EMAIL}"
 pnpm --filter @repo/auth run create-admin
 
-# --- 8. build, sonda e servidores ----------------------------------------------
-step 8 "Build, sonda de saude e servidores de dev"
+# --- 7. build, sonda e servidores ----------------------------------------------
+step 7 "Build, sonda de saude e servidores de dev"
 # web (next build de producao) e mobile (Android SDK) nao sao necessarios para o pnpm dev.
 pnpm turbo run build --filter='!@repo/mobile' --filter='!@repo/web'
 
@@ -174,23 +160,28 @@ count_tables() { psql_admin -d "$1" -tAc "SELECT count(*) FROM information_schem
 API_TABLES="$(count_tables "$DB_NAME")"
 AUTH_TABLES="$(count_tables "$AUTH_DB_NAME")"
 ADMIN_ROWS="$(psql_admin -d "$AUTH_DB_NAME" -tAc "SELECT count(*) FROM users WHERE email='${ADMIN_EMAIL}'")"
-if [ "$API_TABLES" -lt 1 ] || [ "$AUTH_TABLES" -lt 1 ] || [ "$ADMIN_ROWS" -ne 1 ]; then
-  echo "Sonda falhou: tabelas api=$API_TABLES auth=$AUTH_TABLES admin=$ADMIN_ROWS." >&2
+# A fila de jobs de IA e uma tabela da base da API; sem ela os workers nao tem o que ler.
+JOBS_TABLE="$(psql_admin -d "$DB_NAME" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='jobs'")"
+if [ "$API_TABLES" -lt 1 ] || [ "$AUTH_TABLES" -lt 1 ] || [ "$ADMIN_ROWS" -ne 1 ] || [ "$JOBS_TABLE" -ne 1 ]; then
+  echo "Sonda falhou: tabelas api=$API_TABLES auth=$AUTH_TABLES admin=$ADMIN_ROWS jobs=$JOBS_TABLE." >&2
   exit 1
 fi
-PAYLOAD="$(node -e 'console.log(JSON.stringify({worktree:process.argv[1],status:"ok",checkedAt:new Date().toISOString(),databases:{[process.argv[2]]:{tables:+process.argv[4]},[process.argv[3]]:{tables:+process.argv[5]}}}))' \
-  "$SLUG" "$DB_NAME" "$AUTH_DB_NAME" "$API_TABLES" "$AUTH_TABLES")"
-bash "$SCRIPT_DIR/rabbitmq.sh" publish "$SLUG" "$PAYLOAD"
-bash "$SCRIPT_DIR/rabbitmq.sh" peek "$SLUG" | grep -q '"status\\":\\"ok' \
-  || { echo "A mensagem de saude nao foi lida de volta de '${QUEUE}'." >&2; exit 1; }
-echo "Fila ${QUEUE} confirma: bases ok (api=${API_TABLES} tabelas, auth=${AUTH_TABLES} tabelas)."
+echo "Sonda ok: bases prontas (api=${API_TABLES} tabelas, auth=${AUTH_TABLES} tabelas), tabela de jobs e admin presentes."
 
 bash "$SCRIPT_DIR/start-dev.sh"
 
-# --- 9. verificacao final e link -------------------------------------------------
-step 9 "Verificacao no navegador (via Caddy)"
+# --- 8. verificacao final e link -------------------------------------------------
+step 8 "Verificacao final: API, login (via Caddy) e link"
+# start-dev so confere a porta aberta; aqui a API precisa responder HTTP de fato
+# (sem sessao ela devolve 401, o que ja prova que subiu e validou o ambiente).
+API_CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "http://127.0.0.1:${API_PORT}/api/tasks" || true)"
+case "$API_CODE" in
+  000|5??) echo "API em 127.0.0.1:${API_PORT} devolveu HTTP ${API_CODE}. Veja .agents/runtime/dev.log." >&2; exit 1 ;;
+esac
+echo "API em 127.0.0.1:${API_PORT}: HTTP ${API_CODE}."
 LOGIN_CODE="$(node -e 'process.stdout.write(JSON.stringify({email:process.argv[1],password:process.env.ADMIN_PASSWORD}))' "$ADMIN_EMAIL" \
-  | curl -sS -o /dev/null -w '%{http_code}' --max-time 30 --resolve "${HOST}:${CADDY_PORT}:127.0.0.1" \
+  | curl -sS -o /dev/null -w '%{http_code}' --max-time 30 --resolve "${HOST}:${CADDY_HTTPS_PORT}:127.0.0.1" \
+      --cacert "$(caddy_root_cert)" \
       -H 'content-type: application/json' -d @- "${APP_URL}/api/session/login")"
 if [ "$LOGIN_CODE" != "200" ]; then
   echo "Login de ${ADMIN_EMAIL} em ${APP_URL} devolveu HTTP ${LOGIN_CODE} (esperado 200)." >&2
@@ -203,9 +194,9 @@ cat <<SUMMARY
 Worktree '$SLUG' pronta e rodando.
   mudar de pasta: cd $(pwd)   (rode os proximos comandos de dentro da worktree)
   link:      ${APP_URL}
+             (aviso de certificado no navegador? rode uma vez: pnpm caddy:trust)
   login:     ${ADMIN_EMAIL} (senha: ADMIN_PASSWORD do 1Password)
   web/api/auth: ${WEB_PORT} / ${API_PORT} / ${AUTH_PORT}
   bases:     ${DB_NAME}, ${AUTH_DB_NAME} (${PG_CONTAINER}, porta ${SHARED_PG_PORT})
-  fila:      ${QUEUE}
   logs:      $(pwd)/.agents/runtime/dev.log
 SUMMARY

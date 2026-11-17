@@ -12,6 +12,6 @@ export class ListRecurrencesController {
   @Get()
   @UseGuards(GatewayIdentityGuard)
   execute(@CurrentUser() actor: AuthenticatedUser): Promise<RecurrenceDto[]> {
-    return this.listRecurrences.execute(undefined, actor);
+    return this.listRecurrences.execute(actor);
   }
 }

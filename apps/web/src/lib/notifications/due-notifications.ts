@@ -1,18 +1,17 @@
-import type { NotificationOffsetMinutes } from "@/lib/api/contracts";
+import type { TaskCardDto, NotificationOffsetMinutes } from "@repo/contracts";
 
-export type NotificationSourceKind = "event" | "task";
+/** O que o aviso precisa de uma tarefa: o cartao da agenda ou da lista de acompanhados serve. */
+export type NotificationSource = Pick<
+  TaskCardDto,
+  "id" | "name" | "status" | "longRunning" | "startedAt" | "estimatedFinishAt" | "notifyOffsetsMinutes"
+>;
 
-export interface NotificationSource {
-  kind: NotificationSourceKind;
-  id: string;
-  name: string;
-  startedAt: string;
-  notifyOffsetsMinutes: readonly NotificationOffsetMinutes[];
-}
+/** Tarefa acompanhada (`tracked`) e a que tem status ou e longa; o resto e tarefa de referencia (`reference`). Mesmo criterio da API. */
+export type NotificationKind = "tracked" | "reference";
 
 export interface DueNotification {
   key: string;
-  kind: NotificationSourceKind;
+  kind: NotificationKind;
   sourceId: string;
   name: string;
   offsetMinutes: NotificationOffsetMinutes;
@@ -25,12 +24,37 @@ export interface DueNotification {
  */
 export const CATCH_UP_WINDOW_MS = 60 * 60_000;
 
-/** Quanto tempo uma chave disparada fica guardada depois do inicio do item. */
+/** Quanto tempo uma chave disparada fica guardada depois do instante de referencia do item. */
 const FIRED_RETENTION_MS = 24 * 60 * 60_000;
 
+/** Todo aviso abre a tela da tarefa, acompanhada ou de referencia. */
+export function notificationHrefOf(userId: string, item: { kind: NotificationKind; sourceId: string }): string {
+  return `/${userId}/tarefas/${item.sourceId}`;
+}
+
+export function kindOf(source: NotificationSource): NotificationKind {
+  return source.status !== undefined || source.longRunning ? "tracked" : "reference";
+}
+
+/**
+ * O instante de que o aviso conta: o inicio, e na tarefa longa o prazo. `undefined`
+ * quando nao ha o que avisar: sem data, tarefa longa sem prazo, ou ja concluido ou cancelado.
+ */
+export function notificationAnchorOf(source: NotificationSource): string | undefined {
+  if (source.status === "done" || source.status === "cancel") return undefined;
+  return source.longRunning ? source.estimatedFinishAt : source.startedAt;
+}
+
+function anchorTimingOf(source: NotificationSource): { anchor: string; anchorMs: number } | undefined {
+  const anchor = notificationAnchorOf(source);
+  if (anchor === undefined) return undefined;
+  const anchorMs = new Date(anchor).getTime();
+  return Number.isNaN(anchorMs) ? undefined : { anchor, anchorMs };
+}
+
 export function notificationKeyOf(source: NotificationSource, offsetMinutes: NotificationOffsetMinutes): string {
-  // `startedAt` entra na chave: remarcar um evento recria o aviso.
-  return `${source.kind}:${source.id}:${source.startedAt}:${offsetMinutes}`;
+  // O instante de referencia entra na chave: remarcar uma tarefa (ou mudar o prazo do longo) recria o aviso.
+  return `${source.id}:${notificationAnchorOf(source) ?? ""}:${offsetMinutes}`;
 }
 
 /**
@@ -44,25 +68,25 @@ export function dueNotificationsOf(
   sources: readonly NotificationSource[],
   nowMs: number,
   firedKeys: ReadonlySet<string>,
-): { due: DueNotification[]; settled: Array<{ key: string; startedAtMs: number }> } {
+): { due: DueNotification[]; settled: Array<{ key: string; anchorMs: number }> } {
   const due: DueNotification[] = [];
-  const settled: Array<{ key: string; startedAtMs: number }> = [];
+  const settled: Array<{ key: string; anchorMs: number }> = [];
 
   for (const source of sources) {
-    const startedAtMs = new Date(source.startedAt).getTime();
-    if (Number.isNaN(startedAtMs)) continue;
+    const timing = anchorTimingOf(source);
+    if (!timing) continue;
 
     for (const offsetMinutes of source.notifyOffsetsMinutes) {
       const key = notificationKeyOf(source, offsetMinutes);
       if (firedKeys.has(key)) continue;
 
-      const triggerAtMs = startedAtMs - offsetMinutes * 60_000;
+      const triggerAtMs = timing.anchorMs - offsetMinutes * 60_000;
       if (nowMs < triggerAtMs) continue;
 
-      settled.push({ key, startedAtMs });
-      const stillRelevant = nowMs < startedAtMs && nowMs - triggerAtMs <= CATCH_UP_WINDOW_MS;
+      settled.push({ key, anchorMs: timing.anchorMs });
+      const stillRelevant = nowMs < timing.anchorMs && nowMs - triggerAtMs <= CATCH_UP_WINDOW_MS;
       if (stillRelevant) {
-        due.push({ key, kind: source.kind, sourceId: source.id, name: source.name, offsetMinutes });
+        due.push({ key, kind: kindOf(source), sourceId: source.id, name: source.name, offsetMinutes });
       }
     }
   }
@@ -72,7 +96,7 @@ export function dueNotificationsOf(
 
 const FIRED_STORAGE_KEY = "braid:notifications:fired";
 
-/** Chave -> inicio do item (ms), para podar o que ja nao importa. */
+/** Chave -> instante de referencia do item (ms), para podar o que ja nao importa. */
 type FiredRecord = Record<string, number>;
 
 function readFiredRecord(): FiredRecord {
@@ -90,13 +114,13 @@ export function readFiredKeys(): Set<string> {
   return new Set(Object.keys(readFiredRecord()));
 }
 
-/** Guarda as chaves e poda as de itens que comecaram ha mais de um dia. */
-export function recordFiredKeys(entries: ReadonlyArray<{ key: string; startedAtMs: number }>, nowMs: number): void {
+/** Guarda as chaves e poda as de itens cujo instante de referencia passou ha mais de um dia. */
+export function recordFiredKeys(entries: ReadonlyArray<{ key: string; anchorMs: number }>, nowMs: number): void {
   if (entries.length === 0) return;
   const record = readFiredRecord();
-  for (const { key, startedAtMs } of entries) record[key] = startedAtMs;
-  for (const [key, startedAtMs] of Object.entries(record)) {
-    if (!Number.isFinite(startedAtMs) || startedAtMs < nowMs - FIRED_RETENTION_MS) delete record[key];
+  for (const { key, anchorMs } of entries) record[key] = anchorMs;
+  for (const [key, anchorMs] of Object.entries(record)) {
+    if (!Number.isFinite(anchorMs) || anchorMs < nowMs - FIRED_RETENTION_MS) delete record[key];
   }
   try {
     window.localStorage.setItem(FIRED_STORAGE_KEY, JSON.stringify(record));
@@ -110,20 +134,21 @@ export const FEED_UPCOMING_LIMIT = 5;
 
 export interface NotificationFeedItem {
   key: string;
-  kind: NotificationSourceKind;
+  kind: NotificationKind;
   sourceId: string;
   name: string;
   offsetMinutes: NotificationOffsetMinutes;
   /** Quando o aviso vence (ms). */
   triggerAtMs: number;
-  startedAtMs: number;
+  /** O instante de referencia do item (inicio, ou prazo do longo), em ms. */
+  anchorMs: number;
 }
 
 /**
- * A lista do sino, derivada so da coluna `notify_offsets_minutes`: o que ja
+ * A lista do sino, derivada so dos cartoes de agenda e de acompanhados: o que ja
  * venceu nas ultimas 24h (mais recente primeiro) e os proximos avisos (mais
  * proximo primeiro). Nao ha historico guardado — web e Android calculam o
- * mesmo resultado a partir dos mesmos eventos e tarefas.
+ * mesmo resultado a partir das mesmas tarefas.
  */
 export function notificationFeedOf(
   sources: readonly NotificationSource[],
@@ -133,19 +158,19 @@ export function notificationFeedOf(
   const upcoming: NotificationFeedItem[] = [];
 
   for (const source of sources) {
-    const startedAtMs = new Date(source.startedAt).getTime();
-    if (Number.isNaN(startedAtMs)) continue;
+    const timing = anchorTimingOf(source);
+    if (!timing) continue;
 
     for (const offsetMinutes of source.notifyOffsetsMinutes) {
-      const triggerAtMs = startedAtMs - offsetMinutes * 60_000;
+      const triggerAtMs = timing.anchorMs - offsetMinutes * 60_000;
       const item: NotificationFeedItem = {
         key: notificationKeyOf(source, offsetMinutes),
-        kind: source.kind,
+        kind: kindOf(source),
         sourceId: source.id,
         name: source.name,
         offsetMinutes,
         triggerAtMs,
-        startedAtMs,
+        anchorMs: timing.anchorMs,
       };
       if (triggerAtMs > nowMs) upcoming.push(item);
       else if (nowMs - triggerAtMs <= FEED_HISTORY_MS) recent.push(item);
@@ -159,7 +184,7 @@ export function notificationFeedOf(
 
 const READ_STORAGE_KEY = "braid:notifications:read";
 
-/** Chaves lidas -> inicio do item (ms), para podar. */
+/** Chaves lidas -> instante de referencia do item (ms), para podar. */
 export function readReadKeys(): Record<string, number> {
   try {
     const raw = window.localStorage.getItem(READ_STORAGE_KEY);
@@ -173,8 +198,8 @@ export function readReadKeys(): Record<string, number> {
 
 export function writeReadKeys(record: Record<string, number>, nowMs: number): void {
   const pruned: Record<string, number> = {};
-  for (const [key, startedAtMs] of Object.entries(record)) {
-    if (Number.isFinite(startedAtMs) && startedAtMs >= nowMs - 2 * FEED_HISTORY_MS) pruned[key] = startedAtMs;
+  for (const [key, anchorMs] of Object.entries(record)) {
+    if (Number.isFinite(anchorMs) && anchorMs >= nowMs - 2 * FEED_HISTORY_MS) pruned[key] = anchorMs;
   }
   try {
     window.localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(pruned));

@@ -1,0 +1,68 @@
+/*
+ * O modal de seleção de entidade (`EntityPickerDialog`): folha que sobe do pé no
+ * celular, diálogo centrado no desktop. É montado no <body>, fora do shell, então
+ * traz os próprios apelidos de token e o próprio anel de foco. Cor só por token.
+ */
+
+.overlay {
+  --ink: var(--foreground);
+  --muted: var(--muted-foreground);
+  --line: var(--border);
+  --soft: var(--secondary);
+  position: fixed; inset: 0; z-index: var(--z-dialog); display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: color-mix(in oklab, var(--background) 78%, transparent);
+  animation: fade var(--duration-fast) ease-out;
+}
+.overlay :focus-visible:not(input, textarea, select) { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+.panel {
+  display: flex; flex-direction: column; width: 100%; max-width: 480px; height: min(620px, calc(100dvh - 48px)); padding: 8px 20px 0;
+  border: 1px solid var(--line); border-radius: 24px; background: var(--background); color: var(--ink); box-shadow: var(--shadow-float);
+  font-size: var(--font-size-sm); line-height: 1.45;
+  animation: rise var(--duration-slow) var(--ease-out);
+}
+.handle { display: none; }
+
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; }
+.title { margin: 0; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-right: -11px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.close:hover { background: var(--soft); color: var(--ink); }
+.close .closeIcon { width: 20px; height: 20px; stroke-width: 1.75; }
+
+.search { flex: none; display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 14px; border: 1px solid var(--input); border-radius: 24px; transition: border-color var(--duration-fast); }
+.search:focus-within { border-color: var(--brand); }
+.search:focus-within .searchIcon { color: var(--brand-accent); }
+.search .searchIcon { flex: none; width: 18px; height: 18px; stroke-width: 1.75; color: var(--muted); }
+.search input { flex: 1; min-width: 0; height: 46px; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 16px; line-height: 20px; }
+.search input::placeholder { color: var(--faint); opacity: 1; }
+.search input:focus-visible { outline: 0; }
+.search input::-webkit-search-cancel-button { display: none; }
+
+.results { flex: 1; min-height: 0; margin: 10px -20px 0; padding: 0 20px 16px; overflow-y: auto; overscroll-behavior: contain; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { border-bottom: 1px solid var(--hairline); }
+.list li:last-child { border-bottom: 0; }
+.result {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px; width: 100%; min-height: 60px; padding: 8px 0;
+  border: 0; border-radius: 12px; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.result:hover { background: var(--soft); box-shadow: -10px 0 0 var(--soft), 10px 0 0 var(--soft); }
+.result:focus-visible { outline-offset: -2px; }
+.footer { flex: none; margin: 0 -20px; padding: 8px 20px 16px; border-top: 1px solid var(--line); }
+.message { margin: 0; padding: 20px 0; font-size: 14px; line-height: 20px; color: var(--muted); }
+.message[data-alert] { color: var(--destructive); }
+
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes sheet { from { transform: translateY(100%); } }
+
+@media (max-width: 720px) {
+  .overlay { align-items: flex-end; padding: 0; }
+  .panel { max-width: none; height: min(78dvh, 640px); padding: 8px 20px env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 28px 28px 0 0; }
+  .handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; border-radius: 2px; background: var(--line); }
+  .panel { animation-name: sheet; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .panel { animation: none; }
+}

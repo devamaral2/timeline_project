@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import { dayEventsUrl } from "@repo/timeline";
+import { dayTasksUrl } from "@repo/timeline";
 import { ApiError, authedFetch } from "./authed-fetch";
 
 beforeEach(() => {
@@ -13,10 +13,10 @@ afterEach(() => {
 test("sends the request with same-origin credentials", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ items: [] })));
 
-  await authedFetch(dayEventsUrl("2026-08-31"));
+  await authedFetch(dayTasksUrl("2026-08-31"));
 
   expect(fetch).toHaveBeenCalledWith(
-    expect.stringContaining("/api/events?from="),
+    expect.stringContaining("/api/tasks?from="),
     expect.objectContaining({
       credentials: "same-origin",
     }),
@@ -26,14 +26,14 @@ test("sends the request with same-origin credentials", async () => {
 test("keeps the headers the caller asked for", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
 
-  await authedFetch("/api/events/event-1", {
+  await authedFetch("/api/tasks/task-1", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: "{}",
   });
 
   expect(fetch).toHaveBeenCalledWith(
-    "/api/events/event-1",
+    "/api/tasks/task-1",
     expect.objectContaining({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -45,7 +45,7 @@ test("keeps the headers the caller asked for", async () => {
 test("carries the status of a failed response, and not only a message", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response("nope", { status: 503 }));
 
-  const error = await authedFetch("/api/events").catch((thrown) => thrown);
+  const error = await authedFetch("/api/tasks").catch((thrown) => thrown);
 
   expect(error).toBeInstanceOf(ApiError);
   expect((error as ApiError).status).toBe(503);
@@ -54,5 +54,5 @@ test("carries the status of a failed response, and not only a message", async ()
 test("reads nothing from a 204 — there is no body to parse", async () => {
   vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
 
-  await expect(authedFetch("/api/events/event-1", { method: "DELETE" })).resolves.toBeUndefined();
+  await expect(authedFetch("/api/tasks/task-1", { method: "DELETE" })).resolves.toBeUndefined();
 });

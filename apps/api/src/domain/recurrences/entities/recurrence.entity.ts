@@ -1,40 +1,30 @@
 import { ulid } from "ulid";
-import {
-  isRecurrenceFrequency,
-  isRecurrenceTarget,
-  type RecurrenceRule,
-  type RecurrenceTarget,
-} from "../contracts/recurrence-rule";
+import { isRecurrenceFrequency, type RecurrenceRule } from "../contracts/recurrence-rule";
 import { RecurrenceValidationError } from "../errors/recurrence.errors";
-import { normalizeNoteLinks } from "../../notes/types/note-link";
 
 export interface RecurrenceCreateProps {
   id?: string;
   userId: string;
-  target: RecurrenceTarget;
   rule: RecurrenceRule;
   /**
-   * O que cada ocorrencia copia. A entidade so garante que e um objeto: quem
-   * sabe se ele gera um evento ou uma tarefa valida e o usecase, que monta uma
-   * ocorrencia de ensaio antes de salvar.
+   * O que cada ocorrencia copia, incluindo os artefatos que todas elas usam
+   * (`artifactIds`). A entidade so garante que e um objeto: quem sabe se ele
+   * gera uma tarefa valido e o usecase, que monta uma ocorrencia de ensaio antes
+   * de salvar.
    */
   template: Record<string, unknown>;
-  /**
-   * As notes de "todas as ocorrencias", na ordem em que aparecem. Sao a mesma
-   * note em todas elas: cada ocorrencia gerada ganha um vinculo proprio.
-   */
-  noteIds?: string[];
 }
 
 export interface RecurrenceRehydrateProps extends RecurrenceCreateProps {
   revision: number;
   materializedThrough?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface RecurrenceReviseChanges {
   rule?: Partial<RecurrenceRule>;
   template?: Record<string, unknown>;
-  noteIds?: string[];
 }
 
 const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
@@ -64,31 +54,33 @@ function isIntegerBetween(value: unknown, min: number, max: number): value is nu
 }
 
 /**
- * A regra de repeticao de um evento ou de uma tarefa.
+ * A regra de repeticao de uma tarefa.
  *
- * As ocorrencias sao linhas de verdade em `events`/`tasks`, geradas quando
- * alguem le a timeline ou a lista de tarefas. `materializedThrough` e ate que
+ * As ocorrencias sao linhas de verdade em `tasks`, geradas quando alguem le
+ * a agenda ou a lista de tarefas. `materializedThrough` e ate que
  * dia civil isso ja foi feito — a proxima leitura continua dali.
  */
 export class Recurrence {
   private constructor(
     readonly id: string,
     readonly userId: string,
-    readonly target: RecurrenceTarget,
     readonly rule: Readonly<RecurrenceRule>,
     readonly template: Readonly<Record<string, unknown>>,
-    readonly noteIds: readonly string[],
     readonly materializedThrough: string | undefined,
     readonly revision: number,
+    readonly createdAt: Date,
+    /** A ultima revisao da regra ou do template. Avancar a marca d'agua nao conta. */
+    readonly updatedAt: Date,
   ) {}
 
-  static create(props: RecurrenceCreateProps): Recurrence {
+  static create(props: RecurrenceCreateProps, now: Date = new Date()): Recurrence {
     return Recurrence.build({
       ...props,
       id: props.id ?? ulid(),
-      noteIds: props.noteIds ?? [],
       revision: 1,
       materializedThrough: undefined,
+      createdAt: now,
+      updatedAt: now,
     });
   }
 
@@ -96,7 +88,6 @@ export class Recurrence {
     return Recurrence.build({
       ...props,
       id: props.id ?? ulid(),
-      noteIds: props.noteIds ?? [],
       materializedThrough: props.materializedThrough,
     });
   }
@@ -106,35 +97,16 @@ export class Recurrence {
    * marca d'agua volta, e o repositorio apaga as ocorrencias futuras que
    * ninguem editou a mao.
    */
-  revise(changes: RecurrenceReviseChanges): Recurrence {
+  revise(changes: RecurrenceReviseChanges, now: Date = new Date()): Recurrence {
     return Recurrence.build({
       id: this.id,
       userId: this.userId,
-      target: this.target,
       rule: { ...this.rule, ...changes.rule },
       template: changes.template ?? { ...this.template },
-      noteIds: changes.noteIds ?? [...this.noteIds],
       materializedThrough: undefined,
       revision: this.revision + 1,
-    });
-  }
-
-  /**
-   * As notes de "todas as ocorrencias" ganham mais algumas, no fim. Nao e uma
-   * revisao da regra: a marca d'agua fica onde esta, porque quem liga as notes as
-   * ocorrencias ja geradas e o repositorio; so conta uma versao a mais, para uma
-   * geracao em andamento perceber a mudanca e recomecar.
-   */
-  withNotes(noteIds: readonly string[]): Recurrence {
-    return Recurrence.build({
-      id: this.id,
-      userId: this.userId,
-      target: this.target,
-      rule: { ...this.rule },
-      template: { ...this.template },
-      noteIds: [...this.noteIds, ...noteIds.filter((noteId) => !this.noteIds.includes(noteId))],
-      materializedThrough: this.materializedThrough,
-      revision: this.revision + 1,
+      createdAt: this.createdAt,
+      updatedAt: now.getTime() < this.createdAt.getTime() ? this.createdAt : now,
     });
   }
 
@@ -143,12 +115,12 @@ export class Recurrence {
     return Recurrence.build({
       id: this.id,
       userId: this.userId,
-      target: this.target,
       rule: { ...this.rule },
       template: { ...this.template },
-      noteIds: [...this.noteIds],
       materializedThrough: dayKey,
       revision: this.revision,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
     });
   }
 
@@ -157,9 +129,6 @@ export class Recurrence {
   }): Recurrence {
     const rule = normalizeRule(props.rule);
 
-    if (!isRecurrenceTarget(props.target)) {
-      throw new RecurrenceValidationError("Invalid recurrence target");
-    }
     if (typeof props.template !== "object" || props.template === null || Array.isArray(props.template)) {
       throw new RecurrenceValidationError("Recurrence template must be an object");
     }
@@ -169,19 +138,18 @@ export class Recurrence {
     if (props.materializedThrough !== undefined && !isDayKey(props.materializedThrough)) {
       throw new RecurrenceValidationError("Invalid materializedThrough");
     }
-    const noteIds = normalizeNoteLinks(props.noteIds.map((noteId) => ({ noteId, fromRecurrence: false }))).map(
-      (link) => link.noteId,
-    );
-
+    if (props.updatedAt.getTime() < props.createdAt.getTime()) {
+      throw new RecurrenceValidationError("updatedAt must be equal to or after createdAt");
+    }
     return new Recurrence(
       props.id,
       props.userId,
-      props.target,
       Object.freeze(rule),
       Object.freeze(structuredClone(props.template)),
-      Object.freeze(noteIds),
       props.materializedThrough,
       props.revision,
+      props.createdAt,
+      props.updatedAt,
     );
   }
 }

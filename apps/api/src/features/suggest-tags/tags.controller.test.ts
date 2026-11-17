@@ -4,6 +4,9 @@ import { expect, test } from "vitest";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { TagSuggestionDto } from "@repo/contracts";
+import { Task } from "../../domain";
+import { InMemoryTaskDatabase } from "../../api-core/tasks/testing/in-memory-task-database";
+import { InMemoryTagRepository } from "../../api-core/tasks/testing/in-memory-tag.repository";
 import { SuggestTagsUseCase } from "./suggest-tags.usecase";
 import { SuggestTagsController } from "./suggest-tags.controller";
 
@@ -38,4 +41,32 @@ test("requires GatewayIdentityGuard on suggest", () => {
   ) as unknown[] | undefined;
 
   expect(guards).toContain(GatewayIdentityGuard);
+});
+
+function tagged(userId: string, tags: string[]): Task {
+  return Task.create({ userId, name: "Tarefa", status: "todo", tags });
+}
+
+test("suggests the actor's own tags that start with the query, and never another user's", async () => {
+  const database = new InMemoryTaskDatabase([
+    tagged("auth-user-1", ["gym", "casa"]),
+    tagged("auth-user-1", ["Gymnastics", "trabalho"]),
+    tagged("someone-else", ["gym-secreto"]),
+  ]);
+  const controller = new SuggestTagsController(new SuggestTagsUseCase(new InMemoryTagRepository(database)));
+
+  expect((await controller.execute(actor, "gy")).map((tag) => tag.name)).toEqual(["gym", "gymnastics"]);
+  expect(await controller.execute(actor, "secreto")).toEqual([]);
+});
+
+test("limits to 10 suggestions unless a positive integer limit is given", async () => {
+  const tags = Array.from({ length: 12 }, (_, index) => `tag-${String(index).padStart(2, "0")}`);
+  const controller = new SuggestTagsController(
+    new SuggestTagsUseCase(new InMemoryTagRepository(new InMemoryTaskDatabase([tagged("auth-user-1", tags)]))),
+  );
+
+  expect(await controller.execute(actor, "tag")).toHaveLength(10);
+  expect(await controller.execute(actor, "tag", "3")).toHaveLength(3);
+  expect(await controller.execute(actor, "tag", "0")).toHaveLength(10);
+  expect(await controller.execute(actor, "tag", "muitas")).toHaveLength(10);
 });

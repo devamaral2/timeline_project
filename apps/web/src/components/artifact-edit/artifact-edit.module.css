@@ -1,0 +1,8 @@
+/*
+ * O que é só do formulário de artefato: a marca do tipo na pílula (ícone e código
+ * em mono). O resto vem de `components/edit`. Cor só por token.
+ */
+
+.typeMark { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.typeMark .typeIcon { width: 16px; height: 16px; stroke-width: 2; }
+.typeCode { font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; white-space: nowrap; }

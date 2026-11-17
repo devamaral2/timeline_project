@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.FitnessCenter
@@ -40,15 +40,14 @@ import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.DarkTokens
 import app.braid.mobile.core.designsystem.LightTokens
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
+import app.braid.mobile.core.designsystem.LucideIcons
+import app.braid.mobile.core.designsystem.braidBrandAccent
 import app.braid.mobile.core.designsystem.tagColors
 import app.braid.mobile.data.dto.TimelineEventCardDto
 import app.braid.mobile.domain.timeline.EventPosition
 import app.braid.mobile.domain.timeline.durationPartsOf
-import app.braid.mobile.domain.timeline.elapsedSecondsOf
 import app.braid.mobile.domain.timeline.eventPositionOf
-import app.braid.mobile.domain.timeline.formatStopwatch
 import app.braid.mobile.domain.timeline.formatTime
-import app.braid.mobile.ui.event.eventDetailPalette
 import java.time.Instant
 
 private data class EventVisual(
@@ -57,18 +56,25 @@ private data class EventVisual(
     val color: Color,
 )
 
+/** O tipo não tem cor própria: só o ícone o distingue, no tom apagado das legendas. */
 @Composable
 private fun visualFor(type: String): EventVisual {
-    val palette = eventDetailPalette()
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
     return when (type) {
-        "meal" -> EventVisual(Icons.Outlined.Restaurant, "Refeição", palette.meal)
-        "training" -> EventVisual(Icons.Outlined.FitnessCenter, "Treino", palette.training)
-        "sleep" -> EventVisual(Icons.Outlined.Bedtime, "Sono", palette.sleep)
-        "routine" -> EventVisual(Icons.Outlined.AccessTime, "Rotina", palette.routine)
-        else -> EventVisual(Icons.Outlined.Circle, "Evento", MaterialTheme.colorScheme.onSurfaceVariant)
+        "meal" -> EventVisual(Icons.Outlined.Restaurant, "Refeição", muted)
+        "training" -> EventVisual(Icons.Outlined.FitnessCenter, "Treino", muted)
+        "sleep" -> EventVisual(Icons.Outlined.Bedtime, "Sono", muted)
+        "common" -> EventVisual(Icons.Outlined.EventAvailable, "Padrão", muted)
+        else -> EventVisual(Icons.Outlined.Circle, "Evento", muted)
     }
 }
 
+/**
+ * O cartão de evento do canvas “Eventos · Braid” (`.event` do HTML): ícone do tipo à esquerda,
+ * nome, a meta em mono (“07:00 — 08:00 · 1 h”) e as etiquetas; à direita, a seta que abre o
+ * evento ou, no que está rolando, “Em andamento”. Quem já passou some para o fundo (sem
+ * superfície); o não realizado esmaece; o que está rolando ganha a borda da marca.
+ */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 @Suppress("ktlint:standard:function-naming")
@@ -80,29 +86,35 @@ fun EventCard(
     val visual = visualFor(event.kind)
     val dark = LocalBraidDarkTheme.current
     val brand = if (dark) DarkTokens.brand else LightTokens.brand
-    val destructive = if (dark) DarkTokens.destructive else LightTokens.destructive
+    val input = if (dark) DarkTokens.input else LightTokens.input
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    // Não realizado: título e duração no tom apagado, como o `.event[data-missed]`
+    // do web. Opacidade no cartão inteiro levava o texto secundário abaixo de 3:1.
+    val emphasis = if (event.missed) muted else MaterialTheme.colorScheme.onSurface
     val position = eventPositionOf(event, now)
     val isRunning = position == EventPosition.Running
-    val elapsedSeconds = if (isRunning) elapsedSecondsOf(event.startedAt, now) else null
-    val durationParts = event.finishedAt?.let { durationPartsOf(event.startedAt, it) }.orEmpty()
+    val finishedAt = event.finishedAt
+    val durationParts = finishedAt?.let { durationPartsOf(event.startedAt, it) }.orEmpty()
+    val timeText =
+        when {
+            finishedAt == null -> formatTime(event.startedAt)
+            else -> "${formatTime(event.startedAt)} — ${formatTime(finishedAt)}"
+        }
 
-    // Quem já passou some para o fundo (sem superfície); o não realizado esmaece
-    // mais um pouco; o que está rolando ganha a borda da marca.
     Surface(
         onClick = onClick,
-        modifier = Modifier.alpha(if (event.missed) 0.58f else 1f).semantics { contentDescription = "${visual.label}: ${event.name}" },
+        modifier = Modifier.semantics { contentDescription = "${visual.label}: ${event.name}" },
         shape = RoundedCornerShape(14.dp),
         color = if (position == EventPosition.Past) Color.Transparent else MaterialTheme.colorScheme.surface,
         border = BorderStroke(if (isRunning) 2.dp else 1.dp, if (isRunning) brand else MaterialTheme.colorScheme.outline),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
         ) {
             Icon(
-                modifier = Modifier.size(22.dp).align(Alignment.Top).padding(top = 2.dp),
+                modifier = Modifier.size(22.dp).padding(top = 2.dp),
                 imageVector = visual.icon,
                 contentDescription = null,
                 tint = visual.color,
@@ -110,56 +122,22 @@ fun EventCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = event.name,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                    color = emphasis,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Row(
-                    modifier = Modifier.padding(top = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (position == EventPosition.Past) {
-                        Box(
-                            Modifier
-                                .size(5.dp)
-                                .clip(CircleShape)
-                                .alpha(0.8f)
-                                .background(muted),
-                        )
-                    }
-                    val finishedAt = event.finishedAt
-                    Text(
-                        text =
-                            if (finishedAt == null ||
-                                isRunning
-                            ) {
-                                formatTime(event.startedAt)
-                            } else {
-                                "${formatTime(event.startedAt)} — ${formatTime(finishedAt)}"
-                            },
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = muted,
-                    )
-                    if (isRunning) {
-                        Box(Modifier.size(6.dp).clip(CircleShape).background(brand))
-                        Text(
-                            text = "EM ANDAMENTO",
-                            style =
-                                MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 1.sp,
-                                ),
-                            color = brand,
-                        )
-                    } else if (finishedAt == null) {
-                        Text(text = "sem hora de fim", style = MaterialTheme.typography.labelSmall, color = muted)
-                    }
-                }
+                Text(
+                    modifier = Modifier.padding(top = 4.dp),
+                    text = timeText,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = BraidMonoFont, fontSize = 13.sp),
+                    color = muted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 if (event.tags.isNotEmpty() || event.missed) {
                     FlowRow(
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(top = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -167,59 +145,70 @@ fun EventCard(
                             val colors = tagColors(tag, dark)
                             Surface(shape = RoundedCornerShape(5.dp), color = colors.backgroundColor) {
                                 Text(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                                     text = "#$tag",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.5.sp, fontWeight = FontWeight.Medium),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
                                     color = colors.color,
                                 )
                             }
                         }
                         if (event.missed) {
-                            Surface(shape = RoundedCornerShape(5.dp), color = destructive.copy(alpha = if (dark) 0.15f else 0.12f)) {
+                            Surface(
+                                shape = RoundedCornerShape(5.dp),
+                                color = Color.Transparent,
+                                border = BorderStroke(1.dp, input),
+                            ) {
                                 Text(
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                                    text = "NÃO REALIZADO",
-                                    style =
-                                        MaterialTheme.typography.labelSmall.copy(
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            letterSpacing = 0.8.sp,
-                                        ),
-                                    color = destructive,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 1.dp),
+                                    text = "Não realizado",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                                    color = muted,
                                 )
                             }
                         }
                     }
                 }
             }
-            if (elapsedSeconds != null) {
-                Text(
-                    text = formatStopwatch(elapsedSeconds),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontFamily = BraidMonoFont,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Medium,
-                            letterSpacing = (-0.4).sp,
-                        ),
-                    color = brand,
-                )
-            } else if (durationParts.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
-                    durationParts.forEach { part ->
-                        Row(verticalAlignment = Alignment.Bottom) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (durationParts.isNotEmpty()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
+                            durationParts.forEach { part ->
+                                Row(verticalAlignment = Alignment.Bottom) {
+                                    Text(
+                                        text = part.value.toString(),
+                                        style = MaterialTheme.typography.titleLarge.copy(fontFamily = BraidDisplayFont, fontSize = 22.sp),
+                                        color = emphasis,
+                                    )
+                                    Text(
+                                        modifier = Modifier.padding(start = 3.dp, bottom = 2.dp),
+                                        text = part.unit,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                                        color = muted,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (isRunning) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(6.dp).clip(CircleShape).background(brand))
                             Text(
-                                text = part.value.toString(),
-                                style = MaterialTheme.typography.titleLarge.copy(fontFamily = BraidDisplayFont, fontSize = 26.sp),
-                            )
-                            Text(
-                                modifier = Modifier.padding(start = 3.dp, bottom = 3.dp),
-                                text = part.unit,
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                color = muted,
+                                text = "Em andamento",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = braidBrandAccent(),
+                                maxLines = 1,
                             )
                         }
                     }
+                }
+                if (!isRunning) {
+                    Icon(
+                        modifier = Modifier.size(18.dp).padding(top = 3.dp).alpha(0.6f),
+                        imageVector = LucideIcons.chevronRight(),
+                        contentDescription = null,
+                        tint = muted,
+                    )
                 }
             }
         }

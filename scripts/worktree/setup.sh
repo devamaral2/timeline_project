@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Cria uma worktree nova e a deixa rodando no navegador: pnpm install,
 # portas livres, alias <slug>.braid.local (Caddy + /etc/hosts), bases proprias
-# no Postgres compartilhado, fila <slug>.health no RabbitMQ, migrations, admin
-# e servidores de dev. Os passos estao em provision-env.sh; nenhum e opcional.
+# no Postgres compartilhado, migrations, admin e servidores de dev. Os passos estao em provision-env.sh; nenhum e opcional.
 #
 # Uso: bash scripts/worktree/setup.sh <caminho> [args do git worktree add...]
 # Ex.:  bash scripts/worktree/setup.sh .worktrees/minha-feature -b minha-feature
@@ -32,7 +31,7 @@ bash "$SCRIPT_DIR/hosts.sh" ready
 
 WORKTREE_PATH="$1"
 shift
-echo "[0/9] Criando a worktree (git worktree add)"
+echo "[0/8] Criando a worktree (git worktree add)"
 git worktree add "$WORKTREE_PATH" "$@"
 
 cd "$WORKTREE_PATH"

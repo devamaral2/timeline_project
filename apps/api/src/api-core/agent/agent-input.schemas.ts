@@ -12,3 +12,9 @@ export const agentScreenContextSchema = z.object({
     .regex(/^[A-Za-z0-9_-]{1,64}$/)
     .optional(),
 });
+
+/** O id de um pedido (ULID). */
+export const requestIdSchema = z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+
+/** Estavel por mensagem, escolhido pelo cliente: reenviar o mesmo id devolve o pedido ja aceito. */
+export const clientMessageIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);

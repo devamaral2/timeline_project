@@ -70,12 +70,12 @@ export function expandOccurrences(
   return days;
 }
 
-/** O inicio e o fim da ocorrencia daquele dia. */
+/** O inicio e o fim planejado da ocorrencia daquele dia. */
 export function occurrenceWindow(
   rule: RecurrenceRule,
   dayKey: string,
-): { startedAt: Date; finishedAt?: Date } {
+): { startedAt: Date; estimatedFinishAt?: Date } {
   const startedAt = zonedTimeAt(dayKey, rule.timeOfDay, rule.timeZone);
   if (rule.durationMinutes === undefined) return { startedAt };
-  return { startedAt, finishedAt: new Date(startedAt.getTime() + rule.durationMinutes * 60_000) };
+  return { startedAt, estimatedFinishAt: new Date(startedAt.getTime() + rule.durationMinutes * 60_000) };
 }

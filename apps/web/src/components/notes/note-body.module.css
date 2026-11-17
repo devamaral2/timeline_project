@@ -1,72 +1,75 @@
 /*
- * O corpo de uma nota — o mesmo no cartão da nota dentro do evento e no
- * detalhe da nota: número principal, uma linha de métricas e a lista.
- * Tokens (--ink, --muted, --line, --card, --sleep) vêm do shell.
+ * O corpo de uma nota — o mesmo dentro da tarefa e no detalhe da nota. Texto é
+ * markdown; refeição, treino e sono abrem com o número principal na serifa (e,
+ * ao lado, o tempo), seguido da barra, das listas com fio e da receita. Sem
+ * moldura nem ícone: o número carrega. Tokens (--ink, --muted, --line) vêm do
+ * shell.
  */
-.noteBody {
-  --kcal-burned: var(--destructive);
-  --kcal-consumed: oklch(0.55 0.13 150);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  overflow-wrap: anywhere;
-}
-:global(.dark) .noteBody { --kcal-consumed: oklch(0.78 0.13 150); }
-.noteBody hr { width: 100%; height: 1px; margin: 0; border: 0; background: var(--line); }
-.noteText { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
-.noteHeading { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
-.noteFoot { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.bigNumber { display: flex; align-items: center; gap: 14px; }
-.bigNumber > div { display: flex; flex-direction: column; gap: 6px; }
-.bigNumberLabel { color: var(--muted); font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; }
-.bigNumberValue { display: inline-flex; align-items: baseline; gap: 4px; font-family: var(--font-display); font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
-.bigNumberValue small { font-family: var(--font-sans); font-size: 13px; font-weight: 500; }
-.bigNumber[data-tone="burned"] .bigNumberValue { color: var(--kcal-burned); }
-.bigNumber[data-tone="consumed"] .bigNumberValue { color: var(--kcal-consumed); }
-.bigNumber[data-tone="sleep"] .bigNumberValue { color: var(--sleep); }
-.sleepIcon { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; color: var(--sleep); }
-.sleepIcon svg { width: 30px; height: 30px; }
-.kcalIcon { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; }
-.kcalIcon > svg { width: 100%; height: 100%; }
-.kcalIcon[data-kind="burned"] { color: var(--kcal-burned); }
-.kcalIcon[data-kind="consumed"] { color: var(--kcal-consumed); }
-.kcalBadge { position: absolute; top: -4px; right: -6px; display: grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--card); }
-.kcalBadge svg { width: 11px; height: 11px; }
-.kcal { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
-.kcal .kcalIcon { width: 20px; height: 20px; }
-.kcal .kcalBadge { top: -3px; right: -5px; width: 13px; height: 13px; }
-.kcal .kcalBadge svg { width: 9px; height: 9px; }
-.kcalValue { display: inline-flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; }
-.kcalValue small { font-family: var(--font-sans); font-size: 12px; font-weight: 500; }
-.kcal[data-kind="burned"] .kcalValue { color: var(--kcal-burned); }
-.kcal[data-kind="consumed"] .kcalValue { color: var(--kcal-consumed); }
-.metrics { display: flex; gap: 28px; }
-.metrics[data-columns="3"] { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.metric { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--muted); }
-.metric svg { flex-shrink: 0; width: 20px; height: 20px; }
-.metricValue { display: inline-flex; align-items: baseline; gap: 3px; color: var(--ink); font-family: var(--font-display); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.metricValue small { margin-right: 4px; color: var(--muted); font-family: var(--font-sans); font-size: 12px; }
+.noteBody { display: flex; flex-direction: column; gap: 16px; overflow-wrap: anywhere; }
+.noteText { margin: 0; max-width: 62ch; font-size: 15px; line-height: 25px; white-space: pre-wrap; text-wrap: pretty; }
+.noteFoot { margin: 0; color: var(--muted); font-size: 13px; line-height: 20px; text-wrap: pretty; }
+
+/* Os números: o principal à esquerda (56 px) e o tempo à direita (28 px). */
+.figures { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 32px; }
+.bigNumber { display: flex; flex-direction: column; gap: 8px; }
+.bigNumberLabel, .metricLabel { color: var(--muted); font-size: 13px; line-height: 20px; }
+.bigNumberValue { display: inline-flex; align-items: baseline; gap: 6px; font-family: var(--font-display); font-size: 56px; line-height: 56px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.bigNumberValue small { font-family: var(--font-sans); font-size: var(--font-size-sm); letter-spacing: 0; color: var(--muted); }
+.metric { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.metricValue { display: inline-flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: 28px; line-height: 28px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.metricValue small { margin-right: 4px; font-family: var(--font-sans); font-size: var(--font-size-xs); color: var(--muted); }
 .metricValue small:last-child { margin-right: 0; }
-.listHeading { margin: 0 0 10px; color: var(--muted); font-size: 12px; font-weight: 600; }
+/* A barra fina: a pontuação do sono, na cor do sono. */
+.scoreBar { height: 3px; overflow: hidden; border-radius: 2px; background: var(--line); }
+.scoreBar > i { display: block; height: 100%; border-radius: 2px; background: var(--sleep); }
+
+/* Macros: cada um com a sua cor, na barra e no ponto do rótulo. */
+.macroBlock { display: flex; flex-direction: column; gap: 14px; }
+.macroBar { display: flex; height: 4px; gap: 2px; }
+.macroBar > i { display: block; min-width: 2px; border-radius: 2px; background: var(--macro); }
+.macroBar > i[data-macro="protein"], .macro[data-macro="protein"] { --macro: var(--macro-protein); }
+.macroBar > i[data-macro="carbs"], .macro[data-macro="carbs"] { --macro: var(--macro-carbs); }
+.macroBar > i[data-macro="fat"], .macro[data-macro="fat"] { --macro: var(--macro-fat); }
+.macros { display: flex; gap: 12px; }
+.macro { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.macroName { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; line-height: 20px; }
+.macroName i { display: block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--macro); }
+.macroLine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.macroValue { display: inline-flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: var(--font-size-xl); line-height: 24px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.macroValue small { color: var(--muted); font-family: var(--font-sans); font-size: var(--font-size-xs); }
+.macroShare { color: var(--faint); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+/* Listas dentro da nota: o rótulo em mono apagado e as linhas com fio. */
+.listBlock { display: flex; flex-direction: column; gap: 4px; }
+.listHeading { margin: 0; display: flex; align-items: center; gap: 10px; min-height: 24px; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
 .foods { margin: 0; padding: 0; list-style: none; }
-.foods li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 0; border-top: 1px solid var(--line); }
-.foodName { font-size: 14px; font-weight: 500; }
-.foods .kcalValue { font-size: 18px; }
-.row { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 14px 0; }
-.rowHead { display: flex; align-items: center; gap: 16px; width: 100%; }
-.rowText { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
-.rowTitle { color: var(--ink); font-size: 15px; font-weight: 600; }
-.rowSummary { color: var(--muted); font-size: 13px; line-height: 1.45; font-variant-numeric: tabular-nums; }
-.collapsibleToggle { display: flex; flex-direction: column; gap: 6px; width: 100%; min-height: 56px; padding: 14px 0 8px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
-.chevron { display: grid; place-items: center; align-self: center; width: 44px; height: 18px; color: var(--muted); }
-.chevron svg { width: 18px; height: 18px; }
-.collapsibleBody { padding: 4px 0 18px; }
-.exercises { display: flex; flex-direction: column; gap: 16px; }
-.exercises > div { display: flex; flex-direction: column; gap: 8px; }
-.exerciseHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.exerciseHead span:first-child { font-size: 14px; font-weight: 500; }
-.exerciseHead span:last-child { color: var(--muted); font-size: 12px; }
+.foods li { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 6px 0; border-bottom: 1px solid var(--hairline); }
+.foodName { font-size: 15px; font-weight: 500; line-height: 22px; }
+.kcal { flex: none; white-space: nowrap; }
+.kcalValue { display: inline-flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: var(--font-size-lg); line-height: 24px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.kcalValue small { font-family: var(--font-sans); font-size: var(--font-size-xs); color: var(--muted); }
+
+.row { display: flex; align-items: center; gap: 16px; min-height: 64px; }
+.rowHead { display: flex; flex: 1; align-items: center; gap: 16px; min-width: 0; }
+.rowText { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.rowTitle { color: var(--ink); font-size: 15px; font-weight: 600; line-height: 22px; }
+.rowSummary { color: var(--muted); font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; }
+.collapsibleToggle { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 64px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.chevron { flex: none; display: grid; width: 16px; color: var(--faint); }
+.chevron svg { width: 16px; height: 16px; stroke-width: 2; }
+.row::after { content: ""; flex: none; width: 16px; }
+.collapsibleBody { padding: 0 0 14px; }
+.workouts > * { border-bottom: 1px solid var(--hairline); }
+.exercises { display: flex; flex-direction: column; }
+.exercises > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 8px 0; }
+.exerciseHead { display: flex; align-items: baseline; gap: 10px; }
+.exerciseHead span:first-child { font-size: var(--font-size-sm); font-weight: 500; line-height: 20px; }
+.exerciseHead span:last-child { color: var(--muted); font-size: var(--font-size-xs); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chips span { padding: 3px 7px; border-radius: 5px; background: var(--soft); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
-.workouts { border-bottom: 1px solid var(--line); }
-.workouts > * { border-top: 1px solid var(--line); }
+.chips span { padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+@media (max-width: 720px) {
+  .bigNumberValue { font-size: 48px; line-height: 48px; }
+  .macros { gap: 8px; }
+  .macroValue { font-size: 22px; }
+}

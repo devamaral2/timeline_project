@@ -143,7 +143,7 @@ class AgendaViewModelTest {
         finishedAt: String,
     ) = TimelineEventCardDto(
         id = id,
-        kind = "routine",
+        kind = "common",
         noteTypes = emptyList(),
         missed = false,
         name = id,

@@ -1,21 +1,16 @@
 /**
- * Portas de saida do dominio. Vivem aqui — e nao no backend — para que
- * a infraestrutura de persistencia da API possa implementa-las.
+ * Portas de saida do dominio. Vivem aqui, e nao na infraestrutura, para que a
+ * persistencia da API possa implementa-las.
  */
-export type * from "./events/ports/event-repository";
-export type * from "./events/ports/tag-repository";
-export type * from "./catalog/ports/food-repository";
-export type * from "./catalog/ports/meal-repository";
-export type * from "./events/ports/timeline-event-query";
-export type * from "./events/ports/daily-overview-query";
-export type * from "./events/ports/workout-catalog";
 export type * from "./tasks/ports/task-repository";
-export type * from "./notes/ports/note-repository";
-export type * from "./notes/ports/meal-note-generation-repository";
-export type * from "./notes/ports/note-link-query";
+export type * from "./tasks/ports/task-card-query";
+export type * from "./tasks/ports/task-request-link-query";
+export type * from "./tasks/ports/tag-repository";
+export type * from "./artifacts/ports/artifact-repository";
+export type * from "./artifacts/ports/artifact-task-link-query";
+export type * from "./artifacts/ports/food-generation-repository";
+export type * from "./artifacts/ports/workout-catalog";
 export type * from "./recurrences/ports/recurrence-repository";
 export type * from "./agent/ports/scoped-sql-query";
 export type * from "./agent/ports/entity-batch-writer";
-export type * from "./agent/ports/agent-chat-ticket-store";
-export type * from "./agent-chat/ports/agent-conversation-repository";
-export type * from "./agent-chat/ports/agent-conversation-query";
+export type * from "./idempotency/ports/idempotency-store";

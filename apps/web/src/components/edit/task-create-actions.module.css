@@ -1,0 +1,29 @@
+/*
+ * O rodapé do modal de seleção de tarefas (`TaskCreateActions`): criar a tarefa nova com o texto da busca, à mão ou
+ * pelo Hermes. Vive dentro do `.overlay` do modal, que define os apelidos de token (`--ink`, `--muted`, `--soft`).
+ */
+
+.actions { display: flex; flex-direction: column; }
+
+.action {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0;
+  border: 0; border-radius: 12px; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.action:hover:not(:disabled) { background: var(--soft); box-shadow: -10px 0 0 var(--soft), 10px 0 0 var(--soft); }
+.action:focus-visible { outline-offset: -2px; }
+.action:disabled { color: var(--muted); cursor: default; }
+
+.icon { flex: none; width: 20px; height: 20px; stroke-width: 1.75; color: var(--brand-accent); }
+.action:disabled .icon { color: var(--muted); }
+
+.label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.hint { margin: 4px 0 0; font-size: 13px; line-height: 18px; color: var(--muted); }
+.hint[data-alert] { color: var(--destructive); }
+
+.spin { animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; }
+}

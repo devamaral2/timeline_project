@@ -1,0 +1,16 @@
+/*
+ * Linhas-fantasma: as medidas da linha do livro-razao (quadrado de 44, texto,
+ * figura), em barras lisas no tom de `--soft`, sem brilho que atravesse. So a
+ * opacidade pulsa, com cada linha um pouco depois da de cima.
+ */
+.skeleton { display: flex; flex-direction: column; border-top: 1px solid var(--line, var(--border)); }
+.row { display: flex; align-items: center; gap: 16px; padding: 14px 0; animation: pulse 1200ms ease-in-out infinite; animation-delay: calc(var(--row, 0) * 90ms); }
+.row + .row { border-top: 1px solid var(--hairline); }
+.tile { flex: none; width: 44px; height: 44px; border-radius: 13px; background: var(--soft, var(--secondary)); }
+.text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.text i { display: block; width: 96px; max-width: 100%; height: 10px; border-radius: 5px; background: var(--soft, var(--secondary)); }
+.text i:first-child { width: 62%; height: 12px; border-radius: 6px; }
+.text i[data-width="1"] { width: 44%; }
+.text i[data-width="2"] { width: 54%; }
+.figure { flex: none; width: 40px; height: 12px; border-radius: 6px; background: var(--soft, var(--secondary)); }
+@keyframes pulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }

@@ -1,89 +1,204 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { NoteDto } from "@/lib/api/contracts";
-import { textNote } from "./note-fixtures";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+import { type FakeApi, createFakeApi } from "@/test/fake-api";
+import { artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
 
-const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-
-const authedFetch = vi.fn();
-vi.mock("@/lib/api/authed-fetch", () => ({ authedFetch: (...args: unknown[]) => authedFetch(...args) }));
-vi.mock("@/components/events/new-event-forms/TagInput", () => ({ TagInput: () => null }));
+// A tela troca o authedFetch pela API falsa: a rede inteira passa por ela.
+const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
+vi.mock("@/lib/api/authed-fetch", async (original) => ({
+  ...(await original<typeof import("@/lib/api/authed-fetch")>()),
+  authedFetch: net.authedFetch,
+}));
 
 const { NotesScreen } = await import("./NotesScreen");
 
-const note = textNote;
+type Seed = Parameters<typeof createFakeApi>[0]["seed"];
 
-const notes: NoteDto[] = [
-  note({ id: "treino", name: "Treino A", content: "415 kcal gastas.", tags: ["saúde"], link: { kind: "event", id: "e1", name: "Academia", eventKind: "training", at: "2026-09-14T07:00:00-03:00" } }),
-  note({ id: "proposta", name: "Ideias para a proposta", content: "Começar pelo problema.", updatedAt: "2026-09-13T21:12:00-03:00", link: { kind: "task", id: "t1", name: "Revisar proposta" } }),
-  note({ id: "livros", name: "Livros para ler", content: "Torto arado.", updatedAt: "2026-09-11T09:00:00-03:00" }),
-];
+let api: FakeApi;
+
+function install(seed: Seed = {}) {
+  api = createFakeApi({ areas: [artifactsArea], seed });
+  net.authedFetch.mockImplementation(api.authedFetch);
+}
+
+const FOOD = {
+  description: "Arroz e feijão",
+  items: [],
+  totals: { totalCaloriesKcal: 0, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0 },
+  generation: { status: "completed" },
+};
+const SLEEP = { trackedSleepTime: 420, score: 80 };
+
+function lastQuery(): Record<string, string> {
+  return api.calls.at(-1)?.query ?? {};
+}
+
+/** Os ids dos artefatos listados, na ordem da tela (cada item é um link para a nota). */
+function listedIds(): string[] {
+  return within(screen.getByRole("region", { name: "Lista de documentos" }))
+    .queryAllByRole("link")
+    .map((link) => link.getAttribute("href")?.split("/").pop() ?? "");
+}
+
+/** A base de testes: três artefatos do usuário e uma cópia derivada que não pode aparecer. */
+function seeded(): Seed {
+  return {
+    artifacts: [
+      artifactFixture({
+        id: "art-antiga",
+        name: "Livros para ler",
+        data: { body: "Torto arado." },
+        tags: ["leitura"],
+        updatedAt: "2026-09-10T10:00:00.000Z",
+      }),
+      artifactFixture({
+        id: "art-nova",
+        name: "Almoço",
+        type: "food",
+        data: FOOD,
+        tags: ["casa"],
+        updatedAt: "2026-09-12T10:00:00.000Z",
+      }),
+      artifactFixture({
+        id: "art-texto",
+        name: "Lista de compras",
+        data: { body: "Comprar leite" },
+        tags: ["casa"],
+        updatedAt: "2026-09-11T10:00:00.000Z",
+      }),
+      artifactFixture({
+        id: "art-copia",
+        name: "Arroz (cópia)",
+        type: "food",
+        data: FOOD,
+        derived: true,
+        updatedAt: "2026-09-13T10:00:00.000Z",
+      }),
+      artifactFixture({
+        id: "art-sono",
+        name: "Noite",
+        type: "sleep",
+        data: SLEEP,
+        tags: ["casa"],
+        updatedAt: "2026-09-09T10:00:00.000Z",
+      }),
+    ],
+  };
+}
 
 beforeEach(() => {
-  vi.useFakeTimers({ shouldAdvanceTime: true });
-  vi.setSystemTime(new Date("2026-09-14T10:00:00-03:00"));
-  authedFetch.mockReset();
-  push.mockReset();
+  net.authedFetch.mockReset();
+  install(seeded());
 });
 
-afterEach(() => {
-  vi.useRealTimers();
+describe("lista", () => {
+  test("lista os documentos do usuário do mais recente para o mais antigo, sem as cópias derivadas", async () => {
+    render(<NotesScreen userId="user-1" />);
+
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
+    expect(listedIds()).toEqual(["art-nova", "art-texto", "art-antiga", "art-sono"]);
+    expect(screen.queryByText("Arroz (cópia)")).not.toBeInTheDocument();
+    expect(api.calls[0]).toMatchObject({ method: "GET", pathname: "/api/artifacts" });
+  });
+
+  test("cada item mostra o nome, o tipo e as tags, e leva à rota de nota", async () => {
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
+
+    const almoco = within(screen.getByRole("region", { name: "Lista de documentos" })).getByRole("link", { name: /Almoço/ });
+    expect(almoco).toHaveAttribute("href", "/user-1/notas/art-nova");
+    expect(within(almoco).getByText("Refeição")).toBeInTheDocument();
+    expect(within(almoco).getByText("#casa")).toBeInTheDocument();
+  });
 });
 
-test("agrupa por tag e mantém notas sem tag acessíveis", async () => {
-  authedFetch.mockResolvedValue(notes);
-  render(<NotesScreen userId="user-1" />);
-  await screen.findByText("3 notas");
-  const health = screen.getByRole("region", { name: "#saúde" });
-  expect(within(health).getByRole("link", { name: /Treino A/ })).toHaveAttribute("href", "/user-1/notas/treino");
-  const untagged = screen.getByRole("region", { name: "Sem tag" });
-  expect(within(untagged).getByText("Livros para ler")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Nova nota" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Buscar notas" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("group", { name: "Filtrar notas" })).not.toBeInTheDocument();
+describe("filtros", () => {
+  test("o tipo escolhido vai como parâmetro da consulta e filtra a lista", async () => {
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Sono" }));
+
+    await waitFor(() => expect(lastQuery()).toEqual({ type: "sleep" }));
+    expect(listedIds()).toEqual(["art-sono"]);
+    expect(screen.getByRole("button", { name: "Sono" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("a tag escolhida vai à consulta, e as opções de tag continuam as de todos os documentos", async () => {
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
+
+    fireEvent.click(screen.getByRole("button", { name: "#leitura" }));
+
+    await waitFor(() => expect(lastQuery()).toEqual({ tag: "leitura" }));
+    expect(listedIds()).toEqual(["art-antiga"]);
+    expect(screen.getByRole("button", { name: "#casa" })).toBeInTheDocument();
+  });
+
+  test("o texto vai como q e busca no nome e no corpo", async () => {
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar documentos" }), { target: { value: "leite" } });
+
+    await waitFor(() => expect(lastQuery()).toEqual({ q: "leite" }));
+    expect(listedIds()).toEqual(["art-texto"]);
+  });
+
+  test("tipo e tag somam-se na consulta, e Limpar filtros volta a lista inteira", async () => {
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Nota" }));
+    fireEvent.click(screen.getByRole("button", { name: "#casa" }));
+    await waitFor(() => expect(lastQuery()).toEqual({ type: "text", tag: "casa" }));
+    expect(listedIds()).toEqual(["art-texto"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
+    await waitFor(() => expect(lastQuery()).toEqual({}));
+    expect(listedIds()).toEqual(["art-nova", "art-texto", "art-antiga", "art-sono"]);
+  });
+
+  test("nenhum documento combina com a busca: avisa e oferece limpar", async () => {
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "4 documentos" });
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar documentos" }), { target: { value: "zzz" } });
+
+    expect(await screen.findByRole("heading", { name: "Nenhum documento encontrado" })).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: "Lista de documentos" })).getByRole("button", { name: "Limpar filtros" })).toBeInTheDocument();
+  });
 });
 
-test("seleciona tags pelo menu e informa quando todas estão ocultas", async () => {
-  authedFetch.mockResolvedValue(notes);
-  render(<NotesScreen userId="user-1" />);
-  await screen.findByText("3 notas");
-  fireEvent.click(screen.getByLabelText("Opções de visualização"));
-  fireEvent.click(screen.getByRole("checkbox", { name: "#saúde" }));
-  expect(screen.queryByText("Treino A")).not.toBeInTheDocument();
-  expect(screen.getByText("Livros para ler")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("checkbox", { name: "Sem tag" }));
-  expect(screen.getByText(/Nenhuma tag selecionada/)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("checkbox", { name: "#saúde" }));
-  expect(screen.getByText("Treino A")).toBeInTheDocument();
-});
+describe("estados", () => {
+  test("mostra o carregamento enquanto a lista não chega", () => {
+    net.authedFetch.mockReturnValue(new Promise(() => {}));
+    render(<NotesScreen userId="user-1" />);
 
-test("expande e recolhe cada tag independentemente e repete notas com várias tags", async () => {
-  authedFetch.mockResolvedValue([note({ id: "multi", name: "Nota compartilhada", tags: ["saúde", "pessoal"] })]);
-  render(<NotesScreen userId="user-1" />);
-  await screen.findByText("1 nota");
-  expect(screen.getAllByRole("link", { name: /Nota compartilhada/ })).toHaveLength(2);
-  const toggle = screen.getByRole("button", { name: /#saúde/ });
-  fireEvent.click(toggle);
-  expect(toggle).toHaveAttribute("aria-expanded", "false");
-  expect(screen.getAllByRole("link", { name: /Nota compartilhada/ })).toHaveLength(1);
-  fireEvent.click(toggle);
-  expect(screen.getAllByRole("link", { name: /Nota compartilhada/ })).toHaveLength(2);
-});
+    expect(screen.getByRole("status")).toHaveTextContent("Carregando documentos…");
+  });
 
-test("convida a escrever a primeira nota quando não há nenhuma", async () => {
-  authedFetch.mockResolvedValue([]);
-  render(<NotesScreen userId="user-1" />);
+  test("oferece tentar de novo quando a leitura falha", async () => {
+    api.failNext("GET", "/api/artifacts", 500);
+    render(<NotesScreen userId="user-1" />);
 
-  expect(await screen.findByText(/ainda não tem notas/)).toBeInTheDocument();
-});
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar os documentos.");
+    fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
 
-test("oferece tentar de novo quando a leitura falha", async () => {
-  authedFetch.mockRejectedValueOnce(new Error("boom")).mockResolvedValueOnce(notes);
-  render(<NotesScreen userId="user-1" />);
+    expect(await screen.findByRole("heading", { level: 1, name: "4 documentos" })).toBeInTheDocument();
+  });
 
-  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar as notas.");
-  fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+  test("convida a criar a primeira nota quando o usuário não tem nenhuma", async () => {
+    install({});
+    render(<NotesScreen userId="user-1" />);
 
-  expect(await screen.findByText("3 notas")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Nenhum documento ainda" })).toBeInTheDocument();
+  });
+
+  test("uma cópia derivada sozinha não conta como nota: a lista continua vazia", async () => {
+    install({ artifacts: [artifactFixture({ id: "art-copia", name: "Cópia", type: "food", data: FOOD, derived: true })] });
+    render(<NotesScreen userId="user-1" />);
+
+    expect(await screen.findByRole("heading", { name: "Nenhum documento ainda" })).toBeInTheDocument();
+  });
 });

@@ -10,7 +10,7 @@
  */
 
 const base =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-sm px-4 text-sm transition-all disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-10 items-center justify-center gap-2 rounded-sm px-4 text-sm transition-[background-color,filter,opacity] disabled:cursor-not-allowed disabled:opacity-60";
 
 /** Acao principal: o fio tinta, clareando de leve no hover. */
 export const primaryButtonClass = `${base} bg-primary font-semibold text-primary-foreground hover:brightness-110`;

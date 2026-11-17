@@ -1,0 +1,102 @@
+/*
+ * Os controles que se repetem entre as telas, cada um num lugar so: botoes,
+ * chips de escolha, o ponto de cor, o selo de contagem e a superficie do que
+ * flutua. Um modulo de tela usa com `composes: chip from "…/controls.module.css"`
+ * e acrescenta so a posicao e o que for proprio dele.
+ *
+ * Alturas, tamanhos de texto e tempos saem das escalas do globals.css.
+ */
+
+/* Acao principal: o fio tinta, a unica coisa preenchida da tela. Raio 8. */
+.primaryButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--control-md); padding: 0 16px; border: 1px solid var(--primary); border-radius: 8px; background: var(--primary); color: var(--primary-foreground); font: inherit; font-size: var(--font-size-sm); font-weight: 600; white-space: nowrap; cursor: pointer; transition: filter var(--duration-fast), opacity var(--duration-fast), transform var(--duration-fast) var(--ease-out); }
+.primaryButton:hover { filter: brightness(1.1); }
+.primaryButton:disabled { opacity: .6; cursor: not-allowed; }
+.primaryButton svg { width: 18px; height: 18px; }
+
+/* Acao secundaria: a borda de campo, o fundo do cartao. */
+.outlineButton { display: inline-flex; align-items: center; justify-content: center; min-height: var(--control-md); padding: 0 16px; border: 1px solid var(--input); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; }
+
+/* Acao em texto ("Limpar filtros"). */
+.textButton { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; cursor: pointer; }
+.textButton:disabled { color: var(--muted); cursor: default; opacity: .6; }
+
+/* Botao quadrado de icone com borda (opcoes da lista). */
+.iconButtonOutline { position: relative; display: inline-flex; align-items: center; justify-content: center; width: var(--control-md); height: var(--control-md); border: 1px solid var(--input); border-radius: 8px; background: var(--card); color: var(--muted); cursor: pointer; }
+.iconButtonOutline:hover, .iconButtonOutline[aria-expanded="true"] { color: var(--ink); border-color: var(--brand); }
+.iconButtonOutline svg { width: 20px; height: 20px; }
+
+/* Botao redondo de icone, sem borda (voltar, mais acoes). */
+.iconButton { display: grid; place-items: center; width: var(--control-md); height: var(--control-md); padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.iconButton:hover { background: var(--soft); color: var(--ink); }
+.iconButton svg { width: 22px; height: 22px; }
+
+/* Chips de escolha: a pilula e so deles. */
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.chip { display: inline-flex; align-items: center; gap: 8px; min-height: var(--control-sm); padding: 0 12px; border: 1px solid var(--input); border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: var(--font-size-sm); font-weight: 500; cursor: pointer; transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast); }
+.chip[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--ink); }
+@media (hover: hover) {
+  .chip:hover:not([aria-pressed="true"]) { border-color: var(--muted); color: var(--ink); }
+}
+
+/* O ponto que carrega a cor de uma tag ou de um tipo. */
+.dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+/* Selo de contagem preso ao canto de um botao. */
+.badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--primary); color: var(--primary-foreground); font-size: var(--font-size-xs); font-weight: 700; line-height: 18px; text-align: center; }
+
+/* A superficie do que flutua: menus, paineis de opcoes, avisos. Raio 12. */
+.floating { border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: var(--shadow-float); }
+
+/* As pilulas do redesenho: a escolhida e preenchida em `--primary`. 44 de altura. */
+.pill { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--control-md); padding: 0 18px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: var(--font-size-sm); font-weight: 500; white-space: nowrap; cursor: pointer; transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast), transform var(--duration-fast) var(--ease-out); }
+.pill[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
+.pill svg { width: 16px; height: 16px; }
+@media (hover: hover) {
+  .pill:hover:not([aria-pressed="true"]) { border-color: var(--muted); color: var(--ink); }
+}
+
+/* Botao redondo de icone com contorno (opcoes de visualizacao). */
+.roundButton { flex: none; display: grid; place-items: center; width: var(--control-md); height: var(--control-md); padding: 0; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; transition: border-color var(--duration-fast), transform var(--duration-fast) var(--ease-out); }
+/* O toque: o que se aperta cede um pouco. */
+.primaryButton:active, .pill:active { transform: scale(.97); }
+.roundButton:active { transform: scale(.94); }
+.roundButton:hover, .roundButton[aria-expanded="true"] { border-color: var(--ink); }
+.roundButton svg { width: 19px; height: 19px; }
+
+/* O botao que abre as opcoes de uma lista (agenda, tarefas, notas): redondo,
+   com contorno, o icone na cor do texto; aberto, fica preenchido. */
+.menuButton { composes: roundButton; color: var(--ink); transition: background var(--duration-fast), border-color var(--duration-fast), transform var(--duration-fast) var(--ease-out); }
+.menuButton:hover { border-color: var(--muted); }
+.menuButton[aria-expanded="true"] { border-color: var(--line); background: var(--accent); }
+.menuButton svg { width: 20px; height: 20px; }
+
+/* O seletor de duas escolhas (por dia / em sequencia): uma pilula so, em
+   `--primary`, que desliza ate a escolhida (`--segment-index`, 0 ou 1). */
+.segmented { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); min-width: 0; height: var(--control-md); margin: 0; padding: 3px; border: 1px solid var(--line); border-radius: 999px; }
+.segmented::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc((100% - 6px) / 2); border-radius: 999px; background: var(--primary); transform: translateX(calc(var(--segment-index, 0) * 100%)); transition: transform var(--duration-slow) var(--ease-out); }
+.segment { position: relative; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: var(--font-size-sm); font-weight: 500; white-space: nowrap; cursor: pointer; transition: color var(--duration-fast); }
+.segment[aria-pressed="true"] { color: var(--primary-foreground); font-weight: 600; }
+
+/* O circulo do Hermes: verde-agua, com a onda na cor do chao. */
+.hermesMark { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: var(--background); }
+.hermesMark svg { width: 58%; height: 58%; }
+
+/* A chave liga/desliga das opcoes. */
+.switch { flex: none; display: flex; align-items: center; width: 48px; height: 28px; padding: 3px; border: 0; border-radius: 14px; background: var(--input); cursor: pointer; transition: background var(--duration-fast); }
+.switch::before { content: ""; width: 22px; height: 22px; border-radius: 50%; background: var(--background); transition: transform var(--duration-fast) var(--ease-out); }
+.switch[aria-checked="true"] { background: var(--primary); }
+.switch[aria-checked="true"]::before { transform: translateX(20px); }
+
+/* O painel de opcoes de uma lista: rotulos em mono, uma linha por escolha (com
+   ✓ na atual) e linhas com chave. Quem usa posiciona (`left`/`right`). */
+.menuPanel { composes: floating; position: absolute; top: 52px; left: 0; z-index: var(--z-popover); width: 304px; max-width: calc(100vw - 40px); padding: 4px 18px 6px; border-radius: 20px; text-align: left; transform-origin: var(--menu-origin, top left); animation: menuIn 200ms var(--ease-out); }
+/* O painel abre a partir do botão que o chamou; quem o alinha à direita troca `--menu-origin`. */
+@keyframes menuIn { from { opacity: 0; transform: translateY(-6px) scale(.92); } }
+.menuLabel { margin: 0; padding: 12px 0 4px; font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.menuOption { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0; border: 0; border-bottom: 1px solid var(--hairline); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.menuOption svg { width: 18px; height: 18px; stroke-width: 2; }
+.menuText { flex: 1; display: flex; flex-direction: column; }
+.menuText strong { font-size: 15px; font-weight: 600; line-height: 22px; }
+.menuText small { font-size: var(--font-size-xs); line-height: 18px; color: var(--muted); }
+.menuOption[aria-pressed="false"] strong { font-weight: 500; color: var(--muted); }
+.menuRow { display: flex; align-items: center; gap: 16px; min-height: 64px; }

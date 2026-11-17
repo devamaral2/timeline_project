@@ -1,29 +1,68 @@
 import { expect, test } from "vitest";
-import { agentChatServerFrameSchema, noteSchema } from "./schemas";
+import { artifactSchema, createTaskInputSchema, updateTaskInputSchema } from "./schemas";
 
-const meal = {
-  name: "Almoço", description: "arroz", foodItems: [],
+const food = {
+  description: "arroz", items: [],
   totals: { totalCaloriesKcal: 0, totalProteinGrams: 0, totalCarbohydrateGrams: 0, totalFatGrams: 0, totalFiberGrams: 0 },
 };
 
-test.each(["pending", "completed", "failed"])("meal DTO accepts the %s generation state", (status) => {
-  const note = {
-    id: "note", name: "Almoço", type: "meal", schemaVersion: 1, tags: [], revision: 1,
+test.each(["pending", "completed", "failed"])("food DTO accepts the %s generation state", (status) => {
+  const artifact = {
+    id: "artifact", name: "Almoço", type: "food", schemaVersion: 1, global: false, derived: false, tags: [], revision: 1,
     createdAt: "2026-01-01", updatedAt: "2026-01-01",
-    data: { ...meal, generation: { status }, ...(status === "completed" ? { nutritionSource: "model-estimate" } : {}) },
+    data: { ...food, generation: { status }, ...(status === "completed" ? { nutritionSource: "model-estimate" } : {}) },
   };
-  expect(noteSchema.parse(note)).toEqual(note);
+  expect(artifactSchema.parse(artifact)).toEqual(artifact);
 });
 
-test("meal generation contract remains strict and legacy meals remain valid", () => {
-  const base = { id: "note", name: "Almoço", type: "meal", schemaVersion: 1, tags: [], revision: 1,
-    createdAt: "", updatedAt: "", data: meal };
-  expect(noteSchema.safeParse(base).success).toBe(true);
-  expect(noteSchema.safeParse({ ...base, data: { ...meal, generation: { status: "invented" } } }).success).toBe(false);
-  expect(noteSchema.safeParse({ ...base, data: { ...meal, nutritionSource: "catalog" } }).success).toBe(false);
+test("food generation contract remains strict and a food without generation is valid", () => {
+  const base = { id: "artifact", name: "Almoço", type: "food", schemaVersion: 1, global: false, derived: false, tags: [], revision: 1,
+    createdAt: "", updatedAt: "", data: food };
+  expect(artifactSchema.safeParse(base).success).toBe(true);
+  expect(artifactSchema.safeParse({ ...base, data: { ...food, generation: { status: "invented" } } }).success).toBe(false);
+  expect(artifactSchema.safeParse({ ...base, data: { ...food, nutritionSource: "catalog" } }).success).toBe(false);
 });
 
-test("chat compatibility transport accepts a durable queue receipt", () => {
-  const receipt = { type: "queued", id: "request-1", jobId: "job-1" };
-  expect(agentChatServerFrameSchema.parse(receipt)).toEqual(receipt);
+test("a training artifact accepts walking as a cardio workout", () => {
+  const artifact = {
+    id: "artifact", name: "Caminhada", type: "training", schemaVersion: 1, global: false, derived: false, tags: [], revision: 1,
+    createdAt: "2026-01-01", updatedAt: "2026-01-01",
+    data: {
+      workouts: [
+        {
+          id: "workout",
+          workoutCode: "walking",
+          workoutName: "Caminhada",
+          calories: 100,
+          duration: 120,
+          pace: 5,
+          distance: 24,
+        },
+      ],
+      caloriesBurned: 100,
+    },
+  };
+  expect(artifactSchema.parse(artifact)).toEqual(artifact);
+});
+
+// Nome antigo citado de proposito: este arquivo esta na lista de excecoes da varredura de residuos.
+const VELHO = "event";
+const nomeAntigo = (campo: string) => campo.replace("task", VELHO).replace("Task", VELHO[0].toUpperCase() + VELHO.slice(1));
+
+test("the task input schemas take the main task and the subtasks", () => {
+  expect(createTaskInputSchema.safeParse({ parentTaskId: "t1", subtaskIds: ["t2"] }).success).toBe(true);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, parentTaskId: null, subtaskIds: [] }).success).toBe(true);
+  expect(createTaskInputSchema.safeParse({ parentTaskId: ["t1"] }).success).toBe(false);
+});
+
+// A sequencia entre tarefas saiu: nem os nomes dela nem os antigos, de evento, passam.
+test.each(["previousTaskIds", "nextTaskIds"])("the task input schemas refuse %s and its old name", (field) => {
+  expect(createTaskInputSchema.safeParse({ [field]: ["t1"] }).success).toBe(false);
+  expect(createTaskInputSchema.safeParse({ [nomeAntigo(field)]: ["t1"] }).success).toBe(false);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, [field]: [] }).success).toBe(false);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, [nomeAntigo(field)]: [] }).success).toBe(false);
+});
+
+test("the update schema identifies the task by taskId, not by its old name", () => {
+  expect(updateTaskInputSchema.safeParse({ [nomeAntigo("taskId")]: "t1", expectedRevision: 1 }).success).toBe(false);
 });

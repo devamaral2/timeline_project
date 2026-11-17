@@ -1,0 +1,15 @@
+/* As páginas do documento: a caixa tem o lado do quadrado da tarefa (44) para o
+   texto da linha não mudar de lugar; o desenho, mais estreito, fica centrado nela. */
+.sheet { position: relative; flex: none; display: block; width: 44px; height: 44px; color: var(--muted-foreground); }
+.sheet[data-size="cite"] { width: 32px; height: 32px; }
+
+/* O contorno e o ícone são filhos diretos com dois seletores de classe: dentro
+   do shell, `.shell svg` fixa todo svg em 20px com traço de 1,65 e ganharia de
+   uma classe só. */
+.sheet > .outline { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; stroke: var(--border); stroke-width: 1; }
+
+/* O ícone do tipo, no meio da página da frente (30×34 a partir de 2,5/9,5 na
+   lista; 21×24 a partir de 2,5/7,5 na citação). O traço cresce na grade de 24
+   para manter na tela o mesmo peso do ícone de 20px. */
+.sheet > .glyph { position: absolute; top: 18.5px; left: 9.5px; width: 16px; height: 16px; stroke-width: 2.05; }
+.sheet[data-size="cite"] > .glyph { top: 14px; left: 7.5px; width: 11px; height: 11px; stroke-width: 2.75; }

@@ -2,23 +2,20 @@ package app.braid.mobile.ui.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.braid.mobile.data.chat.AgentChatEvent
-import app.braid.mobile.data.chat.AgentChatGateway
-import app.braid.mobile.data.chat.AgentChatHistoryGateway
-import app.braid.mobile.data.chat.AgentChatHistoryResult
+import app.braid.mobile.data.chat.ProcessGateway
+import app.braid.mobile.data.chat.ProcessPoll
+import app.braid.mobile.data.chat.ProcessStart
 import app.braid.mobile.data.dto.AgentChatEntityRefDto
-import app.braid.mobile.data.dto.AgentChatMessageDto
-import app.braid.mobile.data.dto.AgentChatMessageFrameDto
-import app.braid.mobile.data.dto.AgentConversationDto
 import app.braid.mobile.data.dto.AgentScreenContextDto
+import app.braid.mobile.data.dto.AiProcessDto
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -28,6 +25,9 @@ enum class AgentChatMessageRole {
     User,
     Assistant,
     Error,
+
+    /** A caixa de processo (ADR 003): passos com check; não entra em nenhum histórico. */
+    Process,
 }
 
 data class AgentChatUiMessage(
@@ -38,327 +38,129 @@ data class AgentChatUiMessage(
     val failed: Boolean = false,
     val retryText: String = "",
     val requestId: String? = null,
+    val process: AiProcessDto? = null,
 )
 
 data class AgentChatPendingUi(
     val id: String,
     val label: String? = null,
-    val cancelling: Boolean = false,
 )
 
 data class AgentChatUiState(
     val messages: List<AgentChatUiMessage> = emptyList(),
     val pending: AgentChatPendingUi? = null,
-    val conversationId: String? = null,
-    val conversations: List<AgentConversationDto> = emptyList(),
-    val conversationsNextCursor: String? = null,
-    val isLoadingConversations: Boolean = false,
-    val isLoadingMessages: Boolean = false,
-    val isRecoveringJobs: Boolean = true,
 )
 
 sealed interface AgentChatUiEffect {
     data object EntitiesChanged : AgentChatUiEffect
 }
 
+/**
+ * A conversa da agenda. Cada pedido vai pela rota de processo (ADR 003): a caixa mostra os passos até o
+ * fim. O que está na tela é tudo que existe: nada é recarregado do servidor.
+ */
 @HiltViewModel
 class AgentChatViewModel
     @Inject
     constructor(
-        private val gateway: AgentChatGateway,
-        private val history: AgentChatHistoryGateway,
+        private val processes: ProcessGateway,
     ) : ViewModel() {
         private val mutableState = MutableStateFlow(AgentChatUiState())
         private val mutableEffects = MutableSharedFlow<AgentChatUiEffect>(extraBufferCapacity = 8)
-        private var recoveredTurn = false
-        private var recoveredRequestText = ""
+
+        /** Intervalo entre consultas ao processo; os testes o encurtam. */
+        internal var processPollMillis = PROCESS_POLL_MILLIS
 
         val state: StateFlow<AgentChatUiState> = mutableState.asStateFlow()
         val effects: SharedFlow<AgentChatUiEffect> = mutableEffects.asSharedFlow()
 
-        init {
-            viewModelScope.launch {
-                gateway.events.collect(::handleEvent)
-            }
-            loadConversations()
-            recoverJobs()
-        }
-
-        private fun recoverJobs() {
-            mutableState.update { it.copy(isRecoveringJobs = true) }
-            viewModelScope.launch {
-                val jobs = runCatching { gateway.recover() }.getOrDefault(emptyList())
-                // Repository returns pending work and only unobserved terminal receipts.
-                val job = jobs.minByOrNull { it.createdAt }
-                if (job != null && mutableState.value.pending == null) {
-                    recoveredTurn = true
-                    recoveredRequestText = job.request?.text.orEmpty()
-                    val id = job.request?.clientMessageId ?: job.id
-                    val conversationId = job.request?.conversationId
-                    val messages =
-                        conversationId
-                            ?.let { history.messages(it) }
-                            ?.let { result ->
-                                (result as? AgentChatHistoryResult.Success)
-                                    ?.value
-                                    ?.items
-                                    ?.asReversed()
-                                    ?.map(::toUiMessage)
-                            }.orEmpty()
-                    mutableState.update {
-                        it.copy(
-                            conversationId = conversationId,
-                            messages =
-                                if (job.status == "succeeded") {
-                                    messages
-                                } else {
-                                    messages + AgentChatUiMessage(id, AgentChatMessageRole.User, job.request?.text.orEmpty())
-                                },
-                            pending = AgentChatPendingUi(id, job.progress),
-                            isRecoveringJobs = false,
-                        )
-                    }
-                    // A pending turn is not committed to canonical history yet.
-                    gateway.resume(job)
-                } else {
-                    mutableState.update { it.copy(isRecoveringJobs = false) }
-                }
-            }
-        }
-
         fun send(text: String) {
             val trimmed = text.trim()
-            if (
-                trimmed.isEmpty() ||
-                trimmed.length > MAX_MESSAGE_LENGTH ||
-                mutableState.value.pending != null ||
-                mutableState.value.isRecoveringJobs ||
-                mutableState.value.isLoadingMessages
-            ) {
-                return
-            }
+            if (trimmed.isEmpty() || trimmed.length > MAX_MESSAGE_LENGTH || mutableState.value.pending != null) return
 
             val id = UUID.randomUUID().toString()
-            recoveredRequestText = ""
-            val conversationId = mutableState.value.conversationId
             mutableState.update { current ->
                 current.copy(
                     messages = current.messages + AgentChatUiMessage(id, AgentChatMessageRole.User, trimmed),
                     pending = AgentChatPendingUi(id),
                 )
             }
-            viewModelScope.launch {
-                runCatching {
-                    gateway.send(
-                        AgentChatMessageFrameDto(
-                            id = id,
-                            text = trimmed,
-                            context = AgentScreenContextDto(screen = "agenda"),
-                            conversationId = conversationId,
-                        ),
-                    )
-                }.onFailure { handleClientError(id, "connection_failed") }
-            }
+            viewModelScope.launch { runProcess(id, trimmed) }
         }
 
-        fun cancel() {
-            val pending = mutableState.value.pending ?: return
-            if (pending.cancelling) return
-            gateway.cancel(pending.id)
-            mutableState.update { it.copy(pending = pending.copy(label = "Cancelando", cancelling = true)) }
+        /** Segue o processo até o fim: a caixa mostra cada passo com seu estado. */
+        private suspend fun runProcess(
+            id: String,
+            text: String,
+        ) {
+            val processId =
+                when (val start = processes.start(text, AgentScreenContextDto(screen = "agenda"))) {
+                    is ProcessStart.Started -> start.processId
+                    is ProcessStart.Failed ->
+                        return handleError(id, if (start.status == 401) "session_expired" else "connection_failed")
+                }
+            val boxId = "$id-process"
+            mutableState.update { current ->
+                current.copy(
+                    messages = current.messages + AgentChatUiMessage(boxId, AgentChatMessageRole.Process, ""),
+                    pending = AgentChatPendingUi(id, PROCESS_LABEL),
+                )
+            }
+            var failures = 0
+            var waited = 0L
+            while (mutableState.value.pending?.id == id) {
+                when (val poll = processes.get(processId)) {
+                    is ProcessPoll.View -> {
+                        failures = 0
+                        mutableState.update { current ->
+                            current.copy(
+                                messages = current.messages.map { if (it.id == boxId) it.copy(process = poll.process) else it },
+                            )
+                        }
+                        if (poll.process.terminal) {
+                            mutableState.update { it.copy(pending = null) }
+                            // Criar, editar e vincular mudam a agenda; uma consulta pura ou uma resposta, não.
+                            if (poll.process.entities.isNotEmpty()) mutableEffects.tryEmit(AgentChatUiEffect.EntitiesChanged)
+                            return
+                        }
+                    }
+
+                    is ProcessPoll.Failed -> {
+                        failures += 1
+                        if (poll.status == 401) return handleError(id, "session_expired")
+                        if (failures >= PROCESS_POLL_FAILURES) return handleError(id, "connection_lost")
+                    }
+                }
+                if (waited >= PROCESS_TIMEOUT_MILLIS) return handleError(id, "connection_lost")
+                delay(processPollMillis)
+                waited += processPollMillis
+            }
         }
 
         fun retry(messageId: String) {
             val error = mutableState.value.messages.firstOrNull { it.id == messageId } ?: return
-            if (
-                error.role != AgentChatMessageRole.Error ||
-                mutableState.value.pending != null ||
-                mutableState.value.isRecoveringJobs ||
-                mutableState.value.isLoadingMessages
-            ) {
-                return
-            }
+            if (error.role != AgentChatMessageRole.Error || mutableState.value.pending != null) return
             mutableState.update { current ->
-                current.copy(
-                    messages = current.messages.filterNot { it.id == messageId || it.id == error.requestId },
-                )
+                current.copy(messages = current.messages.filterNot { it.id == messageId || it.id == error.requestId })
             }
             send(error.retryText)
         }
 
+        /** Começar de novo é estado local: limpa a tela. */
         fun startNewConversation() {
-            if (mutableState.value.pending != null || mutableState.value.isRecoveringJobs) return
-            mutableState.update { current ->
-                current.copy(
-                    messages = emptyList(),
-                    pending = null,
-                    conversationId = null,
-                    isLoadingMessages = false,
-                )
-            }
+            if (mutableState.value.pending != null) return
+            mutableState.update { AgentChatUiState() }
         }
 
-        fun openConversation(conversationId: String) {
-            if (mutableState.value.pending != null || mutableState.value.isLoadingMessages || mutableState.value.isRecoveringJobs) return
-            mutableState.update { it.copy(isLoadingMessages = true) }
-            viewModelScope.launch {
-                when (val result = history.messages(conversationId)) {
-                    is AgentChatHistoryResult.Success -> {
-                        mutableState.update { current ->
-                            current.copy(
-                                conversationId = conversationId,
-                                messages =
-                                    result.value.items
-                                        .asReversed()
-                                        .map(::toUiMessage),
-                                isLoadingMessages = false,
-                            )
-                        }
-                    }
-
-                    is AgentChatHistoryResult.Failure -> mutableState.update { it.copy(isLoadingMessages = false) }
-                }
-            }
-        }
-
-        fun deleteConversation(conversationId: String) {
-            if (mutableState.value.pending != null || mutableState.value.isRecoveringJobs) return
-            mutableState.update { current ->
-                current.copy(
-                    conversations = current.conversations.filterNot { it.id == conversationId },
-                    messages = if (current.conversationId == conversationId) emptyList() else current.messages,
-                    conversationId = if (current.conversationId == conversationId) null else current.conversationId,
-                )
-            }
-            viewModelScope.launch {
-                when (history.delete(conversationId)) {
-                    is AgentChatHistoryResult.Success -> Unit
-                    is AgentChatHistoryResult.Failure -> loadConversations()
-                }
-            }
-        }
-
-        fun loadMoreConversations() {
-            val cursor = mutableState.value.conversationsNextCursor ?: return
-            if (mutableState.value.isLoadingConversations) return
-            loadConversations(cursor, append = true)
-        }
-
-        private fun loadConversations(
-            cursor: String? = null,
-            append: Boolean = false,
-        ) {
-            mutableState.update { it.copy(isLoadingConversations = true) }
-            viewModelScope.launch {
-                when (val result = history.conversations(cursor)) {
-                    is AgentChatHistoryResult.Success -> {
-                        mutableState.update { current ->
-                            val items =
-                                if (append) {
-                                    (current.conversations + result.value.items).distinctBy(AgentConversationDto::id)
-                                } else {
-                                    result.value.items
-                                }
-                            current.copy(
-                                conversations = items,
-                                conversationsNextCursor = result.value.nextCursor,
-                                isLoadingConversations = false,
-                            )
-                        }
-                    }
-
-                    is AgentChatHistoryResult.Failure -> mutableState.update { it.copy(isLoadingConversations = false) }
-                }
-            }
-        }
-
-        private fun handleEvent(event: AgentChatEvent) {
-            val pending = mutableState.value.pending ?: return
-            val eventId =
-                when (event) {
-                    is AgentChatEvent.Status -> event.frame.id
-                    is AgentChatEvent.Reply -> event.frame.id
-                    is AgentChatEvent.Error -> event.id
-                }
-            if (eventId != pending.id) return
-
-            when (event) {
-                is AgentChatEvent.Status -> {
-                    if (!pending.cancelling) {
-                        mutableState.update { it.copy(pending = pending.copy(label = event.frame.label)) }
-                    }
-                }
-
-                is AgentChatEvent.Reply -> {
-                    if (recoveredTurn) {
-                        recoveredTurn = false
-                        viewModelScope.launch {
-                            val result = history.messages(event.frame.conversationId)
-                            val messages = (result as? AgentChatHistoryResult.Success)?.value?.items
-                            mutableState.update { current ->
-                                current.copy(
-                                    conversationId = event.frame.conversationId,
-                                    pending = null,
-                                    messages =
-                                        if (!messages.isNullOrEmpty()) {
-                                            messages.asReversed().map(::toUiMessage)
-                                        } else {
-                                            current.messages +
-                                                AgentChatUiMessage(
-                                                    "${event.frame.id}-reply",
-                                                    AgentChatMessageRole.Assistant,
-                                                    event.frame.agentResponse,
-                                                    event.frame.entities,
-                                                )
-                                        },
-                                )
-                            }
-                            if (event.frame.entities.isNotEmpty()) mutableEffects.tryEmit(AgentChatUiEffect.EntitiesChanged)
-                            loadConversations()
-                            recoverJobs()
-                        }
-                        return
-                    }
-                    mutableState.update { current ->
-                        current.copy(
-                            conversationId = event.frame.conversationId,
-                            pending = null,
-                            messages =
-                                current.messages +
-                                    AgentChatUiMessage(
-                                        id = "${event.frame.id}-reply",
-                                        role = AgentChatMessageRole.Assistant,
-                                        text = event.frame.agentResponse,
-                                        entities = event.frame.entities,
-                                    ),
-                        )
-                    }
-                    if (event.frame.entities.isNotEmpty()) mutableEffects.tryEmit(AgentChatUiEffect.EntitiesChanged)
-                    loadConversations()
-                }
-
-                is AgentChatEvent.Error -> handleServerError(event.id, event.code)
-            }
-        }
-
-        private fun handleClientError(
+        private fun handleError(
             id: String,
             code: String,
         ) {
-            if (mutableState.value.pending?.id == id) handleServerError(id, code)
-        }
-
-        private fun handleServerError(
-            id: String,
-            code: String,
-        ) {
-            val wasRecovered = recoveredTurn
-            recoveredTurn = false
             val current = mutableState.value
+            if (current.pending?.id != id) return
             val request = current.messages.firstOrNull { it.id == id && it.role == AgentChatMessageRole.User }
             mutableState.value =
                 current.copy(
-                    conversationId = if (code == "conversation_gone") null else current.conversationId,
                     pending = null,
                     messages =
                         current.messages.map { message ->
@@ -368,40 +170,22 @@ class AgentChatViewModel
                                 id = "$id-error",
                                 role = AgentChatMessageRole.Error,
                                 text = errorText(code),
-                                retryText = request?.text ?: recoveredRequestText,
+                                retryText = request?.text.orEmpty(),
                                 requestId = id,
                             ),
                 )
             if (code == "connection_lost") mutableEffects.tryEmit(AgentChatUiEffect.EntitiesChanged)
-            if (wasRecovered) recoverJobs()
         }
 
         private companion object {
             const val MAX_MESSAGE_LENGTH = 4000
-
-            fun toUiMessage(message: AgentChatMessageDto): AgentChatUiMessage =
-                AgentChatUiMessage(
-                    id = message.id,
-                    role =
-                        if (message.role == "user") {
-                            AgentChatMessageRole.User
-                        } else {
-                            AgentChatMessageRole.Assistant
-                        },
-                    text = message.content,
-                    entities = message.entities,
-                )
+            const val PROCESS_LABEL = "Realizando processos"
+            const val PROCESS_POLL_MILLIS = 1_000L
+            const val PROCESS_TIMEOUT_MILLIS = 180_000L
+            const val PROCESS_POLL_FAILURES = 5
 
             fun errorText(code: String): String =
                 when (code) {
-                    "busy" -> "Ainda estou respondendo a mensagem anterior."
-                    "invalid_frame", "invalid_input" -> "Não consegui ler essa mensagem. Tente escrever de outro jeito."
-                    "forbidden" -> "Você não tem permissão para acessar esses dados."
-                    "limit_reached" -> "O pedido ficou grande demais e nada foi gravado. Tente dividir em partes menores."
-                    "conflict" -> "Os dados mudaram enquanto eu preparava a resposta. Nada foi gravado; tente de novo."
-                    "conversation_gone" -> "Esta conversa não existe mais. Sua mensagem não foi enviada — comece outra."
-                    "unavailable" -> "A IA está indisponível agora. Tente de novo em instantes."
-                    "cancelled" -> "Pedido cancelado."
                     "connection_lost" -> "A conexão caiu antes da resposta. Se o pedido gravava algo, confira a agenda antes de reenviar."
                     "connection_failed" -> "Não consegui conectar ao assistente. Tente de novo."
                     "session_expired" -> "Sua sessão acabou. Entre de novo para continuar."

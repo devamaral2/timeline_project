@@ -1,0 +1,4 @@
+interface:
+  display_name: "Entidades"
+  short_description: "Create events and linked notes as JSON"
+  default_prompt: "Use $entidades to turn a natural-language request into the full JSON of events and notes."

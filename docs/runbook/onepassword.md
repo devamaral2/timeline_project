@@ -25,14 +25,21 @@ no [runbook de deploy k3s](./deploy-k3s.md), sem reutilizar senhas locais.
 
 Os scopes de produção são:
 
-- `api-runtime`: `DATABASE_URL`, `AUTH_SERVICE_URL`, `AUTH_INTERNAL_SERVICE_KEY`,
-  `RABBITMQ_URL`, `AI_JOBS_QUEUE_PREFIX` e, se usados, a chave e os modelos do
-  OpenRouter. Sem as duas últimas a API não sobe.
+- `api-runtime`: `DATABASE_URL`, `AUTH_SERVICE_URL`, `AUTH_INTERNAL_SERVICE_KEY`
+  e, se usados, a chave e os modelos do OpenRouter. A fila de jobs de IA é uma
+  tabela do próprio banco ([ai-jobs.md](./ai-jobs.md)): não há URL de broker nem
+  prefixo de fila; `AI_JOBS_CONCURRENCY`, `AI_JOBS_LEASE_MS`,
+  `AI_JOBS_MAX_ATTEMPTS` e `AI_JOBS_POLL_MS` são opcionais.
 - `auth-runtime`: `NODE_ENV`, `AUTH_DATABASE_URL`, `AUTH_ISSUER`,
   `AUTH_PUBLIC_URL`, `AUTH_WEB_APP_URL`, `AUTH_KEY_ENCRYPTION_KEY`,
   `AUTH_AUDIENCE`, `API_SERVICE_URL`, a chave interna e os limites de senha.
 - `web-build`: `BACKEND_URL=http://api.braid.svc.cluster.local:3001` e
   `AUTH_SERVICE_URL=http://auth.braid.svc.cluster.local:3002`.
+- `hermes-runtime`: `HERMES_API_KEY`, `OPENROUTER_API_KEY` e `MCP_TOKEN`, para o
+  container do Hermes (imagem de terceiros, sem o loader). Ver o
+  [runbook do Hermes](./hermes.md).
+- `mcp-runtime`: `MCP_TOKEN`, `AUTH_INTERNAL_SERVICE_KEY`, `MCP_OWNER_USER_ID` e,
+  em produção, `API_SERVICE_URL=http://api.braid.svc.cluster.local:3001`.
 
 Não adicione ao ambiente de produção `AUTH_TEST_DATABASE_URL`, `ADMIN_PASSWORD`,
 portas locais ou o IP privado usado pelo mobile. O mobile continua fora do

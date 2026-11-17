@@ -72,7 +72,7 @@ worktree_slugs() {
 reserved_ports() {
   local path
   while read -r path; do
-    for key in WEB_PORT API_PORT AUTH_PORT; do
+    for key in WEB_PORT API_PORT AUTH_PORT MCP_PORT; do
       read_env_var "$path/.env.local" "$key"
     done
   done < <(git worktree list --porcelain | awk '/^worktree /{sub(/^worktree /, ""); print}')
@@ -89,4 +89,9 @@ find_unreserved_port() {
       *) printf '%s' "$port"; return ;;
     esac
   done
+}
+
+# Certificado raiz da CA local do Caddy (a que assina https://<slug>.braid.local).
+caddy_root_cert() {
+  printf '%s' "${XDG_DATA_HOME:-$HOME/.local/share}/caddy/pki/authorities/local/root.crt"
 }

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys, queuePrefixFromBranch } from "./loader.mjs";
+import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys, defaultScope } from "./loader.mjs";
 
 test("uses the env example as the complete allowlist", () => {
   const keys = readEnvKeys();
@@ -139,15 +139,15 @@ test("points API and Auth at per-worktree databases on the shared Postgres", () 
     { POSTGRES_USER: "timeline", POSTGRES_PASSWORD: "password", POSTGRES_DB: "timeline", AUTH_PORT: "3102", WEB_PORT: "3100" },
     {
       POSTGRES_HOST_PORT: "54391",
-      POSTGRES_DB: "refactory_events",
-      AUTH_POSTGRES_DB: "refactory_events_auth",
-      AUTH_WEB_APP_URL: "http://refactory-events.braid.local:8080",
+      POSTGRES_DB: "refactory_tasks",
+      AUTH_POSTGRES_DB: "refactory_tasks_auth",
+      AUTH_WEB_APP_URL: "http://refactory-tasks.braid.local:8080",
     },
   );
 
-  assert.equal(environment.DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_events");
-  assert.equal(environment.AUTH_DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_events_auth");
-  assert.equal(environment.AUTH_WEB_APP_URL, "http://refactory-events.braid.local:8080");
+  assert.equal(environment.DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_tasks");
+  assert.equal(environment.AUTH_DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_tasks_auth");
+  assert.equal(environment.AUTH_WEB_APP_URL, "http://refactory-tasks.braid.local:8080");
 });
 
 test("reports Environment API failures without starting the application", async () => {
@@ -170,15 +170,19 @@ test("defines minimal production scopes without requiring mobile or test variabl
     "DATABASE_URL",
     "AUTH_SERVICE_URL",
     "AUTH_INTERNAL_SERVICE_KEY",
-    "RABBITMQ_URL",
-    "AI_JOBS_QUEUE_PREFIX",
   ]);
+  // A fila de jobs de IA e uma tabela do Postgres: so ajustes opcionais, nenhum broker.
+  assert.ok(scopeKeys("api-runtime").optional.includes("AI_JOBS_POLL_MS"));
   assert.ok(scopeKeys("auth-runtime").required.includes("AUTH_KEY_ENCRYPTION_KEY"));
   assert.deepEqual(scopeKeys("web-build").required, ["BACKEND_URL", "AUTH_SERVICE_URL"]);
+  assert.deepEqual(scopeKeys("hermes-runtime").required, ["HERMES_API_KEY", "OPENROUTER_API_KEY", "MCP_TOKEN"]);
+  assert.deepEqual(scopeKeys("mcp-runtime").required, ["MCP_TOKEN", "AUTH_INTERNAL_SERVICE_KEY", "MCP_OWNER_USER_ID"]);
 });
 
-test("derives the AI jobs queue prefix from the branch, dropping invalid characters", () => {
-  assert.equal(queuePrefixFromBranch("feat/durable-ai-job-queues"), "featdurable-ai-job-queues");
-  assert.equal(queuePrefixFromBranch("fix/ação#12 v1.0"), "fixao12v1.0");
-  assert.equal(queuePrefixFromBranch("///"), "");
+test("the default scope loads the Hermes key when present but does not require it", () => {
+  const scope = defaultScope();
+
+  assert.ok(scope.optional.includes("HERMES_API_KEY"));
+  assert.ok(!scope.required.includes("HERMES_API_KEY"));
+  assert.ok(scope.required.includes("DATABASE_URL"));
 });

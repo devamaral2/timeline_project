@@ -5,7 +5,7 @@ import {
   date,
   index,
   integer,
-  primaryKey,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -13,97 +13,168 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { workItemPriorityEnum, workItemStatusEnum } from "./enums";
-import { tags } from "./events";
 import { recurrences } from "./recurrences";
+import {
+  ACTORS,
+  AGENT_KINDS,
+  AGENT_STATUSES,
+  ENTRY_KINDS,
+  ENTRY_ROLES,
+  TASK_KINDS,
+  TASK_STATUSES,
+  HUMAN_KINDS,
+  HUMAN_STATUSES,
+  PRIORITIES,
+  sqlList,
+} from "./sets";
 
+/**
+ * O que uma pessoa ou um agente faz ou vai fazer (ADR 0011). E a unica entidade
+ * de acao: tarefa, pedido a IA e passo de agente sao tarefas.
+ *
+ * `started_at` e o inicio planejado, `estimated_finish_at` o fim planejado (o
+ * bloco da agenda, ou o prazo numa tarefa longa) e `finished_at` a conclusao
+ * real. Nao ha check entre `finished_at` e `started_at`: concluir hoje uma tarefa
+ * marcado para amanha e valido.
+ */
 export const tasks = pgTable(
   "tasks",
   {
     id: char("id", { length: 26 }).primaryKey(),
     revision: integer("revision").notNull().default(1),
     userId: text("user_id").notNull(),
-    // Subtarefa: aponta para a tarefa de que esta e filha. `cascade` porque uma
-    // subtarefa so existe dentro do pai — apagar o pai apaga a arvore inteira,
-    // ao contrario do `set null` que o plano usava.
-    parentTaskId: char("parent_task_id", { length: 26 }).references(
-      (): AnyPgColumn => tasks.id,
-      { onDelete: "cascade" },
-    ),
+    actor: text("actor", { enum: ACTORS }).notNull(),
+    kind: text("kind", { enum: TASK_KINDS }).notNull(),
+    // Nulo e a tarefa de referencia: so marca um horario na agenda.
+    status: text("status", { enum: TASK_STATUSES }),
+    priority: text("priority", { enum: PRIORITIES }).notNull().default("medium"),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
-    status: workItemStatusEnum("status").notNull().default("todo"),
-    priority: workItemPriorityEnum("priority").notNull().default("medium"),
+    // Onde a tarefa acontece, em texto que o Google Maps entende. So tarefa de pessoa, e so quando alguem o
+    // informou: nulo e "sem local", nunca texto vazio.
+    location: text("location"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    estimatedFinishAt: timestamp("estimated_finish_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
     notifyOffsetsMinutes: integer("notify_offsets_minutes")
       .array()
       .notNull()
       .default(sql`'{}'::integer[]`),
-    startedAt: timestamp("started_at", { withTimezone: true }),
-    estimatedFinishAt: timestamp("estimated_finish_at", { withTimezone: true }),
-    finishedAt: timestamp("finished_at", { withTimezone: true }),
     // Ocorrencia de uma serie. `set null`: apagar a regra nao apaga o que ja
     // aconteceu — a ocorrencia passada e historia e so perde o vinculo.
-    recurrenceId: char("recurrence_id", { length: 26 }).references(
-      (): AnyPgColumn => recurrences.id,
-      { onDelete: "set null" },
-    ),
+    recurrenceId: char("recurrence_id", { length: 26 }).references((): AnyPgColumn => recurrences.id, {
+      onDelete: "set null",
+    }),
     occurrenceOn: date("occurrence_on"),
     recurrenceDetached: boolean("recurrence_detached").notNull().default(false),
+    // Tarefa de pessoa que fica fora da agenda, como um projeto.
+    longRunning: boolean("long_running").notNull().default(false),
+    // Pequeno: resumo ou resposta final do agente, agente interno de um passo,
+    // contexto de tela. O que cresce vai para `task_entries`.
+    data: jsonb("data").notNull().default(sql`'{}'::jsonb`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-    // Soft delete, como em `events`. O `cascade` de `parent_task_id` so vale para
-    // o hard delete que a edicao de serie ainda faz; o soft delete propaga a
-    // arvore em codigo (`softDeleteTaskTree`).
+    // Exclusao logica: a linha fica para a deteccao de ocorrencia ja gerada
+    // (indice unico abaixo) e toda leitura filtra `deleted_at IS NULL`.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    index("tasks_user_idx").on(table.userId),
-    index("tasks_parent_idx").on(table.parentTaskId),
-    check("tasks_revision_min", sql`${table.revision} >= 1`),
+    // Agenda: pessoa e agente, sem passos e sem tarefas longas.
+    index("tasks_agenda_idx")
+      .on(table.userId, table.startedAt, table.id)
+      .where(
+        sql`${table.startedAt} IS NOT NULL AND NOT ${table.longRunning} AND ${table.kind} <> 'step' AND ${table.deletedAt} IS NULL`,
+      ),
+    // Lista de tarefas: tudo o que tem status, de pessoa e de agente, sem passos.
+    index("tasks_tracked_idx")
+      .on(table.userId, table.status, sql`(coalesce(started_at, estimated_finish_at))`, table.id)
+      .where(sql`${table.status} IS NOT NULL AND ${table.kind} <> 'step' AND ${table.deletedAt} IS NULL`),
+    // Pedidos do usuario, do mais novo para o mais antigo.
+    index("tasks_requests_idx")
+      .on(table.userId, table.id.desc())
+      .where(sql`${table.actor} = 'agent' AND ${table.kind} <> 'step' AND ${table.deletedAt} IS NULL`),
+    // Todas as tarefas vivas de pessoa: agente de consulta e busca por nome.
+    index("tasks_user_live_idx")
+      .on(table.userId, table.id)
+      .where(sql`${table.actor} = 'human' AND ${table.deletedAt} IS NULL`),
     // A garantia de idempotencia da materializacao: duas leituras ao mesmo
-    // tempo nao geram o mesmo dia duas vezes.
+    // tempo nao geram o mesmo dia duas vezes. Sem filtro de apagados, de
+    // proposito: a ocorrencia apagada continua ocupando o dia.
     uniqueIndex("tasks_recurrence_occurrence_unique")
       .on(table.recurrenceId, table.occurrenceOn)
       .where(sql`${table.recurrenceId} IS NOT NULL`),
-    index("tasks_recurrence_idx")
-      .on(table.recurrenceId, table.startedAt)
-      .where(sql`${table.recurrenceId} IS NOT NULL`),
-    // Implicacao, e nao bicondicional: o `set null` do FK mexe numa coluna so.
+    check("tasks_revision_min", sql`${table.revision} >= 1`),
+    check("tasks_actor_valid", sql`${table.actor} IN (${sqlList(ACTORS)})`),
+    check("tasks_priority_valid", sql`${table.priority} IN (${sqlList(PRIORITIES)})`),
     check(
-      "tasks_occurrence_requires_day",
-      sql`${table.recurrenceId} IS NULL OR ${table.occurrenceOn} IS NOT NULL`,
+      "tasks_kind_matches_actor",
+      sql`(${table.actor} = 'human' AND ${table.kind} IN (${sqlList(HUMAN_KINDS)})) OR (${table.actor} = 'agent' AND ${table.kind} IN (${sqlList(AGENT_KINDS)}))`,
     ),
-    // Ciclos mais longos o banco nao consegue barrar; quem barra e
-    // `assertParentTaskAssignable` em apps/api, subindo a cadeia de pais.
+    // `IS NOT NULL` explicito no ramo do agente: `NULL IN (...)` e nulo, e um
+    // check nulo passa.
+    check(
+      "tasks_status_matches_actor",
+      sql`(${table.actor} = 'human' AND (${table.status} IS NULL OR ${table.status} IN (${sqlList(HUMAN_STATUSES)}))) OR (${table.actor} = 'agent' AND ${table.status} IS NOT NULL AND ${table.status} IN (${sqlList(AGENT_STATUSES)}))`,
+    ),
+    // Tarefa longa: de pessoa, com status, sem serie, nunca perdido.
+    check(
+      "tasks_long_running_shape",
+      sql`NOT ${table.longRunning} OR (${table.actor} = 'human' AND ${table.status} IS NOT NULL AND ${table.status} <> 'missed' AND ${table.recurrenceId} IS NULL)`,
+    ),
+    // Os avisos de uma tarefa longa contam a partir do prazo; sem prazo, nao ha aviso.
+    check(
+      "tasks_long_running_notify",
+      sql`NOT ${table.longRunning} OR ${table.estimatedFinishAt} IS NOT NULL OR cardinality(${table.notifyOffsetsMinutes}) = 0`,
+    ),
+    // Fora da tarefa longa, o fim planejado nao vem antes do inicio e o bloco
+    // dura no maximo 31 dias. Na tarefa longa o inicio e o real e pode vir
+    // depois do prazo.
+    check(
+      "tasks_block_span",
+      sql`${table.longRunning} OR ${table.startedAt} IS NULL OR ${table.estimatedFinishAt} IS NULL OR (${table.estimatedFinishAt} >= ${table.startedAt} AND ${table.estimatedFinishAt} - ${table.startedAt} <= interval '31 days')`,
+    ),
+    // Implicacao, e nao bicondicional: o `set null` do FK mexe numa coluna so.
+    check("tasks_occurrence_requires_day", sql`${table.recurrenceId} IS NULL OR ${table.occurrenceOn} IS NOT NULL`),
     // Numero livre (minutos ou dias, ja convertido para minutos) — o teto so
     // barra valor absurdo, nao restringe a um conjunto fixo.
     check(
       "tasks_notify_offsets_valid",
       sql`1 <= ALL(${table.notifyOffsetsMinutes}) AND 43200 >= ALL(${table.notifyOffsetsMinutes})`,
     ),
-    check(
-      "tasks_parent_not_self",
-      sql`${table.parentTaskId} IS NULL OR ${table.parentTaskId} <> ${table.id}`,
-    ),
-    check(
-      "tasks_finished_after_started",
-      sql`${table.startedAt} IS NULL OR ${table.finishedAt} IS NULL OR ${table.finishedAt} >= ${table.startedAt}`,
-    ),
+    check("tasks_location_human", sql`${table.location} IS NULL OR ${table.actor} = 'human'`),
+    check("tasks_location_filled", sql`${table.location} IS NULL OR btrim(${table.location}) <> ''`),
+    check("tasks_location_length", sql`char_length(${table.location}) <= 300`),
+    check("tasks_data_object", sql`jsonb_typeof(${table.data}) = 'object'`),
   ],
 );
 
-export const taskTags = pgTable(
-  "task_tags",
+/**
+ * O que se acrescenta a uma tarefa e nunca se altera: mensagem, pensamento,
+ * trace, resultado e insumo de um passo (ADR 0013). Inserir aqui nao incrementa
+ * a `revision` da tarefa. O id e um ULID e da a ordem.
+ */
+export const taskEntries = pgTable(
+  "task_entries",
   {
+    id: char("id", { length: 26 }).primaryKey(),
     taskId: char("task_id", { length: 26 })
       .notNull()
       .references(() => tasks.id, { onDelete: "cascade" }),
-    tagId: char("tag_id", { length: 26 })
-      .notNull()
-      .references(() => tags.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    kind: text("kind", { enum: ENTRY_KINDS }).notNull(),
+    // So em `message`.
+    role: text("role", { enum: ENTRY_ROLES }),
+    content: text("content"),
+    data: jsonb("data").notNull().default(sql`'{}'::jsonb`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    primaryKey({ columns: [table.taskId, table.tagId] }),
-    index("task_tags_tag_idx").on(table.tagId, table.taskId),
+    index("task_entries_task_idx").on(table.taskId, table.id),
+    check("task_entries_kind_valid", sql`${table.kind} IN (${sqlList(ENTRY_KINDS)})`),
+    check("task_entries_role_only_in_message", sql`(${table.kind} = 'message') = (${table.role} IS NOT NULL)`),
+    check("task_entries_role_valid", sql`${table.role} IS NULL OR ${table.role} IN (${sqlList(ENTRY_ROLES)})`),
+    // O trace guarda so numeros e codigos, em `data`: nunca texto do usuario.
+    check("task_entries_trace_without_text", sql`${table.kind} <> 'trace' OR ${table.content} IS NULL`),
+    check("task_entries_data_object", sql`jsonb_typeof(${table.data}) = 'object'`),
   ],
 );

@@ -47,6 +47,7 @@ import app.braid.mobile.core.designsystem.LucideIcons
 import app.braid.mobile.ui.chat.AgentChatPanel
 import app.braid.mobile.ui.chat.AgentChatViewModel
 import app.braid.mobile.ui.chat.ChatCommand
+import app.braid.mobile.ui.chat.ChatEntityTarget
 import app.braid.mobile.ui.chat.ChatView
 import app.braid.mobile.ui.event.CreateEventUiState
 import app.braid.mobile.ui.event.CreateEventViewModel
@@ -153,6 +154,14 @@ fun HubPanel(
                         },
                         onViewChange = { chatView = it },
                         onEntitiesChanged = onEntitiesChanged,
+                        onClose = onClose,
+                        onOpenEntity = { target ->
+                            onClose()
+                            when (target) {
+                                is ChatEntityTarget.Event -> onOpenEvent(target.id)
+                                is ChatEntityTarget.Note -> onOpenNote(target.id)
+                            }
+                        },
                     )
                 } else {
                     Text(
@@ -264,9 +273,9 @@ private fun KindChips(
     val colors = MaterialTheme.colorScheme
     val options =
         listOf(
-            Triple(CreateKind.Task, "Tarefa", LucideIcons.squareCheck()),
+            Triple(CreateKind.Task, "Tarefa", LucideIcons.listChecks()),
             Triple(CreateKind.Event, "Evento", LucideIcons.calendarDays()),
-            Triple(CreateKind.Note, "Nota", LucideIcons.notepadText()),
+            Triple(CreateKind.Note, "Nota", LucideIcons.fileText()),
         )
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),

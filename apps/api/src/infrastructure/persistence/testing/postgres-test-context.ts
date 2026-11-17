@@ -1,11 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
-import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { randomUUID } from "node:crypto";
-import { Client } from "pg";
+import { Client, Pool } from "pg";
 import { inject } from "vitest";
-import { sql } from "drizzle-orm";
 import * as schema from "../database/schema";
 
 declare module "vitest" {
@@ -20,29 +18,23 @@ export interface PostgresTestContext {
   stop(): Promise<void>;
 }
 
-const MUTABLE_TABLES = [
-  "agent_chat_tickets",
-  "agent_chat_messages",
-  "agent_conversations",
-  "note_tags",
-  "event_notes",
-  "task_notes",
-  "recurrence_notes",
-  "notes",
-  "recurrence_exceptions",
-  "recurrences",
-  "event_tags",
-  "event_tasks",
-  "event_interruptions",
-  "events",
-  "task_tags",
-  "task_dependencies",
-  "tasks",
-  "tags",
-  "meal",
-  "food",
-] as const;
+// Os filhos saem pelo CASCADE do TRUNCATE. `artifacts` fica de fora: os exercicios globais vem da migration.
+const ROOT_TABLES = ["tasks", "tags", "recurrences", "jobs", "idempotency_keys"] as const;
 
+async function dropDatabase(adminUrl: string, databaseName: string): Promise<void> {
+  const cleanup = new Client({ connectionString: adminUrl });
+  await cleanup.connect();
+  try {
+    await cleanup.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
+  } finally {
+    await cleanup.end();
+  }
+}
+
+/**
+ * Um banco vazio com a migration do banco novo (`drizzle`) aplicada. E o
+ * par de `createPostgresTestContext` enquanto os dois esquemas convivem.
+ */
 export async function createPostgresTestContext(): Promise<PostgresTestContext> {
   const adminUrl = inject("apiPostgresUrl");
   const databaseName = `api_test_${randomUUID().replaceAll("-", "")}`;
@@ -60,33 +52,22 @@ export async function createPostgresTestContext(): Promise<PostgresTestContext> 
   const db = drizzle(pool, { schema });
 
   try {
-    await migrate(db, {
-      migrationsFolder: resolve(__dirname, "../../../../drizzle"),
-    });
+    await migrate(db, { migrationsFolder: resolve(__dirname, "../../../../drizzle") });
   } catch (error) {
     await pool.end();
-    const cleanup = new Client({ connectionString: adminUrl });
-    await cleanup.connect();
-    try { await cleanup.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`); }
-    finally { await cleanup.end(); }
+    await dropDatabase(adminUrl, databaseName);
     throw error;
   }
 
   async function reset(): Promise<void> {
-    await pool.query(
-      `TRUNCATE ${MUTABLE_TABLES.join(", ")} RESTART IDENTITY CASCADE`,
-    );
+    await pool.query(`TRUNCATE ${ROOT_TABLES.join(", ")} RESTART IDENTITY CASCADE`);
+    await pool.query("DELETE FROM artifacts WHERE id NOT LIKE '01KDVDNA0%'");
   }
 
   async function stop(): Promise<void> {
     await pool.end();
-    const cleanup = new Client({ connectionString: adminUrl });
-    await cleanup.connect();
-    try { await cleanup.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`); }
-    finally { await cleanup.end(); }
+    await dropDatabase(adminUrl, databaseName);
   }
 
   return { db, pool, connectionString, reset, stop };
 }
-
-export { sql };

@@ -1,14 +1,14 @@
 /**
  * A moldura dos modais — o mesmo painel em todos eles.
  *
- * Os quatro dialogos (novo evento, detalhes, edicao, exclusao) repetiam a
+ * Os quatro dialogos (nova tarefa, detalhes, edicao, exclusao) repetiam a
  * mesma sequencia de classes; qualquer ajuste no acabamento tinha que ser
  * feito quatro vezes, e um deles sempre ficava para tras.
  */
 
 /** O fundo que apaga a timeline atras do dialogo. */
 export const dialogOverlayClass =
-  "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-background/80 p-4 py-8 backdrop-blur-md duration-200 animate-in fade-in";
+  "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-background/85 p-4 py-8 duration-200 animate-in fade-in";
 
 /** O painel. A largura fica com quem usa (`max-w-md`, `max-w-sm`). */
 export const dialogPanelClass =

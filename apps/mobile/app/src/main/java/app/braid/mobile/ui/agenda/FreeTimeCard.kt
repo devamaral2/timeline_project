@@ -57,14 +57,20 @@ fun FreeTimeCard(
     val isNow = !isPast && !now.isBefore(slot.start)
     val start = formatTime(slot.start.toString())
     val end = if (slot.endsAtMidnight) "24:00" else formatTime(slot.end.toString())
-    val dashColor = if (isNow) brand.copy(alpha = 0.6f) else muted.copy(alpha = 0.45f)
+    // Passado: só o tracejado e a ampulheta apagam; o texto fica no tom apagado
+    // cheio, como o `.freeSlot[data-time-position="past"]` do web.
+    val dashColor =
+        when {
+            isNow -> brand.copy(alpha = 0.6f)
+            isPast -> muted.copy(alpha = 0.25f)
+            else -> muted.copy(alpha = 0.45f)
+        }
     val parts = durationPartsOfMinutes(slot.minutes)
 
     Row(
         modifier =
             modifier
                 .fillMaxWidth()
-                .alpha(if (isPast) 0.6f else 1f)
                 .semantics { contentDescription = "Tempo livre, de $start até $end" }
                 .drawBehind {
                     drawRoundRect(
@@ -76,12 +82,12 @@ fun FreeTimeCard(
                                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
                             ),
                     )
-                }.padding(horizontal = 16.dp, vertical = 12.dp),
+                }.padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(22.dp).alpha(if (isPast) 0.6f else 1f),
             imageVector = Icons.Outlined.HourglassEmpty,
             contentDescription = null,
             tint = muted,
@@ -89,50 +95,50 @@ fun FreeTimeCard(
         Column(modifier = Modifier.weight(1f)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "TEMPO LIVRE",
-                    style =
-                        MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 1.2.sp,
-                        ),
+                    text = "Tempo livre",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
                     color = muted,
                 )
                 if (isNow) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(6.dp).clip(CircleShape).background(brand))
                         Text(
-                            text = "LIVRE AGORA",
-                            style =
-                                MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 1.sp,
-                                ),
-                            color = brand,
+                            text = "Livre agora",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = MaterialTheme.colorScheme.tertiary,
                         )
                     }
+                } else {
+                    // Rótulo e intervalo na mesma linha: o tempo livre fica mais
+                    // baixo que um evento (o `.freeSlotText` do web quebra igual).
+                    Text(
+                        text = "$start — $end",
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                        color = muted,
+                    )
                 }
             }
-            Text(
-                modifier = Modifier.padding(top = 4.dp),
-                text = "$start — $end",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                color = muted,
-            )
+            if (isNow) {
+                Text(
+                    modifier = Modifier.padding(top = 2.dp),
+                    text = "$start — $end",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
+                    color = muted,
+                )
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
             parts.forEach { part ->
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         text = part.value.toString(),
-                        style = MaterialTheme.typography.titleLarge.copy(fontFamily = BraidDisplayFont, fontSize = 26.sp),
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.titleLarge.copy(fontFamily = BraidDisplayFont, fontSize = 20.sp),
+                        color = muted,
                     )
                     Text(
                         modifier = Modifier.padding(start = 3.dp, bottom = 3.dp),
                         text = part.unit,
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                         color = muted,
                     )
                 }

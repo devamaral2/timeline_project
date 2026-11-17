@@ -12,7 +12,7 @@ import kotlinx.serialization.json.JsonObject
 @Serializable
 data class TimelineEventCardDto(
     val id: String,
-    /** A natureza do evento (routine, meal, sleep, training); decide o visual do cartão. */
+    /** A natureza do evento (default, meal, sleep, training); decide o visual do cartão. */
     val kind: String,
     /** Os tipos das notes do evento, na ordem em que aparecem. */
     val noteTypes: List<String>,
@@ -151,6 +151,17 @@ data class TreadmillWorkoutDto(
 @Serializable
 @SerialName("running")
 data class RunningWorkoutDto(
+    override val id: String,
+    override val workoutName: String,
+    override val calories: Double,
+    override val duration: Double,
+    val pace: Double,
+    val distance: Double,
+) : WorkoutSnapshotDto
+
+@Serializable
+@SerialName("walking")
+data class WalkingWorkoutDto(
     override val id: String,
     override val workoutName: String,
     override val calories: Double,

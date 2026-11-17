@@ -54,7 +54,7 @@ export interface TagColors {
 
 /**
  * Cores de um chip de tag: a luminosidade e o croma vem do tema (os mesmos dos
- * tokens de tipo de evento), so o matiz muda. Assim qualquer tag, mesmo com cor
+ * tokens de tipo de tarefa), so o matiz muda. Assim qualquer tag, mesmo com cor
  * sorteada por hash, continua harmonica com o resto da UI.
  */
 export function tagColors(name: string, theme: Theme): TagColors {

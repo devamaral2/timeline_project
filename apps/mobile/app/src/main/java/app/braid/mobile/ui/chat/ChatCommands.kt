@@ -1,13 +1,6 @@
 package app.braid.mobile.ui.chat
 
-import app.braid.mobile.data.dto.AgentConversationDto
 import java.text.Normalizer
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.TextStyle
-import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 /** O que a barra "/" do chat abre, como `HUB_COMMANDS` do web (`hub-commands.ts`). */
@@ -60,55 +53,3 @@ fun parseChatCommand(input: String): CommandQuery? {
         }
     return if (matches.isEmpty()) null else CommandQuery(matches, match.groupValues[2].trim())
 }
-
-/** Hoje, os últimos sete dias e o resto (`groupConversations` do web). */
-enum class ConversationGroupLabel(
-    val label: String,
-) {
-    Today("Hoje"),
-    ThisWeek("Esta semana"),
-    Before("Antes"),
-}
-
-data class ConversationGroup(
-    val label: ConversationGroupLabel,
-    val items: List<AgentConversationDto>,
-)
-
-private fun AgentConversationDto.day(zone: ZoneId): LocalDate = Instant.parse(lastMessageAt).atZone(zone).toLocalDate()
-
-/** Cada grupo do mais recente para o mais antigo; grupos vazios ficam de fora. */
-fun groupConversations(
-    conversations: List<AgentConversationDto>,
-    today: LocalDate,
-    zone: ZoneId = ZoneId.systemDefault(),
-): List<ConversationGroup> =
-    conversations
-        .sortedByDescending { Instant.parse(it.lastMessageAt) }
-        .groupBy { conversation ->
-            val days = ChronoUnit.DAYS.between(conversation.day(zone), today)
-            when {
-                days <= 0 -> ConversationGroupLabel.Today
-                days < 7 -> ConversationGroupLabel.ThisWeek
-                else -> ConversationGroupLabel.Before
-            }
-        }.toSortedMap()
-        .map { (label, items) -> ConversationGroup(label, items) }
-
-/** "14:32" hoje, "ter." nesta semana e "28 set." antes disso. */
-fun conversationTime(
-    lastMessageAt: String,
-    today: LocalDate,
-    zone: ZoneId = ZoneId.systemDefault(),
-): String {
-    val moment = Instant.parse(lastMessageAt).atZone(zone)
-    val days = ChronoUnit.DAYS.between(moment.toLocalDate(), today)
-    return when {
-        days <= 0 -> moment.format(DateTimeFormatter.ofPattern("HH:mm"))
-        days < 7 -> moment.dayOfWeek.getDisplayName(TextStyle.SHORT, PT_BR)
-        else -> "${moment.dayOfMonth} ${moment.month.getDisplayName(TextStyle.SHORT, PT_BR)}"
-    }
-}
-
-/** O nome de uma conversa: o título, se alguém deu um; senão o primeiro pedido. */
-fun AgentConversationDto.label(): String = title ?: preview

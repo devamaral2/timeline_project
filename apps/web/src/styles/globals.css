@@ -9,13 +9,14 @@
  * O bloco @theme inline mapeia as custom properties para utilitarios do
  * Tailwind (ex.: --color-primary -> bg-primary, text-primary).
  *
- * A paleta e a "Névoa e Noite": a névoa e o chao claro (#f1f5f6); a noite,
- * um azul de ardosia quase preto (#141f29, cartoes em #1f2b35). O verde-agua
- * (`--brand`, #2e8a7a / #4fc2ab) e sempre o ponto — agora, hoje, foco — e
- * `--brand-soft` e o fundo do que esta ativo. A acao principal e sempre o fio
- * tinta (`--primary`, #203d46 no claro, #eaf2f3 no escuro).
+ * A paleta clara e a "Névoa": a névoa e o chao claro (#f1f5f6). A escura e a
+ * do Hermes: um indigo quase preto (#171720, cartoes em #1d1e2a) com texto
+ * cinza-lavanda. O verde-agua (`--brand`, #2e8a7a / #00b5ab) e sempre o ponto
+ * — agora, hoje, foco — e `--brand-soft` e o fundo do que esta ativo. A acao
+ * principal e sempre o fio tinta (`--primary`, #203d46 no claro, #ece8df no
+ * escuro).
  *
- * As cores por tipo de evento seguem o vocabulario do dominio:
+ * As cores por tipo de tarefa seguem o vocabulario do dominio:
  * routine | meal | training | sleep — mesma luminosidade e croma, so o matiz
  * muda. Os `--strand-*` sao os quatro fios solidos do simbolo.
  *
@@ -95,7 +96,7 @@
   --warning: oklch(0.53 0.1 72);
   --success: oklch(0.575 0.089 179.2);
   --border: oklch(0.909 0.012 217.5);
-  --input: oklch(0.826 0.019 222.2);
+  --input: oklch(0.64 0.019 222.2);
   --ring: oklch(0.575 0.089 179.2);
   --brand: oklch(0.575 0.089 179.2);
   --brand-accent: oklch(0.5208 0.0853 180.1);
@@ -108,56 +109,144 @@
   --training: oklch(0.529 0.099 134.8);
   --meal: oklch(0.53 0.1 72);
   --routine: oklch(0.529 0.0995 231.7);
+  /* Cores dos modos de visualização (agenda e tarefas, aba selecionada da barra). Ficam no web, não em
+     `packages/theme`. Pessoa é o `--primary` (escuro aqui); agentes é o cartão de agente; "todos" é âmbar. */
+  --mode-human: var(--primary);
+  --mode-agent: var(--brand-soft);
+  --mode-all: #e2b57c;
+  --mode-agent-ink: var(--foreground);
+  --mode-all-ink: var(--foreground);
   --card-shadow: none;
   --card-shadow-hover: 0 12px 28px oklch(0.249 0.022 220.8 / 0.12);
   /* Paleta de cores para tags geradas por hash: mesma luminosidade/croma dos
-     tokens de tipo de evento acima, variando apenas o matiz (hue), para que
+     tokens de tipo de tarefa acima, variando apenas o matiz (hue), para que
      qualquer cor de tag permaneça harmonica com o resto da UI. */
   --tag-lightness: 0.53;
   --tag-chroma: 0.09;
+  /* Status e prioridade de tarefa: apelidos dos tokens acima, para que a mesma
+     situacao tenha a mesma cor na agenda, na lista e no detalhe. Como `.dark`
+     fica no <html>, eles trocam de tema junto com o que apontam. Concluida e o
+     verde-agua de `--success`; agendada, o azul de `--routine`; urgente e
+     cancelada, o `--destructive`. */
+  --status-todo: var(--muted-foreground);
+  --status-scheduled: var(--routine);
+  --status-hold: var(--warning);
+  --status-done: var(--success);
+  --status-cancel: var(--destructive);
+  --priority-urgent: var(--destructive);
+  --priority-high: var(--warning);
+  --priority-medium: var(--foreground);
+  --priority-low: var(--muted-foreground);
+  /* As escalas. Um CSS module escolhe um degrau daqui em vez de inventar um
+     valor: texto em sete tamanhos (12 e o minimo), controles em tres alturas
+     (44 e o alvo de toque), movimento em dois tempos e as camadas do que
+     flutua. Os raios ja estao no @theme acima (5, 8, 10, 14, 18, 22). A unica
+     quebra de layout e 720 px — media query nao le custom property, entao ela
+     fica escrita por extenso: `@media (max-width: 720px)`. */
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+  --font-size-3xl: 44px;
+  --control-sm: 36px;
+  --control-md: 44px;
+  --control-lg: 56px;
+  --duration-fast: 150ms;
+  --duration-slow: 240ms;
+  /* Trocar de tela ou abrir uma folha leva mais: 380 para entrar, 280 para
+     voltar. O que entra desacelera (`--ease-out`), o que sai acelera
+     (`--ease-in`); numa lista que chega, cada linha espera `--stagger`. */
+  --duration-screen: 380ms;
+  --duration-screen-back: 280ms;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: cubic-bezier(.4, 0, 1, 1);
+  --stagger: 40ms;
+  --z-sticky: 5;
+  --z-popover: 20;
+  --z-overlay: 30;
+  --z-toast: 40;
+  --z-dialog: 50;
+  /* A sombra do que flutua (menus, avisos, paineis) e a mesma do cartao
+     erguido; o veu e o que escurece a tela atras de uma folha ou dialogo. */
+  --shadow-float: var(--card-shadow-hover);
+  --scrim: oklch(0.249 0.022 220.8 / 0.3);
+  /* Os tons do redesenho que nao tem papel proprio na paleta: o texto mais
+     apagado (legendas em mono, dia fora do mes), o fio entre as linhas de uma
+     lista e o que vai por cima do preenchido em `--primary` (o dia escolhido).
+     No claro apontam para tokens existentes; no escuro tem valor proprio. */
+  /* Os tres macronutrientes da refeicao, cada um com a sua cor: proteinas no
+     azul de `--routine`, carboidratos no ambar de `--meal` e gorduras num rosa
+     da mesma luminosidade e croma das tags (troca de tema junto com elas). */
+  --macro-protein: var(--routine);
+  --macro-carbs: var(--meal);
+  --macro-fat: oklch(var(--tag-lightness) var(--tag-chroma) 340);
+  --faint: var(--muted-foreground);
+  --hairline: oklch(0.82 0.016 218); /* divisores: mais firmes que --border para ler sobre o fundo Névoa */
+  --on-primary-muted: color-mix(in oklab, var(--primary-foreground) 70%, var(--primary));
+  --on-primary-brand: var(--strand-destaque);
 }
 
 .dark {
-  --background: oklch(0.234 0.025 246.5);
-  --foreground: oklch(0.955 0.009 205.9);
-  --card: oklch(0.283 0.025 244);
-  --card-border: oklch(0.369 0.023 245.9);
-  --card-foreground: oklch(0.955 0.009 205.9);
-  --primary: oklch(0.955 0.009 205.9);
-  --primary-foreground: oklch(0.283 0.025 244);
-  --secondary: oklch(0.33 0.024 243.7);
-  --secondary-foreground: oklch(0.955 0.009 205.9);
-  --muted: oklch(0.33 0.024 243.7);
-  --muted-foreground: oklch(0.741 0.025 223.8);
-  --accent: oklch(0.361 0.023 243.6);
-  --accent-foreground: oklch(0.955 0.009 205.9);
+  --background: oklch(0.2089 0.0177 284.76);
+  --foreground: oklch(0.932 0.013 86.8);
+  --card: oklch(0.2396 0.023 280.79);
+  --card-border: oklch(0.3299 0.0284 279.15);
+  --card-foreground: oklch(0.932 0.013 86.8);
+  --primary: oklch(0.932 0.013 86.8);
+  --primary-foreground: oklch(0.2396 0.023 280.79);
+  --secondary: oklch(0.2591 0.0249 274.44);
+  --secondary-foreground: oklch(0.932 0.013 86.8);
+  --muted: oklch(0.2591 0.0249 274.44);
+  --muted-foreground: oklch(0.7351 0.0526 276.4);
+  --accent: oklch(0.3105 0.0364 275.35);
+  --accent-foreground: oklch(0.932 0.013 86.8);
   --destructive: oklch(0.8 0.111 17.7);
-  --destructive-foreground: oklch(0.283 0.025 244);
+  --destructive-foreground: oklch(0.2396 0.023 280.79);
   --warning: oklch(0.801 0.09 72.5);
-  --success: oklch(0.7421 0.1095 177.7);
-  --border: oklch(0.369 0.023 245.9);
-  --input: oklch(0.435 0.021 240.4);
-  --ring: oklch(0.7421 0.1095 177.7);
-  --brand: oklch(0.7421 0.1095 177.7);
-  --brand-accent: oklch(0.8 0.099 179);
-  --brand-soft: oklch(0.369 0.045 188.8);
-  --strand-tile: oklch(0.283 0.025 244);
-  --strand-nevoa: oklch(0.638 0.042 219.1);
-  --strand-destaque: oklch(0.7421 0.1095 177.7);
-  --strand-tinta: oklch(0.955 0.009 205.9);
+  --success: oklch(0.6965 0.1212 187.82);
+  --border: oklch(0.3299 0.0284 279.15);
+  --input: oklch(0.53 0.0325 275.54);
+  --ring: oklch(0.6965 0.1212 187.82);
+  --brand: oklch(0.6965 0.1212 187.82);
+  --brand-accent: oklch(0.775 0.1244 187.69);
+  --brand-soft: oklch(0.3257 0.0435 199.9);
+  --strand-tile: oklch(0.2396 0.023 280.79);
+  --strand-nevoa: oklch(0.5424 0.0397 274.43);
+  --strand-destaque: oklch(0.6965 0.1212 187.82);
+  --strand-tinta: oklch(0.932 0.013 86.8);
   --sleep: oklch(0.8 0.09 287.8);
   --training: oklch(0.8 0.09 134.7);
   --meal: oklch(0.801 0.09 72.5);
   --routine: oklch(0.799 0.09 232.5);
+  /* Cores dos modos de visualização (agenda e tarefas, aba selecionada da barra). Ficam no web, não em
+     `packages/theme`. Pessoa é o `--primary` (claro aqui); agentes é o cartão de agente; "todos" é âmbar. */
+  --mode-human: var(--primary);
+  --mode-agent: var(--brand-soft);
+  --mode-all: #e2b57c;
+  --mode-agent-ink: var(--foreground);
+  --mode-all-ink: oklch(0.2396 0.023 280.79);
   --card-shadow: none;
   --card-shadow-hover: 0 16px 40px oklch(0 0 0 / 0.45);
   --tag-lightness: 0.8;
   --tag-chroma: 0.08;
+  --scrim: oklch(0 0 0 / 0.5);
+  --faint: oklch(0.634 0.048 278); /* #8388a8 */
+  --hairline: oklch(0.302 0.027 278.7); /* #2b2d3c */
+  --on-primary-muted: oklch(0.449 0.039 279.1); /* #50536b */
+  --on-primary-brand: oklch(0.555 0.097 187.4); /* #00857d */
 }
 
 @layer base {
   * {
     border-color: var(--color-border);
+  }
+
+  /* Reserva o espaco da barra de rolagem: sem isto a coluna centrada anda
+     alguns pixels entre uma tela que rola e outra que nao. */
+  html {
+    scrollbar-gutter: stable;
   }
 
   body {
@@ -171,46 +260,37 @@
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
   }
-}
 
-/*
- * Superficie de vidro: o painel translucido que deixa a timeline passar por
- * tras. E o acabamento do cabecalho e das barras flutuantes. A borda fica
- * por conta de quem usa (`border-b border-border`, por exemplo), para nao
- * competir com os utilitarios de borda do Tailwind.
- */
-@utility surface-glass {
-  background-color: color-mix(in oklab, var(--card) 78%, transparent);
-  backdrop-filter: blur(14px);
-}
+  /* Campo de digitar em foco: um único fio de 1 px na cor da marca, por cima
+     da borda e no formato do campo, e o cursor na mesma cor. Sem anel por
+     fora. Caixa de marcar, opção e botão seguem com o anel acima. O campo
+     cuja moldura é o elemento em volta (pílula com ícone) zera este contorno
+     e pinta a borda da moldura em `:focus-within`. */
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="color"], [type="image"]):focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 1px solid var(--color-brand);
+    outline-offset: -1px;
+    caret-color: var(--color-brand-accent);
+  }
 
-/*
- * Brilho que atravessa o esqueleto de carregamento. Mais discreto que um
- * `animate-pulse` no escuro, onde piscar opacidade fica pesado.
- * `prefers-reduced-motion` derruba a animacao junto com as outras, la embaixo.
- */
-@keyframes shimmer {
-  to {
-    transform: translateX(100%);
+  :is(input, textarea, select)[aria-invalid="true"]:focus-visible {
+    outline-color: var(--color-destructive);
   }
 }
 
-@utility shimmer {
-  position: relative;
-  overflow: hidden;
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(
-      90deg,
-      transparent,
-      color-mix(in oklab, var(--foreground) 9%, transparent),
-      transparent
-    );
-    animation: shimmer 1.6s ease-in-out infinite;
-  }
+/*
+ * Superficie opaca: o painel do cabecalho e do que flutua (sugestoes, avisos).
+ * Um passo de tom acima do chao, sem vidro nem desfoque — a timeline nao
+ * atravessa o painel, entao o texto nunca disputa com o que passa atras. A
+ * borda fica por conta de quem usa (`border-b border-border`, por exemplo),
+ * para nao competir com os utilitarios de borda do Tailwind.
+ *
+ * O esqueleto de carregamento nao tem utilitario: sao barras lisas em
+ * `bg-muted`, no tamanho real do valor, sem brilho que atravesse.
+ */
+@utility surface-solid {
+  background-color: var(--card);
 }
 
 @utility scrollbar-none {
@@ -233,11 +313,59 @@
   }
 }
 
+/*
+ * Trocar de tela. Quem navega marca o sentido em `<html data-nav>` e o
+ * navegador anima a foto da tela antiga contra a da nova (`lib/motion`):
+ *   next / prev — entre Agenda, Tarefas e Notas: a antiga sai em 90 ms e a nova
+ *                 entra deslizando 24 px no sentido da aba;
+ *   open        — a linha tocada cresce ate virar a tela (o recorte parte de
+ *                 `--nav-top/right/bottom/left`, a caixa da linha);
+ *   close       — a tela desce e some, e a lista volta de 97% para o tamanho.
+ * O cabecalho e a barra inferior tem nome proprio (no shell) e ficam parados.
+ * Sem `data-nav` — movimento reduzido — sobra so a troca de opacidade.
+ */
+::view-transition-group(*) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: var(--duration-fast);
+}
+html[data-nav]::view-transition-old(root),
+html[data-nav]::view-transition-new(root) {
+  mix-blend-mode: normal;
+}
+html[data-nav="next"]::view-transition-old(root) { animation: nav-out-left 90ms var(--ease-in) both; }
+html[data-nav="next"]::view-transition-new(root) { animation: nav-in-right 300ms var(--ease-out) 90ms both; }
+html[data-nav="prev"]::view-transition-old(root) { animation: nav-out-right 90ms var(--ease-in) both; }
+html[data-nav="prev"]::view-transition-new(root) { animation: nav-in-left 300ms var(--ease-out) 90ms both; }
+html[data-nav="open"]::view-transition-old(root) { animation: nav-recede var(--duration-screen) var(--ease-out) both; }
+html[data-nav="open"]::view-transition-new(root) { animation: nav-grow var(--duration-screen) var(--ease-out) both; }
+html[data-nav="close"]::view-transition-old(root) { z-index: 1; animation: nav-sink 200ms var(--ease-in) both; }
+html[data-nav="close"]::view-transition-new(root) { animation: nav-return var(--duration-screen-back) var(--ease-out) both; }
+
+@keyframes nav-out-left { to { opacity: 0; transform: translateX(-24px); } }
+@keyframes nav-out-right { to { opacity: 0; transform: translateX(24px); } }
+@keyframes nav-in-right { from { opacity: 0; transform: translateX(24px); } }
+@keyframes nav-in-left { from { opacity: 0; transform: translateX(-24px); } }
+@keyframes nav-recede { to { opacity: .25; transform: scale(.97); } }
+@keyframes nav-grow {
+  from { opacity: 0; clip-path: inset(var(--nav-top, 30%) var(--nav-right, 6%) var(--nav-bottom, 30%) var(--nav-left, 6%) round 14px); }
+  20% { opacity: 1; }
+  to { opacity: 1; clip-path: inset(0 0 0 0 round 0px); }
+}
+@keyframes nav-sink { to { opacity: 0; transform: translateY(16px); } }
+@keyframes nav-return { from { opacity: .25; transform: scale(.97); } }
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+  ::view-transition-group(*) {
+    animation: none;
   }
 }

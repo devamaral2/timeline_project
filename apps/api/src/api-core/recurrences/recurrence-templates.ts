@@ -1,53 +1,45 @@
 import {
-  Event,
-  RecurrenceValidationError,
   Task,
-  type EventKind,
-  type EventPriority,
-  type Note,
+  TaskNotFoundError,
+  TaskOwnershipError,
+  RecurrenceValidationError,
+  type Artifact,
+  type TaskPriority,
+  type HumanTaskKind,
+  type HumanTaskStatus,
   type OccurrenceLink,
   type Recurrence,
   type RecurrenceRule,
-  type WorkItemPriority,
 } from "../../domain";
-import type {
-  EventRecurrenceTemplate,
-  TaskRecurrenceTemplate,
-} from "@repo/contracts";
+import type { RecurrenceTemplate } from "@repo/contracts";
 import type { TaskRepository } from "../../domain/ports";
 import { dayKeyOf, expandOccurrences, occurrenceWindow, shiftDayKey } from "@repo/timeline";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { CreateEventUseCase } from "../events/create-event.usecase";
-import { assertParentTaskAssignable } from "../tasks/assert-parent-task";
+import type { CreateTaskUseCase, PrepareTaskOptions } from "../tasks/create-task.usecase";
 
-/** O que cada ocorrencia de evento copia, ja resolvido. */
-export interface StoredEventTemplate {
+/** O que cada ocorrencia copia, ja resolvido. E o que a serie guarda em `template`. */
+export interface StoredTemplate {
+  kind: HumanTaskKind;
+  /** Ausente, cada ocorrencia nasce de referencia. */
+  status?: HumanTaskStatus;
   name: string;
   description: string;
+  /** Onde cada ocorrencia acontece. Ausente, a serie nao tem local. */
+  location?: string;
   tags: string[];
-  priority: EventPriority;
-  kind: EventKind;
-}
-
-/**
- * O template resolvido e as notes da serie. As notes nao viajam dentro do
- * template: sao notes de verdade, ligadas a serie (`recurrence_notes`), e cada
- * ocorrencia gerada ganha o proprio vinculo para a mesma note.
- */
-export interface PreparedEventTemplate {
-  template: StoredEventTemplate;
-  /** As notes que o template cria — gravadas junto com a serie. */
-  notes: Note[];
-  /** Todas as notes da serie, na ordem: as novas e as que o template apontou. */
-  noteIds: string[];
-}
-
-export interface StoredTaskTemplate {
-  name: string;
-  description: string;
-  tags: string[];
-  priority?: WorkItemPriority;
+  priority: TaskPriority;
+  notifyOffsetsMinutes: number[];
+  /** Os mesmos artefatos em todas as ocorrencias, na ordem; cada uma ganha a propria relacao com eles. */
+  artifactIds: string[];
+  /** A tarefa principal de que cada ocorrencia nasce subtarefa. */
   parentTaskId?: string;
+}
+
+export interface PreparedTemplate {
+  template: StoredTemplate;
+  /** Os artefatos que o template cria, gravados junto com a serie. */
+  artifacts: Artifact[];
+  derivations: { originalId: string; copyId: string }[];
 }
 
 /** Ate onde uma serie nova olha para achar um dia de ensaio. */
@@ -65,113 +57,108 @@ export function sampleDayOf(rule: RecurrenceRule): string {
   return first;
 }
 
-/**
- * Resolve o template de evento uma vez, com a janela da primeira ocorrencia:
- * a refeicao passa pelo modelo aqui, o nome derivado ("Almoco") sai da hora da
- * regra, e se o template nao gera um evento valido a serie nao e salva.
- */
-export async function prepareEventTemplate(
-  createEvent: Pick<CreateEventUseCase, "prepare">,
-  template: EventRecurrenceTemplate,
-  rule: RecurrenceRule,
-  actor: AuthenticatedUser,
-): Promise<PreparedEventTemplate> {
-  if (typeof template !== "object" || template === null) {
-    throw new RecurrenceValidationError("An event template must be an object");
-  }
-  const { event, notes } = await createEvent.prepare(template, actor, occurrenceWindow(rule, sampleDayOf(rule)));
+export function storedTemplateOf(recurrence: Recurrence): StoredTemplate {
+  const template = recurrence.template as Partial<StoredTemplate>;
   return {
-    template: {
-      name: event.name,
-      description: event.description,
-      tags: [...event.tags],
-      priority: event.priority,
-      kind: event.kind,
-    },
-    notes,
-    noteIds: event.noteLinks.map((link) => link.noteId),
+    kind: template.kind ?? "common",
+    status: template.status,
+    name: template.name ?? "",
+    description: template.description ?? "",
+    ...(template.location?.trim() ? { location: template.location.trim() } : {}),
+    tags: template.tags ?? [],
+    priority: template.priority ?? "medium",
+    notifyOffsetsMinutes: template.notifyOffsetsMinutes ?? [],
+    artifactIds: template.artifactIds ?? [],
+    ...(template.parentTaskId ? { parentTaskId: template.parentTaskId } : {}),
   };
 }
 
-export async function prepareTaskTemplate(
-  tasks: Pick<TaskRepository, "findById">,
-  template: TaskRecurrenceTemplate,
+/**
+ * Resolve o template uma vez, com a janela da primeira ocorrencia: o nome
+ * derivado ("Almoco") sai da hora da regra, os artefatos novos viram ids, e se
+ * o template nao gera uma tarefa valida a serie nao e salva.
+ */
+export async function prepareTemplate(
+  deps: { createTask: Pick<CreateTaskUseCase, "prepare">; tasks: Pick<TaskRepository, "findByIds"> },
+  template: RecurrenceTemplate,
   rule: RecurrenceRule,
   actor: AuthenticatedUser,
-): Promise<StoredTaskTemplate> {
-  if (template.parentTaskId !== undefined) {
-    await assertParentTaskAssignable(tasks, template.parentTaskId, actor.userId);
+  options?: PrepareTaskOptions,
+): Promise<PreparedTemplate> {
+  if (typeof template !== "object" || template === null) {
+    throw new RecurrenceValidationError("A recurrence template must be an object");
   }
-  const stored: StoredTaskTemplate = {
-    name: template.name ?? "",
-    description: template.description ?? "",
-    tags: template.tags ?? [],
-    priority: template.priority,
-    parentTaskId: template.parentTaskId,
+  // A principal fica fora do ensaio: virar subtarefa dela so acontece quando a ocorrencia nasce.
+  const { parentTaskId, ...taskInput } = template;
+  if (parentTaskId) await assertOwnedTasks(deps.tasks, [parentTaskId], actor);
+
+  const { task, artifacts, derivations } = await deps.createTask.prepare(
+    taskInput,
+    actor,
+    occurrenceWindow(rule, sampleDayOf(rule)),
+    options,
+  );
+  return {
+    template: {
+      kind: task.kind as HumanTaskKind,
+      ...(task.status ? { status: task.status as HumanTaskStatus } : {}),
+      name: task.name,
+      description: task.description,
+      ...(task.location ? { location: task.location } : {}),
+      tags: [...task.tags],
+      priority: task.priority,
+      notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
+      artifactIds: task.artifactLinks.map((link) => link.artifactId),
+      ...(parentTaskId ? { parentTaskId } : {}),
+    },
+    artifacts,
+    derivations,
   };
-  // Ensaio: a entidade recusa aqui o que recusaria em toda materializacao.
-  buildTaskOccurrence(stored, rule, actor.userId, { recurrenceId: "sample", occurrenceOn: sampleDayOf(rule), detached: false });
-  return stored;
+}
+
+async function assertOwnedTasks(
+  tasks: Pick<TaskRepository, "findByIds">,
+  ids: readonly string[],
+  actor: AuthenticatedUser,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const found = new Map((await tasks.findByIds(ids)).map((task) => [task.id, task]));
+  for (const id of ids) {
+    const task = found.get(id);
+    if (!task) throw new TaskNotFoundError(`Task not found: ${id}`);
+    if (task.userId !== actor.userId) throw new TaskOwnershipError();
+  }
 }
 
 function linkOf(recurrence: Recurrence, dayKey: string): OccurrenceLink {
   return { recurrenceId: recurrence.id, occurrenceOn: dayKey, detached: false };
 }
 
-export function buildEventOccurrence(recurrence: Recurrence, dayKey: string): Event {
-  const template = recurrence.template as unknown as StoredEventTemplate;
+/** `liveArtifactIds`: os artefatos do template que ainda existem; um apagado some das ocorrencias novas. */
+export function buildOccurrence(recurrence: Recurrence, dayKey: string, liveArtifactIds?: ReadonlySet<string>): Task {
+  const template = storedTemplateOf(recurrence);
   const window = occurrenceWindow(recurrence.rule, dayKey);
-  return Event.create({
+  return Task.create({
     userId: recurrence.userId,
+    kind: template.kind,
+    status: template.status,
     name: template.name,
     description: template.description,
+    location: template.location,
     startedAt: window.startedAt,
-    finishedAt: window.finishedAt,
+    estimatedFinishAt: window.estimatedFinishAt,
     tags: template.tags,
-    interruptions: [],
-    kind: template.kind,
-    // A mesma note em todas as ocorrencias, cada uma com o proprio vinculo.
-    noteLinks: recurrence.noteIds.map((noteId) => ({ noteId, fromRecurrence: true })),
     priority: template.priority,
+    notifyOffsetsMinutes: template.notifyOffsetsMinutes,
+    // O mesmo artefato em todas as ocorrencias, cada uma com a propria relacao.
+    artifactLinks: template.artifactIds
+      .filter((artifactId) => !liveArtifactIds || liveArtifactIds.has(artifactId))
+      .map((artifactId) => ({ artifactId, relation: "uses" as const, fromRecurrence: true })),
     occurrence: linkOf(recurrence, dayKey),
   });
 }
 
-function buildTaskOccurrence(
-  template: StoredTaskTemplate,
-  rule: RecurrenceRule,
-  userId: string,
-  occurrence: OccurrenceLink,
-  noteIds: readonly string[] = [],
-): Task {
-  const window = occurrenceWindow(rule, occurrence.occurrenceOn);
-  return Task.create({
-    userId,
-    parentTaskId: template.parentTaskId,
-    name: template.name,
-    description: template.description,
-    tags: template.tags,
-    priority: template.priority,
-    // Os mesmos dois campos que o evento usa: inicio da ocorrencia e, com
-    // duracao, o prazo.
-    startedAt: window.startedAt,
-    estimatedFinishAt: window.finishedAt,
-    noteLinks: noteIds.map((noteId) => ({ noteId, fromRecurrence: true })),
-    occurrence,
-  });
-}
-
-export function buildTaskOccurrenceOf(recurrence: Recurrence, dayKey: string): Task {
-  return buildTaskOccurrence(
-    recurrence.template as unknown as StoredTaskTemplate,
-    recurrence.rule,
-    recurrence.userId,
-    linkOf(recurrence, dayKey),
-    recurrence.noteIds,
-  );
-}
-
-/** Hoje, no fuso da regra — o dia a partir do qual "futuro" comeca para ela. */
+/** Hoje, no fuso da regra: o dia a partir do qual "futuro" comeca para ela. */
 export function todayOf(rule: RecurrenceRule, now: Date): string {
   return dayKeyOf(now, rule.timeZone);
 }

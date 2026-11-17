@@ -1,0 +1,1086 @@
+<!doctype html>
+<!--
+  Open Design · OD Next handheld shell — platform-neutral phone (restrained camera dot and symmetric side keys — use when the brief names no platform).
+  Presentation shell for a phone-app prototype: keep the handset markup and
+  CSS, put the product inside the APP CONTENT slot (`.phone-content`). The
+  shell sets no typography, palette, spacing, or navigation for the app.
+  Derived from the Open Design mobile-app template (Apache-2.0).
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Braid · Tarefas e Notas (mobile)</title>
+  <style>
+/* OD-LAYOUT-PRIMITIVES v1 — structure only: display, flex/grid, overflow, wrapping, ratio, geometry.
+   Put this @layer first; product CSS outside the layer wins ordinary layout rules.
+   Native hidden and closed-dialog states take precedence over component display rules. */
+@layer od-layout {
+  [hidden]:not([hidden="until-found" i]) { display: none !important; }
+  dialog:not([open]) { display: none !important; }
+
+  :where(.od-stack,.od-row,.od-row-top,.od-cluster,.od-grid,.od-field,.od-stat,.od-cell,.od-tile) > :where(*) { min-width: 0; }
+
+  /* containers */
+  .od-stack   { display: flex; flex-direction: column; gap: var(--od-gap, 8px); }
+  .od-row     { display: flex; align-items: center; gap: var(--od-gap, 8px); }
+  .od-row-top { display: flex; align-items: flex-start; gap: var(--od-gap, 8px); }
+  .od-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--od-gap, 8px); }
+  .od-fill    { flex: 1 1 0; min-width: 0; }
+  .od-fixed   { flex: none; }
+  .od-grid    { display: grid; gap: var(--od-gap, 12px); grid-template-columns: repeat(var(--od-cols, 3), minmax(0, 1fr)); }
+
+  /* stacked information: each piece is its own line — never sibling inline spans */
+  .od-stat, .od-field, .od-cell { display: grid; gap: var(--od-gap, 2px); }
+  :where(.od-stat,.od-field,.od-cell) > :where(*) { display: block; }
+  .od-tile { display: grid; grid-template-rows: auto 1fr; }
+  :where(.od-tile) > :where(*) { display: block; }
+
+  /* media keeps its intrinsic ratio by default; never a distorted or cropped
+     cover by accident. height:auto lets the ratio win over an <img height="…">
+     attribute. Cropping to a uniform box is an explicit opt-in: set --od-ratio
+     AND add .od-media-cover together (per the core rule, only where a crop is
+     deliberate — tile thumbs, decorative fills — never on full-frame content). */
+  .od-media { display: block; width: 100%; height: auto; aspect-ratio: var(--od-ratio, auto); }
+  .od-media-cover { object-fit: cover; }
+
+  /* functional inline SVG icons opt into bounded geometry; content SVGs keep their own */
+  .od-icon { display: inline-block; inline-size: var(--od-icon-size, 1em); block-size: var(--od-icon-size, 1em); flex: none; }
+
+  /* data text only — authored copy is rewritten to its budget instead */
+  .od-truncate { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .od-clamp-2, .od-clamp-3 { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .od-clamp-2 { -webkit-line-clamp: 2; }
+  .od-clamp-3 { -webkit-line-clamp: 3; }
+  .od-lines-2 { min-height: calc(2 * 1.4em); }   /* block-level reservation for a shared baseline */
+  .od-nowrap  { white-space: nowrap; }           /* 数字+单位 · 价格+起 · 日期+星期 */
+  .od-keep    { word-break: keep-all; overflow-wrap: anywhere; } /* CJK labels break at spaces / <wbr> first */
+
+  /* screen skeleton (optional): bars take their own space, the middle scrolls — no padding guessed for chrome */
+  .od-screen { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; }
+  .od-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+
+  /* horizontal rail: the next item peeks at the edge; trailing room survives overflow */
+  .od-rail { display: flex; gap: var(--od-gap, 8px); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+             padding-inline: var(--od-rail-pad, 16px); scroll-padding-inline: var(--od-rail-pad, 16px); }
+  .od-rail::-webkit-scrollbar { display: none; }
+  :where(.od-rail) > :where(*) { flex: none; scroll-snap-align: start; }
+  :where(.od-rail) > :where(:last-child) { margin-inline-end: var(--od-rail-pad, 16px); }
+
+  .od-spacer { flex: none; visibility: hidden; pointer-events: none; }
+  .od-touch  { min-width: 44px; min-height: 44px; }
+}
+:root [hidden]:where(:not([hidden="until-found" i])) { display: none; }
+/* /OD-LAYOUT-PRIMITIVES v1 */
+
+</style>
+  <style>
+    /* Native hidden remains authoritative over component flex/grid styles. */
+    [hidden]:not([hidden="until-found" i]) { display: none !important; }
+
+    :root {
+      --phone-screen-width: 390px;
+      --phone-screen-height: 844px;
+      --phone-bezel: 10px;
+      --phone-outer-radius: 52px;
+      --phone-screen-radius: 42px;
+      --phone-safe-top: 50px;
+      --phone-safe-bottom: 29px;
+      --phone-system-fg: #e6e6ea;
+      --phone-screen-bg: oklch(0.2089 0.0177 284.76);
+      --phone-stage-bg: #eaebee;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+      background:
+        radial-gradient(circle at 50% 15%, rgba(255,255,255,.94), transparent 35%),
+        var(--phone-stage-bg, #eaebee);
+      color: #191a1d;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .phone-frame {
+      position: relative;
+      width: calc(var(--phone-screen-width, 390px) + var(--phone-bezel, 10px) * 2);
+      height: calc(var(--phone-screen-height, 844px) + var(--phone-bezel, 10px) * 2);
+      padding: var(--phone-bezel, 10px);
+      border-radius: var(--phone-outer-radius, 52px);
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.2), transparent 17%),
+        linear-gradient(160deg, #3f4146 0%, #202227 48%, #0b0c0f 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.13),
+        inset 0 0 0 2px rgba(0,0,0,.85),
+        0 32px 68px -20px rgba(10,12,16,.52),
+        0 10px 24px -10px rgba(10,12,16,.32);
+      isolation: isolate;
+    }
+
+    .phone-frame::before,
+    .phone-frame::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      top: 96px;
+      bottom: 96px;
+      width: 2px;
+      background: linear-gradient(to bottom, transparent, rgba(255,255,255,.13) 16%, transparent 30%, transparent 72%, rgba(255,255,255,.07) 88%, transparent);
+    }
+    .phone-frame::before { left: 0; }
+    .phone-frame::after { right: 0; }
+
+    .hardware-button {
+      position: absolute;
+      width: 4px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #08090b, #2a2d33 60%, #08090b);
+      box-shadow: inset 0 1px rgba(255,255,255,.08);
+    }
+    .hardware-button.volume { left: -3px; top: 222px; height: 86px; }
+    .hardware-button.power { right: -3px; top: 270px; height: 82px; }
+
+    .phone-screen {
+      position: relative;
+      width: var(--phone-screen-width, 390px);
+      height: var(--phone-screen-height, 844px);
+      overflow: hidden;
+      border-radius: var(--phone-screen-radius, 42px);
+      background: var(--phone-screen-bg, #f8f8f9);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+
+    .phone-content {
+      position: absolute;
+      inset: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-top: var(--phone-safe-top, 50px);
+      padding-bottom: var(--phone-safe-bottom, 29px);
+      background: var(--phone-screen-bg, #f8f8f9);
+    }
+    .phone-content::-webkit-scrollbar { display: none; }
+
+    .camera-dot {
+      position: absolute;
+      z-index: 20;
+      top: 13px;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%, #344154 0 12%, #0a0c10 34%, #000 76%);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.06);
+      pointer-events: none;
+    }
+
+    .status-bar {
+      position: absolute;
+      z-index: 15;
+      inset: 0 0 auto;
+      height: var(--phone-safe-top, 50px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+      align-items: start;
+      padding: 14px 20px 0;
+      color: var(--phone-system-fg, #17181a);
+      opacity: .8;
+      pointer-events: none;
+    }
+    .status-time {
+      justify-self: start;
+      display: flex;
+      align-items: center;
+      height: 15px;
+      font-size: 14px;
+      font-weight: 560;
+      line-height: 1;
+      letter-spacing: .01em;
+    }
+    .status-cutout-zone { width: 56px; }
+    .status-icons {
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      height: 15px;
+      gap: 6px;
+    }
+    .status-icons svg {
+      display: block;
+      flex: none;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.35;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .status-icons .connectivity { width: 15px; height: 12px; }
+    .status-icons .wifi { width: 15px; height: 12px; }
+    .status-icons .battery { width: 19px; height: 11px; }
+
+    .gesture-indicator {
+      position: absolute;
+      z-index: 20;
+      left: 50%;
+      bottom: 8px;
+      width: 96px;
+      height: 4px;
+      transform: translateX(-50%);
+      border-radius: 99px;
+      background: var(--phone-system-fg, #17181a);
+      opacity: .86;
+      pointer-events: none;
+    }
+
+    /* Presentation scaling: keep the whole handset visible on short viewports. */
+    @media (max-height: 927px) { .phone-frame { zoom: 0.9; } }
+    @media (max-height: 840px) { .phone-frame { zoom: 0.82; } }
+    @media (max-height: 771px) { .phone-frame { zoom: 0.74; } }
+    @media (max-height: 702px) { .phone-frame { zoom: 0.66; } }
+    /* Narrow viewports: the handset chrome collapses and the screen fills the
+       viewport, so the app behaves like a real phone page instead of
+       scrolling sideways. */
+    @media (max-width: 480px) {
+      body { padding: 0; display: block; }
+      .phone-frame { width: 100%; height: 100dvh; padding: 0; border-radius: 0; background: none; box-shadow: none; zoom: 1; }
+      .phone-frame::before, .phone-frame::after, .hardware-button { display: none; }
+      .phone-screen { width: 100%; height: 100%; border-radius: 0; }
+    }
+
+/* ───────── Fontes locais (as mesmas do app web) ───────── */
+@font-face { font-family: "Figtree"; src: url("assets/fonts/Figtree.ttf") format("truetype"); font-weight: 300 900; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("assets/fonts/Newsreader.ttf") format("truetype"); font-weight: 200 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("assets/fonts/Newsreader-Italic.ttf") format("truetype"); font-weight: 200 800; font-style: italic; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("assets/fonts/JetBrainsMono.ttf") format("truetype"); font-weight: 100 800; font-display: swap; }
+
+/* ───────── Tokens do produto · tema escuro Hermes (no :root: folhas e avisos herdam) ───────── */
+:root {
+  --bg: oklch(0.2089 0.0177 284.76);
+  --surface: oklch(0.2396 0.023 280.79);
+  --surface-hover: oklch(0.2591 0.0249 274.44);
+  --surface-active: oklch(0.3105 0.0364 275.35);
+  --line: oklch(0.3299 0.0284 279.15);
+  --line-strong: oklch(0.3982 0.0325 275.54);
+  --fg: oklch(0.9222 0.0013 286.37);
+  --muted: oklch(0.7351 0.0526 276.4);
+  --on-primary: oklch(0.2396 0.023 280.79);
+  --brand: oklch(0.6965 0.1212 187.82);
+  --brand-hi: oklch(0.775 0.1244 187.69);
+  --brand-soft: oklch(0.3257 0.0435 199.9);
+  --danger: oklch(0.8 0.111 17.7);
+  --warn: oklch(0.801 0.09 72.5);
+  --tag-l: 0.8;
+  --tag-c: 0.08;
+
+  --font-sans: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Newsreader", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --fs-meta: 0.875rem;
+  --fs-body: 1rem;
+  --fs-lead: 1.25rem;
+  --fs-h1: 1.875rem;
+
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+  --r-xs: 5px; --r-sm: 8px; --r-md: 14px; --r-lg: 18px;
+  --t-fast: 150ms; --t-base: 240ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --tabbar-h: 76px;
+  --tabbar-bg: oklch(0.1855 0.0177 284.76);
+}
+
+.product { height: 100%; font-family: var(--font-sans); font-size: var(--fs-body); line-height: 1.5; color: var(--fg); -webkit-font-smoothing: antialiased; }
+.product *, .product *::before, .product *::after { box-sizing: border-box; }
+.product button, .product input, .product select, .product textarea { font: inherit; color: inherit; }
+.product button { cursor: pointer; background: none; border: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+.product h1, .product h2, .product p, .product ul { margin: 0; padding: 0; }
+.product ul { list-style: none; }
+.product :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ───────── Estrutura ───────── */
+.m-app { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--bg); }
+.m-view { display: grid; grid-template-rows: minmax(0, 1fr); min-height: 0; }
+.app-bar { height: 64px; padding: 0 var(--sp-3) 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.wordmark { font-family: var(--font-display); font-size: 1.75rem; line-height: 1; letter-spacing: -0.01em; }
+.eyebrow { color: var(--muted); font-size: var(--fs-meta); }
+.page-title { font-family: var(--font-display); font-weight: 400; font-size: 2.5rem; line-height: 1; letter-spacing: -0.005em; }
+.m-heading { position: relative; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.page-sub { color: var(--muted); font-size: var(--fs-meta); }
+.m-body { padding: 22px var(--sp-4) var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-5); }
+
+.tabbar { display: flex; align-items: center; justify-content: space-between; height: 76px; padding: 8px var(--sp-5); background: var(--tabbar-bg); border-top: 1px solid var(--line); box-shadow: 0 var(--phone-safe-bottom, 29px) 0 var(--tabbar-bg); }
+.tab { position: relative; flex: 1 1 0; height: 60px; display: grid; place-items: center; border-radius: 12px; color: var(--muted); transition: color var(--t-fast) var(--ease-out); }
+.tab .od-icon { --od-icon-size: 25px; }
+.tab[aria-current="page"] { color: var(--fg); }
+.tab[aria-current="page"]::after { content: ""; position: absolute; bottom: 4px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--brand-hi); }
+.tab-find { color: var(--brand-hi); }
+.tab-find .od-icon { --od-icon-size: 30px; }
+
+/* ───────── Controles ───────── */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); min-height: 44px; padding: 0 var(--sp-4); border-radius: var(--r-sm); border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); font-weight: 600; white-space: nowrap; transition: background var(--t-fast) var(--ease-out); }
+.btn .od-icon { --od-icon-size: 18px; }
+.btn-primary { background: var(--fg); color: var(--on-primary); border-color: var(--fg); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--fg); }
+.search { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; padding: 0 var(--sp-3); background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--r-sm); color: var(--muted); }
+.search .od-icon { --od-icon-size: 18px; }
+.search input { flex: 1 1 0; min-width: 0; height: 42px; background: none; border: 0; outline: none; color: var(--fg); }
+.search input::placeholder { color: var(--muted); }
+.search:focus-within { border-color: var(--brand); outline: 2px solid var(--brand); outline-offset: 2px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: oklch(var(--tag-l) var(--tag-c) var(--h)); flex: none; }
+.icon-btn { display: grid; place-items: center; width: 44px; height: 44px; border-radius: var(--r-sm); color: var(--muted); }
+.icon-btn .od-icon { --od-icon-size: 22px; }
+.icon-btn.round { border-radius: 50%; }
+
+.tag { display: inline-flex; align-items: center; min-height: 24px; padding: 0 var(--sp-2); border-radius: var(--r-xs); font-size: var(--fs-meta); font-weight: 500; white-space: nowrap; color: oklch(var(--tag-l) var(--tag-c) var(--h)); background: oklch(var(--tag-l) var(--tag-c) var(--h) / 0.14); }
+
+.opts-panel { position: absolute; z-index: 9; top: 48px; right: 0; display: flex; flex-direction: column; gap: 14px; width: min(280px, calc(100vw - 36px)); max-height: 380px; overflow-y: auto; padding: var(--sp-3); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 16px 40px oklch(0 0 0 / 0.45); animation: rise var(--t-fast) var(--ease-out); }
+.opts-panel fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.opts-panel legend { padding: var(--sp-1) var(--sp-2) 6px; font-size: 0.75rem; color: var(--muted); }
+.opts-panel label { display: flex; align-items: center; gap: var(--sp-3); min-height: 44px; padding: 0 var(--sp-2); border-radius: 9px; font-size: var(--fs-meta); cursor: pointer; overflow-wrap: anywhere; }
+.opts-panel input { width: 18px; height: 18px; accent-color: var(--brand); }
+.opts-panel p { padding: 0 var(--sp-2); font-size: var(--fs-meta); color: var(--muted); }
+.find-create { justify-content: flex-start; width: 100%; }
+
+/* ───────── Grupos ───────── */
+.groups { display: flex; flex-direction: column; gap: var(--sp-5); }
+.group-head { display: flex; align-items: center; gap: var(--sp-2); min-height: 32px; margin-bottom: var(--sp-2); }
+.group-title { font-size: var(--fs-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.group-count { font-family: var(--font-mono); font-size: var(--fs-meta); color: var(--muted); }
+.group-toggle { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; width: 100%; text-align: left; border-radius: var(--r-sm); margin-bottom: var(--sp-1); }
+.group-toggle .od-icon { --od-icon-size: 18px; color: var(--muted); transition: transform var(--t-base) var(--ease-out); }
+.group-toggle[aria-expanded="false"] .od-icon { transform: rotate(-90deg); }
+
+/* ───────── Tarefas ───────── */
+.task-list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
+.task { display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: var(--sp-1); align-items: start; padding: var(--sp-2) var(--sp-4) var(--sp-3) var(--sp-1); border-top: 1px solid var(--line); }
+.task:first-child { border-top: 0; }
+.task.is-new { animation: rise var(--t-base) var(--ease-out); }
+.check { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--muted); }
+.check .od-icon { --od-icon-size: 24px; }
+.check[aria-checked="mixed"], .check[aria-checked="true"] { color: var(--brand); }
+.check .ink { stroke: var(--on-primary); }
+.task-body { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; padding-top: 10px; }
+.task-title { font-weight: 500; line-height: 1.4; }
+.task.is-done .task-title { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line-strong); }
+.task-meta { --od-gap: 8px 12px; }
+.status-text { font-size: var(--fs-meta); color: var(--brand-hi); font-weight: 500; white-space: nowrap; }
+.prio { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-meta); font-weight: 500; white-space: nowrap; }
+.prio .od-icon { --od-icon-size: 16px; }
+.prio-alta { color: var(--danger); }
+.prio-media { color: var(--warn); }
+.prio-baixa { color: var(--muted); }
+.due { display: inline-flex; align-items: center; gap: var(--sp-1); font-size: var(--fs-meta); color: var(--muted); white-space: nowrap; }
+.due .od-icon { --od-icon-size: 16px; }
+.due.is-late { color: var(--danger); font-weight: 600; }
+.due.is-today { color: var(--fg); }
+.sub { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-meta); color: var(--muted); }
+.sub-bar { width: 32px; height: 4px; border-radius: 2px; background: var(--line-strong); overflow: hidden; }
+.sub-bar > i { display: block; height: 100%; background: var(--brand); }
+.sub .n { font-family: var(--font-mono); }
+
+/* ───────── Notas ───────── */
+.note-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.note { --od-gap: 8px; width: 100%; padding: var(--sp-4); text-align: left; align-items: stretch; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); transition: background var(--t-fast) var(--ease-out); }
+.note:active { background: var(--surface-hover); }
+.note-date { font-size: var(--fs-meta); color: var(--muted); }
+.note-title { font-family: var(--font-display); font-weight: 500; font-size: var(--fs-lead); line-height: 1.25; }
+.note-excerpt { color: var(--muted); }
+.note-tags { padding-top: var(--sp-1); }
+
+/* ───────── Estado vazio ───────── */
+.empty { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); text-align: center; padding: var(--sp-6) var(--sp-4); border: 1px dashed var(--line-strong); border-radius: var(--r-md); }
+.empty .od-icon { --od-icon-size: 32px; color: var(--muted); }
+.empty-title { font-family: var(--font-display); font-size: var(--fs-lead); font-weight: 500; }
+.empty-text { color: var(--muted); }
+
+/* ───────── Folhas (montadas dentro da tela do celular) ───────── */
+.overlay { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; }
+.scrim { position: absolute; inset: 0; background: oklch(0 0 0 / 0.6); animation: fade var(--t-base) var(--ease-out); }
+.sheet { position: relative; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; max-height: 88%; background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: var(--r-lg) var(--r-lg) 0 0; animation: lift var(--t-base) var(--ease-out); }
+.sheet.is-tall { height: 88%; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--line); }
+.sheet-title { font-family: var(--font-display); font-size: var(--fs-lead); font-weight: 500; }
+.sheet-body { overflow-y: auto; overscroll-behavior: contain; padding: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-4); }
+.sheet-foot { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + var(--phone-safe-bottom, 29px)); border-top: 1px solid var(--line); }
+.field-label { font-size: var(--fs-meta); font-weight: 600; }
+.field-label .req { color: var(--danger); }
+.input, .textarea { width: 100%; min-height: 44px; padding: 0 var(--sp-3); background: var(--bg); color: var(--fg); border: 1px solid var(--line-strong); border-radius: var(--r-sm); }
+.textarea { min-height: 128px; padding: var(--sp-3); resize: vertical; line-height: 1.5; }
+.input[aria-invalid="true"], .textarea[aria-invalid="true"] { border-color: var(--danger); }
+.field-error { color: var(--danger); font-size: var(--fs-meta); }
+.field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
+.note-view h2 { font-family: var(--font-display); font-weight: 500; font-size: 1.75rem; line-height: 1.15; letter-spacing: -0.01em; }
+.note-view p + p { margin-top: var(--sp-1); }
+
+.toast { position: absolute; left: var(--sp-4); right: var(--sp-4); bottom: calc(var(--phone-safe-bottom, 29px) + var(--tabbar-h) + var(--sp-3)); z-index: 12; display: flex; align-items: center; gap: var(--sp-3); min-height: 52px; padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-4); background: var(--surface-active); border: 1px solid var(--line-strong); border-radius: var(--r-md); box-shadow: 0 16px 40px oklch(0 0 0 / 0.45); animation: rise var(--t-base) var(--ease-out); }
+.toast-msg { min-width: 0; flex: 1 1 0; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes lift { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+  </style>
+</head>
+<body>
+  <div class="phone-frame" data-phone-shell data-platform="neutral">
+    <span class="hardware-button volume" aria-hidden="true"></span>
+    <span class="hardware-button power" aria-hidden="true"></span>
+
+    <section class="phone-screen" data-phone-screen>
+      <main class="phone-content" data-phone-content>
+        <!-- APP CONTENT START -->
+        <div class="product">
+          <div class="m-app" id="app">
+            <header class="app-bar">
+              <span class="wordmark">braid</span>
+              <div class="od-row" style="--od-gap:0">
+                <button type="button" class="icon-btn round" id="btn-bell" aria-label="Notificações"><span data-icon="bell"></span></button>
+                <button type="button" class="icon-btn round" id="btn-account" aria-label="Minha conta"><span data-icon="account"></span></button>
+              </div>
+            </header>
+            <section class="m-view" id="view-tasks" aria-labelledby="tasks-title">
+              <div class="od-scroll">
+                <div class="m-body">
+                  <div class="m-heading">
+                    <h1 class="page-title" id="tasks-title" tabindex="-1">Tarefas</h1>
+                    <button type="button" class="icon-btn round opt-btn" data-opts="tasks" aria-label="Filtrar e ordenar" aria-expanded="false" aria-controls="opts-tasks"><span data-icon="sliders"></span></button>
+                    <div class="opts-panel" id="opts-tasks" hidden></div>
+                  </div>
+                  <div class="groups" id="task-groups"></div>
+                  <div class="empty" id="task-empty" hidden>
+                    <span data-icon="tasks"></span>
+                    <h2 class="empty-title" id="task-empty-title"></h2>
+                    <p class="empty-text" id="task-empty-text"></p>
+                    <button type="button" class="btn" id="task-empty-action"></button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="m-view" id="view-notes" aria-labelledby="notes-title" hidden>
+              <div class="od-scroll">
+                <div class="m-body">
+                  <div class="m-heading">
+                    <h1 class="page-title" id="notes-title" tabindex="-1">Notas</h1>
+                    <button type="button" class="icon-btn round opt-btn" data-opts="notes" aria-label="Opções de visualização" aria-expanded="false" aria-controls="opts-notes"><span data-icon="sliders"></span></button>
+                    <div class="opts-panel" id="opts-notes" hidden></div>
+                  </div>
+                  <div class="groups" id="note-groups"></div>
+                  <div class="empty" id="note-empty" hidden>
+                    <span data-icon="notes"></span>
+                    <h2 class="empty-title" id="note-empty-title"></h2>
+                    <p class="empty-text" id="note-empty-text"></p>
+                    <button type="button" class="btn" id="note-empty-action"></button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <nav class="tabbar" aria-label="Navegação inferior">
+              <button type="button" class="tab" data-nav="tasks" aria-label="Tarefas" aria-current="page"><span data-icon="taskbox"></span></button>
+              <button type="button" class="tab" id="tab-agenda" aria-label="Agenda"><span data-icon="calendar"></span></button>
+              <button type="button" class="tab" data-nav="notes" aria-label="Notas"><span data-icon="notebook"></span></button>
+              <button type="button" class="tab tab-find" id="tab-find" aria-haspopup="dialog" aria-label="Buscar e criar"><span data-icon="radar"></span></button>
+            </nav>
+          </div>
+
+          <div class="overlay" id="overlay" hidden>
+            <div class="scrim" data-close></div>
+
+            <div class="sheet" id="sheet-find" role="dialog" aria-modal="true" aria-labelledby="sheet-find-title" hidden>
+              <div class="sheet-head">
+                <h2 class="sheet-title" id="sheet-find-title">Buscar e criar</h2>
+                <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-icon="x"></span></button>
+              </div>
+              <div class="sheet-body">
+                <div class="od-field">
+                  <label class="field-label" for="f-find">Buscar em <span id="find-scope">tarefas</span></label>
+                  <div class="search"><span data-icon="search"></span>
+                    <input type="search" id="f-find" autocomplete="off">
+                  </div>
+                </div>
+                <div class="od-stack" style="--od-gap:8px">
+                  <button type="button" class="btn find-create" id="find-new-task"><span data-icon="plus"></span>Nova tarefa</button>
+                  <button type="button" class="btn find-create" id="find-new-note"><span data-icon="plus"></span>Nova nota</button>
+                </div>
+              </div>
+              <div class="sheet-foot">
+                <button type="button" class="btn" id="find-clear">Limpar</button>
+                <button type="button" class="btn btn-primary" data-close>Ver resultados</button>
+              </div>
+            </div>
+
+            <div class="sheet" id="sheet-task" role="dialog" aria-modal="true" aria-labelledby="sheet-task-title" hidden>
+              <div class="sheet-head">
+                <h2 class="sheet-title" id="sheet-task-title">Nova tarefa</h2>
+                <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-icon="x"></span></button>
+              </div>
+              <div class="sheet-body">
+                <div class="od-field">
+                  <label class="field-label" for="f-task-title">Título <span class="req" aria-hidden="true">*</span></label>
+                  <input class="input" id="f-task-title" type="text" autocomplete="off" aria-describedby="f-task-title-err" required>
+                  <p class="field-error" id="f-task-title-err" hidden></p>
+                </div>
+                <div class="field-row">
+                  <div class="od-field">
+                    <label class="field-label" for="f-task-tag">Tag</label>
+                    <select class="input" id="f-task-tag"></select>
+                  </div>
+                  <div class="od-field">
+                    <label class="field-label" for="f-task-prio">Prioridade</label>
+                    <select class="input" id="f-task-prio">
+                      <option value="alta">Alta</option>
+                      <option value="media" selected>Média</option>
+                      <option value="baixa">Baixa</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="od-field">
+                  <label class="field-label" for="f-task-due">Prazo</label>
+                  <input class="input" id="f-task-due" type="date" value="2026-11-09">
+                </div>
+              </div>
+              <div class="sheet-foot">
+                <button type="button" class="btn" data-close>Cancelar</button>
+                <button type="button" class="btn btn-primary" id="task-save">Criar tarefa</button>
+              </div>
+            </div>
+
+            <div class="sheet" id="sheet-note" role="dialog" aria-modal="true" aria-labelledby="sheet-note-title" hidden>
+              <div class="sheet-head">
+                <h2 class="sheet-title" id="sheet-note-title">Nova nota</h2>
+                <button type="button" class="icon-btn" data-close aria-label="Fechar"><span data-icon="x"></span></button>
+              </div>
+              <div class="sheet-body">
+                <div class="od-field">
+                  <label class="field-label" for="f-note-title">Título <span class="req" aria-hidden="true">*</span></label>
+                  <input class="input" id="f-note-title" type="text" autocomplete="off" aria-describedby="f-note-title-err" required>
+                  <p class="field-error" id="f-note-title-err" hidden></p>
+                </div>
+                <div class="od-field">
+                  <label class="field-label" for="f-note-tag">Tag</label>
+                  <select class="input" id="f-note-tag"></select>
+                </div>
+                <div class="od-field">
+                  <label class="field-label" for="f-note-body">Texto</label>
+                  <textarea class="textarea" id="f-note-body"></textarea>
+                </div>
+              </div>
+              <div class="sheet-foot">
+                <button type="button" class="btn" data-close>Cancelar</button>
+                <button type="button" class="btn btn-primary" id="note-save">Salvar nota</button>
+              </div>
+            </div>
+
+            <div class="sheet is-tall" id="sheet-view" role="dialog" aria-modal="true" aria-labelledby="note-view-title" hidden>
+              <div class="sheet-head">
+                <span class="eyebrow" id="note-view-date"></span>
+                <button type="button" class="icon-btn" data-close aria-label="Fechar nota"><span data-icon="x"></span></button>
+              </div>
+              <div class="sheet-body note-view" id="note-view-body"></div>
+              <div class="sheet-foot" style="grid-template-columns:1fr">
+                <button type="button" class="btn" data-close>Fechar</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+            <span class="toast-msg od-truncate" id="toast-msg"></span>
+            <button type="button" class="btn btn-ghost" id="toast-undo" hidden>Desfazer</button>
+          </div>
+        </div>
+        <!-- APP CONTENT END -->
+      </main>
+
+      <div class="status-bar" aria-hidden="true">
+        <span class="status-time">9:41</span>
+        <span class="status-cutout-zone"></span>
+        <span class="status-icons">
+          <svg class="connectivity" viewBox="0 0 15 12"><path d="M1.5 10.5v-2m4 2v-4.5m4 4.5v-7m4 7v-9"/></svg>
+          <svg class="wifi" viewBox="0 0 16 12"><path d="M1.5 4.7a9.2 9.2 0 0 1 13 0M4.2 7.3a5.4 5.4 0 0 1 7.6 0M6.9 10a1.55 1.55 0 0 1 2.2 0"/></svg>
+          <svg class="battery" viewBox="0 0 20 11"><rect x=".75" y="1.25" width="16.5" height="8.5" rx="2"/><path d="M18.5 4v3M3.2 3.4h10.4v4.2H3.2z" fill="currentColor" stroke="none"/></svg>
+        </span>
+      </div>
+      <div class="camera-dot" aria-hidden="true"></div>
+      <div class="gesture-indicator" aria-hidden="true"></div>
+    </section>
+  </div>
+<script>
+(() => {
+  /* ── ícones: uma família, traço 1.75, pontas redondas ── */
+  const PATHS = {
+    taskbox: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/>',
+    calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>',
+    notebook: '<path d="M8 2v4"/><path d="M12 2v4"/><path d="M16 2v4"/><rect width="16" height="18" x="4" y="4" rx="2"/><path d="M8 10h6"/><path d="M8 14h8"/><path d="M8 18h5"/>',
+    radar: '<circle cx="12" cy="12" r="2.8" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="6.2" stroke-dasharray="1.1 1.7"/><circle cx="12" cy="12" r="9.6" stroke-dasharray="1.1 2" opacity=".45"/>',
+    sliders: '<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/>',
+    bell: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>',
+    account: '<path d="M18 20a6 6 0 0 0-12 0"/><circle cx="12" cy="10" r="4"/><circle cx="12" cy="12" r="10"/>',
+    tasks: '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+    notes: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/>',
+    plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    x: '<path d="M6 6l12 12"/><path d="M18 6 6 18"/>',
+    chevron: '<path d="m6 9 6 6 6-6"/>',
+    alert: '<path d="M12 4 2.5 20h19z"/><path d="M12 10v4"/><path d="M12 17.5v.01"/>',
+    circle: '<circle cx="12" cy="12" r="8.5"/>',
+    doing: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
+    done: '<circle cx="12" cy="12" r="9.25" fill="currentColor" stroke="none"/><path class="ink" d="m8 12.5 3 3 5-6"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'
+  };
+  const svg = (name) =>
+    `<svg class="od-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PATHS[name]}</svg>`;
+  const prioIcon = (level) => {
+    const on = { alta: 3, media: 2, baixa: 1 }[level];
+    const bars = [['M6 19v-4', 1], ['M12 19v-8', 2], ['M18 19V6', 3]]
+      .map(([d, i]) => `<path d="${d}" opacity="${i <= on ? 1 : 0.3}"/>`).join('');
+    return `<svg class="od-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">${bars}</svg>`;
+  };
+  const hydrateIcons = (root) => root.querySelectorAll('[data-icon]').forEach((el) => {
+    el.insertAdjacentHTML('afterend', svg(el.dataset.icon));
+    el.remove();
+  });
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const h = (tag, props = {}, ...kids) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'text') el.textContent = v;
+      else if (k === 'html') el.innerHTML = v;
+      else if (k === 'style') el.style.cssText = v;
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid);
+    return el;
+  };
+
+  const TODAY = '2026-11-08';
+  const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const utc = (iso) => { const [y, m, d] = iso.split('-').map(Number); return Date.UTC(y, m - 1, d); };
+  const dayDiff = (iso) => Math.round((utc(iso) - utc(TODAY)) / 864e5);
+  const shortDate = (iso) => { const [, m, d] = iso.split('-').map(Number); return `${d} ${MONTHS[m - 1]}`; };
+  const weekdayDate = (iso) => `${WEEKDAYS[new Date(utc(iso)).getUTCDay()]}, ${shortDate(iso)}`;
+
+  const TAGS = {
+    rotina:   { label: 'Rotina',   hue: 232 },
+    refeicao: { label: 'Refeição', hue: 72 },
+    treino:   { label: 'Treino',   hue: 135 },
+    sono:     { label: 'Sono',     hue: 288 },
+    ideias:   { label: 'Ideias',   hue: 20 }
+  };
+  const tagChip = (key) => h('span', { class: 'tag', style: `--h:${TAGS[key].hue}`, text: TAGS[key].label });
+  const PRIO = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+
+  let uid = 100;
+  const tasks = [
+    { id: 't1', title: 'Pagar a fatura do cartão', tag: 'rotina', prio: 'alta', due: '2026-11-07', status: 'todo' },
+    { id: 't2', title: 'Revisar o plano de treino da semana', tag: 'treino', prio: 'alta', due: '2026-11-06', status: 'todo', sub: [1, 3] },
+    { id: 't3', title: 'Treino de pernas', tag: 'treino', prio: 'alta', due: '2026-11-08', time: '18:00', status: 'doing', sub: [2, 4] },
+    { id: 't4', title: 'Preparar as marmitas da semana', tag: 'refeicao', prio: 'media', due: '2026-11-08', time: '15:00', status: 'todo', sub: [2, 5] },
+    { id: 't5', title: 'Dormir às 22h30 para ajustar o horário', tag: 'sono', prio: 'media', due: '2026-11-08', time: '22:30', status: 'todo' },
+    { id: 't6', title: 'Comprar proteínas e verduras', tag: 'refeicao', prio: 'media', due: '2026-11-09', status: 'todo', sub: [3, 6] },
+    { id: 't7', title: 'Marcar consulta de rotina com o clínico', tag: 'rotina', prio: 'baixa', due: '2026-11-10', status: 'todo' },
+    { id: 't8', title: 'Registrar medidas e fotos do mês', tag: 'treino', prio: 'baixa', due: '2026-11-12', status: 'todo' },
+    { id: 't9', title: 'Renovar o seguro do carro', tag: 'rotina', prio: 'media', due: '2026-11-13', status: 'todo' },
+    { id: 't10', title: 'Testar a receita de risoto de cogumelos', tag: 'refeicao', prio: 'baixa', due: '2026-11-20', status: 'todo' },
+    { id: 't11', title: 'Planejar a rotina de sono para a viagem', tag: 'sono', prio: 'baixa', due: '2026-11-24', status: 'todo' },
+    { id: 't12', title: 'Alongamento da manhã', tag: 'treino', prio: 'baixa', due: '2026-11-08', time: '07:00', status: 'done' },
+    { id: 't13', title: 'Enviar o relatório mensal', tag: 'rotina', prio: 'alta', due: '2026-11-05', status: 'done' },
+    { id: 't14', title: 'Lavar a roupa de cama', tag: 'rotina', prio: 'baixa', due: '2026-11-07', status: 'done' }
+  ];
+  const notes = [
+    { id: 'n1', title: 'Rotina de sono: o que mudou em outubro', tags: ['sono'], date: '2026-11-07', body: [
+      'Em outubro passei a desligar as telas meia hora antes de deitar. A diferença mais clara foi acordar sem precisar do segundo alarme.',
+      'Ainda falha nos dias de treino à noite: o corpo demora a baixar a atividade. Vale testar treinar mais cedo ou fechar com alongamento leve.',
+      'Próximo passo: manter o horário de deitar às 22h30 por duas semanas seguidas, inclusive no fim de semana.' ] },
+    { id: 'n2', title: 'Receitas rápidas para a semana', tags: ['refeicao'], date: '2026-11-06', body: [
+      'Frango desfiado com legumes assados rende três marmitas e pode ser feito de uma vez no domingo.',
+      'Omelete de forno com espinafre e queijo branco: dez minutos de preparo, serve bem no café da manhã ou no jantar.',
+      'Para variar, arroz com lentilha e ovo cozido. Barato, simples e segura bem a tarde.' ] },
+    { id: 'n3', title: 'Treino A/B/C: progressão de cargas', tags: ['treino'], date: '2026-11-05', body: [
+      'A: peito, ombro e tríceps. B: costas e bíceps. C: pernas e abdômen. Descanso no quarto dia ou quando a recuperação pedir.',
+      'Regra de progressão: quando fechar todas as séries na repetição máxima com boa execução, subir a carga na sessão seguinte.',
+      'Anotar a carga de cada exercício no fim do treino, não depois.' ] },
+    { id: 'n4', title: 'Ideias para a revisão semanal', tags: ['ideias', 'rotina'], date: '2026-11-04', body: [
+      'Reservar quinze minutos no domingo à noite: o que foi feito, o que ficou para trás e o que importa de verdade na próxima semana.',
+      'Olhar a agenda dos próximos sete dias antes de abrir a lista de tarefas, para encaixar as tarefas nos horários livres.',
+      'Fechar sempre com uma única prioridade da semana.' ] },
+    { id: 'n5', title: 'Checklist para a consulta de rotina', tags: ['rotina'], date: '2026-11-03', body: [
+      'Levar os exames mais recentes e a lista de medicamentos e suplementos em uso.',
+      'Perguntar sobre sono, dor nas costas ao fim do dia e quando repetir o exame de sangue.',
+      'Anotar as orientações logo depois, ainda no consultório.' ] },
+    { id: 'n6', title: 'Café da manhã proteico: combinações', tags: ['refeicao'], date: '2026-11-01', body: [
+      'Iogurte natural com aveia e fruta. Ovos mexidos com pão integral. Tapioca com queijo e ovo.',
+      'O que funciona melhor é deixar metade pronta na véspera: cozinhar os ovos e cortar as frutas.' ] },
+    { id: 'n7', title: 'Alongamento e mobilidade: sequência de dez minutos', tags: ['treino'], date: '2026-10-30', body: [
+      'Quadril em quatro apoios, abertura de peitoral na parede, rotação de coluna deitado e alongamento de posterior sentado.',
+      'Respirar fundo em cada posição e não forçar além do ponto de leve tensão.' ] },
+    { id: 'n8', title: 'Lista de leitura para o fim de ano', tags: ['ideias'], date: '2026-10-28', body: [
+      'Dois livros de não ficção sobre hábitos e sono, um romance longo e uma releitura de algo antigo.',
+      'Meta realista: vinte páginas por dia, sempre antes de dormir, no lugar das telas.' ] },
+    { id: 'n9', title: 'Como foi a semana de 27 de outubro', tags: ['rotina', 'sono'], date: '2026-10-27', body: [
+      'Três treinos feitos de quatro planejados. Duas noites abaixo de sete horas de sono, ambas depois de jantar tarde.',
+      'O que ajudou: marmitas prontas na segunda e caminhada curta depois do almoço.' ] }
+  ];
+
+  const T = { q: '', doneOpen: false, hidden: new Set() };
+  const N = { q: '', hidden: new Set() };
+  let current = 'tasks';
+  let undoFn = null, toastTimer = 0, sheetTrigger = null, openSheet = null, newTaskId = null;
+
+  /* ── navegação inferior ── */
+  function showView(name) {
+    $('#view-tasks').hidden = name !== 'tasks';
+    $('#view-notes').hidden = name !== 'notes';
+    document.querySelectorAll('[data-nav]').forEach((b) => {
+      if (b.dataset.nav === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    current = name;
+    closeMenu();
+    $(name === 'tasks' ? '#tasks-title' : '#notes-title').focus({ preventScroll: true });
+  }
+  document.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => showView(b.dataset.nav)));
+
+  /* ── tarefas: status → prioridade → data ── */
+  const rankDue = (t) => (t.due ? dayDiff(t.due) * 1440 + (t.time ? Number(t.time.slice(0, 2)) * 60 + Number(t.time.slice(3)) : 0) : 1e9);
+  const rankPrio = (t) => ({ alta: 0, media: 1, baixa: 2 }[t.prio]);
+  const byPrioThenDate = (a, b) => rankPrio(a) - rankPrio(b) || rankDue(a) - rankDue(b);
+  const STATUS_GROUPS = [['doing', 'Em andamento'], ['todo', 'A fazer'], ['done', 'Concluídas']];
+
+  function dueNode(t) {
+    if (!t.due) return null;
+    const d = dayDiff(t.due);
+    let cls = 'due', label, icon = '';
+    if (t.status !== 'done' && d < 0) { cls += ' is-late'; label = `Atrasada · ${shortDate(t.due)}`; icon = svg('alert'); }
+    else if (d === 0) { cls += ' is-today'; label = t.time ? `Hoje, ${t.time}` : 'Hoje'; icon = svg('clock'); }
+    else if (d === 1) label = 'Amanhã';
+    else label = weekdayDate(t.due);
+    const el = h('span', { class: cls, html: icon });
+    el.append(label);
+    return el;
+  }
+
+  function taskRow(t, isNew) {
+    const state = t.status === 'done' ? 'true' : t.status === 'doing' ? 'mixed' : 'false';
+    const icon = t.status === 'done' ? 'done' : t.status === 'doing' ? 'doing' : 'circle';
+    return h('li', { class: `task${t.status === 'done' ? ' is-done' : ''}${isNew ? ' is-new' : ''}`, 'data-id': t.id },
+      h('button', { type: 'button', class: 'check', role: 'checkbox', 'aria-checked': state, 'data-action': 'toggle', 'data-id': t.id,
+        'aria-label': `${t.status === 'done' ? 'Reabrir' : 'Concluir'}: ${t.title}`, html: svg(icon) }),
+      h('div', { class: 'task-body' },
+        h('span', { class: 'task-title od-clamp-2', text: t.title }),
+        h('div', { class: 'task-meta od-cluster' },
+          tagChip(t.tag),
+          t.status !== 'done' && h('span', { class: `prio prio-${t.prio}`, html: prioIcon(t.prio) + `<span>${PRIO[t.prio]}</span>` }),
+          dueNode(t),
+          t.status === 'doing' && h('span', { class: 'status-text', text: 'Em andamento' }),
+          t.sub && h('span', { class: 'sub', role: 'img', 'aria-label': `${t.sub[0]} de ${t.sub[1]} subtarefas` },
+            h('span', { class: 'sub-bar' }, h('i', { style: `width:${Math.round((t.sub[0] / t.sub[1]) * 100)}%` })),
+            h('span', { class: 'n', text: `${t.sub[0]}/${t.sub[1]}` })))));
+  }
+
+  function renderTasks() {
+    const q = norm(T.q.trim());
+    const base = tasks.filter((t) => !T.hidden.has(t.tag) && (!q || norm(t.title).includes(q)));
+
+    const nodes = [];
+    for (const [status, title] of STATUS_GROUPS) {
+      const list = base.filter((t) => t.status === status).sort(byPrioThenDate);
+      if (!list.length) continue;
+      if (status === 'done') {
+        const expanded = T.doneOpen;
+        nodes.push(h('section', { class: 'group', 'aria-label': title },
+          h('button', { type: 'button', class: 'group-toggle', id: 'done-toggle', 'aria-expanded': String(expanded), 'aria-controls': 'done-list' },
+            h('span', { html: svg('chevron') }),
+            h('span', { class: 'group-title', text: title }),
+            h('span', { class: 'group-count', text: String(list.length) })),
+          h('ul', { class: 'task-list', id: 'done-list', hidden: !expanded }, list.map((t) => taskRow(t, false)))));
+      } else {
+        nodes.push(h('section', { class: 'group', 'aria-label': title },
+          h('div', { class: 'group-head' }, h('h2', { class: 'group-title', text: title }), h('span', { class: 'group-count', text: String(list.length) })),
+          h('ul', { class: 'task-list' }, list.map((t) => taskRow(t, t.id === newTaskId)))));
+      }
+    }
+    $('#task-groups').replaceChildren(...nodes);
+    newTaskId = null;
+
+    const isEmpty = nodes.length === 0;
+    $('#task-empty').hidden = !isEmpty;
+    $('#task-groups').hidden = isEmpty;
+    if (isEmpty) {
+      const filtered = q || T.hidden.size;
+      $('#task-empty-title').textContent = filtered ? 'Nenhuma tarefa encontrada' : 'Nenhuma tarefa por aqui';
+      $('#task-empty-text').textContent = filtered ? 'Nada combina com a busca e os filtros atuais. Remova um filtro para ver mais.' : 'Crie a primeira tarefa para organizar o seu dia.';
+      const act = $('#task-empty-action');
+      act.textContent = filtered ? 'Limpar filtros' : 'Nova tarefa';
+      act.dataset.mode = filtered ? 'clear' : 'new';
+    }
+  }
+
+  function toggleTask(id) {
+    const t = tasks.find((x) => x.id === id);
+    if (!t) return;
+    const prev = t.status;
+    t.status = prev === 'done' ? 'todo' : 'done';
+    renderTasks();
+    ($(`.check[data-id="${id}"]`) || $('#done-toggle') || $('#tasks-title')).focus({ preventScroll: true });
+    toast(t.status === 'done' ? `Concluída: ${t.title}` : `Reaberta: ${t.title}`, () => {
+      t.status = prev;
+      renderTasks();
+      ($(`.check[data-id="${id}"]`) || $('#tasks-title')).focus({ preventScroll: true });
+    });
+  }
+
+  $('#task-groups').addEventListener('click', (e) => {
+    const chk = e.target.closest('[data-action="toggle"]');
+    if (chk) return toggleTask(chk.dataset.id);
+    if (e.target.closest('#done-toggle')) { T.doneOpen = !T.doneOpen; renderTasks(); $('#done-toggle').focus({ preventScroll: true }); }
+  });
+  $('#task-empty-action').addEventListener('click', (e) => {
+    if (e.currentTarget.dataset.mode === 'clear') { T.q = ''; T.hidden.clear(); renderTasks(); renderOpts(); $('#tasks-title').focus(); }
+    else openTaskSheet(e.currentTarget);
+  });
+
+  /* ── notas: tag → data decrescente ── */
+  const noteCard = (n) => h('li', {},
+    h('button', { type: 'button', class: 'note od-stack', 'data-note': n.id },
+      h('span', { class: 'note-date', text: shortDate(n.date) }),
+      h('span', { class: 'note-title od-clamp-2', text: n.title }),
+      h('span', { class: 'note-excerpt od-clamp-2', text: n.body[0] }),
+      h('span', { class: 'note-tags od-cluster' }, n.tags.map(tagChip))));
+
+  function renderNotes() {
+    const q = norm(N.q.trim());
+    const list = notes
+      .filter((n) => !N.hidden.has(n.tags[0]) && (!q || norm(n.title + ' ' + n.body.join(' ')).includes(q)))
+      .sort((a, b) => utc(b.date) - utc(a.date));
+
+    const groups = Object.keys(TAGS).map((k) => [k, list.filter((n) => n.tags[0] === k)]).filter(([, l]) => l.length);
+    $('#note-groups').replaceChildren(...groups.map(([k, l]) => h('section', { class: 'group', 'aria-label': TAGS[k].label },
+      h('div', { class: 'group-head' },
+        h('span', { class: 'dot', style: `--h:${TAGS[k].hue}` }),
+        h('h2', { class: 'group-title', text: TAGS[k].label }),
+        h('span', { class: 'group-count', text: String(l.length) })),
+      h('ul', { class: 'note-list' }, l.map(noteCard)))));
+
+    const isEmpty = list.length === 0;
+    $('#note-empty').hidden = !isEmpty;
+    $('#note-groups').hidden = isEmpty;
+    if (isEmpty) {
+      const filtered = q || N.hidden.size;
+      $('#note-empty-title').textContent = filtered ? 'Nenhuma nota encontrada' : 'Nenhuma nota ainda';
+      $('#note-empty-text').textContent = filtered ? 'Nada combina com a busca e as tags escolhidas. Tente outra palavra.' : 'Escreva a primeira nota para guardar o que vale lembrar.';
+      const act = $('#note-empty-action');
+      act.textContent = filtered ? 'Limpar filtros' : 'Nova nota';
+      act.dataset.mode = filtered ? 'clear' : 'new';
+    }
+  }
+  $('#note-empty-action').addEventListener('click', (e) => {
+    if (e.currentTarget.dataset.mode === 'clear') { N.q = ''; N.hidden.clear(); renderNotes(); renderOpts(); $('#notes-title').focus(); }
+    else openNoteSheet(e.currentTarget);
+  });
+  $('#note-groups').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-note]'); if (!b) return;
+    const n = notes.find((x) => x.id === b.dataset.note); if (!n) return;
+    $('#note-view-date').textContent = `Nota de ${shortDate(n.date)}`;
+    $('#note-view-body').replaceChildren(
+      h('h2', { id: 'note-view-title', text: n.title }),
+      h('div', { class: 'od-cluster' }, n.tags.map(tagChip)),
+      ...n.body.map((p) => h('p', { text: p })));
+    openSheetEl('sheet-view', b, '#sheet-view .icon-btn');
+  });
+
+  /* ── folhas dentro da tela do celular ── */
+  function openSheetEl(id, trigger, focusSel) {
+    sheetTrigger = trigger;
+    openSheet = $('#' + id);
+    $('#overlay').hidden = false;
+    openSheet.hidden = false;
+    $('#app').inert = true;
+    $(focusSel).focus();
+  }
+  function closeSheet() {
+    if (!openSheet) return;
+    openSheet.hidden = true;
+    $('#overlay').hidden = true;
+    $('#app').inert = false;
+    openSheet = null;
+    const live = sheetTrigger && document.contains(sheetTrigger);
+    (live ? sheetTrigger : $('.m-view:not([hidden]) .opt-btn')).focus({ preventScroll: true });
+    sheetTrigger = null;
+  }
+  $('#overlay').addEventListener('click', (e) => { if (e.target.closest('[data-close]')) closeSheet(); });
+  document.addEventListener('keydown', (e) => {
+    if (!openSheet) return;
+    if (e.key === 'Escape') { e.preventDefault(); return closeSheet(); }
+    if (e.key !== 'Tab') return;
+    const f = [...openSheet.querySelectorAll('button, input, select, textarea')].filter((x) => !x.disabled);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  const fieldError = (input, errEl, msg) => {
+    if (msg) { errEl.textContent = msg; errEl.hidden = false; input.setAttribute('aria-invalid', 'true'); }
+    else { errEl.hidden = true; errEl.textContent = ''; input.removeAttribute('aria-invalid'); }
+  };
+  const tagOptions = (sel, keys) => sel.replaceChildren(...keys.map((k) => h('option', { value: k, text: TAGS[k].label })));
+
+  const taskTitle = $('#f-task-title');
+  const validateTask = () => {
+    const bad = !taskTitle.value.trim();
+    fieldError(taskTitle, $('#f-task-title-err'), bad ? 'Dê um nome à tarefa para salvá-la, por exemplo “Treino de costas”.' : '');
+    return !bad;
+  };
+  function openTaskSheet(trigger) {
+    tagOptions($('#f-task-tag'), ['rotina', 'refeicao', 'treino', 'sono']);
+    taskTitle.value = ''; fieldError(taskTitle, $('#f-task-title-err'), '');
+    $('#f-task-prio').value = 'media'; $('#f-task-due').value = '2026-11-09';
+    openSheetEl('sheet-task', trigger, '#f-task-title');
+  }
+  taskTitle.addEventListener('blur', () => { if (taskTitle.value || taskTitle.hasAttribute('aria-invalid')) validateTask(); });
+  function saveTask() {
+    if (!validateTask()) return taskTitle.focus();
+    const t = { id: `t${++uid}`, title: taskTitle.value.trim(), tag: $('#f-task-tag').value, prio: $('#f-task-prio').value, due: $('#f-task-due').value || null, status: 'todo' };
+    tasks.push(t);
+    T.q = ''; T.hidden.delete(t.tag); renderOpts();
+    newTaskId = t.id;
+    sheetTrigger = null;
+    closeSheet();
+    renderTasks();
+    showView('tasks');
+    ($(`.check[data-id="${t.id}"]`) || $('#tasks-title')).focus();
+    toast('Tarefa criada');
+  }
+  $('#task-save').addEventListener('click', saveTask);
+  taskTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveTask(); } });
+
+  const noteTitle = $('#f-note-title');
+  const validateNote = () => {
+    const bad = !noteTitle.value.trim();
+    fieldError(noteTitle, $('#f-note-title-err'), bad ? 'Dê um título à nota para encontrá-la depois.' : '');
+    return !bad;
+  };
+  function openNoteSheet(trigger) {
+    tagOptions($('#f-note-tag'), Object.keys(TAGS));
+    noteTitle.value = ''; $('#f-note-body').value = ''; fieldError(noteTitle, $('#f-note-title-err'), '');
+    openSheetEl('sheet-note', trigger, '#f-note-title');
+  }
+  noteTitle.addEventListener('blur', () => { if (noteTitle.value || noteTitle.hasAttribute('aria-invalid')) validateNote(); });
+  function saveNote() {
+    if (!validateNote()) return noteTitle.focus();
+    const body = $('#f-note-body').value.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+    const n = { id: `n${++uid}`, title: noteTitle.value.trim(), tags: [$('#f-note-tag').value], date: TODAY, body: body.length ? body : ['Sem texto ainda.'] };
+    notes.push(n);
+    N.q = ''; N.hidden.delete(n.tags[0]); renderOpts();
+    sheetTrigger = null;
+    closeSheet();
+    renderNotes();
+    showView('notes');
+    ($(`[data-note="${n.id}"]`) || $('#notes-title')).focus();
+    toast('Nota salva');
+  }
+  $('#note-save').addEventListener('click', saveNote);
+  noteTitle.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveNote(); } });
+
+  function toast(msg, undo) {
+    clearTimeout(toastTimer);
+    undoFn = undo || null;
+    $('#toast-msg').textContent = msg;
+    $('#toast-undo').hidden = !undo;
+    $('#toast').hidden = false;
+    toastTimer = setTimeout(() => { $('#toast').hidden = true; undoFn = null; }, 5000);
+  }
+  $('#toast-undo').addEventListener('click', () => {
+    const fn = undoFn; undoFn = null; $('#toast').hidden = true; clearTimeout(toastTimer);
+    if (fn) fn();
+  });
+
+  /* ── opções (ícone de filtros, como na aplicação) ── */
+  const query = () => (current === 'tasks' ? T.q : N.q);
+  let menuBtn = null;
+  function optsPanel(kind) {
+    const st = kind === 'tasks' ? T : N;
+    const keys = Object.keys(TAGS).filter((k) => (kind === 'tasks' ? tasks.some((t) => t.tag === k) : notes.some((n) => n.tags[0] === k)));
+    const out = [];
+    if (kind === 'tasks') {
+      out.push(h('fieldset', {}, h('legend', { text: 'Concluídas' }),
+        h('label', {}, h('input', { type: 'checkbox', 'data-done': '', checked: T.doneOpen }), h('span', { text: 'Mostrar concluídas' }))));
+    }
+    out.push(h('fieldset', {}, h('legend', { text: 'Tags exibidas' }),
+      keys.length ? keys.map((k) => h('label', {}, h('input', { type: 'checkbox', 'data-tag': k, checked: !st.hidden.has(k) }), h('span', { text: TAGS[k].label })))
+        : h('p', { text: 'Nenhuma tag disponível.' })));
+    return out;
+  }
+  function renderOpts() {
+    $('#opts-tasks').replaceChildren(...optsPanel('tasks'));
+    $('#opts-notes').replaceChildren(...optsPanel('notes'));
+  }
+  function closeMenu(restore) {
+    const open = [...document.querySelectorAll('.opts-panel')].some((p) => !p.hidden);
+    if (!open) return;
+    document.querySelectorAll('.opts-panel').forEach((p) => { p.hidden = true; });
+    document.querySelectorAll('.opt-btn').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+    if (restore && menuBtn) menuBtn.focus();
+  }
+  document.querySelectorAll('.opt-btn').forEach((b) => b.addEventListener('click', () => {
+    const panel = $('#opts-' + b.dataset.opts);
+    if (!panel.hidden) return closeMenu(true);
+    menuBtn = b;
+    panel.hidden = false;
+    b.setAttribute('aria-expanded', 'true');
+    panel.querySelector('input')?.focus();
+  }));
+  document.querySelectorAll('.opts-panel').forEach((panel) => panel.addEventListener('change', (e) => {
+    const i = e.target;
+    if (i.dataset.done !== undefined) { T.doneOpen = i.checked; renderTasks(); return; }
+    const kind = panel.id === 'opts-tasks' ? 'tasks' : 'notes';
+    const st = kind === 'tasks' ? T : N;
+    i.checked ? st.hidden.delete(i.dataset.tag) : st.hidden.add(i.dataset.tag);
+    kind === 'tasks' ? renderTasks() : renderNotes();
+  }));
+  document.addEventListener('click', (e) => { if (!e.target.closest('.opts-panel, .opt-btn')) closeMenu(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const open = [...document.querySelectorAll('.opts-panel')].some((p) => !p.hidden); if (open) { e.preventDefault(); closeMenu(true); } } });
+
+  /* ── cabeçalho da aplicação: notificações e conta ── */
+  $('#btn-bell').addEventListener('click', () => toast('Notificações não fazem parte deste mockup.'));
+  $('#btn-account').addEventListener('click', () => toast('A conta não faz parte deste mockup.'));
+
+  /* ── rodapé: Agenda e "Buscar e criar" ── */
+  $('#tab-agenda').addEventListener('click', () => toast('A Agenda não faz parte deste mockup.'));
+  const find = $('#f-find');
+  $('#tab-find').addEventListener('click', (e) => {
+    closeMenu();
+    $('#find-scope').textContent = current === 'tasks' ? 'tarefas' : 'notas';
+    find.value = query();
+    openSheetEl('sheet-find', e.currentTarget, '#f-find');
+  });
+  find.addEventListener('input', () => { if (current === 'tasks') { T.q = find.value; renderTasks(); } else { N.q = find.value; renderNotes(); } });
+  find.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); closeSheet(); } });
+  $('#find-clear').addEventListener('click', () => { find.value = ''; find.dispatchEvent(new Event('input')); find.focus(); });
+  $('#find-new-task').addEventListener('click', () => { const t = sheetTrigger; closeSheet(); openTaskSheet(t); });
+  $('#find-new-note').addEventListener('click', () => { const t = sheetTrigger; closeSheet(); openNoteSheet(t); });
+
+  hydrateIcons(document.querySelector('.product'));
+  renderOpts();
+  renderTasks();
+  renderNotes();
+})();
+</script>
+</body>
+</html>

@@ -1,45 +1,34 @@
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { TaskNotFoundError, TaskOwnershipError } from "../../domain";
-import type { TaskRepository } from "../../domain/ports";
+import { TaskNotFoundError, TaskOwnershipError, TaskRevisionConflictError } from "../../domain/index";
+import type { ArtifactRepository, EntityBatchWriter, TaskRepository } from "../../domain/ports";
 import type { UpdateTaskInput } from "@repo/contracts";
-import { assertTasksOwned } from "../../api-core/tasks/assert-tasks-owned";
-import { assertParentTaskAssignable } from "../../api-core/tasks/assert-parent-task";
+import type { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
+import { mergeTaskUpdate, toUpdateBatch } from "../../api-core/tasks/services/task-update-merger.service";
 
 export class UpdateTaskUseCase {
-  constructor(private readonly taskRepository: TaskRepository) {}
+  constructor(
+    private readonly taskRepository: Pick<TaskRepository, "findById" | "findByIds">,
+    private readonly artifactRepository: Pick<ArtifactRepository, "findByIds">,
+    private readonly artifactBuilder: ArtifactBuilder,
+    private readonly batchWriter: EntityBatchWriter,
+  ) {}
 
+  /** A tarefa, os artefatos editados e as tarefas de origem das relacoes mudam numa transacao so. */
   async execute(input: UpdateTaskInput, actor: AuthenticatedUser): Promise<void> {
     const existingTask = await this.taskRepository.findById(input.taskId);
     if (!existingTask) throw new TaskNotFoundError(`Task not found: ${input.taskId}`);
     if (existingTask.userId !== actor.userId) throw new TaskOwnershipError();
-
-    if (input.parentTaskId) {
-      await assertParentTaskAssignable(
-        this.taskRepository,
-        input.parentTaskId,
-        actor.userId,
-        input.taskId,
+    if (existingTask.revision !== input.expectedRevision) {
+      throw new TaskRevisionConflictError(
+        `Expected revision ${input.expectedRevision} but found ${existingTask.revision}`,
       );
     }
-    if (input.dependsOnTaskIds?.length) {
-      await assertTasksOwned(this.taskRepository, input.dependsOnTaskIds, actor.userId);
-    }
 
-    const revisedTask = existingTask.revise({
-      parentTaskId: input.parentTaskId,
-      name: input.name,
-      description: input.description,
-      status: input.status,
-      priority: input.priority,
-      notifyOffsetsMinutes: input.notifyOffsetsMinutes,
-      tags: input.tags,
-      startedAt: input.startedAt !== undefined ? new Date(input.startedAt) : undefined,
-      estimatedFinishAt:
-        input.estimatedFinishAt !== undefined ? new Date(input.estimatedFinishAt) : undefined,
-      finishedAt: input.finishedAt !== undefined ? new Date(input.finishedAt) : undefined,
-      dependsOnTaskIds: input.dependsOnTaskIds,
+    const merged = await mergeTaskUpdate(existingTask, input, {
+      artifactBuilder: this.artifactBuilder,
+      artifactRepository: this.artifactRepository,
+      taskRepository: this.taskRepository,
     });
-
-    await this.taskRepository.update(revisedTask, actor.userId, input.expectedRevision);
+    await this.batchWriter.commit(toUpdateBatch(merged, input.expectedRevision));
   }
 }

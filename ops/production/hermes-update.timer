@@ -1,0 +1,12 @@
+[Unit]
+Description=Atualizacao diaria do Hermes
+
+[Timer]
+# Hora local da VPS (veja `timedatectl`). Persistent roda na volta se a VPS
+# estava desligada no horario.
+OnCalendar=*-*-* 04:00:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

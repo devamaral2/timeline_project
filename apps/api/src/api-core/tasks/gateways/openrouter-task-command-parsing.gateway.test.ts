@@ -1,0 +1,247 @@
+import { afterEach, expect, test, vi } from "vitest";
+import {
+  OpenRouterTaskCommandParsingGateway,
+  toCreateTaskInput,
+  toTaskSchedule,
+  type RawTaskCommand,
+} from "./openrouter-task-command-parsing.gateway";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+function aRawCommand(overrides: Partial<RawTaskCommand> = {}): Partial<RawTaskCommand> {
+  return {
+    type: "common",
+    routineName: "",
+    foodInputText: "",
+    sleepHours: null,
+    sleepScore: null,
+    workoutKind: "free",
+    workoutDurationMinutes: null,
+    workoutCalories: null,
+    workoutDistanceKm: null,
+    startTimeOfDay: "",
+    startOffsetMinutes: null,
+    durationMinutes: null,
+    endTimeOfDay: "",
+    ...overrides,
+  };
+}
+
+test("requests the strict task_command schema and returns the parsed input", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify(aRawCommand({ type: "common", routineName: "Estudar ingles" })),
+          },
+        },
+      ],
+    }),
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const gateway = new OpenRouterTaskCommandParsingGateway("test-api-key", "x-ai/grok-4.5", {
+    build: () => "command prompt",
+  });
+
+  const result = await gateway.parseCommand({ text: "comecei a estudar ingles" });
+
+  expect(result).toEqual({
+    input: { name: "Estudar ingles", kind: "common", tags: [] },
+    schedule: {
+      startTimeOfDay: undefined,
+      startOffsetMinutes: undefined,
+      durationMinutes: undefined,
+      endTimeOfDay: undefined,
+    },
+    modelProvider: "openrouter",
+    modelName: "x-ai/grok-4.5",
+  });
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    "https://openrouter.ai/api/v1/chat/completions",
+    expect.objectContaining({
+      method: "POST",
+      headers: expect.objectContaining({ Authorization: "Bearer test-api-key" }),
+    }),
+  );
+
+  const request = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as {
+    response_format: { type: string; json_schema?: { name: string; strict: boolean } };
+  };
+  expect(request.response_format).toEqual(
+    expect.objectContaining({
+      type: "json_schema",
+      json_schema: expect.objectContaining({ name: "task_command", strict: true }),
+    }),
+  );
+});
+
+test("never logs the api key", async () => {
+  const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify(aRawCommand()) } }],
+      }),
+    }),
+  );
+  const gateway = new OpenRouterTaskCommandParsingGateway("super-secret-key", "model", {
+    build: () => "prompt",
+  });
+
+  await gateway.parseCommand({ text: "oi" });
+
+  const logged = JSON.stringify(logSpy.mock.calls);
+  expect(logged).not.toContain("super-secret");
+});
+
+test("falls back to the transcript when the model leaves the routine name empty", () => {
+  const input = toCreateTaskInput(aRawCommand({ type: "common", routineName: "  " }), "  fui correr no parque  ");
+
+  expect(input).toEqual({ name: "fui correr no parque", kind: "common", tags: [] });
+});
+
+test("falls back to routine when the model returns an unknown type", () => {
+  const input = toCreateTaskInput(aRawCommand({ type: "meditation" }), "meditei 10 minutos");
+
+  expect(input).toEqual({ name: "meditei 10 minutos", kind: "common", tags: [] });
+});
+
+test("reads sleep values above 24 as minutes", () => {
+  const input = toCreateTaskInput(
+    aRawCommand({ type: "sleep", sleepHours: 450, sleepScore: 80 }),
+    "dormi",
+  );
+
+  expect(input).toEqual({
+    kind: "sleep",
+    artifacts: [{ type: "sleep", data: { trackedSleepTime: 450, score: 80 } }],
+    tags: [],
+  });
+});
+
+test("clamps the sleep score and drops a missing duration", () => {
+  const input = toCreateTaskInput(
+    aRawCommand({ type: "sleep", sleepHours: null, sleepScore: 320 }),
+    "dormi mal",
+  );
+
+  expect(input).toEqual({
+    kind: "sleep",
+    artifacts: [{ type: "sleep", data: { trackedSleepTime: undefined, score: 100 } }],
+    tags: [],
+  });
+});
+
+test("builds a weightlifting workout with empty sets", () => {
+  const input = toCreateTaskInput(
+    aRawCommand({
+      type: "training",
+      workoutKind: "weightlifting",
+      workoutDurationMinutes: 50,
+      workoutCalories: 300,
+    }),
+    "treinei peito",
+  );
+
+  expect(input).toEqual({
+    kind: "training",
+    artifacts: [{ type: "training", data: { workouts: [{ workoutCode: "weightlifting", calories: 300, duration: 50, sets: [] }] } }],
+    tags: [],
+  });
+});
+
+test("builds a running workout with the reported distance", () => {
+  const input = toCreateTaskInput(
+    aRawCommand({
+      type: "training",
+      workoutKind: "running",
+      workoutDurationMinutes: 30,
+      workoutDistanceKm: 5,
+    }),
+    "corri cinco quilometros em trinta minutos",
+  );
+
+  expect(input).toEqual({
+    kind: "training",
+    artifacts: [
+      {
+        type: "training",
+        data: { workouts: [{ workoutCode: "running", calories: 0, duration: 30, distance: 5, pace: 0 }] },
+      },
+    ],
+    tags: [],
+  });
+});
+
+test("builds a walking workout with distance and pace", () => {
+  const input = toCreateTaskInput(
+    aRawCommand({
+      type: "training",
+      workoutKind: "walking",
+      workoutDurationMinutes: 120,
+      workoutDistanceKm: 24,
+    }),
+    "caminhei vinte e quatro quilometros",
+  );
+
+  expect(input).toEqual({
+    kind: "training",
+    artifacts: [
+      {
+        type: "training",
+        data: {
+          workouts: [
+            { workoutCode: "walking", calories: 0, duration: 120, distance: 24, pace: 0 },
+          ],
+        },
+      },
+    ],
+    tags: [],
+  });
+});
+
+test("keeps the workout list empty when the phrase carried no numbers", () => {
+  const input = toCreateTaskInput(aRawCommand({ type: "training" }), "fui pra academia");
+
+  expect(input).toEqual({ kind: "training", artifacts: [{ type: "training", data: { workouts: [] } }], tags: [] });
+});
+
+test("carries the spoken window through to the schedule", () => {
+  const schedule = toTaskSchedule(
+    aRawCommand({ type: "sleep", durationMinutes: 360, endTimeOfDay: "06:00" }),
+  );
+
+  expect(schedule).toEqual({
+    startTimeOfDay: undefined,
+    startOffsetMinutes: undefined,
+    durationMinutes: 360,
+    endTimeOfDay: "06:00",
+  });
+});
+
+test("treats empty clock strings as no window at all", () => {
+  const schedule = toTaskSchedule(aRawCommand({ startTimeOfDay: "  ", endTimeOfDay: "" }));
+
+  expect(schedule).toEqual({
+    startTimeOfDay: undefined,
+    startOffsetMinutes: undefined,
+    durationMinutes: undefined,
+    endTimeOfDay: undefined,
+  });
+});
+
+test("uses the transcript when the model returns no food text", () => {
+  const input = toCreateTaskInput(
+    aRawCommand({ type: "food", foodInputText: "" }),
+    "comi uma banana",
+  );
+
+  expect(input).toEqual({ kind: "meal", artifacts: [{ type: "food", data: { inputText: "comi uma banana" } }], tags: [] });
+});

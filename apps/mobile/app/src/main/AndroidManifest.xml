@@ -8,7 +8,7 @@
     <application
         android:name=".BraidApp"
         android:allowBackup="false"
-        android:label="Braid"
+        android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Braid">
         <activity

@@ -140,3 +140,67 @@ spec:
   selector: {app: auth}
   ports:
     - {port: 3002, targetPort: 3002}
+---
+# Servidor MCP do Hermes (ADR 004): so cria e le entidades do dono. Alcancavel
+# apenas pelo pod do Hermes (NetworkPolicy abaixo); sem Ingress.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp
+  namespace: braid
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: mcp}
+  template:
+    metadata:
+      labels: {app: mcp}
+    spec:
+      containers:
+        - name: mcp
+          image: braid-mcp:REPLACE_SHA
+          imagePullPolicy: Never
+          envFrom:
+            - secretRef: {name: onepassword-loader}
+          ports:
+            - {containerPort: 3003}
+          startupProbe:
+            httpGet: {path: /health, port: 3003}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /health, port: 3003}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /health, port: 3003}
+            periodSeconds: 20
+          resources:
+            requests: {cpu: 25m, memory: 96Mi}
+            limits: {cpu: 250m, memory: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp
+  namespace: braid
+spec:
+  type: ClusterIP
+  selector: {app: mcp}
+  ports:
+    - {port: 3003, targetPort: 3003}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mcp-from-hermes-only
+  namespace: braid
+spec:
+  podSelector:
+    matchLabels: {app: mcp}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: hermes}
+      ports:
+        - {protocol: TCP, port: 3003}

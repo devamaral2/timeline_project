@@ -1,119 +1,172 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
-import type { TaskDetailDto, TaskSummaryDto } from "@/lib/api/contracts";
-import { detailTask, summaryTask } from "./task-fixtures";
+import { TaskDetailScreen, type PreviewTask, type PreviewLinkedTask } from "./TaskDetailScreen";
+import { noteOf } from "./note-fixtures";
 
-const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+/** 15 de abril de 2026, 10:00 — 11:00 no fuso da timeline. */
+function taskAt(overrides: Partial<PreviewTask> = {}): PreviewTask {
+  return {
+    id: "tarefa-1",
+    name: "Reunião de planejamento",
+    description: "Fechar o escopo da próxima entrega.",
+    startedAt: "2026-04-15T10:00:00-03:00",
+    finishedAt: "2026-04-15T11:00:00-03:00",
+    tags: ["trabalho"],
+    missed: false,
+    priority: "normal",
+    notifyOffsetsMinutes: [],
+    interruptions: [],
+    revision: 3,
+    kind: "common",
+    notes: [],
+    ...overrides,
+  };
+}
 
-const authedFetch = vi.fn();
-vi.mock("@/lib/api/authed-fetch", () => ({ authedFetch: (...args: unknown[]) => authedFetch(...args) }));
-vi.mock("@/components/events/new-event-forms/TagInput", () => ({ TagInput: () => null }));
-
-const { TaskDetailScreen } = await import("./TaskDetailScreen");
-
-const detail: TaskDetailDto = detailTask({
-  startedAt: "2026-09-18T00:00:00-03:00",
-  dependsOnTaskIds: ["proposta"],
-});
-
-const summaries: TaskSummaryDto[] = [
-  summaryTask({ id: "t1", name: detail.name, startedAt: detail.startedAt, dependsOnTaskIds: ["proposta"], revision: 3 }),
-  summaryTask({ id: "proposta", name: "Revisar proposta", status: "scheduled", startedAt: "2026-09-14T09:00:00-03:00" }),
-  summaryTask({ id: "s1", name: "Montar o roteiro", parentTaskId: "t1", revision: 2 }),
-  summaryTask({ id: "s2", name: "Fazer os slides", parentTaskId: "t1", status: "done" }),
-  summaryTask({ id: "depois", name: "Enviar ao cliente", dependsOnTaskIds: ["t1"], startedAt: "2026-09-19T00:00:00-03:00" }),
-];
+const linkedTask: PreviewLinkedTask = {
+  id: "tarefa-1",
+  name: "Escrever a ata",
+  description: "",
+  status: "todo",
+  priority: "medium",
+  notifyOffsetsMinutes: [],
+  tags: [],
+  dependsOnTaskIds: [],
+  revision: 1,
+};
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
-  vi.setSystemTime(new Date("2026-09-14T10:00:00-03:00"));
-  authedFetch.mockReset();
-  push.mockReset();
-  authedFetch.mockImplementation((path: string, init?: RequestInit) => {
-    if (init?.method) return Promise.resolve(path === "/api/tasks" ? { taskId: "novo" } : undefined);
-    return Promise.resolve(path === "/api/tasks/t1" ? detail : summaries);
-  });
+  vi.setSystemTime(new Date("2026-04-15T15:00:00-03:00"));
 });
 
 afterEach(() => {
   vi.useRealTimers();
 });
 
-test("mostra o nome, o status, a prioridade, o dia, os lembretes, as tags e a descrição", async () => {
-  render(<TaskDetailScreen userId="user-1" taskId="t1" />);
+test("mostra a composição da tela: tipo, nome, data, horário e as seções", () => {
+  render(<TaskDetailScreen task={taskAt()} backHref="/alguem" />);
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Preparar apresentação de sexta" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Status: A fazer. Trocar status" })).toBeInTheDocument();
-  expect(screen.getByRole("img", { name: "Prioridade: Alta" })).toBeInTheDocument();
-  expect(screen.getByText("Sexta-feira, 18 de setembro")).toBeInTheDocument();
-  expect(screen.getByText("Sem horário definido")).toBeInTheDocument();
-  expect(screen.getByText("1 dia antes")).toBeInTheDocument();
-  expect(screen.getByText("#trabalho")).toBeInTheDocument();
-  expect(screen.getByText("Slides com o resumo da proposta.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "Reunião de planejamento" })).toBeInTheDocument();
+  expect(screen.getByText("Padrão")).toBeInTheDocument();
+  expect(screen.getByText("15 abr 2026")).toBeInTheDocument();
+  expect(screen.getByText("10:00")).toBeInTheDocument();
+  expect(screen.getByText("11:00")).toBeInTheDocument();
+  expect(screen.getByText("1h")).toBeInTheDocument();
+
+  for (const title of ["Descrição", "Tarefas", "Notas"]) {
+    expect(screen.getByRole("heading", { level: 2, name: title })).toBeInTheDocument();
+  }
+  expect(screen.getByRole("link", { name: "Voltar para a agenda" })).toHaveAttribute("href", "/alguem");
 });
 
-test("lista de quem depende, as subtarefas e o que a tarefa libera", async () => {
-  render(<TaskDetailScreen userId="user-1" taskId="t1" />);
-  await screen.findByRole("heading", { level: 1 });
-
-  const dependsOn = screen.getByRole("region", { name: "Depende de" });
-  expect(within(dependsOn).getByRole("link", { name: /Revisar proposta/ })).toHaveAttribute("href", "/user-1/tarefas/proposta");
-  expect(within(dependsOn).getByText("Agendada · hoje, 09:00")).toBeInTheDocument();
-
-  const subtasks = screen.getByRole("region", { name: "Subtarefas" });
-  expect(within(subtasks).getByText("1 de 2")).toBeInTheDocument();
-  expect(within(subtasks).getByRole("button", { name: /Toque para concluir “Montar o roteiro”/ })).toBeInTheDocument();
-  expect(within(subtasks).getByRole("button", { name: /Toque para reabrir “Fazer os slides”/ })).toBeInTheDocument();
-
-  const releases = screen.getByRole("region", { name: "Libera" });
-  expect(within(releases).getByText("A fazer · sáb., 19 set.")).toBeInTheDocument();
-});
-
-test("troca o status pelo seletor, com a revisão do detalhe", async () => {
-  render(<TaskDetailScreen userId="user-1" taskId="t1" />);
-  fireEvent.click(await screen.findByRole("button", { name: "Status: A fazer. Trocar status" }));
-
-  const listbox = screen.getByRole("listbox", { name: "Status da tarefa" });
-  expect(within(listbox).getAllByRole("option").map((option) => option.textContent)).toEqual([
-    "A fazer", "Agendada", "A definir", "Em espera", "Concluída", "Cancelada",
-  ]);
-  fireEvent.click(within(listbox).getByRole("option", { name: "Em espera" }));
-
-  await waitFor(() =>
-    expect(authedFetch).toHaveBeenCalledWith("/api/tasks/t1", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ expectedRevision: 3, status: "inHold" }) })),
-  );
-});
-
-test("conclui uma subtarefa e adiciona outra", async () => {
-  render(<TaskDetailScreen userId="user-1" taskId="t1" />);
-  fireEvent.click(await screen.findByRole("button", { name: /Toque para concluir “Montar o roteiro”/ }));
-  await waitFor(() =>
-    expect(authedFetch).toHaveBeenCalledWith("/api/tasks/s1", expect.objectContaining({ body: JSON.stringify({ expectedRevision: 2, status: "done" }) })),
+test("o cartão resume tags, metadados e a situação da tarefa no tempo", () => {
+  render(
+    <TaskDetailScreen
+      task={taskAt({ priority: "urgent", notifyOffsetsMinutes: [15], missed: true, tags: ["trabalho", "equipe"] })}
+      backHref="/alguem"
+    />,
   );
 
-  fireEvent.click(await screen.findByRole("button", { name: "Adicionar subtarefa" }));
-  fireEvent.change(screen.getByLabelText("Nome da subtarefa"), { target: { value: "Ensaiar" } });
-  fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
-  await waitFor(() =>
-    expect(authedFetch).toHaveBeenCalledWith("/api/tasks", expect.objectContaining({ method: "POST", body: JSON.stringify({ name: "Ensaiar", parentTaskId: "t1" }) })),
-  );
+  const summary = screen.getByRole("region", { name: "Resumo da tarefa" });
+  expect(within(summary).getByText("Urgente")).toBeInTheDocument();
+  expect(within(summary).getByText("15 minutos antes")).toBeInTheDocument();
+  expect(within(summary).getByText("Não realizado")).toBeInTheDocument();
+  expect(within(summary).getByText("equipe")).toBeInTheDocument();
+  // 15/04/2026 as 11:00 ja passou em relacao ao relogio do teste.
+  expect(within(summary).getByRole("img", { name: "Já aconteceu" })).toBeInTheDocument();
 });
 
-test("exclui pelo menu e volta para a lista", async () => {
-  render(<TaskDetailScreen userId="user-1" taskId="t1" />);
-  fireEvent.click(await screen.findByRole("button", { name: /Mais ações/ }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "Excluir" }));
-  expect(screen.getByText(/junto com as 2 subtarefas/)).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
+test("uma tarefa que ainda não começou é anunciado como tal", () => {
+  const task = taskAt({ startedAt: "2026-04-16T10:00:00-03:00", finishedAt: "2026-04-16T11:00:00-03:00" });
+  render(<TaskDetailScreen task={task} backHref="/alguem" />);
 
-  await waitFor(() => expect(authedFetch).toHaveBeenCalledWith("/api/tasks/t1", { method: "DELETE" }));
-  await waitFor(() => expect(push).toHaveBeenCalledWith("/user-1/tarefas"));
+  expect(screen.getByRole("img", { name: "Ainda vai acontecer" })).toBeInTheDocument();
 });
 
-test("avisa quando a tarefa não carrega", async () => {
-  authedFetch.mockReset();
-  authedFetch.mockRejectedValue(new Error("falhou"));
-  render(<TaskDetailScreen userId="user-1" taskId="t1" />);
-  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar a tarefa.");
+test("uma tarefa sem hora de fim que já começou aparece em andamento, com cronômetro", () => {
+  const task = taskAt({ startedAt: "2026-04-15T14:30:00-03:00", finishedAt: undefined });
+  render(<TaskDetailScreen task={task} backHref="/alguem" />);
+
+  expect(screen.getByRole("img", { name: "Acontecendo agora" })).toBeInTheDocument();
+  expect(screen.getByText("em andamento")).toBeInTheDocument();
+  expect(screen.getByText("30:00")).toBeInTheDocument();
+});
+
+test("as tarefas vinculadas aparecem com o status; sem elas, a seção diz que não há", () => {
+  const { rerender } = render(<TaskDetailScreen task={taskAt()} backHref="/alguem" />);
+  expect(screen.getByText("Nenhuma tarefa vinculada.")).toBeInTheDocument();
+
+  rerender(<TaskDetailScreen task={taskAt()} linkedTasks={[linkedTask, { ...linkedTask, id: "tarefa-2", name: "Revisar", status: "done" }]} backHref="/alguem" />);
+  expect(screen.getByText("Escrever a ata")).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "A fazer" })).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Concluída" })).toBeInTheDocument();
+});
+
+test("sem ações, o menu da tarefa fica desligado — o estudo visual não promete o que não faz", () => {
+  render(<TaskDetailScreen task={taskAt()} backHref="/alguem" />);
+
+  expect(screen.getByRole("button", { name: "Mais opções da tarefa" })).toBeDisabled();
+});
+
+test("o menu conduz editar, a anotação de não realizado e excluir", () => {
+  const actions = {
+    onEdit: vi.fn(),
+    onToggleMissed: vi.fn(),
+    onDelete: vi.fn(),
+    savingMissed: false,
+  };
+  render(<TaskDetailScreen task={taskAt()} backHref="/alguem" actions={actions} />);
+
+  fireEvent.click(screen.getByRole("button", { name: /Editar tarefa/ }));
+  expect(actions.onEdit).toHaveBeenCalledOnce();
+
+  fireEvent.click(screen.getByRole("button", { name: /Marcar como não realizado/ }));
+  expect(actions.onToggleMissed).toHaveBeenCalledOnce();
+
+  fireEvent.click(screen.getByRole("button", { name: /Excluir tarefa/ }));
+  expect(actions.onDelete).toHaveBeenCalledOnce();
+});
+
+test("numa tarefa já anotado, o menu oferece desfazer a anotação", () => {
+  const actions = { onEdit: vi.fn(), onToggleMissed: vi.fn(), onDelete: vi.fn(), savingMissed: false };
+  render(<TaskDetailScreen task={taskAt({ missed: true })} backHref="/alguem" actions={actions} />);
+
+  expect(screen.getByRole("button", { name: /Desmarcar/ })).toBeInTheDocument();
+});
+
+test("enquanto a anotação salva, o menu não aceita um segundo clique", () => {
+  const actions = { onEdit: vi.fn(), onToggleMissed: vi.fn(), onDelete: vi.fn(), savingMissed: true };
+  render(<TaskDetailScreen task={taskAt()} backHref="/alguem" actions={actions} />);
+
+  expect(screen.getByRole("button", { name: /Marcar como não realizado/ })).toBeDisabled();
+});
+
+test("o conteúdo do tipo entra como mais uma seção, sem mexer no esqueleto", () => {
+  const task = taskAt({
+    kind: "meal",
+    notes: [
+      noteOf({
+        id: "meal-note",
+        type: "meal",
+        data: {
+          name: "Almoço",
+          description: "",
+          foodItems: [],
+          totals: {
+            totalCaloriesKcal: 530,
+            totalProteinGrams: 38,
+            totalCarbohydrateGrams: 54,
+            totalFatGrams: 18,
+            totalFiberGrams: 7,
+          },
+        },
+      }),
+    ],
+  });
+  render(<TaskDetailScreen task={task} backHref="/alguem" />);
+
+  const headings = screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
+  expect(headings).toEqual(["Descrição", "Refeição", "Tarefas", "Notas"]);
+  expect(screen.getByText("530")).toBeInTheDocument();
 });

@@ -1,0 +1,2439 @@
+{
+ "url": "http://localhost:3000/mockups/eventos",
+ "at": "2026-11-07T01:00:15.816Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.18,
+    0.16
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 1368,
+     "screens": 1.5,
+     "words": 351,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 70,
+     "sections": 10,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 1,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Agenda",
+     "words": 1,
+     "chars": 6,
+     "lines": 1,
+     "size": 32,
+     "vw": 2.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": 0,
+     "leading": 1,
+     "top": 135,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "Agenda",
+     "words": 1,
+     "lines": 1,
+     "size": 32,
+     "font": "newsreader"
+    },
+    "headings": [
+     {
+      "text": "braid",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 30,
+      "vw": 2.1,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.04,
+      "top": 21,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Agenda",
+      "words": 1,
+      "chars": 6,
+      "lines": 1,
+      "size": 32,
+      "vw": 2.2,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.005,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.07,
+      "top": 135,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 2,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": 1,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "figtree",
+       "share": 0.93,
+       "mono": false
+      },
+      {
+       "family": "newsreader",
+       "share": 0.07,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      20,
+      26,
+      30,
+      32
+     ],
+     "sizeCount": 9,
+     "notLoaded": [],
+     "body": {
+      "font": "figtree",
+      "size": 12,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 5.2
+     },
+     "measureChars": 41,
+     "max": {
+      "size": 32,
+      "vw": 2.2,
+      "font": "newsreader",
+      "text": "Agenda"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0.04,
+     "centerShare": 0.07,
+     "smallText": 14
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#f1f5f6",
+     "bodyBgHsl": {
+      "h": 192,
+      "s": 0.22,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f1f5f6",
+       "top": 0,
+       "hsl": {
+        "h": 192,
+        "s": 0.22,
+        "l": 0.95
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#586a70",
+       "share": 0.68
+      },
+      {
+       "color": "#152429",
+       "share": 0.25
+      },
+      {
+       "color": "#167d6f",
+       "share": 0.02
+      },
+      {
+       "color": "#8b5782",
+       "share": 0.02
+      },
+      {
+       "color": "#2e8a7a",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#152429"
+     },
+     "lowContrast": [
+      {
+       "text": "Lista por dia",
+       "ratio": 3.7,
+       "need": 4.5,
+       "size": 12,
+       "fg": "#2e8a7a",
+       "bg": "#e2f5f2"
+      },
+      {
+       "text": "Hoje",
+       "ratio": 3.8,
+       "need": 4.5,
+       "size": 13,
+       "fg": "#2e8a7a",
+       "bg": "#f1f5f6"
+      }
+     ]
+    },
+    "buttons": {
+     "count": 3,
+     "inHero": 3,
+     "radius": 0,
+     "height": 45,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Pular para o conteúdo",
+      "Agenda"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 1,
+     "shadowOverlay": 0,
+     "shadowSamples": [
+      "fieldset.mockup-module__zBfSSa__viewModes → rgba(37, 43, 45, 0.07) 0px 10px 40px 0px"
+     ],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 2,
+     "hairlineSamples": [
+      "header.mockup-module__zBfSSa__header 1440px",
+      "section.mockup-module__zBfSSa__timeLegend 245px"
+     ],
+     "outlinedBoxes": 14,
+     "dashed": 15,
+     "blurred": 0,
+     "roundedBoxes": 14,
+     "boxRadius": 14,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 4,
+     "fixed": false,
+     "height": 73,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "figtree",
+     "newsreader"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 1368,
+    "margins": {
+     "left": 192,
+     "right": 203
+    },
+    "sections": [],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Agenda",
+      "size": 32,
+      "top": 135,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 192,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 1,
+    "bodySize": 12,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0.15,
+    "voidBox": {
+     "x": 420,
+     "y": 360,
+     "w": 360,
+     "h": 540
+    }
+   },
+   "app": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "dark": false,
+    "ground": "#f1f5f6",
+    "sidebar": null,
+    "topbar": {
+     "h": 73
+    },
+    "canvas": {
+     "left": 192,
+     "right": -2751
+    },
+    "hero": {
+     "text": "Agenda",
+     "words": 1,
+     "chars": 6,
+     "lines": 1,
+     "size": 32,
+     "vw": 2.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": 0,
+     "leading": 1,
+     "top": 135,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 16,
+     "firstScreen": 14,
+     "ragged": [
+      {
+       "diff": 32,
+       "top": 547
+      },
+      {
+       "diff": 33,
+       "top": 547
+      },
+      {
+       "diff": 33,
+       "top": 547
+      },
+      {
+       "diff": 33,
+       "top": 547
+      },
+      {
+       "diff": 33,
+       "top": 547
+      }
+     ],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 16,
+     "radii": [
+      [
+       14,
+       15
+      ],
+      [
+       0,
+       1
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 37,
+     "tabularShare": 1,
+     "kpiMax": 26
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.43,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      20,
+      26,
+      30,
+      32
+     ]
+    },
+    "title": {
+     "text": "Agenda",
+     "size": 32,
+     "top": 135
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.29,
+    0.25
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 1368,
+     "screens": 1.3,
+     "words": 351,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 70,
+     "sections": 10,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 1,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Agenda",
+     "words": 1,
+     "chars": 6,
+     "lines": 1,
+     "size": 32,
+     "vw": 4.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": 0,
+     "leading": 1,
+     "top": 135,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "Agenda",
+     "words": 1,
+     "lines": 1,
+     "size": 32,
+     "font": "newsreader"
+    },
+    "headings": [
+     {
+      "text": "braid",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 30,
+      "vw": 3.9,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.08,
+      "top": 21,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Agenda",
+      "words": 1,
+      "chars": 6,
+      "lines": 1,
+      "size": 32,
+      "vw": 4.2,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.005,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.13,
+      "top": 135,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.02,
+      "top": 376,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "45",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 376,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "45",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 376,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "45",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 376,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "45",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 376,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.02,
+      "top": 376,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "Um dia livre, do seu jeito.",
+      "words": 6,
+      "chars": 27,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "left",
+      "widthRatio": 0.35,
+      "top": 428,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "30",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.04,
+      "top": 572,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "15",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 572,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "15",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 572,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "15",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 572,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "15",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 572,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.02,
+      "top": 572,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "30",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 572,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.02,
+      "top": 768,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "30",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.04,
+      "top": 768,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "30",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.04,
+      "top": 977,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "20",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 3.4,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.04,
+      "top": 1133,
+      "tag": "strong",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 20,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 18,
+     "centered": 1,
+     "medianWords": 1,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "figtree",
+       "share": 0.93,
+       "mono": false
+      },
+      {
+       "family": "newsreader",
+       "share": 0.07,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      20,
+      26,
+      30,
+      32
+     ],
+     "sizeCount": 9,
+     "notLoaded": [],
+     "body": {
+      "font": "figtree",
+      "size": 12,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 5.2
+     },
+     "measureChars": 37,
+     "max": {
+      "size": 32,
+      "vw": 4.2,
+      "font": "newsreader",
+      "text": "Agenda"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0.04,
+     "centerShare": 0.07,
+     "smallText": 14
+    },
+    "eyebrows": [
+     {
+      "text": "min",
+      "above": "30",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 499
+     },
+     {
+      "text": "min",
+      "above": "15",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 499
+     },
+     {
+      "text": "min",
+      "above": "15",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 499
+     },
+     {
+      "text": "min",
+      "above": "15",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 499
+     },
+     {
+      "text": "min",
+      "above": "15",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 499
+     },
+     {
+      "text": "09:00 — 12:00",
+      "above": "1",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 504
+     },
+     {
+      "text": "09:00 — 12:00",
+      "above": "30",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 504
+     },
+     {
+      "text": "08:45 — 09:00",
+      "above": "1",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 700
+     },
+     {
+      "text": "min",
+      "above": "30",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 695
+     },
+     {
+      "text": "10:30 — 12:30",
+      "above": "30",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 897
+     },
+     {
+      "text": "13:00 — 14:00",
+      "above": "20",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 1065
+     }
+    ],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#f1f5f6",
+     "bodyBgHsl": {
+      "h": 192,
+      "s": 0.22,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f1f5f6",
+       "top": 0,
+       "hsl": {
+        "h": 192,
+        "s": 0.22,
+        "l": 0.95
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#586a70",
+       "share": 0.68
+      },
+      {
+       "color": "#152429",
+       "share": 0.25
+      },
+      {
+       "color": "#167d6f",
+       "share": 0.02
+      },
+      {
+       "color": "#8b5782",
+       "share": 0.02
+      },
+      {
+       "color": "#2e8a7a",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#152429"
+     },
+     "lowContrast": [
+      {
+       "text": "Lista por dia",
+       "ratio": 3.7,
+       "need": 4.5,
+       "size": 12,
+       "fg": "#2e8a7a",
+       "bg": "#e2f5f2"
+      },
+      {
+       "text": "Hoje",
+       "ratio": 3.8,
+       "need": 4.5,
+       "size": 13,
+       "fg": "#2e8a7a",
+       "bg": "#f1f5f6"
+      }
+     ]
+    },
+    "buttons": {
+     "count": 3,
+     "inHero": 3,
+     "radius": 0,
+     "height": 45,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Pular para o conteúdo",
+      "Agenda"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 1,
+     "shadowOverlay": 0,
+     "shadowSamples": [
+      "fieldset.mockup-module__zBfSSa__viewModes → rgba(37, 43, 45, 0.07) 0px 10px 40px 0px"
+     ],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 1,
+     "hairlineSamples": [
+      "header.mockup-module__zBfSSa__header 768px"
+     ],
+     "outlinedBoxes": 14,
+     "dashed": 15,
+     "blurred": 0,
+     "roundedBoxes": 14,
+     "boxRadius": 14,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 4,
+     "fixed": false,
+     "height": 73,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "figtree",
+     "newsreader"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 1368,
+    "margins": {
+     "left": 36,
+     "right": 47
+    },
+    "sections": [],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Agenda",
+      "size": 32,
+      "top": 135,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 36,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 1,
+    "bodySize": 12,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "dark": false,
+    "ground": "#f1f5f6",
+    "sidebar": null,
+    "topbar": {
+     "h": 73
+    },
+    "canvas": {
+     "left": 40,
+     "right": -1772
+    },
+    "hero": {
+     "text": "Agenda",
+     "words": 1,
+     "chars": 6,
+     "lines": 1,
+     "size": 32,
+     "vw": 4.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": 0,
+     "leading": 1,
+     "top": 135,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 16,
+     "firstScreen": 15,
+     "ragged": [
+      {
+       "diff": 32,
+       "top": 547
+      },
+      {
+       "diff": 33,
+       "top": 547
+      },
+      {
+       "diff": 33,
+       "top": 547
+      },
+      {
+       "diff": 33,
+       "top": 547
+      },
+      {
+       "diff": 33,
+       "top": 547
+      }
+     ],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 16,
+     "radii": [
+      [
+       14,
+       15
+      ],
+      [
+       0,
+       1
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 37,
+     "tabularShare": 1,
+     "kpiMax": 26
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.43,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      20,
+      26,
+      30,
+      32
+     ]
+    },
+    "title": {
+     "text": "Agenda",
+     "size": 32,
+     "top": 135
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.28,
+    0.42
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 1,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 1413,
+     "screens": 1.7,
+     "words": 311,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 70,
+     "sections": 10,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 1,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "Agenda",
+     "words": 1,
+     "chars": 6,
+     "lines": 1,
+     "size": 28,
+     "vw": 7.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": 0,
+     "leading": 1,
+     "top": 95,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "Agenda",
+     "words": 1,
+     "lines": 1,
+     "size": 28,
+     "font": "newsreader"
+    },
+    "headings": [
+     {
+      "text": "braid",
+      "words": 1,
+      "chars": 5,
+      "lines": 1,
+      "size": 28,
+      "vw": 7.2,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.01,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.15,
+      "top": 18,
+      "tag": "a",
+      "kind": "heading"
+     },
+     {
+      "text": "Agenda",
+      "words": 1,
+      "chars": 6,
+      "lines": 1,
+      "size": 28,
+      "vw": 7.2,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": -0.005,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.22,
+      "top": 95,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 338,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "45",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 338,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "45",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 338,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "45",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 338,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "45",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 338,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 338,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "Um dia livre, do seu jeito.",
+      "words": 6,
+      "chars": 27,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "center",
+      "position": "left",
+      "widthRatio": 0.69,
+      "top": 360,
+      "tag": "p",
+      "kind": "statement"
+     },
+     {
+      "text": "30",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 534,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "15",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 534,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "15",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 534,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "15",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 534,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "15",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 534,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 534,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "30",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 534,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "1",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.04,
+      "top": 730,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "30",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 730,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "30",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 939,
+      "tag": "strong",
+      "kind": "statement"
+     },
+     {
+      "text": "20",
+      "words": 1,
+      "chars": 2,
+      "lines": 1,
+      "size": 26,
+      "vw": 6.7,
+      "font": "newsreader",
+      "weight": 400,
+      "tracking": 0,
+      "leading": 1,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "right",
+      "widthRatio": 0.07,
+      "top": 1095,
+      "tag": "strong",
+      "kind": "statement"
+     }
+    ],
+    "headingSummary": {
+     "count": 20,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 18,
+     "centered": 1,
+     "medianWords": 1,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "figtree",
+       "share": 0.92,
+       "mono": false
+      },
+      {
+       "family": "newsreader",
+       "share": 0.08,
+       "mono": false
+      }
+     ],
+     "familyCount": 2,
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      20,
+      26,
+      28
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": null,
+     "measureChars": null,
+     "max": {
+      "size": 28,
+      "vw": 7.2,
+      "font": "newsreader",
+      "text": "braid"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0.04,
+     "centerShare": 0.08,
+     "smallText": 8
+    },
+    "eyebrows": [
+     {
+      "text": "min",
+      "above": "30",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 461
+     },
+     {
+      "text": "min",
+      "above": "15",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 461
+     },
+     {
+      "text": "min",
+      "above": "15",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 461
+     },
+     {
+      "text": "min",
+      "above": "15",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 461
+     },
+     {
+      "text": "min",
+      "above": "15",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 461
+     },
+     {
+      "text": "09:00 — 12:00",
+      "above": "1",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 466
+     },
+     {
+      "text": "09:00 — 12:00",
+      "above": "30",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 466
+     },
+     {
+      "text": "08:45 — 09:00",
+      "above": "1",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 662
+     },
+     {
+      "text": "min",
+      "above": "30",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 11,
+      "top": 657
+     },
+     {
+      "text": "10:30 — 12:30",
+      "above": "30",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 859
+     },
+     {
+      "text": "13:00 — 14:00",
+      "above": "20",
+      "upper": false,
+      "tracked": false,
+      "mono": false,
+      "pill": false,
+      "size": 13,
+      "top": 1027
+     }
+    ],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#f1f5f6",
+     "bodyBgHsl": {
+      "h": 192,
+      "s": 0.22,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#f1f5f6",
+       "top": 0,
+       "hsl": {
+        "h": 192,
+        "s": 0.22,
+        "l": 0.95
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#586a70",
+       "share": 0.66
+      },
+      {
+       "color": "#152429",
+       "share": 0.25
+      },
+      {
+       "color": "#167d6f",
+       "share": 0.02
+      },
+      {
+       "color": "#8b5782",
+       "share": 0.02
+      },
+      {
+       "color": "#2e8a7a",
+       "share": 0.01
+      }
+     ],
+     "button": {
+      "bg": "#ffffff",
+      "hsl": {
+       "h": 0,
+       "s": 0,
+       "l": 1
+      },
+      "fg": "#152429"
+     },
+     "lowContrast": [
+      {
+       "text": "Lista por dia",
+       "ratio": 3.7,
+       "need": 4.5,
+       "size": 12,
+       "fg": "#2e8a7a",
+       "bg": "#e2f5f2"
+      },
+      {
+       "text": "Hoje",
+       "ratio": 3.8,
+       "need": 4.5,
+       "size": 13,
+       "fg": "#2e8a7a",
+       "bg": "#f1f5f6"
+      }
+     ]
+    },
+    "buttons": {
+     "count": 2,
+     "inHero": 2,
+     "radius": 0,
+     "height": 45,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "Pular para o conteúdo"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 1,
+     "shadowOverlay": 0,
+     "shadowSamples": [
+      "fieldset.mockup-module__zBfSSa__viewModes → rgba(37, 43, 45, 0.07) 0px 10px 40px 0px"
+     ],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 2,
+     "hairlineSamples": [
+      "header.mockup-module__zBfSSa__header 390px",
+      "nav.mockup-module__zBfSSa__bottomNav 390px"
+     ],
+     "outlinedBoxes": 14,
+     "dashed": 15,
+     "blurred": 0,
+     "roundedBoxes": 14,
+     "boxRadius": 14,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": false,
+     "height": 65,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "figtree",
+     "newsreader"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 1413,
+    "margins": {
+     "left": 18,
+     "right": 18
+    },
+    "sections": [
+     {
+      "sel": "div.mockup-module__zBfSSa__agendaControls",
+      "tag": "div",
+      "top": 141,
+      "height": 136,
+      "words": 9,
+      "media": 0,
+      "middle": 5,
+      "heading": null,
+      "left": 18,
+      "right": 18,
+      "textLeft": 18,
+      "textRight": 28,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": true
+     },
+     {
+      "sel": "section.mockup-module__zBfSSa__horizontalDays",
+      "tag": "section",
+      "top": 283,
+      "height": 956,
+      "words": 67,
+      "media": 0,
+      "middle": 1449,
+      "heading": {
+       "text": "30",
+       "size": 26,
+       "tag": "strong"
+      },
+      "left": 73,
+      "right": 0,
+      "textLeft": 73,
+      "textRight": 35,
+      "fullBleed": false,
+      "footer": true,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "Agenda",
+      "size": 28,
+      "top": 95,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 18,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 1,
+    "bodySize": 12,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "dark": false,
+    "ground": "#f1f5f6",
+    "sidebar": null,
+    "topbar": {
+     "h": 65
+    },
+    "canvas": {
+     "left": 20,
+     "right": -1742
+    },
+    "hero": {
+     "text": "Agenda",
+     "words": 1,
+     "chars": 6,
+     "lines": 1,
+     "size": 28,
+     "vw": 7.2,
+     "font": "newsreader",
+     "weight": 400,
+     "tracking": 0,
+     "leading": 1,
+     "top": 95,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 15,
+     "firstScreen": 13,
+     "ragged": [
+      {
+       "diff": 32,
+       "top": 509
+      },
+      {
+       "diff": 33,
+       "top": 509
+      },
+      {
+       "diff": 33,
+       "top": 509
+      },
+      {
+       "diff": 33,
+       "top": 509
+      },
+      {
+       "diff": 33,
+       "top": 509
+      }
+     ],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 15,
+     "radii": [
+      [
+       14,
+       15
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 37,
+     "tabularShare": 1,
+     "kpiMax": 26
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0.51,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      11,
+      12,
+      13,
+      14,
+      15,
+      20,
+      26,
+      28
+     ]
+    },
+    "title": {
+     "text": "Agenda",
+     "size": 28,
+     "top": 95
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "WARN",
+   "id": "contrast",
+   "width": 1440,
+   "message": "Low-contrast text: \"Lista por dia\" 3.7:1 needs 4.5:1; \"Hoje\" 3.8:1 needs 4.5:1",
+   "fix": "Darken or lighten the text colour.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "ragged-row",
+   "width": 1440,
+   "message": "5 pair(s) of cards in one row end at different heights (by 32px, 33px, 33px).",
+   "fix": "Cards that share a row share a bottom edge: balance them by their content (the same number of rows, a block of similar height beside it), or stack them. In testing, ragged rows were marked down every time.",
+   "alsoAt": [
+    768
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "tiny-text",
+   "width": 390,
+   "message": "51% of the text is under 13px.",
+   "fix": "Data and labels read at 13–14px; keep 11–12px for sublines and axis ticks."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after/desktop-fold.jpg",
+   "pages": [
+    "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after/desktop-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after/tablet-fold.jpg",
+   "pages": [
+    "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after/tablet-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after/mobile-fold.jpg",
+   "pages": [
+    "/home/rafaelamaral/Documents/projects/timeline_project/.taste-skill/after/mobile-page-01.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

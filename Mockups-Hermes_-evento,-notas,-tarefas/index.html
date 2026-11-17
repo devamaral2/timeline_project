@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hermes · novos detalhes de evento, nota e tarefa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..500;1,6..72,400..500&amp;family=Figtree:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<style>
+/* OD-LAYOUT-PRIMITIVES v1 — structure only: display, flex/grid, overflow, wrapping, ratio, geometry.
+   Put this @layer first; product CSS outside the layer wins ordinary layout rules.
+   Native hidden and closed-dialog states take precedence over component display rules. */
+@layer od-layout {
+  [hidden]:not([hidden="until-found" i]) { display: none !important; }
+  dialog:not([open]) { display: none !important; }
+
+  :where(.od-stack,.od-row,.od-row-top,.od-cluster,.od-grid,.od-field,.od-stat,.od-cell,.od-tile) > :where(*) { min-width: 0; }
+
+  /* containers */
+  .od-stack   { display: flex; flex-direction: column; gap: var(--od-gap, 8px); }
+  .od-row     { display: flex; align-items: center; gap: var(--od-gap, 8px); }
+  .od-row-top { display: flex; align-items: flex-start; gap: var(--od-gap, 8px); }
+  .od-cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--od-gap, 8px); }
+  .od-fill    { flex: 1 1 0; min-width: 0; }
+  .od-fixed   { flex: none; }
+  .od-grid    { display: grid; gap: var(--od-gap, 12px); grid-template-columns: repeat(var(--od-cols, 3), minmax(0, 1fr)); }
+
+  /* stacked information: each piece is its own line — never sibling inline spans */
+  .od-stat, .od-field, .od-cell { display: grid; gap: var(--od-gap, 2px); }
+  :where(.od-stat,.od-field,.od-cell) > :where(*) { display: block; }
+  .od-tile { display: grid; grid-template-rows: auto 1fr; }
+  :where(.od-tile) > :where(*) { display: block; }
+
+  /* media keeps its intrinsic ratio by default; never a distorted or cropped
+     cover by accident. height:auto lets the ratio win over an <img height="…">
+     attribute. Cropping to a uniform box is an explicit opt-in: set --od-ratio
+     AND add .od-media-cover together (per the core rule, only where a crop is
+     deliberate — tile thumbs, decorative fills — never on full-frame content). */
+  .od-media { display: block; width: 100%; height: auto; aspect-ratio: var(--od-ratio, auto); }
+  .od-media-cover { object-fit: cover; }
+
+  /* functional inline SVG icons opt into bounded geometry; content SVGs keep their own */
+  .od-icon { display: inline-block; inline-size: var(--od-icon-size, 1em); block-size: var(--od-icon-size, 1em); flex: none; }
+
+  /* data text only — authored copy is rewritten to its budget instead */
+  .od-truncate { display: block; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .od-clamp-2, .od-clamp-3 { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  .od-clamp-2 { -webkit-line-clamp: 2; }
+  .od-clamp-3 { -webkit-line-clamp: 3; }
+  .od-lines-2 { min-height: calc(2 * 1.4em); }   /* block-level reservation for a shared baseline */
+  .od-nowrap  { white-space: nowrap; }           /* 数字+单位 · 价格+起 · 日期+星期 */
+  .od-keep    { word-break: keep-all; overflow-wrap: anywhere; } /* CJK labels break at spaces / <wbr> first */
+
+  /* screen skeleton (optional): bars take their own space, the middle scrolls — no padding guessed for chrome */
+  .od-screen { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; }
+  .od-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+
+  /* horizontal rail: the next item peeks at the edge; trailing room survives overflow */
+  .od-rail { display: flex; gap: var(--od-gap, 8px); overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+             padding-inline: var(--od-rail-pad, 16px); scroll-padding-inline: var(--od-rail-pad, 16px); }
+  .od-rail::-webkit-scrollbar { display: none; }
+  :where(.od-rail) > :where(*) { flex: none; scroll-snap-align: start; }
+  :where(.od-rail) > :where(:last-child) { margin-inline-end: var(--od-rail-pad, 16px); }
+
+  .od-spacer { flex: none; visibility: hidden; pointer-events: none; }
+  .od-touch  { min-width: 44px; min-height: 44px; }
+}
+:root [hidden]:where(:not([hidden="until-found" i])) { display: none; }
+/* /OD-LAYOUT-PRIMITIVES v1 */
+
+
+    /* Native hidden remains authoritative over component flex/grid styles. */
+    [hidden]:not([hidden="until-found" i]) { display: none !important; }
+
+    :root {
+      --phone-screen-width: 390px;
+      --phone-screen-height: 844px;
+      --phone-bezel: 10px;
+      --phone-outer-radius: 52px;
+      --phone-screen-radius: 42px;
+      --phone-safe-top: 50px;
+      --phone-safe-bottom: 29px;
+      --phone-system-fg: #EAF2F3;
+      --phone-screen-bg: #141F29;
+      --phone-stage-bg: #eaebee;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+      background:
+        radial-gradient(circle at 50% 15%, rgba(255,255,255,.94), transparent 35%),
+        var(--phone-stage-bg, #eaebee);
+      color: #191a1d;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .phone-frame {
+      position: relative;
+      width: calc(var(--phone-screen-width, 390px) + var(--phone-bezel, 10px) * 2);
+      height: calc(var(--phone-screen-height, 844px) + var(--phone-bezel, 10px) * 2);
+      padding: var(--phone-bezel, 10px);
+      border-radius: var(--phone-outer-radius, 52px);
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.2), transparent 17%),
+        linear-gradient(160deg, #3f4146 0%, #202227 48%, #0b0c0f 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.13),
+        inset 0 0 0 2px rgba(0,0,0,.85),
+        0 32px 68px -20px rgba(10,12,16,.52),
+        0 10px 24px -10px rgba(10,12,16,.32);
+      isolation: isolate;
+    }
+
+    .phone-frame::before,
+    .phone-frame::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      top: 96px;
+      bottom: 96px;
+      width: 2px;
+      background: linear-gradient(to bottom, transparent, rgba(255,255,255,.13) 16%, transparent 30%, transparent 72%, rgba(255,255,255,.07) 88%, transparent);
+    }
+    .phone-frame::before { left: 0; }
+    .phone-frame::after { right: 0; }
+
+    .hardware-button {
+      position: absolute;
+      width: 4px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #08090b, #2a2d33 60%, #08090b);
+      box-shadow: inset 0 1px rgba(255,255,255,.08);
+    }
+    .hardware-button.volume { left: -3px; top: 222px; height: 86px; }
+    .hardware-button.power { right: -3px; top: 270px; height: 82px; }
+
+    .phone-screen {
+      position: relative;
+      width: var(--phone-screen-width, 390px);
+      height: var(--phone-screen-height, 844px);
+      overflow: hidden;
+      border-radius: var(--phone-screen-radius, 42px);
+      background: var(--phone-screen-bg, #f8f8f9);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+
+    .phone-content {
+      position: absolute;
+      inset: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-top: var(--phone-safe-top, 50px);
+      padding-bottom: var(--phone-safe-bottom, 29px);
+      background: var(--phone-screen-bg, #f8f8f9);
+    }
+    .phone-content::-webkit-scrollbar { display: none; }
+
+    .camera-dot {
+      position: absolute;
+      z-index: 20;
+      top: 13px;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%, #344154 0 12%, #0a0c10 34%, #000 76%);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.06);
+      pointer-events: none;
+    }
+
+    .status-bar {
+      position: absolute;
+      z-index: 15;
+      inset: 0 0 auto;
+      height: var(--phone-safe-top, 50px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 56px minmax(0, 1fr);
+      align-items: start;
+      padding: 14px 20px 0;
+      color: var(--phone-system-fg, #17181a);
+      opacity: .8;
+      pointer-events: none;
+    }
+    .status-time {
+      justify-self: start;
+      display: flex;
+      align-items: center;
+      height: 15px;
+      font-size: 14px;
+      font-weight: 560;
+      line-height: 1;
+      letter-spacing: .01em;
+    }
+    .status-cutout-zone { width: 56px; }
+    .status-icons {
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      height: 15px;
+      gap: 6px;
+    }
+    .status-icons svg {
+      display: block;
+      flex: none;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.35;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .status-icons .connectivity { width: 15px; height: 12px; }
+    .status-icons .wifi { width: 15px; height: 12px; }
+    .status-icons .battery { width: 19px; height: 11px; }
+
+    .gesture-indicator {
+      position: absolute;
+      z-index: 20;
+      left: 50%;
+      bottom: 8px;
+      width: 96px;
+      height: 4px;
+      transform: translateX(-50%);
+      border-radius: 99px;
+      background: var(--phone-system-fg, #17181a);
+      opacity: .86;
+      pointer-events: none;
+    }
+
+
+    /* Presentation scaling: keep the whole handset visible on short viewports. */
+    @media (max-height: 927px) { .phone-frame { zoom: 0.9; } }
+    @media (max-height: 840px) { .phone-frame { zoom: 0.82; } }
+    @media (max-height: 771px) { .phone-frame { zoom: 0.74; } }
+    @media (max-height: 702px) { .phone-frame { zoom: 0.66; } }
+    /* Narrow viewports: the handset chrome collapses and the screen fills the
+       viewport, so the app behaves like a real phone page instead of
+       scrolling sideways. */
+    @media (max-width: 480px) {
+      body { padding: 0; display: block; }
+      .phone-frame { width: 100%; height: 100dvh; padding: 0; border-radius: 0; background: none; box-shadow: none; zoom: 1; }
+      .phone-frame::before, .phone-frame::after, .hardware-button { display: none; }
+      .phone-screen { width: 100%; height: 100%; border-radius: 0; }
+    }
+  
+/* ===== Product tokens (kept apart from the handset's --phone-* block) ===== */
+:root {
+  --bg: #141F29;
+  --surface: #1F2B35;
+  --line: #36414B;
+  --text: #EAF2F3;
+  --muted: #9BAFB7;
+  --accent: #4FC2AB;
+  --accent-tint: #4FC2AB24;
+  --accent-ink: #0F1A21;
+  --event: #A5CB90;
+  --task: #EDAB9D;
+  --note: #DEABD4;
+  --danger: #FF9B93;
+  --kcal: #FDA0A3;
+  --macro-p: #4FC2AB;
+  --macro-c: #BCC489;
+  --macro-g: #DEABD4;
+  --stage: #0E161D;
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s7: 28px; --s8: 32px; --s10: 40px;
+  --r-chip: 6px; --r-ctl: 12px; --r-sheet: 20px;
+  --t-fast: 160ms; --t-base: 240ms;
+
+  --font-ui: Figtree, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-serif: Newsreader, Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ===== Board (presentation of the four handsets) ===== */
+body { display: block; padding: var(--s8) var(--s6) 64px; background: var(--stage); color: var(--text); font-family: var(--font-ui); -webkit-font-smoothing: antialiased; }
+.board-head { max-width: 1760px; margin: 0 auto var(--s8); display: grid; gap: var(--s2); text-align: center; }
+.board-head h1 { margin: 0; font-family: var(--font-serif); font-weight: 400; font-size: 32px; line-height: 1.15; }
+.board-head p { margin: 0 auto; max-width: 640px; font-size: 16px; line-height: 1.5; color: var(--muted); }
+.board { max-width: 1760px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 56px var(--s8); }
+.slot { display: grid; justify-items: center; gap: var(--s4); }
+.slot-cap { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.phone-frame { transition: box-shadow var(--t-base) ease-out; }
+.phone-frame.flash { box-shadow: inset 0 0 0 1px rgba(255,255,255,.13), inset 0 0 0 2px rgba(0,0,0,.85), 0 0 0 3px var(--accent), 0 32px 68px -20px rgba(10,12,16,.52); }
+
+/* ===== Handset content ===== */
+.phone-content { background: var(--bg); color: var(--text); font-family: var(--font-ui); font-size: 16px; line-height: 1.5; }
+.phone-content :where(h1,h2,h3,p,ol,ul) { margin: 0; }
+.phone-content :where(ol,ul) { padding: 0; list-style: none; }
+.phone-content button { font: inherit; color: inherit; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.app { display: flex; flex-direction: column; gap: var(--s7); padding: var(--s2) var(--s5) var(--s10); min-height: 100%; }
+.app :focus-visible, .sheet :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-chip); }
+
+.i14 { --od-icon-size: 14px; } .i16 { --od-icon-size: 16px; } .i18 { --od-icon-size: 18px; } .i20 { --od-icon-size: 20px; } .i22 { --od-icon-size: 22px; }
+.od-icon { fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+/* top bar */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.back, .iconbtn, .textbtn { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; }
+.back { gap: var(--s2); font-size: 16px; font-weight: 500; color: var(--text); padding-right: var(--s3); }
+.iconbtn { width: 44px; border-radius: 50%; color: var(--muted); transition: background var(--t-fast) ease-out, color var(--t-fast) ease-out; }
+.textbtn { padding: 0 var(--s3); font-size: 16px; font-weight: 600; color: var(--accent); }
+.back:focus-visible, .iconbtn:focus-visible, .textbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) {
+  .iconbtn:hover { background: var(--surface); color: var(--text); }
+  .back:hover { color: var(--accent); }
+}
+
+/* title block */
+.head { display: flex; flex-direction: column; gap: var(--s3); }
+.kindrow { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.kind { display: inline-flex; align-items: center; gap: var(--s2); font-weight: 500; }
+.pill { display: inline-block; padding: 2px var(--s2); border-radius: var(--r-chip); background: var(--accent-tint); color: var(--accent); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.title { font-family: var(--font-serif); font-weight: 400; font-size: 34px; line-height: 1.1; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.title[contenteditable="true"] { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: var(--r-chip); }
+.title.done { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.crumb { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: var(--s2); min-height: 44px; margin: -6px 0; font-size: 14px; color: var(--muted); }
+.crumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.crumb-main { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.crumb-main b { font-weight: 500; }
+@media (hover: hover) { .crumb:hover { color: var(--text); } }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { padding: 2px var(--s2); border-radius: var(--r-chip); font-size: 14px; font-weight: 500; background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); }
+.stamp { font-size: 14px; color: var(--muted); }
+.rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+/* meta rows (icon + two block lines) */
+.meta { display: flex; flex-direction: column; gap: var(--s4); }
+.meta-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--s3); align-items: start; }
+.meta-row > .od-icon { margin-top: 2px; color: var(--muted); }
+.meta-main, .meta-sub { display: block; }
+.meta-main { font-size: 16px; color: var(--text); }
+.meta-sub { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* sections */
+.section { display: flex; flex-direction: column; gap: var(--s3); }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); }
+.label { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.body-copy { font-size: 16px; line-height: 1.6; color: var(--text); }
+.body-copy + .body-copy { margin-top: var(--s3); }
+.steps-list { display: flex; flex-direction: column; gap: var(--s4); counter-reset: n; }
+.steps-list li { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--s3); align-items: start; }
+.steps-list li::before { counter-increment: n; content: counter(n); display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--surface); color: var(--note); font-family: var(--font-serif); font-size: 16px; font-variant-numeric: tabular-nums; }
+.steps-list b { display: block; font-weight: 600; }
+.steps-list span { display: block; color: var(--muted); font-size: 15px; }
+
+/* linked rows */
+.linkrow { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: 24px minmax(0, 1fr) 16px; gap: var(--s3); align-items: center; min-height: 56px; padding: var(--s3) 0; border-bottom: 1px solid var(--line); width: 100%; }
+.linkrow:last-child { border-bottom: 0; }
+.linkrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.linkrow > .od-icon:first-child { color: var(--ic, var(--muted)); }
+.linkrow > .od-icon:last-child { color: var(--muted); }
+.linkrow-t, .linkrow-s { display: block; }
+.linkrow-t { font-weight: 500; }
+.linkrow-s { font-size: 14px; color: var(--muted); }
+@media (hover: hover) { .linkrow:hover .linkrow-t { color: var(--accent); } }
+
+/* checks */
+.checks { display: flex; flex-direction: column; }
+.check { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--s3); align-items: center; min-height: 48px; padding: var(--s2) 0; cursor: pointer; }
+.check input { position: absolute; inset: 0 auto 0 0; width: 44px; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.check .box { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--muted); color: transparent; transition: background var(--t-fast) ease-out, border-color var(--t-fast) ease-out; }
+.check input:checked + .box { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.check input:focus-visible + .box { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check .txt { display: block; transition: color var(--t-fast) ease-out; }
+.check input:checked ~ .txt { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* Hermes origin */
+.origin { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.origin-head { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; min-height: 64px; padding: var(--s3) 0; display: grid; grid-template-columns: 36px minmax(0, 1fr) 20px; gap: var(--s3); align-items: center; }
+.origin-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.origin-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent-tint); color: var(--accent); }
+.origin-title, .origin-sub { display: block; }
+.origin-title { font-weight: 600; }
+.origin-sub { font-size: 14px; color: var(--muted); }
+.origin-chev { color: var(--muted); transition: transform var(--t-fast) ease-out; }
+.origin-head[aria-expanded="true"] .origin-chev { transform: rotate(180deg); }
+.origin-body { padding: 0 0 var(--s4); display: flex; flex-direction: column; gap: var(--s4); }
+.quote { font-family: var(--font-serif); font-style: italic; font-size: 18px; line-height: 1.4; color: var(--text); }
+.hsteps { display: flex; flex-direction: column; gap: var(--s3); }
+.hstep { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: var(--s3); align-items: start; font-size: 14px; }
+.hstep > .od-icon { margin-top: 2px; color: var(--muted); }
+.hstep-t { display: block; color: var(--text); }
+.hstep-m { display: block; color: var(--muted); font-family: var(--font-mono); font-size: 12.5px; }
+.hstep-d { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hkey { font-size: 14px; color: var(--muted); }
+.hkey code { font-family: var(--font-mono); font-size: 12.5px; color: var(--text); overflow-wrap: anywhere; }
+
+/* buttons */
+.btn { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px; padding: 0 var(--s5); border-radius: var(--r-ctl); font-size: 16px; font-weight: 600; white-space: nowrap; transition: background var(--t-fast) ease-out, color var(--t-fast) ease-out, border-color var(--t-fast) ease-out; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-ghost { border: 1px solid var(--line); color: var(--text); background: transparent; }
+.btn-danger { border: 1px solid var(--danger); color: var(--danger); background: transparent; }
+.btn-block { width: 100%; }
+@media (hover: hover) {
+  .btn-primary:hover { background: #6AD2BC; color: var(--accent-ink); }
+  .btn-ghost:hover { border-color: var(--muted); background: var(--surface); }
+  .btn-danger:hover { background: #FF9B9322; }
+}
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* meal note */
+.kcal { display: grid; gap: var(--s1); }
+.kcal-v { display: inline-flex; align-items: baseline; gap: var(--s1); font-family: var(--font-serif); font-size: clamp(40px, 12vw, 52px); line-height: 1; color: var(--kcal); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kcal-v small { font-family: var(--font-ui); font-size: 14px; font-weight: 500; color: var(--muted); }
+.note-hint { font-size: 14px; color: var(--muted); }
+.macrobar { display: flex; height: 8px; gap: 2px; border-radius: 4px; overflow: hidden; }
+.macrobar > i { display: block; background: var(--c); }
+.macros { --od-cols: 3; --od-gap: var(--s3); }
+.macro { display: grid; gap: 2px; }
+.macro-n { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.macro-n i { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.macro-v { display: block; font-family: var(--font-serif); font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.macro-v small { font-family: var(--font-ui); font-size: 14px; color: var(--muted); margin-left: 2px; }
+.foods { display: flex; flex-direction: column; }
+.food { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s3); align-items: center; min-height: 56px; padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.food:last-child { border-bottom: 0; }
+.food-n, .food-q { display: block; }
+.food-q { font-size: 14px; color: var(--muted); }
+.food-k { font-size: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.food-k small { font-size: 14px; color: var(--muted); margin-left: 2px; }
+
+/* deleted state */
+.empty { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s3); padding-top: var(--s10); }
+.empty .od-icon { color: var(--muted); }
+.empty h2 { font-family: var(--font-serif); font-weight: 400; font-size: 28px; line-height: 1.15; }
+.empty p { color: var(--muted); max-width: 30ch; }
+.empty .btn { margin-top: var(--s2); }
+
+/* sheet, scrim, toast (mounted inside the handset screen) */
+.scrim { position: absolute; inset: 0; z-index: 30; background: rgba(8,13,18,.64); animation: fade var(--t-base) ease-out; }
+.scrim.closing { opacity: 0; transition: opacity 160ms ease-in; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 31; background: var(--surface); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: var(--s3) var(--s5) calc(var(--phone-safe-bottom, 29px) + var(--s4)); display: flex; flex-direction: column; gap: var(--s2); animation: rise var(--t-base) ease-out; }
+.sheet.closing { transform: translateY(24px); opacity: 0; transition: transform 160ms ease-in, opacity 160ms ease-in; }
+.sheet-grip { align-self: center; width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin-bottom: var(--s2); }
+.sheet-title { font-family: var(--font-serif); font-size: 24px; line-height: 1.2; }
+.sheet-text { color: var(--muted); font-size: 15px; margin-bottom: var(--s2); }
+.sheet-item { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: 0 var(--s2); border-radius: var(--r-ctl); font-size: 16px; font-weight: 500; }
+.sheet-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+.sheet-item.danger { color: var(--danger); }
+@media (hover: hover) { .sheet-item:hover { background: var(--bg); } }
+.sheet-actions { display: grid; gap: var(--s2); margin-top: var(--s2); }
+.toast { position: absolute; left: var(--s5); right: var(--s5); bottom: calc(var(--phone-safe-bottom, 29px) + var(--s4)); z-index: 40; padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--text); color: var(--bg); font-size: 15px; font-weight: 500; animation: rise var(--t-base) ease-out; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rise { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}
+
+/* Phone-sized viewport: the handset collapses and each screen fills the viewport. */
+@media (max-width: 480px) {
+  body { padding: 0; }
+  .board-head { padding: var(--s6) var(--s5) var(--s4); text-align: left; }
+  .board { gap: 0; }
+  .slot { gap: 0; width: 100%; }
+  .slot-cap { padding: var(--s4) var(--s5); width: 100%; background: var(--stage); }
+}
+
+/* task header: status trigger + priority (as in the app) */
+.statusrow { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.stbtn { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; margin: -10px 0; color: var(--muted); }
+.stbtn > [data-status-icon] { color: var(--sc, var(--muted)); }
+.stbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-chip); }
+.stbtn-l { display: block; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text); }
+.prio { display: inline-flex; align-items: center; gap: var(--s2); font-size: 14px; color: var(--muted); }
+.prio-i { width: 16px; height: 16px; flex: none; color: var(--text); }
+.datelines { display: flex; flex-direction: column; gap: 2px; margin-top: var(--s1); }
+.datelines p { font-size: 14px; line-height: 1.5; color: var(--muted); font-variant-numeric: tabular-nums; }
+.meta.tight { gap: var(--s3); }
+.meta.tight .meta-row { grid-template-columns: 18px minmax(0, 1fr); }
+.meta.tight .meta-row > .od-icon { margin-top: 1px; }
+.meta.tight .meta-main { font-size: 15px; line-height: 1.45; }
+.cardlist { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: var(--s1) var(--s4); }
+
+/* status picker pane */
+.pick-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin: calc(var(--s1) * -1) calc(var(--s2) * -1) var(--s1) 0; }
+.pick { display: flex; flex-direction: column; }
+.pick li + li { border-top: 1px solid var(--line); }
+.opt { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; min-height: 60px; padding: var(--s2) 0; display: grid; grid-template-columns: 24px minmax(0, 1fr) 18px; gap: var(--s3); align-items: center; }
+.opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; border-radius: var(--r-chip); }
+.opt-i { display: grid; place-items: center; color: var(--sc); }
+.opt-t b, .opt-t small { display: block; }
+.opt-t b { font-size: 16px; font-weight: 600; }
+.opt-t small { font-size: 14px; color: var(--muted); }
+.opt-c { color: var(--accent); visibility: hidden; display: grid; }
+.opt[aria-current="true"] .opt-c { visibility: visible; }
+@media (hover: hover) { .opt:hover .opt-t b { color: var(--accent); } }
+
+/* Vínculos: one sequential list; task rows carry their own status control */
+.taskrow { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: var(--s3); align-items: center; min-height: 56px; border-bottom: 1px solid var(--line); }
+.taskrow:last-child { border-bottom: 0; }
+.st-mini { all: unset; box-sizing: border-box; cursor: pointer; width: 44px; height: 44px; margin: -10px; display: grid; place-items: center; color: var(--sc, var(--muted)); border-radius: 50%; transition: background var(--t-fast) ease-out; }
+.st-mini:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+@media (hover: hover) { .st-mini:hover { background: var(--bg); } }
+.linkmain { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) 16px; gap: var(--s3); align-items: center; min-height: 56px; padding: var(--s3) 0; color: var(--text); }
+.linkmain:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.linkmain > .od-icon { color: var(--muted); }
+@media (hover: hover) { .linkmain:hover .linkrow-t { color: var(--accent); } }
+
+/* priority trigger (same pattern as the status trigger) */
+.prio-btn { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: var(--s2); min-height: 44px; margin: -10px 0; font-size: 14px; color: var(--muted); }
+.prio-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-chip); }
+.prio-i-l { width: 20px; height: 20px; }
+@media (hover: hover) { .prio-btn:hover { color: var(--text); } }
+
+/* bottom chat bar: the place where texts are edited, by talking to the AI */
+.phone-content { padding-bottom: calc(var(--phone-safe-bottom, 29px) + 76px); }
+.chatbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4) calc(var(--phone-safe-bottom, 29px) + var(--s2)); background: var(--bg); border-top: 1px solid var(--line); }
+.chat-field { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: var(--s2); min-height: 48px; padding: 0 var(--s4); border-radius: 24px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); transition: box-shadow var(--t-fast) ease-out; }
+.chat-field:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
+.chat-ico { display: inline-flex; flex: none; color: var(--accent); }
+.chat-input { all: unset; box-sizing: border-box; flex: 1 1 0; min-width: 0; min-height: 44px; font-size: 16px; color: var(--text); }
+.chat-input::placeholder { color: var(--muted); opacity: 1; }
+.chat-send { all: unset; box-sizing: border-box; cursor: pointer; flex: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--accent-ink); transition: background var(--t-fast) ease-out; }
+.chat-send:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chat-send[disabled] { opacity: .5; cursor: not-allowed; }
+@media (hover: hover) { .chat-send:not([disabled]):hover { background: #6AD2BC; } }
+.chat-panel { position: absolute; left: var(--s3); right: var(--s3); bottom: calc(var(--phone-safe-bottom, 29px) + 72px); z-index: 25; display: flex; flex-direction: column; gap: var(--s2); padding: var(--s4); padding-right: 52px; border-radius: 16px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line), 0 12px 32px rgba(0,0,0,.45); animation: rise var(--t-base) ease-out; }
+.chat-x { all: unset; box-sizing: border-box; cursor: pointer; position: absolute; top: 2px; right: 2px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); }
+.chat-x:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.chat-said { font-size: 16px; line-height: 1.45; color: var(--text); overflow-wrap: anywhere; }
+.chat-step { display: flex; align-items: center; gap: var(--s2); font-size: 14px; color: var(--muted); }
+.chat-panel[data-state="working"] .chat-ico { animation: pulse 1s ease-in-out infinite; }
+.chat-result { font-size: 14px; line-height: 1.45; color: var(--muted); }
+@keyframes pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.toast { bottom: calc(var(--phone-safe-bottom, 29px) + 76px); }
+.sheet { z-index: 31; }
+
+/* voice conversation with the AI */
+.chat-field { padding: 0 var(--s5); }
+.chat-voice { all: unset; box-sizing: border-box; cursor: pointer; flex: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: var(--surface); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); transition: background var(--t-fast) ease-out, color var(--t-fast) ease-out; }
+.chat-voice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chat-voice[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+@media (hover: hover) { .chat-voice[aria-pressed="false"]:hover { background: var(--bg); color: var(--accent); } }
+.chat-wave { display: none; align-items: center; gap: 3px; height: 16px; }
+.chat-wave i { display: block; width: 3px; height: 100%; border-radius: 2px; background: var(--accent); transform: scaleY(.3); }
+.chat-panel[data-state="listening"] .chat-wave { display: inline-flex; }
+.chat-panel[data-state="listening"] .chat-ico { display: none; }
+.chat-panel[data-state="listening"] .chat-wave i { animation: wave 900ms ease-in-out infinite; }
+.chat-panel[data-state="listening"] .chat-wave i:nth-child(2) { animation-delay: 120ms; }
+.chat-panel[data-state="listening"] .chat-wave i:nth-child(3) { animation-delay: 240ms; }
+.chat-panel[data-state="listening"] .chat-wave i:nth-child(4) { animation-delay: 360ms; }
+.chat-panel[data-state="listening"] .chat-wave i:nth-child(5) { animation-delay: 480ms; }
+.chat-panel[data-state="listening"] .chat-said { display: none; }
+.chat-stop { all: unset; box-sizing: border-box; cursor: pointer; align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--s4); border-radius: var(--r-ctl); border: 1px solid var(--line); font-size: 15px; font-weight: 600; color: var(--text); }
+.chat-stop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) { .chat-stop:hover { border-color: var(--muted); background: var(--bg); } }
+@keyframes wave { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+
+/* Vínculos: typed groups (notes, tasks, events), at most 3 each */
+.links { gap: var(--s5); }
+.linkgroup { display: flex; flex-direction: column; gap: var(--s2); }
+.linkgroup-h { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); margin: 0; font-size: 14px; font-weight: 600; color: var(--text); }
+.linkgroup-h .count { font-weight: 400; }
+
+</style>
+</head>
+<body>
+<header class="board-head">
+<h1>Criado pelo Hermes</h1>
+<p>Detalhe de um evento, uma nota, uma tarefa e uma nota de refeição novos, no tema Noite do Timeline. Toque em “Criado pelo Hermes” para ver os passos.</p>
+</header>
+<div class="board">
+<div class="slot"><p class="slot-cap">1 · Evento</p>
+<div class="phone-frame" data-phone-shell data-platform="neutral" data-app="event">
+<span class="hardware-button volume" aria-hidden="true"></span><span class="hardware-button power" aria-hidden="true"></span>
+<section class="phone-screen" data-phone-screen>
+<main class="phone-content" data-phone-content>
+<!-- APP CONTENT START -->
+<div data-view="content"><div class="app"><nav class="topbar" aria-label="Navegação"><button type="button" class="back" data-toast-btn="Aqui você voltaria para a Agenda."><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Agenda</button><button type="button" class="iconbtn" data-more aria-label="Mais ações: excluir"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></nav>
+<header class="head">
+<div class="kindrow"><span class="kind" style="color:var(--event)"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>Evento · Planejamento</span></div>
+<h1 class="title" data-title>Revisão semanal</h1>
+<div class="tags"><span class="tag" style="--c:#BCC489">#planejamento</span><span class="tag" style="--c:#DEABD4">#rotina</span></div>
+</header>
+<div class="meta"><div class="meta-row"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><div><span class="meta-main">Hoje, domingo, 8 de novembro</span><span class="meta-sub">18:00 → 18:45 · 45 min</span></div></div><div class="meta-row"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg><div><span class="meta-main">Repete todo domingo</span></div></div><div class="meta-row"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><div><span class="meta-main">Casa</span></div></div><div class="meta-row"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><div><span class="meta-main">15 minutos antes</span></div></div></div>
+<section class="section links" aria-labelledby="ev-links"><h2 class="label" id="ev-links">Vínculos</h2><div class="linkgroup" role="group" aria-labelledby="ev-links-notes"><h3 class="linkgroup-h" id="ev-links-notes">Notas vinculadas<span class="count">1</span></h3><div class="cardlist"><button type="button" class="linkrow" data-goto="note" style="--ic:var(--note)"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span><span class="linkrow-t">Pauta da revisão semanal</span><span class="linkrow-s">Nota · agenda, pendências e refeições</span></span><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></div><div class="linkgroup" role="group" aria-labelledby="ev-links-tasks"><h3 class="linkgroup-h" id="ev-links-tasks">Tarefas vinculadas<span class="count">3</span></h3><div class="cardlist"><div class="taskrow"><button type="button" class="st-mini" data-status-open data-task="mover" data-status="todo" data-for="Mover as tarefas atrasadas para esta semana" data-icon-size="20" aria-haspopup="dialog" aria-label="Status: A fazer. Trocar status de Mover as tarefas atrasadas para esta semana" style="--sc:#9BAFB7"><span data-status-icon style="display:inline-flex"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></span></button><button type="button" class="linkmain" data-toast-btn="Aqui abriria a tarefa “Mover as tarefas atrasadas para esta semana”."><span><span class="linkrow-t">Mover as tarefas atrasadas para esta semana</span><span class="linkrow-s">Tarefa · hoje, sem horário</span></span><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div><div class="taskrow"><button type="button" class="st-mini" data-status-open data-task="revisar" data-status="todo" data-for="Revisar os eventos da próxima semana" data-icon-size="20" aria-haspopup="dialog" aria-label="Status: A fazer. Trocar status de Revisar os eventos da próxima semana" style="--sc:#9BAFB7"><span data-status-icon style="display:inline-flex"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></span></button><button type="button" class="linkmain" data-toast-btn="Aqui abriria a tarefa “Revisar os eventos da próxima semana”."><span><span class="linkrow-t">Revisar os eventos da próxima semana</span><span class="linkrow-s">Tarefa · hoje, 17:30</span></span><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div><div class="taskrow"><button type="button" class="st-mini" data-status-open data-task="compras" data-status="todo" data-for="Fazer a lista de compras da semana" data-icon-size="20" aria-haspopup="dialog" aria-label="Status: A fazer. Trocar status de Fazer a lista de compras da semana" style="--sc:#9BAFB7"><span data-status-icon style="display:inline-flex"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></span></button><button type="button" class="linkmain" data-goto="task"><span><span class="linkrow-t">Fazer a lista de compras da semana</span><span class="linkrow-s">Tarefa · segunda, 9 de novembro</span></span><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></div></div></section>
+<section class="origin" aria-label="Origem">
+<button type="button" class="origin-head" data-origin-toggle aria-expanded="false" aria-controls="steps-event">
+<span class="origin-icon"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span>
+<span><span class="origin-title">Criado pelo Hermes</span><span class="origin-sub">Automação · resumo semanal · hoje, 07:00</span></span>
+<span class="origin-chev"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button>
+<div class="origin-body" id="steps-event" hidden><ol class="hsteps" aria-label="Passos do Hermes"><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span><span class="hstep-t">Consultou os eventos de domingo</span><span class="hstep-m">list_timeline_events</span></span><span class="hstep-d">0,4 s<span class="sr"> · concluído</span></span></li><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span><span class="hstep-t">Criou o evento Revisão semanal</span><span class="hstep-m">create_event</span></span><span class="hstep-d">0,7 s<span class="sr"> · concluído</span></span></li><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span><span class="hstep-t">Criou a nota Pauta da revisão semanal</span><span class="hstep-m">create_note</span></span><span class="hstep-d">0,6 s<span class="sr"> · concluído</span></span></li></ol><p class="hkey">Chave de idempotência · <code>revisao-semanal:2026-11-08</code></p></div></section>
+</div></div>
+<div data-view="deleted" hidden><div class="app"><div class="empty"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg><h2>Evento excluído</h2><p>A revisão semanal saiu da sua agenda. As notas e tarefas vinculadas continuam salvas.</p><button type="button" class="btn btn-ghost" data-undo><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>Desfazer exclusão</button></div></div></div>
+<!-- APP CONTENT END -->
+</main>
+<div class="chat-panel" data-chat-panel data-state="done" role="region" aria-label="Conversa com o Hermes" hidden><button type="button" class="chat-x" data-chat-dismiss aria-label="Fechar conversa"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button><p class="chat-said" data-chat-said></p><p class="chat-step" data-chat-step><span class="chat-ico"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span><span class="chat-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span data-chat-step-text></span></p><button type="button" class="chat-stop" data-voice-stop hidden>Parar e enviar</button><p class="chat-result" data-chat-result hidden>Prévia: neste mockup o texto da tela não muda. No app, o Hermes aplicaria a edição e mostraria os passos.</p></div><div class="chatbar" data-chatbar><label class="sr" for="chat-event">Conversar com o Hermes</label><span class="chat-field"><input id="chat-event" class="chat-input" data-chat-input type="text" autocomplete="off" placeholder="Peça ao Hermes para editar este evento"></span><button type="button" class="chat-voice" data-chat-voice aria-pressed="false" aria-label="Falar com o Hermes por voz"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></svg></button><button type="button" class="chat-send" data-chat-send aria-label="Enviar ao Hermes" hidden><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button></div>
+<div class="scrim" data-scrim hidden></div>
+<div class="sheet" data-sheet role="dialog" aria-modal="true" aria-label="Ações" hidden>
+<span class="sheet-grip" aria-hidden="true"></span>
+<div data-pane="menu">
+<button type="button" class="sheet-item danger" data-ask-delete><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>Excluir evento</button>
+</div>
+<div data-pane="status" hidden><div class="pick-head"><h2 class="sheet-title">Status</h2><button type="button" class="iconbtn" data-close aria-label="Fechar"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div><ul class="pick" aria-label="Status"><li><button type="button" class="opt" data-status-pick="todo" data-label="A fazer" style="--sc:#9BAFB7"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></span><span class="opt-t"><b>A fazer</b><small>Pode ter um dia, sem horário</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="scheduled" data-label="Agendada" style="--sc:#EAF2F3"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg></span><span class="opt-t"><b>Agendada</b><small>Tem dia e horário</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="tbd" data-label="A definir" style="--sc:#9BAFB7"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="2.4 2.31"/></svg></span><span class="opt-t"><b>A definir</b><small>Ainda sem data</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="hold" data-label="Em espera" style="--sc:#E2B57C"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 9v6"/><path d="M14 9v6"/></svg></span><span class="opt-t"><b>Em espera</b><small>Parada, esperando algo</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="done" data-label="Concluída" style="--sc:#80D58D"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.2 2.4 2.4 4.6-4.9"/></svg></span><span class="opt-t"><b>Concluída</b><small>Feita</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="canceled" data-label="Cancelada" style="--sc:#FDA0A3"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 15 6-6"/></svg></span><span class="opt-t"><b>Cancelada</b><small>Não vai mais acontecer</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li></ul></div>
+<div data-pane="confirm" hidden>
+<h2 class="sheet-title">Excluir este evento?</h2>
+<p class="sheet-text">A exclusão tira o evento do Timeline. Logo depois, você ainda poderá desfazer.</p>
+<div class="sheet-actions"><button type="button" class="btn btn-danger btn-block" data-delete>Excluir</button><button type="button" class="btn btn-ghost btn-block" data-close>Cancelar</button></div>
+</div>
+</div>
+<div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+<div class="status-bar" aria-hidden="true"><span class="status-time">13:20</span><span class="status-cutout-zone"></span><span class="status-icons"><svg class="connectivity" viewBox="0 0 15 12"><path d="M1.5 10.5v-2m4 2v-4.5m4 4.5v-7m4 7v-9"/></svg><svg class="wifi" viewBox="0 0 16 12"><path d="M1.5 4.7a9.2 9.2 0 0 1 13 0M4.2 7.3a5.4 5.4 0 0 1 7.6 0M6.9 10a1.55 1.55 0 0 1 2.2 0"/></svg><svg class="battery" viewBox="0 0 20 11"><rect x=".75" y="1.25" width="16.5" height="8.5" rx="2"/><path d="M18.5 4v3M3.2 3.4h10.4v4.2H3.2z" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="camera-dot" aria-hidden="true"></div><div class="gesture-indicator" aria-hidden="true"></div>
+</section></div></div>
+<div class="slot"><p class="slot-cap">2 · Nota</p>
+<div class="phone-frame" data-phone-shell data-platform="neutral" data-app="note">
+<span class="hardware-button volume" aria-hidden="true"></span><span class="hardware-button power" aria-hidden="true"></span>
+<section class="phone-screen" data-phone-screen>
+<main class="phone-content" data-phone-content>
+<!-- APP CONTENT START -->
+<div data-view="content"><div class="app"><nav class="topbar" aria-label="Navegação"><button type="button" class="back" data-toast-btn="Aqui você voltaria para as Notas."><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Notas</button><button type="button" class="iconbtn" data-more aria-label="Mais ações: excluir"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></nav>
+<header class="head">
+<h1 class="title" data-title>Pauta da revisão semanal</h1>
+<div class="tags"><span class="tag" style="--c:#BCC489">#planejamento</span><span class="tag" style="--c:#DEABD4">#rotina</span></div>
+<p class="stamp">Criada hoje, 07:00</p>
+</header>
+<hr class="rule">
+<section class="section" aria-label="Conteúdo da nota"><ol class="steps-list">
+<li><div><b>Agenda da semana</b><span>Conferir os eventos de segunda a sexta e ajustar os conflitos de horário.</span></div></li>
+<li><div><b>Pendências</b><span>Trazer para esta semana as tarefas que ficaram atrasadas.</span></div></li>
+<li><div><b>Refeições</b><span>Decidir os almoços de segunda a quarta e fechar a lista de compras.</span></div></li></ol></section>
+<section class="section links" aria-labelledby="nt-links"><h2 class="label" id="nt-links">Vínculos</h2><div class="linkgroup" role="group" aria-labelledby="nt-links-tasks"><h3 class="linkgroup-h" id="nt-links-tasks">Tarefas vinculadas<span class="count">1</span></h3><div class="cardlist"><div class="taskrow"><button type="button" class="st-mini" data-status-open data-task="compras" data-status="todo" data-for="Fazer a lista de compras da semana" data-icon-size="20" aria-haspopup="dialog" aria-label="Status: A fazer. Trocar status de Fazer a lista de compras da semana" style="--sc:#9BAFB7"><span data-status-icon style="display:inline-flex"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></span></button><button type="button" class="linkmain" data-goto="task"><span><span class="linkrow-t">Fazer a lista de compras da semana</span><span class="linkrow-s">Tarefa · segunda, 9 de novembro</span></span><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></div></div><div class="linkgroup" role="group" aria-labelledby="nt-links-events"><h3 class="linkgroup-h" id="nt-links-events">Eventos vinculados<span class="count">1</span></h3><div class="cardlist"><button type="button" class="linkrow" data-goto="event" style="--ic:var(--event)"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg><span><span class="linkrow-t">Revisão semanal</span><span class="linkrow-s">Evento · hoje, 18:00</span></span><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></div></section>
+<section class="origin" aria-label="Origem">
+<button type="button" class="origin-head" data-origin-toggle aria-expanded="false" aria-controls="steps-note">
+<span class="origin-icon"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span>
+<span><span class="origin-title">Criada pelo Hermes</span><span class="origin-sub">Automação · resumo semanal · hoje, 07:00</span></span>
+<span class="origin-chev"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button>
+<div class="origin-body" id="steps-note" hidden><ol class="hsteps" aria-label="Passos do Hermes"><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span><span class="hstep-t">Leu o evento Revisão semanal</span><span class="hstep-m">get_event</span></span><span class="hstep-d">0,3 s<span class="sr"> · concluído</span></span></li><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span><span class="hstep-t">Criou a nota com a pauta</span><span class="hstep-m">create_note</span></span><span class="hstep-d">0,6 s<span class="sr"> · concluído</span></span></li></ol><p class="hkey">Chave de idempotência · <code>revisao-semanal:2026-11-08:pauta</code></p></div></section>
+</div></div>
+<div data-view="deleted" hidden><div class="app"><div class="empty"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg><h2>Nota excluída</h2><p>A pauta da revisão semanal foi removida. O evento vinculado continua na agenda.</p><button type="button" class="btn btn-ghost" data-undo><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>Desfazer exclusão</button></div></div></div>
+<!-- APP CONTENT END -->
+</main>
+<div class="chat-panel" data-chat-panel data-state="done" role="region" aria-label="Conversa com o Hermes" hidden><button type="button" class="chat-x" data-chat-dismiss aria-label="Fechar conversa"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button><p class="chat-said" data-chat-said></p><p class="chat-step" data-chat-step><span class="chat-ico"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span><span class="chat-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span data-chat-step-text></span></p><button type="button" class="chat-stop" data-voice-stop hidden>Parar e enviar</button><p class="chat-result" data-chat-result hidden>Prévia: neste mockup o texto da tela não muda. No app, o Hermes aplicaria a edição e mostraria os passos.</p></div><div class="chatbar" data-chatbar><label class="sr" for="chat-note">Conversar com o Hermes</label><span class="chat-field"><input id="chat-note" class="chat-input" data-chat-input type="text" autocomplete="off" placeholder="Peça ao Hermes para editar esta nota"></span><button type="button" class="chat-voice" data-chat-voice aria-pressed="false" aria-label="Falar com o Hermes por voz"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></svg></button><button type="button" class="chat-send" data-chat-send aria-label="Enviar ao Hermes" hidden><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button></div>
+<div class="scrim" data-scrim hidden></div>
+<div class="sheet" data-sheet role="dialog" aria-modal="true" aria-label="Ações" hidden>
+<span class="sheet-grip" aria-hidden="true"></span>
+<div data-pane="menu">
+<button type="button" class="sheet-item danger" data-ask-delete><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>Excluir nota</button>
+</div>
+<div data-pane="status" hidden><div class="pick-head"><h2 class="sheet-title">Status</h2><button type="button" class="iconbtn" data-close aria-label="Fechar"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div><ul class="pick" aria-label="Status"><li><button type="button" class="opt" data-status-pick="todo" data-label="A fazer" style="--sc:#9BAFB7"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></span><span class="opt-t"><b>A fazer</b><small>Pode ter um dia, sem horário</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="scheduled" data-label="Agendada" style="--sc:#EAF2F3"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg></span><span class="opt-t"><b>Agendada</b><small>Tem dia e horário</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="tbd" data-label="A definir" style="--sc:#9BAFB7"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="2.4 2.31"/></svg></span><span class="opt-t"><b>A definir</b><small>Ainda sem data</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="hold" data-label="Em espera" style="--sc:#E2B57C"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 9v6"/><path d="M14 9v6"/></svg></span><span class="opt-t"><b>Em espera</b><small>Parada, esperando algo</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="done" data-label="Concluída" style="--sc:#80D58D"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.2 2.4 2.4 4.6-4.9"/></svg></span><span class="opt-t"><b>Concluída</b><small>Feita</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="canceled" data-label="Cancelada" style="--sc:#FDA0A3"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 15 6-6"/></svg></span><span class="opt-t"><b>Cancelada</b><small>Não vai mais acontecer</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li></ul></div>
+<div data-pane="confirm" hidden>
+<h2 class="sheet-title">Excluir esta nota?</h2>
+<p class="sheet-text">A exclusão tira a nota do Timeline. Logo depois, você ainda poderá desfazer.</p>
+<div class="sheet-actions"><button type="button" class="btn btn-danger btn-block" data-delete>Excluir</button><button type="button" class="btn btn-ghost btn-block" data-close>Cancelar</button></div>
+</div>
+</div>
+<div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+<div class="status-bar" aria-hidden="true"><span class="status-time">13:20</span><span class="status-cutout-zone"></span><span class="status-icons"><svg class="connectivity" viewBox="0 0 15 12"><path d="M1.5 10.5v-2m4 2v-4.5m4 4.5v-7m4 7v-9"/></svg><svg class="wifi" viewBox="0 0 16 12"><path d="M1.5 4.7a9.2 9.2 0 0 1 13 0M4.2 7.3a5.4 5.4 0 0 1 7.6 0M6.9 10a1.55 1.55 0 0 1 2.2 0"/></svg><svg class="battery" viewBox="0 0 20 11"><rect x=".75" y="1.25" width="16.5" height="8.5" rx="2"/><path d="M18.5 4v3M3.2 3.4h10.4v4.2H3.2z" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="camera-dot" aria-hidden="true"></div><div class="gesture-indicator" aria-hidden="true"></div>
+</section></div></div>
+<div class="slot"><p class="slot-cap">3 · Tarefa</p>
+<div class="phone-frame" data-phone-shell data-platform="neutral" data-app="task">
+<span class="hardware-button volume" aria-hidden="true"></span><span class="hardware-button power" aria-hidden="true"></span>
+<section class="phone-screen" data-phone-screen>
+<main class="phone-content" data-phone-content>
+<!-- APP CONTENT START -->
+<div data-view="content"><div class="app"><nav class="topbar" aria-label="Navegação"><button type="button" class="back" data-toast-btn="Aqui você voltaria para as Tarefas."><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Tarefas</button><button type="button" class="iconbtn" data-more aria-label="Mais ações: excluir"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></nav>
+<header class="head">
+<h1 class="title" data-title>Fazer a lista de compras da semana</h1>
+<div class="statusrow">
+<button type="button" class="stbtn" data-status-open data-task="compras" data-status="todo" data-icon-size="18" aria-haspopup="listbox" aria-label="Status: A fazer. Trocar status" style="--sc:#9BAFB7"><span data-status-icon style="display:inline-flex"><svg class="od-icon i18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></span><span class="stbtn-l" data-status-label>A fazer</span><svg class="od-icon i14 " viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+<button type="button" class="prio-btn" data-priority-open data-priority="normal" aria-haspopup="dialog" aria-label="Prioridade: Normal. Trocar prioridade"><svg class="prio-i" viewBox="0 0 16 16" fill="none" aria-hidden="true" data-priority-icon><path d="M3 13V10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M8 13V7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="1"/><path d="M13 13V4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".25"/></svg><span data-priority-label>Normal</span><svg class="od-icon i14 " viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+</div>
+<div class="datelines"><p>Segunda-feira, 9 de novembro</p><p>Sem horário definido</p></div>
+</header>
+<section class="meta tight" aria-label="Informações">
+<div class="meta-row"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><div><span class="meta-main">1 dia antes</span></div></div>
+<div class="meta-row"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h16"/><path d="M4 15h16"/><path d="M10 3 8 21"/><path d="M16 3l-2 18"/></svg><div><div class="tags"><span class="tag" style="--c:#EDAB9D">#casa</span><span class="tag" style="--c:#BCC489">#compras</span></div></div></div>
+</section>
+<p class="body-copy">Conferir a despensa e anotar o que falta para os almoços de segunda a quarta.</p>
+<section class="section" aria-labelledby="tk-sub"><div class="section-head"><h2 class="label" id="tk-sub">Subtarefas</h2><span class="count" data-count="tk-sub">0 de 3</span></div>
+<div class="checks"><label class="check"><input type="checkbox" data-group="tk-sub"><span class="box"><svg class="od-icon i14 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Conferir a despensa</span></label><label class="check"><input type="checkbox" data-group="tk-sub"><span class="box"><svg class="od-icon i14 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Anotar os ingredientes dos almoços</span></label><label class="check"><input type="checkbox" data-group="tk-sub"><span class="box"><svg class="od-icon i14 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><span class="txt">Separar o que comprar no mercado</span></label></div></section>
+<section class="section links" aria-labelledby="tk-links"><h2 class="label" id="tk-links">Vínculos</h2><div class="linkgroup" role="group" aria-labelledby="tk-links-notes"><h3 class="linkgroup-h" id="tk-links-notes">Notas vinculadas<span class="count">1</span></h3><div class="cardlist"><button type="button" class="linkrow" data-goto="note" style="--ic:var(--note)"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span><span class="linkrow-t">Pauta da revisão semanal</span><span class="linkrow-s">Nota · agenda, pendências e refeições</span></span><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></div><div class="linkgroup" role="group" aria-labelledby="tk-links-events"><h3 class="linkgroup-h" id="tk-links-events">Eventos vinculados<span class="count">1</span></h3><div class="cardlist"><button type="button" class="linkrow" data-goto="event" style="--ic:var(--event)"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg><span><span class="linkrow-t">Revisão semanal</span><span class="linkrow-s">Evento · hoje, 18:00</span></span><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></div></section>
+<section class="origin" aria-label="Origem">
+<button type="button" class="origin-head" data-origin-toggle aria-expanded="false" aria-controls="steps-task">
+<span class="origin-icon"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span>
+<span><span class="origin-title">Criada pelo Hermes</span><span class="origin-sub">Pedido no chat · ontem, 21:40</span></span>
+<span class="origin-chev"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button>
+<div class="origin-body" id="steps-task" hidden><p class="quote">“Cria uma tarefa para a lista de compras de segunda”</p><ol class="hsteps" aria-label="Passos do Hermes"><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg><span><span class="hstep-t">Entendeu o prazo como segunda, 9 de novembro</span></span><span class="hstep-d">1,2 s<span class="sr"> · concluído</span></span></li><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span><span class="hstep-t">Verificou se a tarefa já existia</span><span class="hstep-m">list_tasks</span></span><span class="hstep-d">0,3 s<span class="sr"> · concluído</span></span></li><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span><span class="hstep-t">Criou a tarefa</span><span class="hstep-m">create_task</span></span><span class="hstep-d">0,5 s<span class="sr"> · concluído</span></span></li></ol><p class="hkey">Chave de idempotência · <code>lista-compras:2026-11-09</code></p></div></section>
+</div></div>
+<div data-view="deleted" hidden><div class="app"><div class="empty"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg><h2>Tarefa excluída</h2><p>A lista de compras da semana foi removida. O evento vinculado continua na agenda.</p><button type="button" class="btn btn-ghost" data-undo><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>Desfazer exclusão</button></div></div></div>
+<!-- APP CONTENT END -->
+</main>
+<div class="chat-panel" data-chat-panel data-state="done" role="region" aria-label="Conversa com o Hermes" hidden><button type="button" class="chat-x" data-chat-dismiss aria-label="Fechar conversa"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button><p class="chat-said" data-chat-said></p><p class="chat-step" data-chat-step><span class="chat-ico"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span><span class="chat-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span data-chat-step-text></span></p><button type="button" class="chat-stop" data-voice-stop hidden>Parar e enviar</button><p class="chat-result" data-chat-result hidden>Prévia: neste mockup o texto da tela não muda. No app, o Hermes aplicaria a edição e mostraria os passos.</p></div><div class="chatbar" data-chatbar><label class="sr" for="chat-task">Conversar com o Hermes</label><span class="chat-field"><input id="chat-task" class="chat-input" data-chat-input type="text" autocomplete="off" placeholder="Peça ao Hermes para editar esta tarefa"></span><button type="button" class="chat-voice" data-chat-voice aria-pressed="false" aria-label="Falar com o Hermes por voz"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></svg></button><button type="button" class="chat-send" data-chat-send aria-label="Enviar ao Hermes" hidden><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button></div>
+<div class="scrim" data-scrim hidden></div>
+<div class="sheet" data-sheet role="dialog" aria-modal="true" aria-label="Ações" hidden>
+<span class="sheet-grip" aria-hidden="true"></span>
+<div data-pane="menu">
+<button type="button" class="sheet-item danger" data-ask-delete><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>Excluir tarefa</button>
+</div>
+<div data-pane="status" hidden><div class="pick-head"><h2 class="sheet-title">Status</h2><button type="button" class="iconbtn" data-close aria-label="Fechar"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div><ul class="pick" aria-label="Status"><li><button type="button" class="opt" data-status-pick="todo" data-label="A fazer" style="--sc:#9BAFB7"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg></span><span class="opt-t"><b>A fazer</b><small>Pode ter um dia, sem horário</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="scheduled" data-label="Agendada" style="--sc:#EAF2F3"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 1.8"/></svg></span><span class="opt-t"><b>Agendada</b><small>Tem dia e horário</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="tbd" data-label="A definir" style="--sc:#9BAFB7"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="2.4 2.31"/></svg></span><span class="opt-t"><b>A definir</b><small>Ainda sem data</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="hold" data-label="Em espera" style="--sc:#E2B57C"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10 9v6"/><path d="M14 9v6"/></svg></span><span class="opt-t"><b>Em espera</b><small>Parada, esperando algo</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="done" data-label="Concluída" style="--sc:#80D58D"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.2 2.4 2.4 4.6-4.9"/></svg></span><span class="opt-t"><b>Concluída</b><small>Feita</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-status-pick="canceled" data-label="Cancelada" style="--sc:#FDA0A3"><span class="opt-i"><svg class="od-icon i20" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 15 6-6"/></svg></span><span class="opt-t"><b>Cancelada</b><small>Não vai mais acontecer</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li></ul></div><div data-pane="priority" hidden><div class="pick-head"><h2 class="sheet-title">Prioridade</h2><button type="button" class="iconbtn" data-close aria-label="Fechar"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div><ul class="pick" aria-label="Prioridade"><li><button type="button" class="opt" data-priority-pick="urgent" data-label="Urgente" style="--sc:#EAF2F3"><span class="opt-i"><svg class="prio-i prio-i-l" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13V10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M8 13V7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="1"/><path d="M13 13V4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="1"/></svg></span><span class="opt-t"><b>Urgente</b><small>Precisa de atenção primeiro</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-priority-pick="normal" data-label="Normal" style="--sc:#EAF2F3"><span class="opt-i"><svg class="prio-i prio-i-l" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13V10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M8 13V7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity="1"/><path d="M13 13V4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".25"/></svg></span><span class="opt-t"><b>Normal</b><small>Prioridade padrão</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li><li><button type="button" class="opt" data-priority-pick="flexible" data-label="Flexível" style="--sc:#EAF2F3"><span class="opt-i"><svg class="prio-i prio-i-l" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 13V10" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><path d="M8 13V7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".25"/><path d="M13 13V4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" opacity=".25"/></svg></span><span class="opt-t"><b>Flexível</b><small>Pode esperar</small></span><span class="opt-c"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span></button></li></ul></div>
+<div data-pane="confirm" hidden>
+<h2 class="sheet-title">Excluir esta tarefa?</h2>
+<p class="sheet-text">A exclusão tira a tarefa do Timeline. Logo depois, você ainda poderá desfazer.</p>
+<div class="sheet-actions"><button type="button" class="btn btn-danger btn-block" data-delete>Excluir</button><button type="button" class="btn btn-ghost btn-block" data-close>Cancelar</button></div>
+</div>
+</div>
+<div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+<div class="status-bar" aria-hidden="true"><span class="status-time">13:20</span><span class="status-cutout-zone"></span><span class="status-icons"><svg class="connectivity" viewBox="0 0 15 12"><path d="M1.5 10.5v-2m4 2v-4.5m4 4.5v-7m4 7v-9"/></svg><svg class="wifi" viewBox="0 0 16 12"><path d="M1.5 4.7a9.2 9.2 0 0 1 13 0M4.2 7.3a5.4 5.4 0 0 1 7.6 0M6.9 10a1.55 1.55 0 0 1 2.2 0"/></svg><svg class="battery" viewBox="0 0 20 11"><rect x=".75" y="1.25" width="16.5" height="8.5" rx="2"/><path d="M18.5 4v3M3.2 3.4h10.4v4.2H3.2z" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="camera-dot" aria-hidden="true"></div><div class="gesture-indicator" aria-hidden="true"></div>
+</section></div></div>
+<div class="slot"><p class="slot-cap">4 · Nota de refeição</p>
+<div class="phone-frame" data-phone-shell data-platform="neutral" data-app="meal">
+<span class="hardware-button volume" aria-hidden="true"></span><span class="hardware-button power" aria-hidden="true"></span>
+<section class="phone-screen" data-phone-screen>
+<main class="phone-content" data-phone-content>
+<!-- APP CONTENT START -->
+<div data-view="content"><div class="app"><nav class="topbar" aria-label="Navegação"><button type="button" class="back" data-toast-btn="Aqui você voltaria para as Notas."><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Notas</button><button type="button" class="iconbtn" data-more aria-label="Mais ações: excluir"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></nav>
+<header class="head">
+<div class="kindrow"><span class="kind" style="color:var(--note)"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>Nota de refeição</span></div>
+<h1 class="title" data-title>Macarrão integral com frango e salada</h1>
+<div class="tags"><span class="tag" style="--c:#FDA0A3">#refeição</span><span class="tag" style="--c:#BCC489">#caseiro</span></div>
+<p class="stamp">Criada hoje, 13:05</p>
+</header>
+<section class="section" aria-labelledby="ml-nut">
+<div><h2 class="label" id="ml-nut">Informações nutricionais</h2><p class="note-hint" style="margin-top:4px">Estimativa do Hermes a partir dos itens abaixo.</p></div>
+<div class="kcal"><span class="label" aria-hidden="true" style="letter-spacing:.1em">Calorias consumidas</span><span class="kcal-v">449<small>kcal</small></span><span class="sr">Calorias consumidas: 449 quilocalorias</span></div>
+<div class="macrobar" role="img" aria-label="Distribuição de calorias: proteínas 37%, carboidratos 44%, gorduras 19%"><i style="--c:var(--macro-p);flex:37"></i><i style="--c:var(--macro-c);flex:44"></i><i style="--c:var(--macro-g);flex:19"></i></div>
+<div class="od-grid macros"><div class="macro"><span class="macro-n" style="--c:var(--macro-p)"><i></i>Proteínas</span><span class="macro-v" style="--c:var(--macro-p)">42<small>g</small></span></div><div class="macro"><span class="macro-n" style="--c:var(--macro-c)"><i></i>Carboidratos</span><span class="macro-v">50<small>g</small></span></div><div class="macro"><span class="macro-n" style="--c:var(--macro-g)"><i></i>Gorduras</span><span class="macro-v">10<small>g</small></span></div></div>
+</section>
+<section class="section" aria-labelledby="ml-food"><div class="section-head"><h2 class="label" id="ml-food">Alimentos</h2><span class="count">5 itens</span></div>
+<ul class="foods"><li class="food"><div><span class="food-n">Macarrão integral cozido</span><span class="food-q">150 g</span></div><span class="food-k">186<small>kcal</small></span></li><li class="food"><div><span class="food-n">Peito de frango desfiado</span><span class="food-q">100 g</span></div><span class="food-k">159<small>kcal</small></span></li><li class="food"><div><span class="food-n">Molho de tomate caseiro</span><span class="food-q">100 g</span></div><span class="food-k">45<small>kcal</small></span></li><li class="food"><div><span class="food-n">Azeite de oliva</span><span class="food-q">1 colher de chá</span></div><span class="food-k">44<small>kcal</small></span></li><li class="food"><div><span class="food-n">Salada de folhas com tomate</span><span class="food-q">80 g</span></div><span class="food-k">15<small>kcal</small></span></li></ul>
+</section>
+<section class="section links" aria-labelledby="ml-links"><h2 class="label" id="ml-links">Vínculos</h2><div class="linkgroup" role="group" aria-labelledby="ml-links-events"><h3 class="linkgroup-h" id="ml-links-events">Eventos vinculados<span class="count">1</span></h3><div class="cardlist"><button type="button" class="linkrow" data-toast-btn="Aqui abriria “Almoço”." style="--ic:var(--event)"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg><span><span class="linkrow-t">Almoço</span><span class="linkrow-s">Evento · hoje, 12:30</span></span><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div></div></section>
+<section class="origin" aria-label="Origem">
+<button type="button" class="origin-head" data-origin-toggle aria-expanded="false" aria-controls="steps-meal">
+<span class="origin-icon"><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span>
+<span><span class="origin-title">Criada pelo Hermes</span><span class="origin-sub">Pedido no chat · hoje, 13:05</span></span>
+<span class="origin-chev"><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button>
+<div class="origin-body" id="steps-meal" hidden><p class="quote">“Almocei macarrão integral com frango, molho de tomate e salada”</p><ol class="hsteps" aria-label="Passos do Hermes"><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg><span><span class="hstep-t">Separou a refeição em 5 itens</span></span><span class="hstep-d">1,4 s<span class="sr"> · concluído</span></span></li><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span><span class="hstep-t">Encontrou o evento Almoço de hoje</span><span class="hstep-m">list_timeline_events</span></span><span class="hstep-d">0,4 s<span class="sr"> · concluído</span></span></li><li class="hstep"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span><span class="hstep-t">Criou a nota de refeição</span><span class="hstep-m">create_note</span></span><span class="hstep-d">0,7 s<span class="sr"> · concluído</span></span></li></ol></div></section>
+</div></div>
+<div data-view="deleted" hidden><div class="app"><div class="empty"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg><h2>Nota excluída</h2><p>A nota de refeição foi removida. O evento Almoço continua na agenda.</p><button type="button" class="btn btn-ghost" data-undo><svg class="od-icon i18 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>Desfazer exclusão</button></div></div></div>
+<!-- APP CONTENT END -->
+</main>
+<div class="chat-panel" data-chat-panel data-state="done" role="region" aria-label="Conversa com o Hermes" hidden><button type="button" class="chat-x" data-chat-dismiss aria-label="Fechar conversa"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button><p class="chat-said" data-chat-said></p><p class="chat-step" data-chat-step><span class="chat-ico"><svg class="od-icon i16 " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></span><span class="chat-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span data-chat-step-text></span></p><button type="button" class="chat-stop" data-voice-stop hidden>Parar e enviar</button><p class="chat-result" data-chat-result hidden>Prévia: neste mockup o texto da tela não muda. No app, o Hermes aplicaria a edição e mostraria os passos.</p></div><div class="chatbar" data-chatbar><label class="sr" for="chat-meal">Conversar com o Hermes</label><span class="chat-field"><input id="chat-meal" class="chat-input" data-chat-input type="text" autocomplete="off" placeholder="Peça ao Hermes para editar esta nota"></span><button type="button" class="chat-voice" data-chat-voice aria-pressed="false" aria-label="Falar com o Hermes por voz"><svg class="od-icon i22 " viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19v3"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><rect x="9" y="2" width="6" height="13" rx="3"/></svg></button><button type="button" class="chat-send" data-chat-send aria-label="Enviar ao Hermes" hidden><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button></div>
+<div class="scrim" data-scrim hidden></div>
+<div class="sheet" data-sheet role="dialog" aria-modal="true" aria-label="Ações" hidden>
+<span class="sheet-grip" aria-hidden="true"></span>
+<div data-pane="menu">
+<button type="button" class="sheet-item danger" data-ask-delete><svg class="od-icon i20 " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>Excluir nota</button>
+</div>
+
+<div data-pane="confirm" hidden>
+<h2 class="sheet-title">Excluir esta nota?</h2>
+<p class="sheet-text">A exclusão tira a nota do Timeline. Logo depois, você ainda poderá desfazer.</p>
+<div class="sheet-actions"><button type="button" class="btn btn-danger btn-block" data-delete>Excluir</button><button type="button" class="btn btn-ghost btn-block" data-close>Cancelar</button></div>
+</div>
+</div>
+<div class="toast" data-toast role="status" aria-live="polite" hidden></div>
+<div class="status-bar" aria-hidden="true"><span class="status-time">13:20</span><span class="status-cutout-zone"></span><span class="status-icons"><svg class="connectivity" viewBox="0 0 15 12"><path d="M1.5 10.5v-2m4 2v-4.5m4 4.5v-7m4 7v-9"/></svg><svg class="wifi" viewBox="0 0 16 12"><path d="M1.5 4.7a9.2 9.2 0 0 1 13 0M4.2 7.3a5.4 5.4 0 0 1 7.6 0M6.9 10a1.55 1.55 0 0 1 2.2 0"/></svg><svg class="battery" viewBox="0 0 20 11"><rect x=".75" y="1.25" width="16.5" height="8.5" rx="2"/><path d="M18.5 4v3M3.2 3.4h10.4v4.2H3.2z" fill="currentColor" stroke="none"/></svg></span></div>
+<div class="camera-dot" aria-hidden="true"></div><div class="gesture-indicator" aria-hidden="true"></div>
+</section></div></div>
+</div>
+<script>
+(function () {
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var openers = new WeakMap();    // frame -> element that opened the sheet
+  var toastTimers = new WeakMap();
+  var chatTimers = new WeakMap();
+
+  function $(root, sel) { return root ? root.querySelector(sel) : null; }
+  function $$(root, sel) { return root ? Array.prototype.slice.call(root.querySelectorAll(sel)) : []; }
+  function frameOf(el) { return el && el.closest ? el.closest('.phone-frame') : null; }
+
+  /* ----- toast ----- */
+  function toast(frame, text) {
+    var t = $(frame, '[data-toast]');
+    if (!t) return;
+    t.textContent = text;
+    t.hidden = false;
+    clearTimeout(toastTimers.get(frame));
+    toastTimers.set(frame, setTimeout(function () { t.hidden = true; }, 3200));
+  }
+
+  /* ----- sheet (menu / status / priority / confirm panes) ----- */
+  function sheetParts(frame) {
+    return { scrim: $(frame, '[data-scrim]'), sheet: $(frame, '[data-sheet]') };
+  }
+  function showPane(frame, name) {
+    $$(frame, '[data-pane]').forEach(function (p) { p.hidden = p.getAttribute('data-pane') !== name; });
+  }
+  function markCurrent(sheet, selector, attr, value) {
+    $$(sheet, selector).forEach(function (r) {
+      if (r.getAttribute(attr) === value) r.setAttribute('aria-current', 'true'); else r.removeAttribute('aria-current');
+    });
+  }
+  function openSheet(frame, opener, pane) {
+    var p = sheetParts(frame);
+    if (!p.sheet || !p.scrim) return;
+    openers.set(frame, opener || null);
+    pane = pane || 'menu';
+    showPane(frame, pane);
+    if (pane === 'status' && opener) markCurrent(p.sheet, '[data-status-pick]', 'data-status-pick', opener.getAttribute('data-status') || 'todo');
+    if (pane === 'priority' && opener) markCurrent(p.sheet, '[data-priority-pick]', 'data-priority-pick', opener.getAttribute('data-priority') || 'normal');
+    p.scrim.classList.remove('closing'); p.sheet.classList.remove('closing');
+    p.scrim.hidden = false; p.sheet.hidden = false;
+    var first = $(p.sheet, '[data-pane="' + pane + '"] [aria-current="true"]') || $(p.sheet, '[data-pane="' + pane + '"] button');
+    if (first) first.focus();
+  }
+  function closeSheet(frame, returnFocus) {
+    var p = sheetParts(frame);
+    if (!p.sheet || p.sheet.hidden) return;
+    function done() {
+      p.sheet.hidden = true; p.scrim.hidden = true;
+      p.sheet.classList.remove('closing'); p.scrim.classList.remove('closing');
+      if (returnFocus !== false) {
+        var o = openers.get(frame);
+        var target = o && frame.contains(o) && !o.hidden && o.offsetParent !== null ? o : $(frame, '[data-more]');
+        if (target) target.focus();
+      }
+    }
+    if (reduce) { done(); return; }
+    p.sheet.classList.add('closing'); p.scrim.classList.add('closing');
+    setTimeout(done, 170);
+  }
+
+  /* ----- delete / undo ----- */
+  function setDeleted(frame, on) {
+    var content = $(frame, '[data-view="content"]');
+    var gone = $(frame, '[data-view="deleted"]');
+    if (!content || !gone) return;
+    content.hidden = on; gone.hidden = !on;
+    var scroller = $(frame, '.phone-content');
+    if (scroller) scroller.scrollTop = 0;
+    var bar = $(frame, '[data-chatbar]');
+    if (bar) bar.hidden = on;
+    var panel = $(frame, '[data-chat-panel]');
+    if (panel && on) panel.hidden = true;
+    var focusEl = on ? $(gone, 'button') : $(frame, '[data-more]');
+    if (focusEl) focusEl.focus();
+  }
+
+  /* ----- counters (checklists) ----- */
+  function updateCount(frame, group) {
+    var boxes = $$(frame, 'input[data-group="' + group + '"]');
+    var done = boxes.filter(function (b) { return b.checked; }).length;
+    $$(frame, '[data-count="' + group + '"]').forEach(function (c) { c.textContent = done + ' de ' + boxes.length; });
+  }
+
+  /* ----- task status (picker sheet, like the app) ----- */
+  function applyStatus(trig, row) {
+    var label = row.getAttribute('data-label') || '';
+    var rowSvg = $(row, 'svg');
+    var holder = $(trig, '[data-status-icon]');
+    var txt = $(trig, '[data-status-label]');
+    var size = trig.getAttribute('data-icon-size') || '18';
+    if (holder && rowSvg) holder.innerHTML = rowSvg.outerHTML.replace(/\bi\d\d\b/, 'i' + size);
+    if (txt) txt.textContent = label;
+    trig.setAttribute('data-status', row.getAttribute('data-status-pick'));
+    trig.style.setProperty('--sc', row.style.getPropertyValue('--sc'));
+    var of = trig.getAttribute('data-for');
+    trig.setAttribute('aria-label', 'Status: ' + label + '. Trocar status' + (of ? ' de ' + of : ''));
+  }
+  function pickStatus(frame, row) {
+    var trig = openers.get(frame);
+    if (trig) {
+      var id = trig.getAttribute('data-task');
+      var all = id ? $$(document, '[data-status-open][data-task="' + id + '"]') : [trig];
+      all.forEach(function (t) { applyStatus(t, row); });
+    }
+    closeSheet(frame);
+  }
+
+  /* ----- task priority (picker sheet) ----- */
+  function pickPriority(frame, row) {
+    var trig = openers.get(frame);
+    if (trig) {
+      var label = row.getAttribute('data-label') || '';
+      var holder = $(trig, '[data-priority-icon]');
+      var rowSvg = $(row, 'svg');
+      var txt = $(trig, '[data-priority-label]');
+      if (holder && rowSvg) holder.innerHTML = rowSvg.innerHTML;
+      if (txt) txt.textContent = label;
+      trig.setAttribute('data-priority', row.getAttribute('data-priority-pick'));
+      trig.setAttribute('aria-label', 'Prioridade: ' + label + '. Trocar prioridade');
+    }
+    closeSheet(frame);
+  }
+
+  /* ----- chat bar (AI assistant: where texts are edited; typed or by voice) ----- */
+  function syncSlot(frame) {
+    var input = $(frame, '[data-chat-input]');
+    var send = $(frame, '[data-chat-send]');
+    var voice = $(frame, '[data-chat-voice]');
+    var has = !!(input && input.value.trim());
+    if (send) send.hidden = !has;
+    if (voice) voice.hidden = has;
+  }
+  function setVoice(frame, on) {
+    var voice = $(frame, '[data-chat-voice]');
+    if (voice) {
+      voice.setAttribute('aria-pressed', String(on));
+      voice.setAttribute('aria-label', on ? 'Parar de falar e enviar' : 'Falar com o Hermes por voz');
+    }
+  }
+  function runRequest(frame, text) {
+    var panel = $(frame, '[data-chat-panel]');
+    var send = $(frame, '[data-chat-send]');
+    var said = $(panel, '[data-chat-said]');
+    var stepText = $(panel, '[data-chat-step-text]');
+    var result = $(panel, '[data-chat-result]');
+    var stop = $(panel, '[data-voice-stop]');
+    if (said) said.textContent = text;
+    panel.hidden = false;
+    panel.setAttribute('data-state', 'working');
+    if (stepText) stepText.textContent = 'Hermes está lendo e editando o texto…';
+    if (result) result.hidden = true;
+    if (stop) stop.hidden = true;
+    setVoice(frame, false);
+    if (send) send.disabled = true;
+    clearTimeout(chatTimers.get(frame));
+    function finish() {
+      panel.setAttribute('data-state', 'done');
+      if (stepText) stepText.textContent = 'Hermes concluiu o pedido';
+      if (result) result.hidden = false;
+      if (send) send.disabled = false;
+    }
+    if (reduce) finish(); else chatTimers.set(frame, setTimeout(finish, 1100));
+  }
+  function chatSend(frame) {
+    var input = $(frame, '[data-chat-input]');
+    var panel = $(frame, '[data-chat-panel]');
+    var send = $(frame, '[data-chat-send]');
+    if (!input || !panel) return;
+    var text = input.value.trim();
+    if (!text) { input.focus(); return; }
+    if (send && send.disabled) return;
+    input.value = '';
+    syncSlot(frame);
+    runRequest(frame, text);
+  }
+  function voiceStart(frame) {
+    var panel = $(frame, '[data-chat-panel]');
+    if (!panel) return;
+    var stepText = $(panel, '[data-chat-step-text]');
+    var result = $(panel, '[data-chat-result]');
+    var stop = $(panel, '[data-voice-stop]');
+    clearTimeout(chatTimers.get(frame));
+    panel.hidden = false;
+    panel.setAttribute('data-state', 'listening');
+    if (stepText) stepText.textContent = 'Ouvindo… diga o que quer mudar';
+    if (result) result.hidden = true;
+    if (stop) { stop.hidden = false; stop.focus(); }
+    setVoice(frame, true);
+  }
+  function voiceStop(frame) {
+    runRequest(frame, 'Pedido por voz (exemplo)');
+    var input = $(frame, '[data-chat-input]'); if (input) input.focus();
+  }
+  function voiceCancel(frame) {
+    var panel = $(frame, '[data-chat-panel]');
+    if (panel && panel.getAttribute('data-state') === 'listening') { panel.hidden = true; setVoice(frame, false); }
+  }
+
+  /* ----- cross links ----- */
+  function goto(name) {
+    var target = document.querySelector('.phone-frame[data-app="' + name + '"]');
+    if (!target) return;
+    target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center', inline: 'center' });
+    var h = $(target, '[data-title]');
+    if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+    target.classList.add('flash');
+    setTimeout(function () { target.classList.remove('flash'); }, 1400);
+  }
+
+  /* ----- events (delegated; handlers survive any re-render) ----- */
+  document.addEventListener('click', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('button, [data-goto], [data-scrim]') : null;
+    if (!el) return;
+    var frame = frameOf(el);
+    if (!frame) return;
+
+    if (el.hasAttribute('data-scrim')) { closeSheet(frame); return; }
+    if (el.hasAttribute('data-goto')) { goto(el.getAttribute('data-goto')); return; }
+    if (el.hasAttribute('data-more')) { openSheet(frame, el); return; }
+    if (el.hasAttribute('data-close')) { closeSheet(frame); return; }
+    if (el.hasAttribute('data-ask-delete')) { showPane(frame, 'confirm'); var c = $(frame, '[data-pane="confirm"] [data-close]'); if (c) c.focus(); return; }
+    if (el.hasAttribute('data-delete')) { closeSheet(frame, false); setDeleted(frame, true); return; }
+    if (el.hasAttribute('data-undo')) { setDeleted(frame, false); toast(frame, 'Exclusão desfeita.'); return; }
+    if (el.hasAttribute('data-status-open')) { openSheet(frame, el, 'status'); return; }
+    if (el.hasAttribute('data-status-pick')) { pickStatus(frame, el); return; }
+    if (el.hasAttribute('data-priority-open')) { openSheet(frame, el, 'priority'); return; }
+    if (el.hasAttribute('data-priority-pick')) { pickPriority(frame, el); return; }
+    if (el.hasAttribute('data-chat-send')) { chatSend(frame); return; }
+    if (el.hasAttribute('data-chat-voice')) { if (el.getAttribute('aria-pressed') === 'true') voiceStop(frame); else voiceStart(frame); return; }
+    if (el.hasAttribute('data-voice-stop')) { voiceStop(frame); return; }
+    if (el.hasAttribute('data-chat-dismiss')) {
+      voiceCancel(frame);
+      var panel = $(frame, '[data-chat-panel]'); if (panel) panel.hidden = true;
+      var inp = $(frame, '[data-chat-input]'); if (inp) inp.focus();
+      return;
+    }
+    if (el.hasAttribute('data-toast-btn')) { toast(frame, el.getAttribute('data-toast-btn')); return; }
+    if (el.hasAttribute('data-origin-toggle')) {
+      var body = document.getElementById(el.getAttribute('aria-controls'));
+      var open = el.getAttribute('aria-expanded') === 'true';
+      el.setAttribute('aria-expanded', String(!open));
+      if (body) body.hidden = open;
+      return;
+    }
+  });
+
+  document.addEventListener('change', function (e) {
+    var el = e.target;
+    var frame = frameOf(el);
+    if (!frame || !el.matches) return;
+    if (el.matches('input[data-group]')) updateCount(frame, el.getAttribute('data-group'));
+  });
+
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (el && el.matches && el.matches('[data-chat-input]')) { var f = frameOf(el); if (f) syncSlot(f); }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    var frame = frameOf(e.target) || (document.activeElement && frameOf(document.activeElement));
+    if (!frame) return;
+    var p = sheetParts(frame);
+    var sheetOpen = p.sheet && !p.sheet.hidden;
+    if (e.key === 'Escape') {
+      if (sheetOpen) { e.preventDefault(); closeSheet(frame); return; }
+      var panel = $(frame, '[data-chat-panel]');
+      if (panel && !panel.hidden) { e.preventDefault(); voiceCancel(frame); panel.hidden = true; var inp = $(frame, '[data-chat-input]'); if (inp) inp.focus(); }
+      return;
+    }
+    if (e.key === 'Enter' && e.target && e.target.matches && e.target.matches('[data-chat-input]')) {
+      e.preventDefault();
+      chatSend(frame);
+      return;
+    }
+    if (e.key === 'Tab' && sheetOpen) {
+      var items = $$(p.sheet, 'button').filter(function (b) { return b.offsetParent !== null; });
+      if (!items.length) return;
+      var first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+})();
+
+</script>
+</body>
+</html>

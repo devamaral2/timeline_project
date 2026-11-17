@@ -106,7 +106,7 @@ fun HubSearchPanel(
                                 Text(
                                     modifier = Modifier.padding(top = 4.dp),
                                     text = result.subtitle,
-                                    fontSize = 10.sp,
+                                    fontSize = 12.sp,
                                     color = colors.onSurfaceVariant,
                                 )
                             }
@@ -121,6 +121,6 @@ fun HubSearchPanel(
 private fun SearchKind.icon() =
     when (this) {
         SearchKind.Event -> LucideIcons.calendarDays(1.3f)
-        SearchKind.Task -> LucideIcons.squareCheck(1.3f)
-        SearchKind.Note -> LucideIcons.notepadText(1.3f)
+        SearchKind.Task -> LucideIcons.listChecks(1.3f)
+        SearchKind.Note -> LucideIcons.fileText(1.3f)
     }

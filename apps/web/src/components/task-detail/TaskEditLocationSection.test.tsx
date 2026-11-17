@@ -1,0 +1,116 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mapsUrl } from "@/lib/tasks/maps-link";
+
+const places = vi.hoisted(() => ({ searchPlaces: vi.fn() }));
+vi.mock("@/lib/api/places", () => ({ searchPlaces: places.searchPlaces }));
+
+const { TaskEditLocationSection } = await import("./TaskEditLocationSection");
+
+function Harness({ initial = "" }: { initial?: string }) {
+  const [value, setValue] = useState(initial);
+  return <TaskEditLocationSection value={value} onChange={setValue} />;
+}
+
+const IBIRAPUERA = { name: "Parque Ibirapuera", address: "São Paulo, SP", label: "Parque Ibirapuera, São Paulo, SP" };
+
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  places.searchPlaces.mockReset();
+  places.searchPlaces.mockResolvedValue([IBIRAPUERA]);
+});
+afterEach(() => vi.useRealTimers());
+
+describe("campo Local", () => {
+  it("busca o que a pessoa digita e escolher a sugestão grava o endereço completo", async () => {
+    render(<Harness />);
+    const input = screen.getByRole("combobox", { name: "Local" });
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "ibirapuera" } });
+    await vi.advanceTimersByTimeAsync(350);
+
+    const option = await screen.findByRole("button", { name: IBIRAPUERA.label });
+    expect(places.searchPlaces).toHaveBeenCalledWith("ibirapuera", 6);
+    fireEvent.click(option);
+
+    expect(input).toHaveValue(IBIRAPUERA.label);
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    // Escolher não dispara outra busca.
+    await vi.advanceTimersByTimeAsync(350);
+    expect(places.searchPlaces).toHaveBeenCalledTimes(1);
+  });
+
+  it("nunca pede a posição da pessoa ao navegador", async () => {
+    const getCurrentPosition = vi.fn();
+    vi.stubGlobal("navigator", { ...navigator, geolocation: { getCurrentPosition } });
+    try {
+      render(<Harness />);
+      const input = screen.getByRole("combobox", { name: "Local" });
+
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "padaria" } });
+      await vi.advanceTimersByTimeAsync(350);
+
+      expect(places.searchPlaces).toHaveBeenLastCalledWith("padaria", 6);
+      expect(getCurrentPosition).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("não busca com menos de três letras", async () => {
+    render(<Harness />);
+    fireEvent.change(screen.getByRole("combobox", { name: "Local" }), { target: { value: "pa" } });
+    await vi.advanceTimersByTimeAsync(350);
+
+    expect(places.searchPlaces).not.toHaveBeenCalled();
+  });
+
+  it("Enter escolhe a sugestão destacada e a seta troca a destacada", async () => {
+    places.searchPlaces.mockResolvedValue([IBIRAPUERA, { name: "Outro", address: "Rio", label: "Outro, Rio" }]);
+    render(<Harness />);
+    const input = screen.getByRole("combobox", { name: "Local" });
+    fireEvent.change(input, { target: { value: "parque" } });
+    await vi.advanceTimersByTimeAsync(350);
+    await screen.findByRole("listbox");
+
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(input).toHaveValue("Outro, Rio");
+  });
+
+  it("uma falha na busca não atrapalha: o texto digitado continua valendo", async () => {
+    places.searchPlaces.mockRejectedValue(new Error("fora do ar"));
+    render(<Harness />);
+    const input = screen.getByRole("combobox", { name: "Local" });
+    fireEvent.change(input, { target: { value: "minha casa" } });
+    await vi.advanceTimersByTimeAsync(350);
+
+    await waitFor(() => expect(places.searchPlaces).toHaveBeenCalled());
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(input).toHaveValue("minha casa");
+  });
+
+  it("com um local preenchido, oferece abrir no Google Maps em outra aba", () => {
+    render(<Harness initial="Av. Paulista, 1000, São Paulo" />);
+
+    const link = screen.getByRole("link", { name: "Abrir no Google Maps" });
+    expect(link).toHaveAttribute("href", mapsUrl("Av. Paulista, 1000, São Paulo"));
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+  });
+
+  it("sem local não há link", () => {
+    render(<Harness />);
+    expect(screen.queryByRole("link", { name: "Abrir no Google Maps" })).not.toBeInTheDocument();
+  });
+});
+
+describe("mapsUrl", () => {
+  it("codifica o texto na busca do Google Maps", () => {
+    expect(mapsUrl(" Rua A, 10 & Cia ")).toBe("https://www.google.com/maps/search/?api=1&query=Rua%20A%2C%2010%20%26%20Cia");
+  });
+});

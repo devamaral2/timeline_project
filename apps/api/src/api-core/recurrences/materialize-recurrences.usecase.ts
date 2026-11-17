@@ -1,12 +1,8 @@
 import { Logger } from "@nestjs/common";
 import { RecurrenceRevisionConflictError, type Recurrence } from "../../domain";
-import type { RecurrenceRepository } from "../../domain/ports";
+import type { ArtifactRepository, RecurrenceRepository } from "../../domain/ports";
 import { dayKeyOf, expandOccurrences, shiftDayKey } from "@repo/timeline";
-import {
-  buildEventOccurrence,
-  buildTaskOccurrenceOf,
-  todayOf,
-} from "./recurrence-templates";
+import { buildOccurrence, storedTemplateOf, todayOf } from "./recurrence-templates";
 
 /** Quantos dias a frente uma leitura comum garante gerados. */
 export const DEFAULT_HORIZON_DAYS = 60;
@@ -18,12 +14,12 @@ export const MAX_HORIZON_DAYS = 365;
 /** Teto de ocorrencias por serie numa passada; o resto fica para a proxima leitura. */
 export const MAX_OCCURRENCES_PER_PASS = 400;
 
-/** Quem le a timeline ou as tarefas pede para a serie estar gerada ate ali. */
+/** Quem le a agenda ou a lista de tarefas pede para a serie estar gerada ate ali. */
 export interface RecurrenceMaterializer {
   materialize(userId: string, until?: Date): Promise<void>;
 }
 
-/** Para quem nao tem serie nenhuma a gerar — os testes de leitura, por exemplo. */
+/** Para quem nao tem serie nenhuma a gerar: os testes de leitura, por exemplo. */
 export const NO_RECURRENCES: RecurrenceMaterializer = {
   materialize: async () => {},
 };
@@ -38,6 +34,7 @@ export class MaterializeRecurrencesUseCase implements RecurrenceMaterializer {
 
   constructor(
     private readonly recurrences: RecurrenceRepository,
+    private readonly artifacts: Pick<ArtifactRepository, "findByIds">,
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
@@ -54,8 +51,7 @@ export class MaterializeRecurrencesUseCase implements RecurrenceMaterializer {
       } catch (error) {
         // A regra mudou no meio: a proxima leitura gera com a regra nova.
         if (error instanceof RecurrenceRevisionConflictError) continue;
-        // Uma serie quebrada (o pai da tarefa foi apagado, por exemplo) nao pode
-        // derrubar a timeline inteira.
+        // Uma serie quebrada nao pode derrubar a agenda inteira.
         this.logger.error(`Failed to materialize recurrence ${recurrence.id}`, error as Error);
       }
     }
@@ -76,12 +72,12 @@ export class MaterializeRecurrencesUseCase implements RecurrenceMaterializer {
     const batch = days.slice(0, MAX_OCCURRENCES_PER_PASS);
     const watermark = batch.length < days.length ? (batch[batch.length - 1] as string) : horizon;
 
-    const occurrences =
-      recurrence.target === "event"
-        ? batch.map((day) => buildEventOccurrence(recurrence, day))
-        : batch.map((day) => buildTaskOccurrenceOf(recurrence, day));
+    // Um artefato do template que foi apagado some das ocorrencias novas, em vez de quebrar a serie.
+    const template = storedTemplateOf(recurrence);
+    const live = new Set((await this.artifacts.findByIds(template.artifactIds)).map((artifact) => artifact.id));
+    const occurrences = batch.map((day) => buildOccurrence(recurrence, day, live));
 
-    await this.recurrences.materialize(recurrence.materializedUntil(watermark), occurrences);
+    await this.recurrences.materialize(recurrence.materializedUntil(watermark), occurrences, template.parentTaskId);
   }
 }
 

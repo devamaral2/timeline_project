@@ -1,27 +1,28 @@
-import type { Note, Recurrence, RecurrenceRule } from "../../domain";
-import type { EventRecurrenceTemplate, TaskRecurrenceTemplate } from "@repo/contracts";
-import type { TaskRepository } from "../../domain/ports";
+import type { Artifact, Recurrence, RecurrenceRule } from "../../domain";
+import type { RecurrenceTemplate } from "@repo/contracts";
 import { shiftDayKey } from "@repo/timeline";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { CreateEventUseCase } from "../events/create-event.usecase";
-import { prepareEventTemplate, prepareTaskTemplate, todayOf } from "./recurrence-templates";
+import type { PrepareTaskOptions } from "../tasks/create-task.usecase";
+import type { RecurrenceTemplateDeps } from "./prepare-recurrence";
+import { prepareTemplate, storedTemplateOf, todayOf } from "./recurrence-templates";
 
 export interface RecurrenceRevision {
   /** So o que muda; uma chave com `undefined` remove o campo opcional da regra. */
   rule: Partial<RecurrenceRule>;
   /** Substitui o template inteiro. Ausente, o da serie fica. */
-  template?: EventRecurrenceTemplate | TaskRecurrenceTemplate;
+  template?: RecurrenceTemplate;
   /**
-   * O template novo nao traz notes e as da serie devem ficar. O PATCH da API
-   * troca o template inteiro (e as notes com ele); o agente altera so o que foi pedido.
+   * O template novo nao traz artefatos e os da serie devem ficar. O PATCH da API
+   * troca o template inteiro (e os artefatos com ele); o agente altera so o que foi pedido.
    */
-  keepNotes?: boolean;
+  keepArtifacts?: boolean;
 }
 
 export interface RevisedRecurrence {
   recurrence: Recurrence;
-  /** As notes novas do template, gravadas antes da serie. */
-  notes: Note[];
+  /** Os artefatos novos do template, gravados antes da serie. */
+  artifacts: Artifact[];
+  derivations: { originalId: string; copyId: string }[];
   /** A serie vale de hoje em diante: as ocorrencias deste dia para frente sao regeradas. */
   fromDay: string;
 }
@@ -29,40 +30,35 @@ export interface RevisedRecurrence {
 /**
  * Monta a serie revisada, sem gravar. E o que `PATCH /api/recurrences` e o
  * agente compartilham: quem grava decide como (repositorio sozinho, ou no
- * mesmo lote do turno do chat).
+ * mesmo lote do passo do agente).
  *
  * Editar vale de hoje em diante: as ocorrencias de hoje para frente que ninguem
  * mexeu a mao sao apagadas e regeradas na proxima leitura. O passado fica como
  * aconteceu.
  */
 export async function reviseRecurrence(
-  deps: {
-    createEvent: Pick<CreateEventUseCase, "prepare">;
-    tasks: Pick<TaskRepository, "findById">;
-  },
+  deps: RecurrenceTemplateDeps,
   existing: Recurrence,
   revision: RecurrenceRevision,
   actor: AuthenticatedUser,
   now: Date,
+  options?: PrepareTaskOptions,
 ): Promise<RevisedRecurrence> {
   // A regra revisada vem primeiro: o template novo e resolvido com a janela dela.
   const withRule = existing.revise({ rule: revision.rule });
-  // Trocar o template troca as notes da serie; as que saem continuam existindo, soltas.
+  // Trocar o template troca os artefatos da serie; os que saem continuam existindo, soltos.
   const prepared =
     revision.template === undefined
       ? undefined
-      : withRule.target === "event"
-        ? await prepareEventTemplate(deps.createEvent, revision.template as EventRecurrenceTemplate, withRule.rule, actor)
-        : {
-            template: await prepareTaskTemplate(deps.tasks, revision.template as TaskRecurrenceTemplate, withRule.rule, actor),
-            notes: [] as Note[],
-            noteIds: existing.noteIds as string[],
-          };
-  const keepNotes = revision.keepNotes && prepared !== undefined && prepared.notes.length === 0;
+      : await prepareTemplate(deps, revision.template, withRule.rule, actor, options);
+  const template =
+    prepared && revision.keepArtifacts && prepared.template.artifactIds.length === 0
+      ? { ...prepared.template, artifactIds: storedTemplateOf(existing).artifactIds }
+      : prepared?.template;
+
   let revised: Recurrence = existing.revise({
     rule: revision.rule,
-    template: prepared ? { ...prepared.template } : undefined,
-    noteIds: keepNotes ? undefined : prepared?.noteIds,
+    template: template ? { ...template } : undefined,
   });
 
   const fromDay = todayOf(revised.rule, now);
@@ -71,5 +67,5 @@ export async function reviseRecurrence(
   if (existing.materializedThrough && yesterday >= revised.rule.startsOn) {
     revised = revised.materializedUntil(yesterday);
   }
-  return { recurrence: revised, notes: prepared?.notes ?? [], fromDay };
+  return { recurrence: revised, artifacts: prepared?.artifacts ?? [], derivations: prepared?.derivations ?? [], fromDay };
 }

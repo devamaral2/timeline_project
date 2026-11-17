@@ -1,177 +1,186 @@
 "use client";
 
-import { ArrowLeft, CalendarPlus, ChevronRight, Ellipsis, Pencil, Tag, Trash2, Unlink } from "lucide-react";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ICON_STROKE_WIDTH } from "@/components/events/event-visuals";
-import { authedFetch } from "@/lib/api/authed-fetch";
-import type { NoteDto } from "@/lib/api/contracts";
-import { useNow } from "@/lib/events/use-now";
-import { noteDates, sleepAgendaOf, whenLabel } from "@/lib/notes/notes-model";
-import { hasPendingMeal, pendingMealEditMessage } from "@/lib/notes/meal-generation";
+import type { ArtifactDto, ArtifactTaskLinkDto } from "@repo/contracts";
+import { Pencil, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ActionPill, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMenu, DetailMessage, DetailNav, DetailSection, LinkList, LinkRow, MenuItem, TagPills, detailIcon,
+} from "@/components/detail/detail-parts";
+import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
+import { visualForItemType } from "@/components/tasks/task-visuals";
+import { useMotionRouter } from "@/components/shell/navigation-motion";
+import { getArtifact } from "@/lib/api/artifacts";
+import { ApiRequestError } from "@/lib/api/client-request";
+import { artifactTypeLabel, artifactVisualType } from "@/lib/artifacts/artifact-model";
+import { editEntityTypeOfArtifact } from "@/lib/entity-edit/entity-edit-target";
+import { useNow } from "@/lib/tasks/use-now";
+import { pendingMealEditMessage } from "@/lib/notes/meal-generation";
+import { whenLabel } from "@/lib/notes/notes-model";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
-import { tagColorStyle } from "@/lib/tags/tag-color";
-import shellStyles from "@/app/mockups/eventos/mockup.module.css";
+import { ArtifactContent } from "./ArtifactContent";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
-import { NoteContent } from "./NoteContent";
-import { NoteEditorDialog } from "./NoteEditorDialog";
-import { originOfLink } from "./NoteOrigin";
-import styles from "./notes.module.css";
+import { noteTypeIcon } from "./NoteSheet";
 
-const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
+type LoadState = "loading" | "ready" | "missing" | "error";
 
-/** A nota aberta: título, datas, tags, onde ela aparece e o conteúdo — com editar, soltar e excluir no menu. */
+/**
+ * O artefato aberto, em duas colunas. À esquerda: voltar, o tipo (em mono), o nome na serifa, os fatos
+ * (tags e, num artefato global, "Catálogo global") e as ações. À direita: o conteúdo conforme o tipo, as tarefas
+ * em que o artefato aparece com a relação de cada um, e o Registro (criação e última alteração).
+ *
+ * Editar e excluir valem só para a nota de texto própria: pílulas na coluna da esquerda (desktop) e o menu
+ * "Mais ações" do topo (celular). Alimento, sono, treino e o catálogo global não têm essas ações.
+ */
 export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: string }) {
-  const router = useRouter();
   const now = useNow();
-  const [note, setNote] = useState<NoteDto | null>(null);
-  const [error, setError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const router = useMotionRouter();
+  const [artifact, setArtifact] = useState<ArtifactDto | null>(null);
+  const [state, setState] = useState<LoadState>("loading");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const listHref = `/${userId}/notas`;
-  const pendingMeal = hasPendingMeal(note ? [note] : []);
-  usePendingMealRefresh(pendingMeal, async () => {
-    setNote(await authedFetch<NoteDto>(`/api/notes/${noteId}`));
-  });
+  const editHref = `/${userId}/notas/${noteId}/editar`;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey força o refetch após editar.
   useEffect(() => {
     let cancelled = false;
-    setError(false);
-    void authedFetch<NoteDto>(`/api/notes/${noteId}`)
-      .then((data) => { if (!cancelled) setNote(data); })
-      .catch(() => { if (!cancelled) setError(true); });
+    setState("loading");
+    getArtifact(noteId).then(
+      (loaded) => {
+        if (cancelled) return;
+        setArtifact(loaded);
+        setState("ready");
+      },
+      (error: unknown) => {
+        if (!cancelled) setState(isMissing(error) ? "missing" : "error");
+      },
+    );
     return () => { cancelled = true; };
-  }, [noteId, reloadKey]);
+  }, [noteId]);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    function close(event: Event) {
-      if (event instanceof KeyboardEvent ? event.key === "Escape" : !menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
-    }
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [menuOpen]);
+  // Um alimento com o cálculo pendente é relido até o servidor terminar (a falha da leitura não derruba a tela).
+  const pendingMeal = artifact?.type === "food" && artifact.data.generation?.status === "pending";
+  usePendingMealRefresh(Boolean(pendingMeal), async () => {
+    setArtifact(await getArtifact(noteId));
+  });
 
-  async function detach() {
-    if (!note) return;
-    setMenuOpen(false);
-    setActionError(null);
-    try {
-      await authedFetch(`/api/notes/${note.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expectedRevision: note.revision, eventIds: [], taskIds: [] }),
-      });
-      setReloadKey((key) => key + 1);
-    } catch {
-      setActionError("Não foi possível soltar a nota. Tente novamente.");
-    }
+  const frame = { leadLabel: "Resumo do documento", bodyLabel: "Conteúdo do documento" };
+  const backOnly = <DetailNav label="Navegação do registro" back={<BackLink href={listHref} label="Voltar para Documentos" />} title="Documento" />;
+  if (state === "missing") {
+    return <DetailFrame {...frame} lead={backOnly}><DetailMessage alert>Documento não encontrado.</DetailMessage></DetailFrame>;
+  }
+  if (state === "error") {
+    return <DetailFrame {...frame} lead={backOnly}><DetailMessage alert>Não foi possível carregar o documento. Tente novamente.</DetailMessage></DetailFrame>;
+  }
+  if (state !== "ready" || !artifact) {
+    return <DetailFrame {...frame} lead={backOnly}><DetailMessage>Carregando documento…</DetailMessage></DetailFrame>;
   }
 
-  if (error) {
+  const tasks = artifact.tasks ?? [];
+  const dates = now ? { created: whenLabel(artifact.createdAt, now), updated: whenLabel(artifact.updatedAt, now) } : null;
+  const ownsText = artifact.type === "text" && !artifact.global;
+  // Skill e agente têm o próprio campo, o pedido de edição do arquivo (`AgentFileEditBar`, dentro do conteúdo).
+  const editType = artifact.type === "skill" || artifact.type === "agent" ? null : editEntityTypeOfArtifact(artifact);
+  const TypeIcon = noteTypeIcon(artifactVisualType(artifact.type));
+
+  const actions = ownsText ? (
+    <DetailActions>
+      <ActionPill icon={<Pencil {...detailIcon} />} onClick={() => router.push(editHref)}>Editar</ActionPill>
+      <ActionPill icon={<Trash2 {...detailIcon} />} danger onClick={() => setConfirmingDelete(true)}>Excluir</ActionPill>
+    </DetailActions>
+  ) : null;
+
+  const menu = ownsText ? (
+    <DetailMenu label="Mais ações">
+      {(close) => (
+        <>
+          <MenuItem icon={<Pencil {...detailIcon} />} onClick={() => { close(); router.push(editHref); }}>Editar</MenuItem>
+          <MenuItem icon={<Trash2 {...detailIcon} />} danger onClick={() => { close(); setConfirmingDelete(true); }}>Excluir</MenuItem>
+        </>
+      )}
+    </DetailMenu>
+  ) : null;
+
+  /** Uma linha por tarefa: o ícone do tipo, o nome, a relação (código em mono) e quando a tarefa começa. */
+  function taskRow(link: ArtifactTaskLinkDto) {
+    const { Icon } = visualForItemType(link.kind);
+    const when = now && link.startedAt ? ` · ${whenLabel(link.startedAt, now)}` : "";
     return (
-      <main id="conteudo" className={shellStyles.detailMain}>
-        <div className={styles.detail}>
-          <Link href={listHref} className={styles.backLink}><ArrowLeft {...icon} />Notas</Link>
-          <p role="alert" className={styles.message}>Não foi possível carregar a nota. Tente novamente.</p>
-        </div>
-      </main>
+      <LinkRow
+        key={link.taskId}
+        kind="task"
+        icon={<Icon {...detailIcon} />}
+        title={link.name}
+        sub={`${link.relation}${when}`}
+        href={`/${userId}/tarefas/${link.taskId}`}
+      />
     );
   }
-  if (!note) {
-    return <main id="conteudo" className={shellStyles.detailMain}><p role="status" className={styles.message}>Carregando nota…</p></main>;
-  }
-
-  const links = note.links ?? [];
-  const dates = now ? noteDates(note, now) : null;
-  const sleep = sleepAgendaOf(note);
 
   return (
-    <main id="conteudo" className={shellStyles.detailMain}>
-      <div className={styles.detail}>
-        <nav className={styles.navigation} aria-label="Nota">
-          <Link href={listHref} className={styles.backLink}><ArrowLeft {...icon} />Notas</Link>
-          <div className={styles.menuAnchor} ref={menuRef}>
-            <button type="button" className={styles.iconButton} aria-label="Mais ações: editar, soltar, excluir" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
-            {menuOpen ? (
-              <div role="menu" className={styles.menu}>
-                <button type="button" role="menuitem" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => { setMenuOpen(false); if (note.type === "text") router.push(`${listHref}/${note.id}/editar`); else setEditing(true); }}><Pencil {...icon} />Editar</button>
-                {links.length ? <button type="button" role="menuitem" disabled={pendingMeal} title={pendingMeal ? pendingMealEditMessage : undefined} onClick={() => void detach()}><Unlink {...icon} />Soltar da origem</button> : null}
-                <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
-              </div>
-            ) : null}
-          </div>
-        </nav>
+    <DetailFrame
+      {...frame}
+      lead={
+        <>
+          <DetailNav label="Navegação do registro" back={<BackLink href={listHref} label="Voltar para Documentos" />} title="Documento">{menu}</DetailNav>
 
-        <header className={styles.heading}>
-          <h1>{note.name}</h1>
-        </header>
+          <DetailHeading eyebrow={artifactTypeLabel(artifact.type)}>{artifact.name}</DetailHeading>
 
-        {dates || note.tags.length ? (
-          <section className={styles.info} aria-label="Informações">
-            {dates ? (
-              <div><CalendarPlus {...icon} /><span>Criada {dates.created}</span></div>
-            ) : null}
-            {dates?.edited ? <div><Pencil {...icon} /><span>Editada {dates.edited}</span></div> : null}
-            {note.tags.length ? (
-              <div>
-                <Tag {...icon} />
-                <ul aria-label="Tags da nota">
-                  {note.tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}
-                </ul>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
+          {artifact.tags.length || artifact.global ? (
+            <DetailFacts label="Informações">
+              {artifact.tags.length ? <DetailFact label="Tags"><TagPills tags={artifact.tags} label="Tags do documento" /></DetailFact> : null}
+              {artifact.global ? <DetailFact label="Origem">Catálogo global</DetailFact> : null}
+            </DetailFacts>
+          ) : null}
 
-        {links.length ? (
-          <section aria-label="Onde a nota aparece">
-            <div className={styles.sectionLabel}><h2>Aparece em</h2><span>{links.length}</span></div>
-            <ul className={styles.links}>
-              {links.map((link) => {
-                const { Icon, origin } = originOfLink(link);
-                const href = link.kind === "event" ? `/${userId}/eventos/${link.id}` : null;
-                const row = (
-                  <>
-                    <Icon {...icon} />
-                    <span className={styles.linkText}>
-                      <span className={styles.linkName}>{link.name}</span>
-                      <span className={styles.linkMeta}>{link.kind === "event" ? "Evento" : "Tarefa"}{link.at && now ? ` · ${whenLabel(link.at, now)}` : ""}</span>
-                    </span>
-                    {href ? <ChevronRight {...icon} /> : null}
-                  </>
-                );
-                return (
-                  <li key={`${link.kind}-${link.id}`}>
-                    {href ? (
-                      <Link href={href} className={styles.linkRow} data-origin={origin}>{row}</Link>
-                    ) : (
-                      <span className={styles.linkRow} data-origin={origin}>{row}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ) : null}
+          {actions}
+        </>
+      }
+    >
+      <ArtifactContent artifact={artifact} />
 
-        <NoteContent note={note} title={sleep?.title} agendaMinutes={sleep?.agendaMinutes} />
-        {pendingMeal ? <p className={styles.message}>{pendingMealEditMessage}</p> : null}
-        {actionError ? <p role="alert" className={styles.message}>{actionError}</p> : null}
-      </div>
+      {/* Sem tarefa (ou artefato global), a seção some: só aparece quando há o que mostrar. */}
+      {!artifact.global && tasks.length ? (
+        <DetailSection title="Tarefas" labelId="nt-tasks" count={tasks.length > 1 ? tasks.length : undefined}>
+          <LinkList>{tasks.map(taskRow)}</LinkList>
+        </DetailSection>
+      ) : null}
 
-      {editing ? <NoteEditorDialog note={note} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); setReloadKey((key) => key + 1); }} /> : null}
-      {deleting ? <DeleteNoteDialog noteId={note.id} noteName={note.name} onClose={() => setDeleting(false)} onDeleted={() => router.push(listHref)} /> : null}
-    </main>
+      {dates ? (
+        <DetailSection title="Registro" labelId="nt-registro">
+          <DetailFacts label="Registro">
+            <DetailFact label="Criado">{dates.created}</DetailFact>
+            <DetailFact label="Última alteração">{dates.updated}</DetailFact>
+          </DetailFacts>
+        </DetailSection>
+      ) : null}
+
+      {editType ? (
+        <EntityAiEditBar
+          userId={userId}
+          entityType={editType}
+          entityId={artifact.id}
+          disabledReason={pendingMeal ? pendingMealEditMessage : undefined}
+          onEdited={() => { void getArtifact(noteId).then(setArtifact, () => undefined); }}
+          context={{
+            icon: <TypeIcon aria-hidden />,
+            meta: now ? `${artifactTypeLabel(artifact.type)} · ${whenLabel(artifact.updatedAt, now)}` : artifactTypeLabel(artifact.type),
+            title: artifact.name,
+          }}
+        />
+      ) : null}
+
+      {confirmingDelete ? (
+        <DeleteNoteDialog
+          noteId={artifact.id}
+          noteName={artifact.name}
+          onClose={() => setConfirmingDelete(false)}
+          onDeleted={() => router.replace(listHref)}
+        />
+      ) : null}
+    </DetailFrame>
   );
+}
+
+/** O artefato de outro usuário responde 403 e o inexistente 404: a tela diz só que não há artefato. */
+function isMissing(error: unknown): boolean {
+  return error instanceof ApiRequestError && (error.kind === "not_found" || error.kind === "forbidden");
 }

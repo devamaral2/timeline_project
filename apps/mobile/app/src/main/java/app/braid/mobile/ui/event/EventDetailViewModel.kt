@@ -67,6 +67,15 @@ class EventDetailViewModel
                 }
         }
 
+        /** Recarrega sem voltar ao carregando: a edição por IA acabou de mudar o evento. */
+        fun refresh(eventId: String) {
+            viewModelScope.launch {
+                val result = gateway.detail(eventId)
+                val current = mutableState.value as? EventDetailUiState.Content ?: return@launch
+                if (result is EventResult.Success) mutableState.value = current.copy(event = result.value)
+            }
+        }
+
         fun delete(eventId: String) {
             val current = mutableState.value as? EventDetailUiState.Content ?: return
             mutableState.value = current.copy(isDeleting = true, deleteError = null)

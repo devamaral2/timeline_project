@@ -1,7 +1,7 @@
 package app.braid.mobile.data.events
 
 import app.braid.mobile.data.chat.AiJobOutbox
-import app.braid.mobile.data.chat.ChatApi
+import app.braid.mobile.data.chat.JobsApi
 import app.braid.mobile.data.dto.AiJobDto
 import app.braid.mobile.data.dto.SubmitVoiceJobDto
 import app.braid.mobile.data.dto.VoiceEventResponseDto
@@ -19,7 +19,7 @@ class DurableVoiceRepository
     @Inject
     constructor(
         private val eventsApi: EventsApi,
-        private val jobsApi: ChatApi,
+        private val jobsApi: JobsApi,
         private val session: SessionRepository,
         private val outbox: AiJobOutbox,
     ) : VoiceEventGateway {

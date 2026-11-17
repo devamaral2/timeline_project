@@ -9,13 +9,13 @@ function forwardedAuthorization(response: Response): string | null {
 }
 
 test("turns the access cookie into a bearer for the Nest API", () => {
-  const request = new NextRequest("http://web.test/api/events", { headers: { cookie: "braid_access=access-1" } });
+  const request = new NextRequest("http://web.test/api/tasks", { headers: { cookie: "braid_access=access-1" } });
 
   expect(forwardedAuthorization(proxy(request))).toBe("Bearer access-1");
 });
 
 test("drops an Authorization header the browser sent on its own", () => {
-  const request = new NextRequest("http://web.test/api/events", { headers: { authorization: "Bearer forged" } });
+  const request = new NextRequest("http://web.test/api/tasks", { headers: { authorization: "Bearer forged" } });
 
   const response = proxy(request);
 

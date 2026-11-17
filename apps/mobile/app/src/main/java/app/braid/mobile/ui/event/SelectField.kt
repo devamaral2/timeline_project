@@ -54,7 +54,7 @@ data class SelectOption<T>(
 
 /**
  * Seletor de uma opção, no padrão do web (`entitySelectButton` e `pickerOption`
- * em `mockups/eventos/mobile-navigation.tsx`): um campo com rótulo pequeno,
+ * em `components/shell/mobile-navigation.tsx`): um campo com rótulo pequeno,
  * ícone, texto e seta; ao tocar, abre uma folha com uma linha por opção, a
  * escolhida em destaque com ✓. Substitui as fileiras de chips, que não existem
  * no web.

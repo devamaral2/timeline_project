@@ -27,7 +27,7 @@ class EventNotesTest {
     @Test
     fun primaryNoteIsNullWhenTheEventHasNoNoteOfItsKind() {
         assertNull(event(kind = "meal", notes = listOf(text, sleep)).primaryNote())
-        assertNull(event(kind = "routine", notes = emptyList()).primaryNote())
+        assertNull(event(kind = "common", notes = emptyList()).primaryNote())
     }
 
     @Test

@@ -1,0 +1,64 @@
+import { shiftDayKey, zonedDayStart } from "@repo/timeline";
+
+/** Quando uma tarefa ocupa o relógio; `endMs` nulo é uma tarefa sem hora de fim. */
+export interface TimeSpan {
+  startMs: number;
+  endMs: number | null;
+}
+
+/** A menor janela que entra na lista: abaixo de 15 minutos não é tempo livre que se planeje. */
+export const MIN_FREE_WINDOW_MINUTES = 15;
+
+/** Uma lacuna entre tarefas do mesmo dia. Só existe na tela; nada disso é salvo. */
+export interface FreeSlot {
+  startMs: number;
+  endMs: number;
+  /** Minutos inteiros da lacuna (sempre ≥ 1). */
+  minutes: number;
+  /** A lacuna vai até o fim do dia, que se escreve “24:00”. */
+  endsAtMidnight: boolean;
+}
+
+/**
+ * Os intervalos livres de um dia: entre uma tarefa e o seguinte e do fim do
+ * última tarefa até a meia-noite. Nunca atravessam o dia — o que sobra depois
+ * da meia-noite pertence ao dia seguinte — e não há lacuna antes do primeiro
+ * tarefa.
+ *
+ * Tarefas sobrepostas contam como um bloco só (vale o fim mais tardio). Um
+ * tarefa sem hora de fim não diz quando termina, então dali em diante não se
+ * calcula tempo livre: seria chute.
+ */
+export function freeTimeSlots(spans: readonly TimeSpan[], dayKey: string): FreeSlot[] {
+  const dayEndMs = zonedDayStart(shiftDayKey(dayKey, 1)).getTime();
+  const ordered = [...spans].sort((left, right) => left.startMs - right.startMs);
+  const slots: FreeSlot[] = [];
+  let cursorMs: number | null = null;
+
+  for (const span of ordered) {
+    if (cursorMs !== null && span.startMs > cursorMs) {
+      pushSlot(slots, cursorMs, Math.min(span.startMs, dayEndMs), dayEndMs);
+    }
+    if (span.endMs === null) return slots;
+    cursorMs = Math.max(cursorMs ?? span.endMs, span.endMs);
+  }
+
+  if (cursorMs !== null && cursorMs < dayEndMs) pushSlot(slots, cursorMs, dayEndMs, dayEndMs);
+  return slots;
+}
+
+function pushSlot(slots: FreeSlot[], startMs: number, endMs: number, dayEndMs: number) {
+  const minutes = Math.round((endMs - startMs) / 60_000);
+  if (minutes < 1) return;
+  slots.push({ startMs, endMs, minutes, endsAtMidnight: endMs === dayEndMs });
+}
+
+/**
+ * Quanto a cor de uma janela livre anda na régua: `low` vai do tom apagado
+ * (15 min) ao verde-água (2 h) e `high`, dali ao verde-água claro (4 h ou mais).
+ * Em porcentagem, para o `color-mix` da linha.
+ */
+export function freeWindowGrade(minutes: number): { low: number; high: number } {
+  const clamp = (value: number) => Math.round(Math.min(1, Math.max(0, value)) * 100);
+  return { low: clamp((minutes - 15) / 105), high: clamp((minutes - 120) / 120) };
+}

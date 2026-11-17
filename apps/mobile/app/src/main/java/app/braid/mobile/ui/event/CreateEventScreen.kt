@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Restaurant
@@ -155,7 +155,7 @@ fun NewEventContent(
 private val NewEventType.icon: ImageVector
     get() =
         when (this) {
-            NewEventType.Routine -> Icons.Outlined.AccessTime
+            NewEventType.Routine -> Icons.Outlined.EventAvailable
             NewEventType.Meal -> Icons.Outlined.Restaurant
             NewEventType.Sleep -> Icons.Outlined.Bedtime
             NewEventType.Training -> Icons.Outlined.FitnessCenter

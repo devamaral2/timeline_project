@@ -1,0 +1,22 @@
+/*
+ * O editor da regra de recorrência, sob a linha "Recorrência" da edição: os
+ * campos com rótulo em cima, os dias da semana e a confirmação de apagar a
+ * série. As pílulas e as ações em texto vêm de `components/edit`. Cor só por token.
+ */
+
+.editor { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.label { padding-left: 14px; font-size: 13px; line-height: 20px; color: var(--muted); }
+.intervalRow { display: flex; align-items: center; gap: 10px; }
+.unit { flex: none; font-size: 14px; color: var(--muted); }
+
+.days { display: flex; flex-wrap: wrap; gap: 6px; }
+.day {
+  width: 44px; height: 44px; padding: 0; border: 1px solid var(--input); border-radius: 22px;
+  background: transparent; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.day[aria-pressed="true"] { border-color: transparent; background: var(--secondary); color: var(--ink); }
+
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px; }
+.confirm { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 6px; border: 1px solid var(--input); border-radius: 18px; }
+.confirmText { margin: 0; font-size: 15px; line-height: 22px; color: var(--ink); }

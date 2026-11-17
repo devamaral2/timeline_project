@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@repo/contracts": "workspace:*",
     "@repo/theme": "workspace:*",
     "@repo/timeline": "workspace:*",
     "clsx": "^2.1.1",

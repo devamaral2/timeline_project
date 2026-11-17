@@ -1,9 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import { expect, test } from "vitest";
-import type { MealRecipe } from "@/lib/api/contracts";
+import type { FoodRecipe } from "@repo/contracts";
 import { MealRecipeView } from "./MealRecipeView";
 
-const recipe: MealRecipe = {
+const recipe: FoodRecipe = {
   source: "model",
   servings: 2,
   prepTimeMinutes: 30,

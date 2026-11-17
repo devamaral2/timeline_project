@@ -1,50 +1,41 @@
-import {
-  Task,
-  type WorkItemPriority,
-  type WorkItemStatus,
-  type NoteLink,
-  type NotificationOffsetMinutes,
-} from "../../../../domain";
-import { occurrenceLinkOf, type OccurrenceColumns } from "../../recurrences/mappers/occurrence-columns";
+import { Task, type ArtifactLink } from "../../../../domain/index";
+import type * as schema from "../../database/schema/index";
+import { occurrenceLinkOf } from "../../recurrences/mappers/occurrence-columns";
 
-export interface TaskRow extends Partial<OccurrenceColumns> {
-  id: string;
-  revision: number;
-  userId: string;
-  parentTaskId: string | null;
-  name: string;
-  description: string;
-  status: WorkItemStatus;
-  priority: WorkItemPriority;
-  /** `number[]` e nao a uniao: quem restringe os valores e o CHECK da coluna, nao o tipo Drizzle de um array de integer. */
-  notifyOffsetsMinutes: number[];
-  startedAt: Date | null;
-  estimatedFinishAt: Date | null;
-  finishedAt: Date | null;
+export type TaskRow = typeof schema.tasks.$inferSelect;
+
+/** O que vem das outras tabelas para completar o agregado. */
+export interface TaskRowParts {
+  tags?: readonly string[];
+  artifactLinks?: readonly ArtifactLink[];
+  parentId?: string;
+  subtaskIds?: readonly string[];
 }
 
-export function mapTaskRow(
-  row: TaskRow,
-  tagNames: readonly string[],
-  dependsOnTaskIds: readonly string[] = [],
-  noteLinks: readonly NoteLink[] = [],
-): Task {
+export function mapTaskRow(row: TaskRow, parts: TaskRowParts = {}): Task {
   return Task.rehydrate({
     id: row.id,
     userId: row.userId,
-    parentTaskId: row.parentTaskId ?? undefined,
+    actor: row.actor,
+    kind: row.kind,
+    status: row.status ?? undefined,
+    priority: row.priority,
     name: row.name,
     description: row.description,
-    status: row.status,
-    priority: row.priority,
-    notifyOffsetsMinutes: row.notifyOffsetsMinutes as NotificationOffsetMinutes[],
-    tags: [...tagNames],
+    location: row.location ?? undefined,
     startedAt: row.startedAt ?? undefined,
     estimatedFinishAt: row.estimatedFinishAt ?? undefined,
     finishedAt: row.finishedAt ?? undefined,
-    dependsOnTaskIds: [...dependsOnTaskIds],
-    noteLinks: [...noteLinks],
+    notifyOffsetsMinutes: [...row.notifyOffsetsMinutes],
+    tags: [...(parts.tags ?? [])],
+    longRunning: row.longRunning,
+    data: (row.data ?? {}) as Record<string, unknown>,
+    artifactLinks: [...(parts.artifactLinks ?? [])],
+    parentId: parts.parentId,
+    subtaskIds: [...(parts.subtaskIds ?? [])],
     occurrence: occurrenceLinkOf(row),
     revision: row.revision,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   });
 }

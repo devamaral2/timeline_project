@@ -1,0 +1,786 @@
+.shell {
+  /* Os nomes do mockup leem os tokens globais do globals.css, que ja trocam
+     entre Névoa e Noite pela classe `dark` do <html>. */
+  --ink: var(--foreground);
+  --muted: var(--muted-foreground);
+  --line: var(--border);
+  --soft: var(--secondary);
+  --cyan: var(--brand);
+  --cyan-soft: var(--brand-soft);
+  --control-bg: var(--card);
+  --control-border: var(--input);
+  --control-shadow: none;
+  min-height: 100svh;
+  background: var(--background);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .monthPicker { background: transparent; }
+.dark .accountPopover { border-color: var(--line); }
+.dark .creationToggle button { background: transparent; }
+.dark .viewModes, .dark .taskDialog { border-color: var(--line); }
+.dark .quickCreate input, .dark .quickCreate select, .dark .creationToggle [aria-pressed="true"] { background: var(--accent); color: var(--ink); }
+.dark .monthPicker button, .dark .accountPopover button, .dark .sectionMenuHeading button { color: var(--ink); }
+
+.shell * { box-sizing: border-box; }
+.shell button, .shell a { -webkit-tap-highlight-color: transparent; }
+/* `:where` zera a especificidade deste reset: `.shell button` (0,1,1) vencia
+   qualquer classe sozinha (0,1,0), e o `font-size`, o `font-weight` e o
+   `cursor` que um modulo declarava num botao eram ignorados em silencio. */
+:where(.shell) button { font: inherit; cursor: default; }
+.shell button:disabled { opacity: 1; }
+.shell a { text-decoration: none; }
+.shell svg { flex-shrink: 0; width: 20px; height: 20px; stroke-width: 1.65; }
+/* Os campos de digitar ficam de fora: o foco deles é o fio de 1 px do globals.css. */
+.shell :focus-visible:not(input, textarea, select) { outline: 2px solid var(--ring); outline-offset: 2px; }
+.skipLink { position: fixed; top: -80px; left: 20px; padding: 12px 20px; background: var(--card); z-index: 50; }
+.skipLink:focus { top: 12px; }
+
+.header { border-bottom: 1px solid var(--line); }
+.headerInner { max-width: 1184px; margin: 0 auto; padding: 14px min(32px, 5%); display: flex; flex-wrap: wrap; align-items: center; column-gap: 40px; row-gap: 8px; }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); }
+.wordmark { font-family: var(--font-display); font-size: 27px; font-weight: 400; letter-spacing: -.01em; line-height: 44px; }
+/* A navegacao e so texto: a tela atual ganha peso e o ponto da marca. */
+.primaryNav { display: flex; align-items: center; gap: 4px; margin-right: auto; }
+.primaryNav a { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; color: var(--muted); border-radius: 8px; font-size: 14px; font-weight: 500; }
+.primaryNav a:hover { color: var(--ink); }
+.primaryNav .navActive { color: var(--ink); font-weight: 600; }
+.primaryNav .navActive::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--brand); }
+.headerActions { display: flex; align-items: center; gap: 6px; }
+/* O campo "Buscar e criar" do cabecalho abre o painel no desktop (Ctrl/⌘ K);
+   no celular quem abre e a barra inferior. `.shell .hubTrigger` vence o
+   `font: inherit` e o `cursor: default` que o shell da a todo botao. */
+.shell .hubTrigger { display: flex; align-items: center; gap: 10px; width: 248px; height: 44px; padding: 0 8px 0 7px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font-size: 13px; text-align: left; cursor: pointer; transition: border-color 140ms, box-shadow 140ms, background 140ms; }
+.shell .hubTrigger:hover { border-color: var(--muted); }
+.shell .hubTrigger[aria-expanded="true"] { border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring); }
+.hubMark { composes: hermesMark from "../ui/controls.module.css"; }
+.hubTrigger > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hubTrigger kbd { padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-family: var(--font-mono); font-size: 12px; line-height: 1; white-space: nowrap; }
+.accountMenu { position: relative; }
+.accountMenu > summary { list-style: none; }
+.accountMenu > summary::-webkit-details-marker { display: none; }
+.accountPopover { composes: floating from "../ui/controls.module.css"; position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; display: grid; min-width: 150px; gap: 4px; padding: 7px; }
+.accountPopover button { padding: 9px 10px; color: var(--ink); text-align: left; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.accountPopover button:hover { background: var(--soft); }
+.iconButton { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--muted); border-radius: 50%; cursor: pointer; }
+.iconButton:hover { background: var(--soft); color: var(--ink); }
+.iconButton svg { width: 20px; height: 20px; stroke-width: 1.75; }
+
+.notificationBell { position: relative; display: inline-flex; }
+.notificationBadge { position: absolute; top: 5px; right: 4px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--destructive); color: var(--destructive-foreground); font-size: 12px; font-weight: 600; line-height: 1; }
+.notificationPanel { composes: floating from "../ui/controls.module.css"; position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: min(360px, calc(100vw - 32px)); max-height: min(70vh, 520px); overflow-y: auto; padding: 8px; }
+.notificationPanel header { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; }
+.notificationPanel h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+.notificationPanel header button { padding: 4px 8px; color: var(--muted); font-size: 13px; border-radius: 8px; cursor: pointer; }
+.notificationPanel header button:hover { background: var(--soft); color: var(--ink); }
+.notificationPanel h3 { margin: 10px 8px 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.notificationPanel ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.notificationPanel li > a, .notificationPanel li > button { display: flex; width: 100%; text-align: left; cursor: pointer; align-items: flex-start; gap: 10px; padding: 9px 8px; color: var(--ink); border-radius: 8px; }
+.notificationPanel li > a:hover, .notificationPanel li > button:hover { background: var(--soft); }
+.notificationDot { flex: none; width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: transparent; }
+.notificationDot[data-unread="true"] { background: var(--brand); }
+.notificationText { display: grid; flex: 1; min-width: 0; gap: 2px; }
+.notificationText strong { overflow: hidden; font-size: 14px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.notificationText small { color: var(--muted); font-size: 12px; }
+.notificationPanel time { flex: none; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.notificationPanel[data-inline="true"] { position: static; width: 100%; max-height: none; overflow: visible; padding: 0; border: 0; box-shadow: none; background: transparent; }
+.settingsView { display: grid; gap: 8px; }
+.settingsView h2 { margin: 0 8px 4px; font-size: 15px; font-weight: 600; color: var(--ink); }
+.settingsView button { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); text-align: left; cursor: pointer; }
+.settingsView button:hover { background: var(--soft); }
+.settingsView svg { width: 18px; height: 18px; color: var(--muted); }
+.notificationEmpty { margin: 0; padding: 14px 8px; color: var(--muted); font-size: 14px; }
+.notificationToast a { color: var(--ink); }
+.notificationToasts { position: fixed; top: 20px; right: 20px; z-index: 40; display: grid; gap: 8px; width: min(320px, calc(100% - 40px)); }
+.notificationToast { composes: floating from "../ui/controls.module.css"; display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; font-size: 14px; }
+.notificationToast button { margin-left: auto; color: var(--muted); cursor: pointer; }
+.dark .notificationToast { border-color: var(--line); color: var(--ink); }
+
+.main { composes: container from "../ui/page.module.css"; }
+.eyebrow { color: var(--muted); font-size: 12px; font-weight: 500; margin-bottom: 8px; }
+.agenda { min-width: 0; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 29px; }
+.filters { display: flex; align-items: center; gap: 7px; }
+.filters button { border: 1px solid transparent; border-radius: 25px; padding: 8px 20px; color: var(--muted); font-size: 12px; }
+.filters .filterActive { color: var(--ink); background: var(--soft); border-color: var(--line); font-weight: 600; }
+.dayGroup + .dayGroup { margin-top: 31px; }
+.dayHeading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+.dayHeading h2 { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-display); font-size: 24px; font-weight: 400; line-height: 1.1; color: var(--ink); }
+.dayHeading h2 span { font-family: var(--font-sans); font-size: 13px; font-weight: 400; color: var(--muted); }
+.dayHeading > span { font-size: 12px; font-weight: 500; line-height: 1; color: var(--muted); }
+.task { position: relative; line-height: normal; padding: 16px 24px; margin-inline: 0; border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; background: var(--card); box-shadow: none; transition: background 200ms, border-color 200ms, opacity 200ms; }
+.task[data-time-position="past"] { background: transparent; }
+.task[data-time-position="past"]:focus-within { background: var(--card); }
+.task[data-time-position="running"] { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+.task[data-time-position="upcoming"] { background: var(--card); }
+/* Nao realizado: o titulo e a duracao descem para o tom apagado. Opacidade no
+   cartao inteiro levava o texto secundario abaixo de 3:1. */
+.task[data-missed="true"] h3, .task[data-missed="true"] .taskDuration { color: var(--muted); }
+.task:not([data-time-position="past"]):has(.taskLink):hover { border-color: color-mix(in oklab, var(--brand) 40%, transparent); }
+.task .typeIcon { grid-column: 1; grid-row: 1 / 3; align-self: start; margin-top: 2px; width: 22px; height: 22px; color: var(--muted); }
+.task h3 { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 600; line-height: 1.4; letter-spacing: 0; color: var(--card-foreground); }
+.task h3 > a, .task h3 > button { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.taskDuration { grid-column: 3; grid-row: 1 / 3; justify-self: end; align-self: center; display: inline-flex; align-items: baseline; justify-content: flex-end; gap: 3px; color: var(--card-foreground); font-family: var(--font-display); font-size: 22px; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.taskDuration strong { font-weight: 400; }
+.taskDuration small { color: var(--muted); font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; }
+.taskDuration small + strong { margin-left: 6px; }
+.taskDuration.stopwatch { color: var(--brand-accent); font-family: var(--font-mono); font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
+.task .taskChevron { grid-column: 4; grid-row: 1 / 3; align-self: center; margin-left: -4px; justify-self: end; width: 18px; height: 18px; color: var(--muted); opacity: 0; transform: translateX(-4px); transition: opacity 150ms, transform 150ms; }
+@media (hover: hover) { .task:hover .taskChevron { opacity: 1; transform: none; } }
+.task:has(.taskLink:focus-visible) .taskChevron { opacity: 1; transform: none; }
+@media (hover: none) { .task .taskChevron { opacity: .6; transform: none; } }
+
+/* Tempo livre entre tarefas: só leitura, tracejado e sem fundo de cartão, para
+   nunca ser confundido com algo registrado. */
+
+.weekday { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+.bottomNav, .bottomFade, .navScrim { display: none; }
+/* O circulo que voa entre a barra inferior e o icone de status do campo. */
+.hermesFlyer { position: fixed; z-index: 21; display: grid; place-items: center; pointer-events: none; visibility: hidden; will-change: transform; }
+.flyerBot { font-size: 52px; }
+.sectionMenu { display: none; }
+
+/* Ações compactas da agenda. */
+.monthToggle { display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; min-height: 44px; }
+.monthToggle svg { width: 14px; height: 14px; color: var(--muted); transition: transform 160ms; }
+.monthToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+.monthDays .weekday { padding: 7px 0; font-size: 12px; }
+.horizontalDays { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -14px; }
+.verticalDays { overflow-anchor: auto; }
+.horizontalDays::-webkit-scrollbar { display: none; }
+.horizontalDays > .dayGroup, .horizontalDays > .dayGroup + .dayGroup { flex: 0 0 100%; min-width: 0; padding: 0 14px 15px; margin-top: 0; scroll-snap-align: start; scroll-snap-stop: always; }
+.freeDay { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 240px; padding: 40px 24px; text-align: center; }
+.freeDay p { margin: 0; color: var(--ink); font-family: var(--font-display); font-size: 26px; line-height: 1.25; }
+.freeDay span { max-width: 280px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+.detailMain { max-width: 784px; padding: 34px 32px 60px; margin: auto; }
+/* O detalhe com a barra "Peça ao Hermes…" é um rodapé: a página vira uma coluna de altura total e a barra
+   (margin-top: auto) fica no fim da tela mesmo com pouco conteúdo; com muito, ela gruda na borda de baixo.
+   O respiro de baixo passa para a própria barra, senão ela pararia acima da borda. */
+.shell:has(> .detailMain > [data-entity-ai-bar]) { display: flex; flex-direction: column; }
+.shell > .detailMain:has(> [data-entity-ai-bar]) { flex: 1 0 auto; display: flex; flex-direction: column; width: 100%; padding-bottom: 0; }
+.detailNavigation { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; }
+.detailBrand { display: none; }
+.backLink { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.backLink:hover { color: var(--brand-accent); }
+.backLink svg { width: 18px; height: 18px; }
+.detailType { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); background: var(--soft, var(--secondary)); border-radius: 20px; padding: 7px 13px; font-size: 12px; }
+.detailType svg { width: 16px; height: 16px; }
+.detailHeading h1 { font-size: 32px; font-weight: 500; line-height: 1.2; letter-spacing: -.02em; margin-top: 12px; }
+.detailHeading > p { margin-top: 9px; font-size: 13px; color: var(--muted); }
+.detailMeta { display: flex; flex-wrap: wrap; gap: 26px; margin-top: 26px; color: var(--muted); font-size: 12px; }
+.detailMeta > span { display: inline-flex; align-items: center; gap: 8px; }
+.detailMeta svg { width: 16px; height: 16px; }
+.detailDuration { margin-left: 3px; font-size: 12px; color: var(--meal); }
+.detailDurationTrack { height: 2px; margin-top: 24px; }
+.detailDurationTrack span { display: block; height: 100%; width: calc(100% / 3); border-radius: 3px; background: var(--meal); opacity: .75; }
+.detailInfo { margin-top: 34px; border: 1px solid var(--line); border-radius: 17px; padding: 25px 27px; display: grid; gap: 25px; }
+.detailInfo > div { display: flex; gap: 18px; }
+.detailInfo > div > svg { width: 19px; height: 19px; margin-top: 2px; color: var(--muted); }
+.detailInfo h2 { font-size: 12px; color: var(--muted); font-weight: 400; margin-bottom: 5px; }
+.detailInfo p { font-size: 14px; line-height: 1.7; }
+.nutrition { margin-top: 33px; }
+.nutrition > h2 { font-size: 13px; font-weight: 600; }
+.nutritionGrid { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 23px; }
+.nutritionGrid > div { border-right: 1px solid var(--line); padding-left: 24px; }
+.nutritionGrid > div:first-child { padding-left: 0; }
+.nutritionGrid > div:last-child { border: 0; }
+.nutritionGrid p { font-size: 26px; letter-spacing: -.7px; font-weight: 500; }
+.nutritionGrid p > span { font-size: 12px; color: var(--muted); margin-left: 5px; letter-spacing: 0; font-weight: 400; }
+.nutritionGrid h3 { font-size: 12px; color: var(--muted); margin-top: 4px; font-weight: 400; }
+.detailFooter { display: flex; justify-content: space-between; align-items: center; gap: 18px; border-top: 1px solid var(--line); margin-top: 37px; padding-top: 24px; }
+.missedCheckbox { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.missedCheckbox input { appearance: none; border: 1px solid var(--input); width: 15px; height: 15px; border-radius: 4px; }
+.editButton { padding: 12px 19px; border-radius: 10px; background: var(--primary); color: var(--primary-foreground); display: flex; align-items: center; gap: 9px; font-size: 12px; }
+.editButton svg { width: 16px; height: 16px; }
+.detailPrototypeNote { margin-top: 26px; color: var(--muted); font-size: 12px; }
+
+/* Status da tarefa e anotação da tarefa têm sinais independentes. */
+.task:has(.taskReference) .taskLabels { grid-column: 2; }
+.tag { padding: 2px 8px; border-radius: 5px; background: var(--soft); color: var(--muted); font-size: 13px; font-weight: 500; line-height: 20px; }
+.taskPriority { display: inline-flex; align-items: center; color: var(--priority-low); }
+.taskPriority svg { width: 14px; height: 14px; }
+.taskPriority[data-priority="urgent"] { color: var(--priority-urgent); }
+.taskPriority[data-priority="low"] { opacity: .55; }
+.taskStatusButton { position: relative; display: grid; place-items: center; width: 24px; height: 24px; margin: -2px 0; border-radius: 50%; cursor: pointer; }
+.taskStatusButton::after { content: ""; position: absolute; inset: -10px; }
+.taskStatusButton:hover { background: var(--soft); }
+.taskStatusIcon[data-status="todo"] { color: var(--status-todo); }
+.taskStatusIcon[data-status="inHold"] { color: var(--status-scheduled); }
+.taskStatusIcon[data-status="doing"] { color: var(--status-hold); fill: color-mix(in oklab, var(--status-hold) 14%, transparent); }
+.taskStatusIcon[data-status="done"] { color: var(--status-done); fill: color-mix(in oklab, var(--status-done) 14%, transparent); }
+.taskStatusIcon[data-status="cancel"] { color: var(--status-cancel); }
+.taskDialog { position: fixed; inset: 0; margin: auto; padding: 0; width: min(440px, calc(100% - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; border: 1px solid var(--line); border-radius: 22px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-float); }
+.taskDialog::backdrop { background: var(--scrim); }
+:global(body):has(.taskDialog[open]) { overflow: hidden; }
+.taskDialogContent { padding: 26px; }
+.taskDialogHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 25px; }
+.taskDialogHeading p { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.taskDialogHeading p svg { width: 12px; height: 12px; }
+.taskDialogHeading h2 { font-size: 21px; font-weight: 500; margin-top: 7px; letter-spacing: -.5px; }
+.taskDialogHeading button { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: var(--soft); cursor: pointer; }
+.taskDialogHeading button svg { width: 16px; height: 16px; }
+.statusOptions, .priorityOptions { border: 0; padding: 0; margin: 0; min-width: 0; }
+.statusOptions legend, .priorityOptions legend { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.statusOptions label { position: relative; display: flex; align-items: center; gap: 11px; min-height: 43px; padding: 8px 11px; border-radius: 9px; font-size: 12px; cursor: pointer; }
+.statusOptions label[data-selected="true"] { background: var(--soft); }
+.statusOptions .selectedCheck { margin-left: auto; width: 15px; height: 15px; color: var(--muted); }
+.statusOptions input, .priorityOptions input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.statusOptions label:has(:focus-visible), .priorityOptions label:has(:focus-visible) { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.priorityOptions { display: flex; gap: 7px; margin-top: 22px; }
+.priorityOptions label { position: relative; display: flex; align-items: center; justify-content: center; gap: 7px; flex: 1; padding: 10px 6px; font-size: 12px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; }
+.priorityOptions label[data-selected="true"] { border-color: var(--brand); background: var(--cyan-soft); }
+.taskAnnotation { margin-top: 25px; padding-top: 21px; border-top: 1px solid var(--line); }
+.taskAnnotation h3 { font-size: 12px; font-weight: 600; }
+.taskAnnotation h3 span { display: block; font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 5px; }
+.taskAnnotation label { display: flex; align-items: center; gap: 9px; margin-top: 17px; font-size: 12px; cursor: pointer; }
+.taskAnnotation input { width: 16px; height: 16px; accent-color: var(--destructive); }
+.taskAnnotation p { margin-top: 9px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.taskDemoNote { margin-top: 22px; font-size: 12px; color: var(--muted); }
+
+@media (max-width: 1000px) {
+  .headerInner { column-gap: 16px; }
+  .primaryNav { gap: 2px; }
+  /* Sem espaco para o campo: fica so o circulo do Hermes, no tamanho dos vizinhos. */
+  .shell .hubTrigger { justify-content: center; width: 44px; height: 44px; padding: 0; border-color: transparent; background: transparent; }
+  .shell .hubTrigger:hover { border-color: transparent; background: var(--soft); }
+  .hubTrigger > span, .hubTrigger kbd { display: none; }
+}
+
+/* Os formularios de criar e editar (tarefa e nota), no redesenho: o
+   nome na serifa ao lado do quadrado do tipo, linhas com fio para o horario,
+   rotulos em mono, campos de raio 18 e o botao em pilula de 56 px. */
+.entityForm { display: grid; gap: 28px; padding: 24px 4px 4px; }
+.entityHeading { display: flex; align-items: center; gap: 14px; }
+.entityHeading > span { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 13px; color: var(--muted); }
+.entityHeading > div { flex: 1; min-width: 0; }
+.entityHeading h3 { margin: 0; font-size: 20px; font-weight: 500; }
+.entityHeading p { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+.entityNameInput { width: 100%; min-width: 0; height: 48px; padding: 0 !important; border: 0 !important; border-radius: 8px !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font-family: var(--font-display); font-size: 30px !important; letter-spacing: -.01em; }
+.entityNameInput:focus-visible { outline: 1px solid var(--brand) !important; outline-offset: 4px; }
+.entityTaskHeading { display: grid; }
+.entityTaskTypeName { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.entityTaskTitleRow { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.entityTypeSelect { position: relative; width: 44px; margin: 0; padding: 0; border: 0; flex: 0 0 44px; }
+.entityTypeButton { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--ink); cursor: pointer; }
+.entityTypeButton > svg:last-child { position: absolute; right: -3px; bottom: -3px; width: 15px; height: 15px; padding: 2px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--control-bg); color: var(--muted); transition: transform 140ms; }
+.entityTypeButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
+.entityTypeButton:focus-visible { outline: 0; }
+.entityTypeButton:focus-visible .entityTypeIcon { box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
+.entityTypeIcon { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 13px; background: transparent; color: var(--muted); flex-shrink: 0; }
+.entityTypeIcon svg { width: 20px; height: 20px; }
+.entityTaskNameInput { flex: 1; width: 100%; min-width: 0; height: 48px; padding: 0 !important; border: 0 !important; border-radius: 8px !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font-family: var(--font-display); font-size: 30px !important; letter-spacing: -.01em; }
+.entityTaskNameInput:focus-visible { outline: 1px solid var(--brand) !important; outline-offset: 4px; }
+.pickerView { display: flex; flex-direction: column; min-height: 280px; padding: 8px 0 2px; }
+.pickerHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.pickerBack { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -12px; flex-shrink: 0; color: var(--muted); border-radius: 50%; cursor: pointer; }
+.pickerBack:hover { background: var(--soft); color: var(--ink); }
+.pickerBack svg { width: 20px; height: 20px; }
+.pickerHeader h3 { margin: 0; color: var(--ink); font-size: 17px; font-weight: 500; }
+.pickerOptions { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; }
+.pickerOption { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 10px 14px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); font-size: 15px; text-align: left; cursor: pointer; transition: border-color 140ms, box-shadow 140ms; }
+.pickerOption:hover { border-color: var(--muted); }
+.pickerOption[aria-selected="true"] { border-color: var(--brand); background: var(--cyan-soft); }
+.pickerOption:focus-visible { border-color: var(--ring); }
+.pickerOption > svg:last-child { width: 16px; height: 16px; margin-left: auto; color: var(--brand-accent); flex-shrink: 0; }
+.pickerOption .entityTypeIcon { width: 38px; height: 38px; }
+.pickerOption .taskStatusIcon { width: 20px; height: 20px; }
+.pickerOption .entityPriorityIcon { width: 22px; height: 22px; }
+.taskSchedule { position: relative; border-top: 1px solid var(--line); }
+.taskDateTimeRow { position: relative; display: flex; align-items: center; gap: 8px; min-height: 64px; border-bottom: 1px solid var(--hairline); }
+.taskDuration { display: flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: 24px; line-height: 24px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.taskDuration strong { font-weight: 400; }
+.taskDuration small { margin-right: 4px; font-family: var(--font-sans); font-size: 12px; color: var(--muted); }
+.taskDuration small:last-child { margin-right: 0; }
+.taskDateTimeLabel { flex: 1; color: var(--muted); font-size: 14px; line-height: 20px; }
+.taskDateControl { position: relative; display: flex; align-items: center; width: 150px; height: 44px; padding: 0 4px 0 14px; border: 1px solid var(--line); border-radius: 999px; }
+.taskDateControl input, .taskTimeInput { width: 100%; min-width: 0; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--ink); font: inherit; font-size: 14px !important; font-weight: 500; }
+.taskDateControl:focus-within, .shell .taskTimeInput:focus-visible { border-color: var(--brand) !important; }
+.taskDateControl input:focus-visible, .taskTimeInput:focus-visible { outline: 0; }
+.taskDateControl button { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
+.taskDateControl button:hover, .taskDateControl button[aria-expanded="true"] { color: var(--ink); }
+.taskDateControl button svg { width: 16px; height: 16px; }
+.shell .taskTimeInput { flex: none; width: 78px; height: 44px; border: 1px solid var(--line) !important; border-radius: 999px !important; text-align: center; font-variant-numeric: tabular-nums; }
+.pickerCalendar { width: 100%; }
+.taskDatePickerHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; text-transform: capitalize; }
+.taskDatePickerHeading strong { font-size: 14px; font-weight: 500; }
+.taskDatePickerHeading span { display: flex; gap: 2px; }
+.taskDatePickerHeading button { width: 30px; height: 30px; }
+.taskDateWeek, .taskDateGrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.taskDateWeek { margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+.taskDateWeek span { padding: 5px 0; }
+.taskDateGrid button, .taskDateGrid > span { width: 32px; height: 32px; }
+.taskDateGrid button { border-radius: 50%; color: var(--ink); font-size: 12px; cursor: pointer; }
+.taskDateGrid button:hover { background: var(--soft); }
+.taskDateGrid button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
+.entityForm label { display: grid; min-width: 0; gap: 10px; font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.entityForm label input, .entityForm select, .entityForm textarea { width: 100%; min-width: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 18px; background: transparent; box-shadow: none; color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 22px; letter-spacing: 0; text-transform: none; transition: border-color 140ms; }
+.entityForm label input:focus-visible, .entityForm select:focus-visible, .entityForm textarea:focus-visible, .quickCreate input:focus-visible, .quickCreate select:focus-visible { outline: 0; border-color: var(--brand); }
+.entityForm .entityControl { min-height: 56px; }
+.entityForm textarea.entityControl { min-height: 96px; resize: vertical; }
+.entityForm textarea { resize: vertical; min-height: 96px; }
+.entitySelectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.entitySelect { position: relative; min-width: 0; margin: 0; padding: 0; border: 0; }
+.entitySelectLabel { display: block; margin-bottom: 10px; font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.entitySelectButton { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 54px; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); cursor: pointer; transition: border-color 140ms, box-shadow 140ms; }
+.entitySelectButton:hover, .entitySelectButton[aria-expanded="true"] { border-color: var(--muted); }
+.entitySelectButton:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; border-color: var(--ring); }
+.entitySelectButton > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entitySelectButton > svg:last-child { width: 15px; height: 15px; margin-left: auto; color: var(--muted); transition: transform 140ms; }
+.entitySelectButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
+.entityPriorityIcon { display: inline-grid; place-items: center; width: 20px; height: 20px; color: var(--priority-low); flex-shrink: 0; }
+.entityPriorityIcon svg { width: 17px; height: 17px; }
+.entityPriorityIcon[data-priority="medium"] { color: var(--priority-medium); }
+.entityPriorityIcon[data-priority="high"] { color: var(--priority-high); }
+.entityPriorityIcon[data-priority="urgent"] { color: var(--priority-urgent); }
+.entitySelect .taskStatusIcon { width: 18px; height: 18px; color: var(--muted); }
+.entityFields { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 12px; }
+
+/* Chips de tags e avisos do formulário de nova tarefa. */
+.entityChips { display: flex; flex-wrap: wrap; gap: 6px; }
+.entityChips button, .entityChip { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px 0 16px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer; }
+.entityChips button[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
+.offsetAdd { display: flex; gap: 8px; }
+.offsetAdd input { flex: 1; min-width: 0; height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: 14px; }
+.offsetAdd input:focus-visible { outline: 0; border-color: var(--brand); }
+.offsetAdd button { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 16px 0 12px; border: 1px dashed var(--input); border-radius: 999px; color: var(--muted); font-size: 14px; font-weight: 500; cursor: pointer; }
+.offsetAdd button:hover { border-style: solid; color: var(--ink); }
+.offsetAdd svg { width: 16px; height: 16px; }
+.entitySelect > .entityChips { margin-top: 10px; }
+.entityChip button { display: grid; place-items: center; width: 20px; min-height: 0; padding: 0; border: 0; background: transparent; color: var(--muted); }
+.entityChip svg { width: 14px; height: 14px; }
+.entityContinue { composes: primaryButton from "../ui/controls.module.css"; }
+.shell .entityContinue { width: 100%; min-height: 56px; border-radius: 999px; font-size: 16px; }
+.shell .entityContinue:disabled { opacity: .6; cursor: not-allowed; }
+/* As telas de criar e editar: a mesma coluna das listas, mais estreita, e o
+   titulo na serifa dos titulos de pagina, ao lado da seta de voltar. */
+.newTaskPage { composes: container from "../ui/page.module.css"; --page-width: 480px; }
+.newTaskPage .pickerHeader { margin-bottom: 0; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.newTaskPage .pickerHeader h1 { margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.formError { margin: 0; color: var(--destructive); font-size: 13px; }
+
+@media (max-width: 720px) {
+  .brand { gap: 7px; }
+  .task { padding: 16px; }
+  .headerActions { margin-left: auto; gap: 0; }
+  .primaryNav, .shell .hubTrigger { display: none; }
+  /* Sem cabeçalho no celular: a barra inferior e o chat levam tudo. O sino segue montado só para entregar os avisos (toasts). */
+  .header { border: 0; }
+  .headerInner { height: 0; padding: 0; overflow: hidden; }
+  .brand, .headerActions .iconButton, .accountMenu { display: none; }
+  .eyebrow { display: none; }
+  .toolbar { margin-bottom: 27px; }
+  .filters { gap: 5px; }
+  .filters button { padding: 7px 17px; font-size: 12px; }
+  .toolbar > .iconButton { width: 30px; }
+  .dayGroup + .dayGroup { margin-top: 30px; }
+  /* A barra inferior flutua em duas pecas: a dock com as tres telas e, separado
+     por um respiro de 10 px, o circulo do chat (66 px, a altura da dock). Atras
+     da barra o conteudo se apaga no chao. */
+  .bottomFade { display: block; position: fixed; z-index: 19; left: 0; right: 0; bottom: 0; height: calc(140px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 58%); pointer-events: none; }
+  .bottomNav { display: block; position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); --nav-pill: var(--primary); --nav-pill-ink: var(--primary-foreground); }
+  .navDock { margin-right: 76px; border: 1px solid var(--line); border-radius: 33px; background: var(--card); transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms, border-radius 300ms cubic-bezier(.5,0,.2,1) 50ms, box-shadow 300ms; }
+  /* Com o menu de opcoes aberto a dock cresce para cima (`section-menu.tsx`),
+     passa a flutuar e avanca por baixo do circulo do chat, para o menu ter a
+     largura toda. As abas nao saem do lugar: o que a dock ganha a direita, elas
+     devolvem em margem, no mesmo tempo e na mesma curva. */
+  .bottomNav[data-menu-open] .navDock { margin-right: 0; border-radius: 30px; box-shadow: var(--shadow-float); transition: margin-right 500ms cubic-bezier(.22,1,.36,1), border-radius 500ms cubic-bezier(.22,1,.36,1), box-shadow 400ms; }
+  .navScrim { display: block; position: fixed; z-index: 19; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: var(--scrim); opacity: 0; pointer-events: none; cursor: default; transition: opacity 220ms ease-in; }
+  .navScrim[data-open] { opacity: 1; pointer-events: auto; transition: opacity 340ms ease-out; }
+  .navTabs { position: relative; display: flex; align-items: center; gap: 4px; padding: 6px; transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms; }
+  .bottomNav[data-menu-open] .navTabs { margin-right: 76px; transition: margin-right 500ms cubic-bezier(.22,1,.36,1); }
+  /* A pilula da tela atual e uma so e desliza ate a secao escolhida
+     (`--nav-index`, 0 a 2). A dock menos os respiros (20 ao todo) se divide em
+     3,8 partes: a aba atual leva 1,8 (ela mostra o titulo) e as outras uma cada.
+     Ao trocar, a borda do lado do destino sai na frente (`data-dir`) e a
+     pilula estica ate la. */
+  .navTabs::before { content: ""; position: absolute; top: 6px; bottom: 6px; left: calc(6px + var(--nav-index, 1) * ((100% - 20px) / 3.8 + 4px)); right: calc(6px + (2 - var(--nav-index, 1)) * ((100% - 20px) / 3.8 + 4px)); border-radius: 26px; background: var(--nav-pill); transition: left 420ms var(--ease-out), right 420ms var(--ease-out), background-color 300ms, opacity 200ms; }
+  .bottomNav[data-dir="r"] .navTabs::before { transition: right 260ms var(--ease-out), left 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
+  .bottomNav[data-dir="l"] .navTabs::before { transition: left 260ms var(--ease-out), right 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
+  /* Icone em todas as abas; o titulo so na atual, que cresce para abrigá-lo. */
+  .navTabs > button, .navTabs > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; height: 52px; border-radius: 26px; color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: flex-grow 420ms var(--ease-out), color 250ms; }
+  .navTabs > [aria-current="page"] { flex-grow: 1.8; color: var(--nav-pill-ink); }
+  .navGlyph { position: relative; display: block; flex: none; width: 24px; height: 24px; }
+  .navTabs svg { display: block; width: 24px; height: 24px; stroke-width: 1.75; }
+  .navTabs .navGlyph > svg { transform: scale(.9); transition: transform 500ms cubic-bezier(.34,1.56,.64,1); }
+  .navTabs > [aria-current="page"] .navGlyph > svg { transform: none; }
+  .navTabs > :active .navGlyph > svg { transform: scale(.8); transition-duration: 100ms; }
+  .bottomNav[data-menu-open] .navTabs > [aria-current="page"] .navGlyph > svg { transform: scale(.9); }
+  /* O titulo: fechado nas outras abas, abre ao lado do icone na atual. */
+  .navLabel { display: block; max-width: 0; margin-left: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: max-width 420ms var(--ease-out), margin-left 420ms var(--ease-out), opacity 200ms linear; }
+  .navTabs > [aria-current="page"] .navLabel { max-width: 96px; margin-left: 8px; opacity: 1; transition-delay: 0s, 0s, 110ms; }
+  /* O ponto: ha busca ou filtro ativo na tela atual. */
+  .navDot { position: absolute; top: -5px; left: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 0 2px var(--nav-pill); transform: scale(0); transition: transform 350ms cubic-bezier(.34,1.56,.64,1); }
+  .navTabs > [aria-current="page"] .navDot[data-on] { transform: none; }
+  /* O circulo do chat: um aro da cor da dock em volta do robo. Com o menu
+     aberto a dock passa por baixo dele e o aro some. */
+  .commandButton { position: absolute; z-index: 1; right: 0; bottom: 0; display: grid; place-items: center; width: 66px; height: 66px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--card); cursor: pointer; transition: border-color 300ms, background-color 300ms; }
+  .bottomNav[data-menu-open] .commandButton { border-color: transparent; background: transparent; }
+  .commandCore { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; color: var(--ink); transition: transform 200ms var(--ease-out); }
+  .commandButton:active .commandCore { transform: scale(.92); }
+  .commandCore > svg { width: 24px; height: 24px; stroke-width: 1.75; }
+  /* O círculo de 52 px do robô vem do componente, pelo `font-size`
+     (`hermes-bot.tsx`). */
+  .commandBot { font-size: 52px; }
+  /* A cor do modo de visualização pinta a pílula da aba atual, nas três telas
+     (`data-list-mode` vem do `useViewMode`). As cores e as
+     tintas do texto são tokens do web (`globals.css`). */
+  .bottomNav[data-list-mode="human"] { --nav-pill: var(--mode-human); }
+  .bottomNav[data-list-mode="agent"] { --nav-pill: var(--mode-agent); --nav-pill-ink: var(--mode-agent-ink); }
+  .bottomNav[data-list-mode="all"] { --nav-pill: var(--mode-all); --nav-pill-ink: var(--mode-all-ink); }
+}
+
+/* O painel "Buscar e criar" (chat, criar, pesquisar): o conteudo e o mesmo no
+   celular e no desktop; so a moldura muda, nos dois blocos logo abaixo. */
+:global(body):has(.sectionMenu[open]) { overflow: hidden; }
+.sectionMenu[open] { display: flex; flex-direction: column; }
+.sectionMenuHeading { display: flex; justify-content: space-between; align-items: center; padding-left: 12px; margin-bottom: 3px; }
+.sectionMenuHeading h2 { color: var(--ink); font-size: 20px; font-weight: 500; }
+.sectionMenuHeading button { display: grid; place-items: center; width: 40px; height: 40px; color: var(--muted); cursor: pointer; border-radius: 50%; }
+.sectionMenuHeading svg { width: 17px; height: 17px; }
+
+.hubDescription { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 0 12px 20px; }
+.hubContent { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 2px; }
+.creationToggle { display: flex; gap: 4px; border: 0; border-radius: 12px; background: var(--soft); padding: 4px; margin: 0 0 9px; min-width: 0; }
+.creationToggle button { flex: 1; min-width: 0; min-height: 44px; padding: 6px 3px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 9px; background: var(--line); color: var(--muted); font-size: 12px; cursor: pointer; }
+.creationToggle [aria-pressed="true"] { background: var(--cyan-soft); color: var(--brand-accent); }
+.creationToggle svg { width: 16px; height: 16px; stroke-width: 1.4; }
+.manualPanel > .hubSearch:last-child { margin-top: 16px; }
+.sectionMenuHeading, .sheetHandle { flex-shrink: 0; }
+.hubSearch { display: flex; align-items: center; gap: 10px; border: 1px solid var(--control-border); padding: 8px 10px 8px 14px; border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); transition: border-color 140ms, box-shadow 140ms; }
+.hubSearch:focus-within { border-color: var(--brand); }
+.hubSearch input { width: 100%; min-width: 0; border: 0; background: transparent; padding: 8px 0; font: inherit; font-size: 16px; color: var(--ink); }
+.hubSearch input:focus-visible { outline: 0; }
+
+.sectionMenu[data-hub-view] .hubContent { flex: 1; padding: 8px 0 0; }
+.hubHeader { flex-shrink: 0; display: flex; align-items: center; gap: 6px; min-height: 52px; }
+.hubBack { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -12px; flex-shrink: 0; border-radius: 50%; color: var(--ink); cursor: pointer; }
+.hubHeader .creationToggle { flex: 1; margin: 0; padding: 0; gap: 6px; background: transparent; overflow-x: auto; }
+.hubHeader .creationToggle button { flex: 0 0 auto; min-height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font-size: 14px; }
+.hubHeader .creationToggle [aria-pressed="true"] { border-color: var(--ink); background: transparent; box-shadow: 0 0 0 1px var(--ink); color: var(--ink); font-weight: 600; }
+.hubHeader .hubSearch { flex: 1; padding: 2px 14px; border-radius: 999px; }
+
+.assistantPanel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.chatHeader { flex-shrink: 0; display: flex; align-items: center; gap: 4px; min-height: 60px; margin: 0 -8px; border-bottom: 1px solid var(--line); }
+.chatHeader h2, .chatTitle p { min-width: 0; margin: 0; overflow: hidden; font-size: 15px; font-weight: 600; line-height: 20px; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
+/* O titulo da conversa leva em cima quem responde: o assistente da agenda ou o Hermes (`/hermes`). */
+.chatTitle { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-left: 4px; }
+.chatLive { font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.chatIconButton { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
+.chatIconButton:hover:not(:disabled) { color: var(--ink); }
+[data-chat-view="list"] .chatIconButton { color: var(--ink); }
+.chatIconButton:disabled { opacity: .4; }
+/* As duas vistas do chat: a conversa e o processo da IA. No painel estreito uma toma o lugar da outra; com
+   largura (o chat expandido no desktop) o processo abre ao lado, em paralelo. */
+.assistantPanel { container: chat / inline-size; }
+.chatPanes { flex-shrink: 0; display: flex; gap: 20px; min-width: 0; margin: 0 -8px; padding: 0 12px; border: 0; border-bottom: 1px solid var(--hairline); }
+.chatPanes button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
+.chatPanes button:hover { color: var(--ink); }
+.chatPanes button[aria-pressed="true"] { border-bottom-color: var(--ink); color: var(--ink); }
+.chatPaneCount { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--soft); font-size: 11px; line-height: 18px; letter-spacing: 0; text-align: center; font-variant-numeric: tabular-nums; color: var(--muted); }
+.chatPaneCount[data-running="true"] { background: var(--cyan-soft); color: var(--brand-accent); }
+.chatSplit { flex: 1; min-height: 0; min-width: 0; display: flex; }
+.chatProcess { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.chatSplit[data-pane="process"] > .chatBody { display: none; }
+@container chat (min-width: 860px) {
+  .chatSplit[data-pane="process"] { gap: 24px; }
+  .chatSplit[data-pane="process"] > .chatBody { display: flex; flex: 1 1 0; }
+  .chatSplit[data-pane="process"] > .chatProcess { flex: 1 1 0; padding-left: 24px; border-left: 1px solid var(--line); }
+}
+/* Os botoes do inicio so aparecem depois que a marca termina de se trancar. */
+/* A margem lateral deixa o realce dos comandos sair 12px do texto sem rolar de lado. */
+.chatBody { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 -12px; padding: 0 12px; overflow: hidden auto; min-width: 0; overscroll-behavior: contain; }
+/* `margin-top: auto` em vez de `justify-content: flex-end`: se o conteudo passar
+   da altura, o topo continua alcancavel pela rolagem. */
+[data-chat-view="home"] .assistantWelcome { margin-top: auto; }
+.chatCommands { margin-top: auto; }
+.assistantWelcome { display: flex; flex-direction: column; gap: 24px; padding: 24px 4px 12px; text-align: left; }
+.assistantWelcome h2 { margin: 0; font-family: var(--font-display); font-size: 36px; font-weight: 400; line-height: 40px; letter-spacing: -.015em; text-wrap: balance; color: var(--ink); }
+.assistantWelcome p { margin: -12px 0 0; font-size: 13px; color: var(--muted); }
+/* Os atalhos do inicio: uma linha por acao, com fio. */
+.createActions { min-width: 0; margin: 0; padding: 0; border: 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; }
+.createActions button { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 52px; padding: 0; border: 0; border-bottom: 1px solid var(--hairline); border-radius: 0; color: var(--ink); font-size: 16px; font-weight: 500; text-align: left; cursor: pointer; }
+.createActions button:hover { text-decoration: underline; text-underline-offset: 4px; }
+.createActions svg { width: 20px; height: 20px; color: var(--muted); }
+
+.chatCommands { list-style: none; margin-bottom: 0; padding: 0 0 4px; display: grid; gap: 2px; }
+.chatCommands button { width: calc(100% + 24px); margin: 0 -12px; display: flex; align-items: center; gap: 14px; min-height: 56px; padding: 8px 12px; border-radius: var(--radius-xs); color: var(--ink); text-align: left; cursor: pointer; }
+.chatCommands button[aria-current="true"] { background: var(--accent); }
+.chatCommands svg { color: var(--muted); }
+.chatCommands [aria-current="true"] svg { color: var(--ink); }
+.chatCommands button > span { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.chatCommands strong { font-size: 15px; font-weight: 600; }
+.chatCommands small { font-size: 13px; color: var(--muted); }
+.chatCommands code { flex-shrink: 0; font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+
+/* O campo do Hermes no pe do chat (o desenho e o de `components/detail/entity-ai-edit-bar.module.css`);
+   aqui so a posicao e a janela livre anexada: tracejada, na cor da marca. */
+.chatField { flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
+.chatField form { background: var(--background); }
+.chatWindow { padding-right: 2px; border-style: dashed; border-color: var(--brand); }
+.chatWindow > span:first-child { color: var(--brand); }
+.chatWindowDuration { flex: none; display: flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: 22px; line-height: 22px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--brand); }
+.chatWindowDuration small { margin-right: 4px; font-family: var(--font-sans); font-size: 12px; color: var(--muted); }
+.chatWindowDuration small:last-child { margin-right: 0; }
+.hubComposerHint { margin: 0 0 4px; font-size: 12px; color: var(--muted); }
+
+.hubSearch svg { color: var(--brand-accent); }
+.manualHeading { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 12px; }
+.manualHeading h3 { color: var(--muted); font-size: 12px; font-weight: 400; }
+.manualHeading button { display: flex; align-items: center; gap: 5px; color: var(--brand-accent); cursor: pointer; font-size: 12px; min-height: 36px; }
+.manualHeading svg { width: 16px; }
+.hubResults { list-style: none; margin: 0; padding: 0; max-height: 260px; overflow-y: auto; }
+.hubResults li { display: flex; gap: 12px; align-items: center; padding: 12px 4px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.hubResults svg { color: var(--brand-accent); stroke-width: 1.3; }
+.hubResults small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.quickCreate { padding: 14px; background: var(--cyan-soft); border-radius: 12px; display: grid; gap: 12px; }
+.quickCreate label { display: grid; gap: 5px; font-size: 12px; color: var(--muted); }
+.quickCreate input, .quickCreate select { border: 1px solid var(--control-border); border-radius: 10px; background: var(--control-bg); box-shadow: var(--control-shadow); padding: 10px; font-size: 16px; color: var(--ink); width: 100%; transition: border-color 140ms, box-shadow 140ms; }
+.quickCreate button, .chatPreview button { justify-self: start; padding: 9px 0; font-size: 12px; color: var(--brand-accent); cursor: pointer; }
+.hubNotice { font-size: 12px; color: var(--brand-accent); margin: 8px 0; }
+.hubNotice:empty { display: none; }
+.hubFootnote { font-size: 12px; color: var(--muted); text-align: center; margin: 16px 0 0; line-height: 1.5; }
+/* `minmax(0, 1fr)`: sem isso a coluna implicita cresce ate o max-content da linha mais longa e o texto passa da borda em vez de quebrar. */
+.chatLog { list-style: none; margin: 0 0 8px; padding: 20px 4px 0; display: flex; flex-direction: column; gap: 20px; min-width: 0; font-size: 15px; line-height: 24px; }
+.chatBubble { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.chatBubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* A conversa e reta, ao modo do Hermes: o pedido e um retangulo de largura inteira
+   (fio e fundo do campo), nao um balao; a resposta e texto solto. O campo segue redondo. */
+.chatBubble[data-role="user"] { margin: 0 -4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-xs); background: var(--background); line-height: 22px; }
+.chatBubble[data-role="assistant"] { padding: 0; }
+.chatBubble[data-role="user"] p { white-space: pre-wrap; }
+.chatBubble[data-role="error"] { margin: 0 -4px; padding: 10px 14px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); border-radius: var(--radius-xs); color: var(--destructive); font-size: 13px; line-height: 20px; }
+.chatBubble[data-role="error"] button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; padding: 0; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
+.chatBubble[data-role="error"] svg { width: 14px; height: 14px; }
+/* Cada registro da resposta e uma linha que abre a pagina dele (o apagado fica so como texto). */
+.chatEntities { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--hairline); }
+.dark .chatDiffLine[data-sign="-"] { color: color-mix(in oklab, var(--destructive) 55%, white); }
+.dark .chatDiffLine[data-sign="+"] { color: color-mix(in oklab, var(--success) 60%, white); }
+.chatEntityRow { display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0; border-bottom: 1px solid var(--hairline); color: var(--ink); }
+a.chatEntityRow { cursor: pointer; }
+a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underline-offset: 4px; }
+.shell .chatEntityRow > svg:first-child { box-sizing: border-box; width: 40px; height: 40px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-xs); color: var(--muted); stroke-width: 1.75; }
+.chatEntityText { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.chatEntityName { overflow: hidden; font-size: 15px; font-weight: 600; line-height: 22px; text-overflow: ellipsis; white-space: nowrap; }
+.chatEntityChange { font-size: 12px; line-height: 18px; color: var(--muted); }
+.shell .chatEntityGo { width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
+.chatEntities li[data-change="deleted"] .chatEntityName { text-decoration: line-through; color: var(--muted); }
+.chatBubble[data-role="process"] { padding: 0; }
+.processBox { display: grid; gap: 8px; }
+.processTitle { margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.processWaiting { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 12px; }
+.processWaiting svg { width: 14px; height: 14px; animation: processSpin 1s linear infinite; }
+.processSteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--muted); }
+.processSteps li { display: flex; align-items: center; gap: 8px; }
+.processSteps li[data-status="pending"] { color: var(--muted); }
+.processMark { display: grid; place-items: center; flex: none; width: 14px; height: 14px; }
+.shell .processMark svg { width: 14px; height: 14px; stroke-width: 2.2; }
+.processSteps li[data-status="succeeded"] .processMark { color: var(--brand); }
+.processSteps li[data-status="failed"] .processMark { color: var(--destructive); }
+.processSteps li[data-status="running"] .processMark { color: var(--brand-accent); }
+.processSteps li[data-status="running"] .processMark svg { animation: processSpin 1s linear infinite; }
+.processRows { overflow-x: auto; max-height: 220px; font-size: 12px; }
+.processRows table { border-collapse: collapse; width: 100%; }
+.processRows th, .processRows td { padding: 4px 8px 4px 0; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
+.processRows th { color: var(--muted); font-weight: 600; }
+.processRows p { margin: 6px 0 0; color: var(--muted); }
+.processMessage { margin: 0; font-size: 15px; line-height: 24px; text-wrap: pretty; }
+.processCancel { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
+.chatBubble[data-role="process"] [data-status="failed"] ~ .processMessage, .processBox[data-status="failed"] .processMessage { color: var(--destructive); }
+.chatBubble[data-role="hermes-steps"] { justify-self: stretch; padding: 0; background: none; }
+.hermesSteps ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--muted); }
+.hermesSteps li { min-height: 30px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.hermesTool { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hermesTool code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 6px; border-radius: 4px; background: var(--secondary); font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.hermesMark { display: grid; place-items: center; flex: none; width: 16px; height: 16px; align-self: center; }
+.shell .hermesMark svg { width: 14px; height: 14px; stroke-width: 2.2; }
+.hermesSteps [data-status="done"] .hermesMark { color: var(--brand); }
+.hermesSteps [data-status="failed"] .hermesMark { color: var(--destructive); }
+.hermesSteps [data-status="running"] .hermesMark { color: var(--brand-accent); }
+.hermesSteps [data-status="running"] .hermesMark svg { animation: processSpin 1s linear infinite; }
+.hermesSteps details summary { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; cursor: pointer; list-style: none; }
+.hermesSteps details summary::-webkit-details-marker { display: none; }
+.hermesSteps details summary svg { width: 14px; height: 14px; transition: transform .15s; }
+.hermesSteps details[open] summary svg { transform: rotate(90deg); }
+.hermesSteps details p { margin: 4px 0 0 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .processWaiting svg, .processSteps li[data-status="running"] .processMark svg, .hermesSteps [data-status="running"] .hermesMark svg, .hermesSteps details summary svg { animation: none; transition: none; }
+}
+
+/* No celular o painel e uma folha presa acima da barra inferior. */
+@media (max-width: 720px) {
+  .shell:has(.sectionMenu[open]) .header, .shell:has(.sectionMenu[open]) .main { filter: blur(2px); }
+  .sectionMenu { position: fixed; inset: auto 0 calc(98px + env(safe-area-inset-bottom)); margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - 122px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 10px 26px 15px; background: var(--card); color: var(--ink); border: 0; border-radius: 24px 24px 0 0; animation: menuEnter 200ms cubic-bezier(.2,.7,.2,1); }
+  .sectionMenu::backdrop { background: linear-gradient(to bottom, var(--scrim) calc(100% - 98px - env(safe-area-inset-bottom)), transparent 0); animation: backdropEnter 160ms ease-out; }
+  .sheetHandle { width: 30px; height: 3px; margin: 0 auto 7px; border-radius: 4px; background: var(--line); }
+  /* O painel do hub: compacto no inicio do chat, alto na conversa, na lista e nos
+     comandos, e a tela toda (acima da barra) quando expandido. */
+  .sectionMenu[data-hub-view] { height: min(400px, calc(100dvh - 122px - env(safe-area-inset-bottom))); max-height: none; overflow: hidden; padding: 10px 20px 24px; }
+  .sectionMenu[data-hub-view]:has([data-chat-view="conversation"], [data-chat-view="list"]) { height: calc(100dvh - 194px - env(safe-area-inset-bottom)); }
+  /* Criar e buscar acompanham o conteudo; so rolam se passarem da tela. */
+  .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"], .sectionMenu[data-hub-view="notifications"], .sectionMenu[data-hub-view="settings"] { height: auto; max-height: calc(100dvh - 194px - env(safe-area-inset-bottom)); overflow-y: auto; }
+  .sectionMenu[data-expanded="true"] { inset: 0 0 calc(98px + env(safe-area-inset-bottom)); height: auto; border-radius: 0; background: var(--background); }
+  .sectionMenu[data-expanded="true"] .sheetHandle { visibility: hidden; }
+  .sectionMenu[data-hub-view] .sheetHandle { width: 36px; height: 4px; margin: 0 auto 2px; background: var(--input); }
+
+  /* O painel do Hermes (chat, criar, pesquisar) ocupa a tela, por baixo da
+     barra: sem alca, sem veu. A barra troca o botao do Hermes (que vira o icone
+     de status do campo) pelos tres destinos com nome, e contorna o de onde a
+     pessoa veio. */
+  .sectionMenu.sectionMenu[data-hub-view] { z-index: 19; inset: 0; height: auto; max-height: none; padding: 0 16px calc(98px + env(safe-area-inset-bottom)); border-radius: 0; background: var(--background); animation: none; }
+  .sectionMenu.sectionMenu[data-hub-view="chat"] { overflow: hidden; }
+  .sectionMenu[data-hub-view] .sheetHandle { display: none; }
+  .sectionMenu[data-hub-view="chat"] .chatField form, .sectionMenu[data-hub-view="chat"] .chatBubble[data-role="user"] { background: var(--card); }
+  .sectionMenu[data-hub-view="chat"] [data-chat-control] { display: none; }
+  .sectionMenu[data-hub-view="chat"] .assistantWelcome h2 { font-size: 38px; line-height: 42px; }
+  .shell:has(.sectionMenu[open]) .bottomFade { display: none; }
+  .bottomNav[data-hub-open] .navTabs > a, .bottomNav[data-hub-open] .navTabs > button { border: 1px solid transparent; }
+  .bottomNav[data-hub-open] .navDot { display: none; }
+  /* Com o chat aberto nenhuma secao e preenchida: a pilula se apaga e a de onde se veio fica so contornada. */
+  .bottomNav[data-hub-open] .navTabs::before { opacity: 0; }
+  .bottomNav[data-hub-open] .navTabs > [aria-current="page"] { border-color: var(--input); color: var(--ink); }
+  .bottomNav[data-hub-open] .navTabs svg { width: 20px; height: 20px; }
+  .bottomNav[data-hub-open] .navTabs .navGlyph { width: 20px; height: 20px; }
+  /* Com o chat aberto, o lugar do robo e do X que fecha o painel (`.commandCore`), dentro do mesmo aro. */
+
+  /* O voo do botao do Hermes (`hermes-flight.ts`): o circulo sai da barra e
+     pousa como o icone de status do campo, que so aparece no pouso; o painel
+     entra por baixo dele e o X surge no lugar que o botao deixou. Na volta, o
+     painel se apaga, o X some e o circulo retorna para a barra. */
+  .bottomNav[data-flight] .navTabs > a, .bottomNav[data-flight] .navTabs > button { transition: background-color 200ms, color 200ms, border-color 200ms; }
+  .bottomNav[data-flight="out"] .navTabs > a, .bottomNav[data-flight="out"] .navTabs > button { transition-duration: 100ms; }
+  .bottomNav[data-flight="out"] .commandCore { animation: closeEnter 120ms 70ms cubic-bezier(.2,.7,.2,1) backwards; }
+  .bottomNav[data-flight="back"] .commandCore { animation: flightAway 200ms forwards; }
+  .sectionMenu.sectionMenu[data-hub-view][data-flight="out"] { animation: flightCome 137ms 73ms backwards; }
+  .sectionMenu.sectionMenu[data-hub-view][data-flight="back"] { animation: flightAway 234ms forwards; }
+  .sectionMenu[data-flight] .chatField [data-hermes-mark] { visibility: hidden; }
+  .sectionMenu[data-flight="out"] .chatField > form, .sectionMenu[data-flight="out"] .chatField > p > span:not([data-hermes-mark]) { animation: flightRise 137ms 73ms ease-out backwards; }
+  /* Entrar num detalhe: a barra se apaga enquanto o botao voa para o campo do
+     registro; ao sair, ela volta e o botao pousa de novo na ponta. */
+  .bottomNav[data-flight="dock"] { animation: flightAway 126ms forwards; pointer-events: none; }
+  .bottomNav[data-flight="undock"] { animation: flightCome 216ms 144ms backwards; }
+  .bottomNav[data-flight="dock"] .commandCore, .bottomNav[data-flight="undock"] .commandCore { visibility: hidden; }
+
+  .shell:has(:is(.detailMain, [data-detail])) .header, .shell:has(:is(.detailMain, [data-detail])) .bottomNav:not([data-flight="dock"]), .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }
+  .detailMain { padding: 20px 25px 36px; }
+  .detailNavigation { margin-bottom: 35px; }
+  .detailNavigation .backLink { width: 40px; height: 40px; }
+  .detailNavigation .backLink > span { display: none; }
+  .detailBrand { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+  .detailBrand .wordmark { font-size: 28px; }
+  .detailHeading h1 { font-size: 28px; letter-spacing: -.02em; margin-top: 12px; }
+  .detailHeading > p { font-size: 12px; }
+  .detailMeta { display: grid; gap: 12px; margin-top: 22px; }
+  .detailInfo { margin-top: 27px; padding: 22px 18px; gap: 23px; border-radius: 14px; }
+  .detailInfo > div { gap: 13px; }
+  .detailInfo p { font-size: 14px; }
+  .detailInfo h2 { font-size: 12px; }
+  .nutrition { margin-top: 29px; }
+  .nutritionGrid { margin-top: 20px; }
+  .nutritionGrid > div { padding-left: 12px; }
+  .nutritionGrid p { font-size: 23px; }
+  .nutritionGrid p > span { font-size: 12px; margin-left: 3px; }
+  .nutritionGrid h3 { font-size: 12px; }
+  .detailFooter { margin-top: 29px; }
+  .missedCheckbox { font-size: 12px; gap: 8px; }
+  .editButton { padding: 12px 14px; font-size: 12px; gap: 7px; }
+  .detailPrototypeNote { margin-top: 21px; }
+}
+
+/* No desktop o mesmo painel e um dialogo centrado, aberto pelo campo "Buscar e
+   criar" do cabecalho (ou Ctrl/⌘ K): 640 de largura, veu atras e Esc fecha. */
+@media (min-width: 721px) {
+  .sectionMenu { position: fixed; inset: 0; margin: auto; width: min(640px, calc(100vw - 48px)); max-width: none; height: min(700px, calc(100dvh - 96px)); max-height: none; overflow: hidden; padding: 12px 24px 20px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-float); animation: hubEnter 200ms cubic-bezier(.2,.7,.2,1); }
+  .sectionMenu::backdrop { background: var(--scrim); animation: backdropEnter 160ms ease-out; }
+  /* Criar e pesquisar acompanham o conteudo. `fit-content`, e nao `auto`: com
+     `inset: 0` um dialogo de altura automatica estica ate o limite. */
+  .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"], .sectionMenu[data-hub-view="notifications"], .sectionMenu[data-hub-view="settings"] { height: fit-content; max-height: calc(100dvh - 96px); overflow-y: auto; }
+  .sectionMenu[data-expanded="true"] { width: min(960px, calc(100vw - 48px)); height: calc(100dvh - 48px); }
+  .sheetHandle { display: none; }
+  /* O chat e um painel de 480 px encostado a direita, com a tela a vista atras. */
+  .sectionMenu.sectionMenu[data-hub-view="chat"] { inset: 24px 24px 24px auto; margin: 0; width: min(480px, calc(100vw - 48px)); height: auto; padding: 8px 16px 16px; border-radius: 24px; }
+  .sectionMenu.sectionMenu[data-hub-view="chat"][data-expanded="true"] { inset: 24px; width: auto; }
+}
+
+
+@media (max-width: 360px) {
+  .monthToggle { font-size: 12px; }
+  .headerInner { padding-left: 20px; }
+  .filters button { padding-inline: 13px; }
+  .detailMain { padding-inline: 20px; }
+  .nutritionGrid > div { padding-left: 8px; }
+  .nutritionGrid h3 { font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task { transition: none; }
+  .sectionMenu, .sectionMenu::backdrop { animation: none; }
+}
+
+@keyframes chatReveal {
+  0%, 88.2% { opacity: 0; visibility: hidden; }
+  100% { opacity: 1; visibility: visible; }
+}
+
+@keyframes braidTails {
+  from { stroke-dashoffset: var(--braid-from); }
+  to { stroke-dashoffset: var(--braid-to); }
+}
+
+@keyframes braidKnot {
+  from { mask-position: 0 -81px; }
+  to { mask-position: 0 0; }
+}
+
+@keyframes braidDot {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+@keyframes menuEnter {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hubEnter {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+
+
+@keyframes processSpin { to { transform: rotate(360deg); } }
+@keyframes chatPulse {
+  50% { opacity: .45; }
+}
+
+@keyframes flightCome { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .bottomNav, .navScrim, .navTabs::before, .navTabs svg, .navLabel, .navDot { transition-duration: .01ms !important; transition-delay: 0s !important; }
+}
+@keyframes flightAway { to { opacity: 0; } }
+@keyframes flightRise { from { transform: translateY(14px); } }
+@keyframes closeEnter { from { opacity: 0; transform: scale(.6); } }
+
+@keyframes backdropEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+
+/*
+ * Numa troca de tela (`html[data-nav]`, ver `lib/motion`) o que e do shell tem
+ * nome proprio e por isso fica parado enquanto o conteudo se move (a pilula da
+ * barra desliza por conta propria, ver `.navTabs::before`). Os nomes so
+ * existem durante a troca, para nao criar camadas no resto do tempo.
+ */
+@media (min-width: 721px) {
+  :global(html[data-nav]) .header { view-transition-name: shell-header; }
+}
+@media (max-width: 720px) {
+  :global(html[data-nav]) .bottomFade { view-transition-name: shell-fade; }
+  :global(html[data-nav]) .bottomNav { view-transition-name: shell-nav; }
+}

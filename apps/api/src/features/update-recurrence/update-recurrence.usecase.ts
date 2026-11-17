@@ -1,8 +1,8 @@
-import { RecurrenceNotFoundError, RecurrenceOwnershipError } from "../../domain";
-import type { UpdateRecurrenceInput } from "@repo/contracts";
-import type { RecurrenceRepository, TaskRepository } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { CreateEventUseCase } from "../../api-core/events/create-event.usecase";
+import { RecurrenceNotFoundError, RecurrenceOwnershipError } from "../../domain";
+import type { TaskRepository, RecurrenceRepository } from "../../domain/ports";
+import type { UpdateRecurrenceInput } from "@repo/contracts";
+import type { CreateTaskUseCase } from "../../api-core/tasks/create-task.usecase";
 import { reviseRecurrence } from "../../api-core/recurrences/revise-recurrence";
 
 /**
@@ -12,9 +12,9 @@ import { reviseRecurrence } from "../../api-core/recurrences/revise-recurrence";
  */
 export class UpdateRecurrenceUseCase {
   constructor(
-    private readonly recurrences: RecurrenceRepository,
-    private readonly createEvent: CreateEventUseCase,
-    private readonly tasks: TaskRepository,
+    private readonly recurrences: Pick<RecurrenceRepository, "findById" | "update">,
+    private readonly createTask: Pick<CreateTaskUseCase, "prepare">,
+    private readonly tasks: Pick<TaskRepository, "findByIds">,
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
@@ -24,14 +24,14 @@ export class UpdateRecurrenceUseCase {
     if (existing.userId !== actor.userId) throw new RecurrenceOwnershipError();
 
     const { recurrenceId: _id, expectedRevision, template, ...ruleChanges } = input;
-    const { recurrence, notes, fromDay } = await reviseRecurrence(
-      { createEvent: this.createEvent, tasks: this.tasks },
+    const { recurrence, artifacts, derivations, fromDay } = await reviseRecurrence(
+      { createTask: this.createTask, tasks: this.tasks },
       existing,
       { rule: ruleChanges, template },
       actor,
       this.clock(),
     );
 
-    await this.recurrences.update(recurrence, actor.userId, expectedRevision, fromDay, { created: notes });
+    await this.recurrences.update(recurrence, actor.userId, expectedRevision, fromDay, { created: artifacts, derivations });
   }
 }

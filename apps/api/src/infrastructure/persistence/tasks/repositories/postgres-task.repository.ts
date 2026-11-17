@@ -1,59 +1,67 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   Task,
   TaskNotFoundError,
   TaskOwnershipError,
   TaskRevisionConflictError,
-  type NoteWrites,
-} from "../../../../domain";
+  SUBTASK_RELATION,
+  type ArtifactLink,
+  type ArtifactWrites,
+} from "../../../../domain/index";
 import type { TaskRepository } from "../../../../domain/ports";
-import * as schema from "../../database/schema";
-import { mapTaskRow } from "../mappers/task-row.mapper";
+import * as schema from "../../database/schema/index";
+import { writeArtifacts } from "../../artifacts/repositories/postgres-artifact.repository";
+import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import { pgIntegerArrayLiteral } from "../../shared/pg-integer-array";
-import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
-import type { Tx } from "../../events/repositories/postgres-event.repository";
+import type { Db, Tx } from "../../shared/tx";
 import { upsertTagIds } from "../../shared/upsert-tag-ids";
-import { writeNotes } from "../../notes/repositories/postgres-note.repository";
-import { insertTaskNoteLinks, selectTaskNoteLinks } from "../../notes/repositories/note-links";
+import { mapTaskRow, type TaskRow, type TaskRowParts } from "../mappers/task-row.mapper";
+import {
+  assertTaskReferences,
+  deleteTaskRelations,
+  insertTaskRelations,
+} from "./task-relations";
 
-async function insertTags(tx: Tx, task: Task): Promise<void> {
-  if (task.tags.length === 0) return;
+export type { Tx } from "../../shared/tx";
 
-  const tagIds = await upsertTagIds(tx, task.userId, task.tags);
+async function insertChildren(tx: Tx, task: Task): Promise<void> {
+  await assertTaskReferences(tx, task);
+  await insertTaskRelations(tx, task);
 
-  await tx.insert(schema.taskTags).values(tagIds.map((tagId) => ({ taskId: task.id, tagId })));
-}
-
-async function insertDependencies(tx: Tx, task: Task): Promise<void> {
-  if (task.dependsOnTaskIds.length === 0) return;
-
-  await tx
-    .insert(schema.taskDependencies)
-    .values(task.dependsOnTaskIds.map((dependsOnTaskId) => ({ taskId: task.id, dependsOnTaskId })));
+  if (task.tags.length > 0) {
+    const tagIds = await upsertTagIds(tx, task.userId, task.tags);
+    await tx.insert(schema.taskTags).values(tagIds.map((tagId) => ({ taskId: task.id, tagId })));
+  }
 }
 
 /**
- * Insere a tarefa, as tags e as dependencias. Devolve `false` quando ela e uma
- * ocorrencia de um dia que a serie ja gerou.
+ * Insere a tarefa e o que sai dela. Devolve `false` quando a tarefa e uma
+ * ocorrencia de um dia que a serie ja gerou: o indice unico recusa a linha e o
+ * resto nem e tentado, porque apontaria para uma tarefa que nao entrou.
  */
-export async function insertTaskAggregate(tx: Tx, task: Task, notes?: NoteWrites): Promise<boolean> {
+export async function insertTaskAggregate(tx: Tx, task: Task, artifacts?: ArtifactWrites): Promise<boolean> {
   const inserted = await tx
     .insert(schema.tasks)
     .values({
       id: task.id,
       revision: task.revision,
       userId: task.userId,
-      parentTaskId: task.parentTaskId ?? null,
+      actor: task.actor,
+      kind: task.kind,
+      status: task.status ?? null,
+      priority: task.priority,
       name: task.name,
       description: task.description,
-      status: task.status,
-      priority: task.priority,
-      notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
+      location: task.location ?? null,
       startedAt: task.startedAt ?? null,
       estimatedFinishAt: task.estimatedFinishAt ?? null,
       finishedAt: task.finishedAt ?? null,
+      notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
+      longRunning: task.longRunning,
+      data: task.data,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
       ...occurrenceColumnsOf(task.occurrence),
     })
     .onConflictDoNothing({
@@ -63,38 +71,43 @@ export async function insertTaskAggregate(tx: Tx, task: Task, notes?: NoteWrites
     .returning({ id: schema.tasks.id });
 
   if (inserted.length === 0) return false;
-  await writeNotes(tx, notes);
-  await insertTags(tx, task);
-  await insertDependencies(tx, task);
-  await insertTaskNoteLinks(tx, task.id, task.noteLinks);
+  await writeArtifacts(tx, artifacts);
+  await insertChildren(tx, task);
   return true;
 }
 
-/** Linha apagada conta como inexistente, como em `updateEventAggregate`. */
+/**
+ * Atualiza a linha e regrava o que sai da tarefa. Linha apagada conta como
+ * inexistente: quem edita algo que outra aba ja apagou recebe "nao encontrado".
+ * So tarefas de pessoa passam por aqui; as de agente mudam pelo proprio agente.
+ */
 export async function updateTaskAggregate(
   tx: Tx,
   task: Task,
   actorUserId: string,
   expectedRevision: number,
-  notes?: NoteWrites,
+  artifacts?: ArtifactWrites,
 ): Promise<void> {
   const result = await tx.execute(sql`
     UPDATE tasks
-    SET parent_task_id = ${task.parentTaskId ?? null},
+    SET kind = ${task.kind},
+        status = ${task.status ?? null},
+        priority = ${task.priority},
         name = ${task.name},
         description = ${task.description},
-        status = ${task.status},
-        priority = ${task.priority},
-        notify_offsets_minutes = ${pgIntegerArrayLiteral(task.notifyOffsetsMinutes)}::integer[],
+        location = ${task.location ?? null},
         started_at = ${task.startedAt ?? null},
         estimated_finish_at = ${task.estimatedFinishAt ?? null},
         finished_at = ${task.finishedAt ?? null},
+        notify_offsets_minutes = ${pgIntegerArrayLiteral(task.notifyOffsetsMinutes)}::integer[],
+        long_running = ${task.longRunning},
         recurrence_detached = ${task.occurrence?.detached ?? false},
         revision = ${task.revision},
-        updated_at = now()
+        updated_at = ${task.updatedAt}
     WHERE id = ${task.id}
       AND user_id = ${actorUserId}
       AND revision = ${expectedRevision}
+      AND actor = 'human'
       AND deleted_at IS NULL
     RETURNING revision
   `);
@@ -103,7 +116,7 @@ export async function updateTaskAggregate(
     const [existing] = await tx
       .select({ userId: schema.tasks.userId, revision: schema.tasks.revision })
       .from(schema.tasks)
-      .where(and(eq(schema.tasks.id, task.id), isNull(schema.tasks.deletedAt)));
+      .where(and(eq(schema.tasks.id, task.id), eq(schema.tasks.actor, "human"), isNull(schema.tasks.deletedAt)));
 
     classifyUpdateFailure(existing, actorUserId, expectedRevision, {
       notFound: () => new TaskNotFoundError(`Task not found: ${task.id}`),
@@ -112,30 +125,23 @@ export async function updateTaskAggregate(
     });
   }
 
-  await writeNotes(tx, notes);
+  await writeArtifacts(tx, artifacts);
+  await deleteTaskRelations(tx, task.id);
   await tx.delete(schema.taskTags).where(eq(schema.taskTags.taskId, task.id));
-  await insertTags(tx, task);
-  await tx.delete(schema.taskDependencies).where(eq(schema.taskDependencies.taskId, task.id));
-  await insertDependencies(tx, task);
-  await tx.delete(schema.taskNotes).where(eq(schema.taskNotes.taskId, task.id));
-  await insertTaskNoteLinks(tx, task.id, task.noteLinks);
+
+  await insertChildren(tx, task);
 }
 
-interface DeletedTaskRow extends Record<string, unknown> {
-  id: string;
-  recurrence_id: string | null;
-  occurrence_on: string | null;
-}
-
-/**
- * Apaga a tarefa e todos os niveis de subtarefa abaixo dela, e devolve os ids
- * apagados. O `cascade` do FK nao dispara num UPDATE, entao a arvore desce aqui.
- */
-export async function softDeleteTaskTree(tx: Tx, taskId: string, actorUserId: string): Promise<string[]> {
+/** Soft delete de uma tarefa de pessoa. As relacoes ficam e a leitura filtra `deleted_at IS NULL`. */
+export async function softDeleteTask(tx: Tx, taskId: string, actorUserId: string): Promise<void> {
   const [existing] = await tx
-    .select({ userId: schema.tasks.userId })
+    .select({
+      userId: schema.tasks.userId,
+      recurrenceId: schema.tasks.recurrenceId,
+      occurrenceOn: schema.tasks.occurrenceOn,
+    })
     .from(schema.tasks)
-    .where(and(eq(schema.tasks.id, taskId), isNull(schema.tasks.deletedAt)));
+    .where(and(eq(schema.tasks.id, taskId), eq(schema.tasks.actor, "human"), isNull(schema.tasks.deletedAt)));
 
   if (!existing) {
     throw new TaskNotFoundError(`Task not found: ${taskId}`);
@@ -144,98 +150,140 @@ export async function softDeleteTaskTree(tx: Tx, taskId: string, actorUserId: st
     throw new TaskOwnershipError();
   }
 
-  const deleted = await tx.execute<DeletedTaskRow>(sql`
-    WITH RECURSIVE tree AS (
-      SELECT id FROM tasks WHERE id = ${taskId}
-      UNION
-      SELECT child.id
-      FROM tasks child
-      JOIN tree ON child.parent_task_id = tree.id
-      WHERE child.deleted_at IS NULL
-    )
-    UPDATE tasks
-    SET deleted_at = now(), updated_at = now()
-    WHERE id IN (SELECT id FROM tree) AND deleted_at IS NULL
-    RETURNING id, recurrence_id, occurrence_on::text AS occurrence_on
-  `);
-
-  // Como no evento: a edicao da serie faz hard delete e regera o futuro, e sem a
-  // excecao o dia apagado voltaria.
-  const exceptions = deleted.rows
-    .filter((row) => row.recurrence_id && row.occurrence_on)
-    .map((row) => ({ recurrenceId: row.recurrence_id as string, occurrenceOn: row.occurrence_on as string }));
-  if (exceptions.length > 0) {
-    await tx.insert(schema.recurrenceExceptions).values(exceptions).onConflictDoNothing();
+  // A linha apagada ja ocupa o dia no indice unico, mas a edicao da serie faz
+  // hard delete das ocorrencias futuras e regera: sem a excecao, o dia voltaria.
+  if (existing.recurrenceId && existing.occurrenceOn) {
+    await tx
+      .insert(schema.recurrenceExceptions)
+      .values({ recurrenceId: existing.recurrenceId, occurrenceOn: existing.occurrenceOn })
+      .onConflictDoNothing();
   }
 
-  return deleted.rows.map((row) => row.id);
+  await tx
+    .update(schema.tasks)
+    .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
+    .where(eq(schema.tasks.id, taskId));
+}
+
+interface MutableTaskParts extends TaskRowParts {
+  tags: string[];
+  artifactLinks: ArtifactLink[];
+  parentId?: string;
+  subtaskIds: string[];
+}
+
+/** O que completa cada tarefa, lido das outras tabelas em poucas consultas, para qualquer quantidade de tarefas. */
+export async function loadTaskParts(db: Db | Tx, taskIds: readonly string[]): Promise<Map<string, TaskRowParts>> {
+  const parts = new Map<string, MutableTaskParts>();
+  for (const id of taskIds) {
+    parts.set(id, { tags: [], artifactLinks: [], subtaskIds: [] });
+  }
+  if (taskIds.length === 0) return parts;
+  const ids = [...taskIds];
+
+  const [tagRows, artifactRows, outgoing, incoming] = await Promise.all([
+    db
+      .select({ taskId: schema.taskTags.taskId, name: schema.tags.name })
+      .from(schema.taskTags)
+      .innerJoin(schema.tags, eq(schema.taskTags.tagId, schema.tags.id))
+      .where(inArray(schema.taskTags.taskId, ids))
+      .orderBy(asc(schema.tags.name)),
+    db
+      .select({
+        taskId: schema.taskArtifactRelation.taskId,
+        artifactId: schema.taskArtifactRelation.artifactId,
+        relation: schema.taskArtifactRelation.relation,
+        fromRecurrence: schema.taskArtifactRelation.fromRecurrence,
+      })
+      .from(schema.taskArtifactRelation)
+      .innerJoin(schema.artifacts, eq(schema.taskArtifactRelation.artifactId, schema.artifacts.id))
+      .where(and(inArray(schema.taskArtifactRelation.taskId, ids), isNull(schema.artifacts.deletedAt)))
+      .orderBy(asc(schema.taskArtifactRelation.position), asc(schema.taskArtifactRelation.createdAt)),
+    db
+      .select({
+        taskId: schema.taskTaskRelation.fromTaskId,
+        otherId: schema.taskTaskRelation.toTaskId,
+      })
+      .from(schema.taskTaskRelation)
+      .innerJoin(schema.tasks, eq(schema.taskTaskRelation.toTaskId, schema.tasks.id))
+      .where(
+        and(
+          inArray(schema.taskTaskRelation.fromTaskId, ids),
+          eq(schema.taskTaskRelation.relation, SUBTASK_RELATION),
+          isNull(schema.tasks.deletedAt),
+        ),
+      )
+      .orderBy(asc(schema.taskTaskRelation.createdAt), asc(schema.taskTaskRelation.toTaskId)),
+    db
+      .select({
+        taskId: schema.taskTaskRelation.toTaskId,
+        otherId: schema.taskTaskRelation.fromTaskId,
+      })
+      .from(schema.taskTaskRelation)
+      .innerJoin(schema.tasks, eq(schema.taskTaskRelation.fromTaskId, schema.tasks.id))
+      .where(
+        and(
+          inArray(schema.taskTaskRelation.toTaskId, ids),
+          eq(schema.taskTaskRelation.relation, SUBTASK_RELATION),
+          isNull(schema.tasks.deletedAt),
+        ),
+      )
+      .orderBy(asc(schema.taskTaskRelation.createdAt), asc(schema.taskTaskRelation.fromTaskId)),
+  ]);
+
+  for (const row of tagRows) parts.get(row.taskId)?.tags.push(row.name);
+  for (const row of artifactRows) {
+    const link: ArtifactLink = { artifactId: row.artifactId, relation: row.relation, fromRecurrence: row.fromRecurrence };
+    parts.get(row.taskId)?.artifactLinks.push(link);
+  }
+  for (const row of outgoing) {
+    parts.get(row.taskId)?.subtaskIds.push(row.otherId);
+  }
+  // O indice unico garante uma principal por tarefa.
+  for (const row of incoming) {
+    const part = parts.get(row.taskId);
+    if (part) part.parentId = row.otherId;
+  }
+  return parts;
+}
+
+export async function hydrateTasks(db: Db | Tx, rows: readonly TaskRow[]): Promise<Task[]> {
+  const parts = await loadTaskParts(db, rows.map((row) => row.id));
+  return rows.map((row) => mapTaskRow(row, parts.get(row.id)));
 }
 
 export class PostgresTaskRepository implements TaskRepository {
-  constructor(private readonly db: NodePgDatabase<typeof schema>) {}
+  constructor(private readonly db: Db) {}
 
-  async save(task: Task, notes?: NoteWrites): Promise<void> {
+  async save(task: Task, artifacts?: ArtifactWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await insertTaskAggregate(tx, task, notes);
+      await insertTaskAggregate(tx, task, artifacts);
     });
   }
 
-  async update(task: Task, actorUserId: string, expectedRevision: number, notes?: NoteWrites): Promise<void> {
+  async update(task: Task, actorUserId: string, expectedRevision: number, artifacts?: ArtifactWrites): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await updateTaskAggregate(tx, task, actorUserId, expectedRevision, notes);
+      await updateTaskAggregate(tx, task, actorUserId, expectedRevision, artifacts);
     });
   }
 
   async delete(taskId: string, actorUserId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
-      await softDeleteTaskTree(tx, taskId, actorUserId);
+      await softDeleteTask(tx, taskId, actorUserId);
     });
   }
 
   async findById(taskId: string): Promise<Task | null> {
-    const [row] = await this.db
-      .select()
-      .from(schema.tasks)
-      .where(and(eq(schema.tasks.id, taskId), isNull(schema.tasks.deletedAt)));
-    if (!row) return null;
-    return this.hydrate(row);
+    const [task] = await this.findByIds([taskId]);
+    return task ?? null;
   }
 
-  async listByUserId(userId: string): Promise<Task[]> {
+  async findByIds(taskIds: readonly string[]): Promise<Task[]> {
+    if (taskIds.length === 0) return [];
     const rows = await this.db
       .select()
       .from(schema.tasks)
-      .where(and(eq(schema.tasks.userId, userId), isNull(schema.tasks.deletedAt)));
-    return Promise.all(rows.map((row) => this.hydrate(row)));
-  }
-
-  async listByParentTaskId(parentTaskId: string): Promise<Task[]> {
-    const rows = await this.db
-      .select()
-      .from(schema.tasks)
-      .where(and(eq(schema.tasks.parentTaskId, parentTaskId), isNull(schema.tasks.deletedAt)));
-    return Promise.all(rows.map((row) => this.hydrate(row)));
-  }
-
-  private async hydrate(row: typeof schema.tasks.$inferSelect): Promise<Task> {
-    const tagRows = await this.db
-      .select({ name: schema.tags.name })
-      .from(schema.taskTags)
-      .innerJoin(schema.tags, eq(schema.taskTags.tagId, schema.tags.id))
-      .where(eq(schema.taskTags.taskId, row.id));
-    const dependencyRows = await this.db
-      .select({ dependsOnTaskId: schema.taskDependencies.dependsOnTaskId })
-      .from(schema.taskDependencies)
-      .innerJoin(schema.tasks, eq(schema.taskDependencies.dependsOnTaskId, schema.tasks.id))
-      .where(and(eq(schema.taskDependencies.taskId, row.id), isNull(schema.tasks.deletedAt)));
-
-    const noteLinks = await selectTaskNoteLinks(this.db, row.id);
-
-    return mapTaskRow(
-      row,
-      tagRows.map((tagRow) => tagRow.name),
-      dependencyRows.map((dependencyRow) => dependencyRow.dependsOnTaskId),
-      noteLinks,
-    );
+      .where(and(inArray(schema.tasks.id, [...taskIds]), isNull(schema.tasks.deletedAt)));
+    return hydrateTasks(this.db, rows);
   }
 }

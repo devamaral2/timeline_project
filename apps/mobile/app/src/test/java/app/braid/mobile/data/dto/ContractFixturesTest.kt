@@ -33,9 +33,6 @@ class ContractFixturesTest {
         assertFixture("event-detail", EventDetailDto.serializer())
         assertFixture("create-event-input", CreateEventInputDto.serializer())
         assertFixture("update-event-input", UpdateEventInputDto.serializer())
-        assertFixture("agent-chat-ticket", AgentChatTicketDto.serializer())
-        assertFixture("agent-conversations", AgentConversationPageDto.serializer())
-        assertFixture("agent-messages", AgentChatMessagePageDto.serializer())
         assertFixture("tag-suggestions", ListSerializer(TagSuggestionDto.serializer()))
         assertFixture("note-list", ListSerializer(NoteDto.serializer()))
         assertFixture("create-note-input", CreateNoteInputDto.serializer())
@@ -92,12 +89,6 @@ class ContractFixturesTest {
         assertEquals("model", recipe?.source)
         assertEquals(listOf("Aveia em flocos", "Banana"), recipe?.ingredients?.map { it.name })
         assertEquals(2, recipe?.steps?.size)
-    }
-
-    @Test
-    fun everyClientAndServerFrameVariantIsCovered() {
-        assertFixture("agent-client-frames", ListSerializer(AgentChatClientFrameDto.serializer()))
-        assertFixture("agent-server-frames", ListSerializer(AgentChatServerFrameDto.serializer()))
     }
 
     private fun <T> assertFixture(

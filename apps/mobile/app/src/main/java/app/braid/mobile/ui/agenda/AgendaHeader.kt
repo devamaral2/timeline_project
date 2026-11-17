@@ -36,7 +36,7 @@ import app.braid.mobile.core.designsystem.LucideIcons
 
 /**
  * O cabeçalho do web no celular (`.header`/`.headerInner` de `mockup-shell.tsx`):
- * a assinatura “braid” (só o texto, sem o símbolo) à esquerda e, à direita, o sino de notificações (`notifications`) e o menu da
+ * a assinatura à esquerda (o símbolo dos quatro fios e “braid”) e, à direita, o sino de notificações (`notifications`) e o menu da
  * conta, com fio embaixo. O menu da conta traz “Tema escuro/claro” e “Sair da
  * conta”, no lugar do antigo menu lateral.
  */
@@ -55,7 +55,7 @@ fun AgendaHeader(
             modifier = Modifier.fillMaxWidth().height(64.dp).padding(start = 20.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            BraidWordmark(style = MaterialTheme.typography.headlineMedium, showLogo = false)
+            BraidWordmark(style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.weight(1f))
             notifications()
             AccountMenu(onToggleTheme = onToggleTheme, onSignOut = onSignOut)

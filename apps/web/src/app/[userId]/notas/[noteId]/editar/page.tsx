@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { EditNoteRoute } from "@/components/new-item/NewItemRoutes";
 
 export const metadata: Metadata = {
-  title: "Editar nota — Braid",
+  title: "Editar nota — Agente pessoal",
 };
 
 export default async function Page({ params }: { params: Promise<{ userId: string; noteId: string }> }) {

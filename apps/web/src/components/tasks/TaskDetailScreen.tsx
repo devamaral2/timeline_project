@@ -1,359 +1,436 @@
 "use client";
 
-import { ArrowLeft, Bell, Check, ChevronDown, ChevronRight, Copy, Ellipsis, Hash, Pencil, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useRef, useState } from "react";
-import shellStyles from "@/app/mockups/eventos/mockup.module.css";
-import { ICON_STROKE_WIDTH, notificationOffsetLabel } from "@/components/events/event-visuals";
-import { authedFetch } from "@/lib/api/authed-fetch";
-import type { TaskDetailDto, TaskSummaryDto, WorkItemStatus } from "@/lib/api/contracts";
-import { useNow } from "@/lib/events/use-now";
-import { tagColorStyle } from "@/lib/tags/tag-color";
-import { createTask, updateTask } from "@/lib/tasks/task-api";
 import {
-  releasedBy,
-  subtasksOf,
-  TASK_STATUS_ORDER,
-  taskDateLine,
-  taskDayOf,
-  taskStatusLabels,
-  taskTimeLine,
-  taskWhenLabel,
-  toggledStatus,
-} from "@/lib/tasks/tasks-model";
-import { cn } from "@/lib/utils";
-import { DeleteTaskDialog } from "./DeleteTaskDialog";
-import { TaskPriorityMark, TaskStatusIcon } from "./task-visuals";
-import styles from "./tasks.module.css";
+  ArrowLeft, Bell, Check, Circle, CircleCheck, CircleDashed, CirclePause, CircleSlash,
+  Flag, MoreVertical, Pencil, Trash2, type LucideIcon,
+} from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
+import {
+  compactDate, dayKeyOf, elapsedSecondsOf, formatStopwatch,
+  formatTime, longDate, type TaskPosition,
+} from "@repo/timeline";
+import type { FoodRecipe, SleepData, TaskCardDto, TaskPriority, TextData, TrainingData } from "@repo/contracts";
+import { positionOf } from "@/lib/tasks/task-window";
+import { useNow } from "@/lib/tasks/use-now";
+import { ICON_STROKE_WIDTH, missedLabel, notificationOffsetLabel, visualForItemType } from "./task-visuals";
+import { MarkdownView } from "@/components/notes/MarkdownView";
+import { MealRecipeView } from "@/components/notes/MealRecipeView";
+import { MealGenerationStatus } from "@/components/notes/MealGenerationStatus";
+import styles from "./task-detail-screen.module.css";
 
-const icon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
+/*
+ * Os dados que a prévia desenha. São a forma local do exemplo, não o contrato da API:
+ * a tela real lê a tarefa com `getTask` (ver `@repo/contracts`).
+ */
+export type PreviewPriority = "urgent" | "normal" | "flexible";
+type PreviewStatus = Extract<NonNullable<TaskCardDto["status"]>, "todo" | "toDefine" | "inHold" | "done" | "cancel">;
 
-/** "hoje, 09:00" / "sex., 18 set.": o mesmo rotulo da lista, em minusculas, para ir depois do status. */
-function lowerFirst(label: string): string {
-  return label.charAt(0).toLocaleLowerCase("pt-BR") + label.slice(1);
+const previewPriorityLabels: Record<PreviewPriority, string> = {
+  urgent: "Urgente",
+  normal: "Normal",
+  flexible: "Flexível",
+};
+
+export interface PreviewLinkedTask {
+  id: string;
+  name: string;
+  description: string;
+  status: PreviewStatus;
+  priority: TaskPriority;
+  notifyOffsetsMinutes: number[];
+  tags: string[];
+  dependsOnTaskIds: string[];
+  revision: number;
+}
+
+export interface PreviewMeal {
+  name: string;
+  description: string;
+  totals: {
+    totalCaloriesKcal: number;
+    totalProteinGrams: number;
+    totalCarbohydrateGrams: number;
+    totalFatGrams: number;
+    totalFiberGrams: number;
+  };
+  recipe?: FoodRecipe;
+  generation?: { status: "pending" | "completed" | "failed" };
+  nutritionSource?: "model-estimate";
+}
+
+interface PreviewNoteBase {
+  id: string;
+  name: string;
+}
+
+/** Uma nota da tarefa na prévia: a refeição, o treino, o sono ou o texto. */
+export type PreviewNote =
+  | (PreviewNoteBase & { type: "meal"; data: PreviewMeal })
+  | (PreviewNoteBase & { type: "training"; data: TrainingData })
+  | (PreviewNoteBase & { type: "sleep"; data: SleepData })
+  | (PreviewNoteBase & { type: "text"; data: TextData });
+
+export interface PreviewInterruption {
+  id: string;
+  name: string;
+  description: string;
+  startedAt: string;
+  finishedAt: string;
+}
+
+export interface PreviewTask {
+  id: string;
+  name: string;
+  description: string;
+  startedAt: string;
+  finishedAt?: string;
+  tags: string[];
+  missed: boolean;
+  priority: PreviewPriority;
+  notifyOffsetsMinutes: number[];
+  interruptions: PreviewInterruption[];
+  revision: number;
+  kind: string;
+  notes: PreviewNote[];
+  taskIds?: string[];
 }
 
 /**
- * A tarefa aberta: nome, status (toque para trocar) e prioridade, dia e hora,
- * lembretes, tags, descricao e as tres relacoes — de quem depende, as
- * subtarefas e o que ela libera. Nao ha botao de concluir nem de editar: o
- * status muda no seletor e a edicao fica no menu "···".
+ * O que a tela faz alem de mostrar. Ausente, o menu aparece desligado — e o
+ * que o estudo visual precisa, e evita um menu que promete acao e nao cumpre.
  */
-export function TaskDetailScreen({ userId, taskId }: { userId: string; taskId: string }) {
-  const router = useRouter();
-  const now = useNow();
-  const [task, setTask] = useState<TaskDetailDto | null>(null);
-  const [all, setAll] = useState<TaskSummaryDto[]>([]);
-  const [error, setError] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [addingSubtask, setAddingSubtask] = useState(false);
-  const [subtaskName, setSubtaskName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
-  const listHref = `/${userId}/tarefas`;
+export interface TaskDetailActions {
+  onEdit: () => void;
+  onToggleMissed: () => void;
+  onDelete: () => void;
+  savingMissed: boolean;
+}
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reloadKey força o refetch após cada mudança.
-  useEffect(() => {
-    let cancelled = false;
-    setError(false);
-    void Promise.all([
-      authedFetch<TaskDetailDto>(`/api/tasks/${taskId}`),
-      authedFetch<TaskSummaryDto[]>("/api/tasks"),
-    ])
-      .then(([detail, summaries]) => {
-        if (cancelled) return;
-        setTask(detail);
-        setAll(summaries);
-      })
-      .catch(() => { if (!cancelled) setError(true); });
-    return () => { cancelled = true; };
-  }, [taskId, reloadKey]);
+export interface TaskDetailScreenProps {
+  task: PreviewTask;
+  /** As tarefas vinculadas, ja resolvidas por quem carregou a tarefa. */
+  linkedTasks?: PreviewLinkedTask[];
+  backHref: string;
+  actions?: TaskDetailActions;
+  /** Mensagem de erro de uma acao — some quando a acao da certo. */
+  actionError?: string | null;
+}
 
-  useEffect(() => {
-    if (!menuOpen && !statusOpen) return;
-    function close(event: Event) {
-      if (event instanceof KeyboardEvent) {
-        if (event.key === "Escape") { setMenuOpen(false); setStatusOpen(false); }
-        return;
-      }
-      const target = event.target as Node;
-      if (!menuRef.current?.contains(target)) setMenuOpen(false);
-      if (!statusRef.current?.contains(target)) setStatusOpen(false);
-    }
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [menuOpen, statusOpen]);
-
-  /** Roda uma escrita e recarrega; a falha vira o aviso da tela. */
-  async function run(action: () => Promise<void>, failure: string) {
-    setBusy(true);
-    setActionError(null);
-    try {
-      await action();
-      setReloadKey((key) => key + 1);
-    } catch {
-      setActionError(failure);
-      // A revisão pode ter andado em outra aba: recarregar traz a atual.
-      setReloadKey((key) => key + 1);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function changeStatus(status: WorkItemStatus) {
-    setStatusOpen(false);
-    if (!task || status === task.status) return;
-    void run(() => updateTask(task.id, { expectedRevision: task.revision, status }), "Não foi possível trocar o status. Tente novamente.");
-  }
-
-  function toggleSubtask(subtask: TaskSummaryDto) {
-    void run(
-      () => updateTask(subtask.id, { expectedRevision: subtask.revision, status: toggledStatus(subtask) }),
-      "Não foi possível atualizar a subtarefa. Tente novamente.",
-    );
-  }
-
-  function addSubtask(event: FormEvent) {
-    event.preventDefault();
-    const name = subtaskName.trim();
-    if (!task || !name) return;
-    void run(async () => {
-      await createTask({ name, parentTaskId: task.id });
-      setSubtaskName("");
-      setAddingSubtask(false);
-    }, "Não foi possível adicionar a subtarefa. Tente novamente.");
-  }
-
-  async function duplicate() {
-    if (!task) return;
-    setMenuOpen(false);
-    setBusy(true);
-    setActionError(null);
-    try {
-      const copyId = await createTask({
-        name: `${task.name} (cópia)`,
-        description: task.description,
-        status: task.status === "done" || task.status === "cancel" ? "todo" : task.status,
-        priority: task.priority,
-        tags: task.tags,
-        notifyOffsetsMinutes: task.notifyOffsetsMinutes,
-        startedAt: task.startedAt,
-        estimatedFinishAt: task.estimatedFinishAt,
-        parentTaskId: task.parentTaskId,
-      });
-      router.push(`${listHref}/${copyId}`);
-    } catch {
-      setActionError("Não foi possível duplicar a tarefa. Tente novamente.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (error) {
-    return (
-      <main id="conteudo" className={shellStyles.detailMain}>
-        <div className={styles.detail}>
-          <Link href={listHref} className={styles.backLink}><ArrowLeft {...icon} />Tarefas</Link>
-          <p role="alert" className={styles.message}>Não foi possível carregar a tarefa. Tente novamente.</p>
-        </div>
-      </main>
-    );
-  }
-  if (!task) {
-    return <main id="conteudo" className={shellStyles.detailMain}><p role="status" className={styles.message}>Carregando tarefa…</p></main>;
-  }
-
-  const byId = new Map(all.map((item) => [item.id, item]));
-  const dependsOn = task.dependsOnTaskIds.map((id) => byId.get(id)).filter((item): item is TaskSummaryDto => item !== undefined);
-  const subtasks = subtasksOf(task.id, all);
-  const released = releasedBy(task.id, all);
-  const timeLine = taskTimeLine(task);
-  const doneSubtasks = subtasks.filter((item) => item.status === "done").length;
-
-  function relationMeta(item: TaskSummaryDto): string {
-    const label = taskStatusLabels[item.status];
-    if (!now || taskDayOf(item) === null) return label;
-    return `${label} · ${lowerFirst(taskWhenLabel(item, now))}`;
-  }
-
-  function renderRelation(item: TaskSummaryDto) {
-    return (
-      <li key={item.id}>
-        <Link href={`${listHref}/${item.id}`} className={styles.relation} data-status={item.status}>
-          <span className={styles.relationIcon} role="img" aria-label={taskStatusLabels[item.status]}><TaskStatusIcon status={item.status} size={20} /></span>
-          <span className={styles.relationText}>
-            <span className={styles.relationName}>{item.name}</span>
-            <span className={styles.relationMeta}>{relationMeta(item)}</span>
-          </span>
-          <ChevronRight {...icon} />
-        </Link>
-      </li>
-    );
-  }
+/**
+ * A tela de detalhe da tarefa.
+ *
+ * A composicao e a mesma para todo tipo: navegacao, tipo, nome com a data ao
+ * lado, o cartao de resumo — horario, duracao, metadados, tags e a situacao no
+ * tempo — e as secoes de texto (descricao, tarefas, notas). O que o tipo do
+ * tarefa traz de proprio entra como mais uma secao entre a descricao e as
+ * tarefas; o esqueleto nao muda.
+ */
+export function TaskDetailScreen({ task, linkedTasks = [], backHref, actions, actionError }: TaskDetailScreenProps) {
+  const visual = visualForItemType(task.kind);
+  const TypeIcon = visual.Icon;
+  const dayKey = dayKeyOf(task.startedAt);
 
   return (
-    <main id="conteudo" className={shellStyles.detailMain}>
-      <div className={styles.detail}>
-        <nav className={styles.navigation} aria-label="Tarefa">
-          <Link href={task.parentTaskId ? `${listHref}/${task.parentTaskId}` : listHref} className={styles.backLink}>
-            <ArrowLeft {...icon} />{task.parentTaskId ? (byId.get(task.parentTaskId)?.name ?? "Tarefa") : "Tarefas"}
-          </Link>
-          <div className={styles.anchor} ref={menuRef}>
-            <button type="button" className={styles.iconButton} aria-label="Mais ações: editar, duplicar, excluir" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)}><Ellipsis {...icon} /></button>
-            {menuOpen ? (
-              <div role="menu" className={styles.menu}>
-                <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); router.push(`${listHref}/${task.id}/editar`); }}><Pencil {...icon} />Editar</button>
-                <button type="button" role="menuitem" onClick={() => void duplicate()}><Copy {...icon} />Duplicar</button>
-                <button type="button" role="menuitem" data-danger="true" onClick={() => { setMenuOpen(false); setDeleting(true); }}><Trash2 {...icon} />Excluir</button>
-              </div>
-            ) : null}
-          </div>
-        </nav>
+    <div className={styles.screen}>
+      <nav className={styles.topBar} aria-label="Navegação da tarefa">
+        <Link href={backHref} className={styles.iconAction} aria-label="Voltar para a agenda">
+          <ArrowLeft aria-hidden />
+        </Link>
+        <TaskMenu missed={task.missed} actions={actions} />
+      </nav>
 
-        <header className={styles.header}>
+      <header data-type={task.kind}>
+        <p className={styles.type}>
+          <TypeIcon aria-hidden strokeWidth={ICON_STROKE_WIDTH} />
+          {visual.label}
+        </p>
+        <div className={styles.titleRow}>
           <h1>{task.name}</h1>
-          <div className={styles.statusRow}>
-            <div className={styles.anchor} ref={statusRef}>
-              <button
-                type="button"
-                className={styles.statusButton}
-                data-status={task.status}
-                aria-haspopup="listbox"
-                aria-expanded={statusOpen}
-                aria-label={`Status: ${taskStatusLabels[task.status]}. Trocar status`}
-                disabled={busy}
-                onClick={() => setStatusOpen((open) => !open)}
-              >
-                <TaskStatusIcon status={task.status} />
-                <span>{taskStatusLabels[task.status]}</span>
-                <ChevronDown className={styles.caret} {...icon} />
-              </button>
-              {statusOpen ? (
-                <div role="listbox" aria-label="Status da tarefa" className={cn(styles.menu, styles.statusMenu)}>
-                  {TASK_STATUS_ORDER.map((status) => (
-                    <button key={status} type="button" role="option" aria-selected={status === task.status} data-status={status} onClick={() => changeStatus(status)}>
-                      <TaskStatusIcon status={status} />
-                      {taskStatusLabels[status]}
-                      {status === task.status ? <Check className={styles.selectedMark} {...icon} /> : null}
-                    </button>
-                  ))}
+          <time className={styles.headingDate} dateTime={dayKey} title={longDate(dayKey)}>
+            {compactDate(dayKey)}
+          </time>
+        </div>
+      </header>
+
+      <TaskSummary task={task} dayKey={dayKey} />
+
+      <Section title="Descrição">
+        {task.description
+          ? <p className={styles.prose}>{task.description}</p>
+          : <p className={styles.empty}>Sem descrição.</p>}
+      </Section>
+
+      {task.notes.map((note) => <NoteSection key={note.id} note={note} />)}
+
+      {task.interruptions.length ? (
+        <Section title="Interrupções">
+          <ul className={styles.list}>
+            {task.interruptions.map((interruption) => (
+              <li key={interruption.id}>
+                <div>
+                  <p>{interruption.name}</p>
+                  {interruption.description ? <p className={styles.secondary}>{interruption.description}</p> : null}
                 </div>
-              ) : null}
-            </div>
-            <TaskPriorityMark priority={task.priority} withLabel />
-          </div>
-          <div className={styles.dateLines}>
-            <p>{taskDateLine(task)}</p>
-            {timeLine ? <p>{timeLine}</p> : null}
-          </div>
-        </header>
+                <span>{durationLabel(interruption.startedAt, interruption.finishedAt)}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      ) : null}
 
-        {task.notifyOffsetsMinutes.length || task.tags.length ? (
-          <section className={styles.info} aria-label="Informações">
-            {task.notifyOffsetsMinutes.length ? (
-              <div>
-                <Bell {...icon} />
-                <ul className={styles.reminders} aria-label="Lembretes">
-                  {task.notifyOffsetsMinutes.map((minutes) => <li key={minutes}>{notificationOffsetLabel(minutes)}</li>)}
-                </ul>
-              </div>
-            ) : null}
-            {task.tags.length ? (
-              <div>
-                <Hash {...icon} />
-                <ul aria-label="Tags da tarefa">
-                  {task.tags.map((tag) => <li key={tag} style={tagColorStyle(tag)}>#{tag}</li>)}
-                </ul>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {task.description ? <p className={styles.prose}>{task.description}</p> : null}
-
-        {actionError ? <p role="alert" className={styles.message}>{actionError}</p> : null}
-
-        {dependsOn.length ? (
-          <section aria-label="Depende de">
-            <div className={styles.sectionLabel}><h2>Depende de</h2></div>
-            <ul className={styles.card}>{dependsOn.map(renderRelation)}</ul>
-          </section>
-        ) : null}
-
-        <section aria-label="Subtarefas">
-          <div className={styles.sectionLabel}>
-            <h2>Subtarefas</h2>
-            {subtasks.length ? <span>{doneSubtasks} de {subtasks.length}</span> : null}
-          </div>
-          <ul className={styles.card}>
-            {subtasks.map((subtask) => {
-              const closed = subtask.status === "done" || subtask.status === "cancel";
+      <Section title="Tarefas">
+        {linkedTasks.length ? (
+          <ul className={styles.tasks}>
+            {linkedTasks.map((linkedTask) => {
+              const { Icon, label } = statusView[linkedTask.status] ?? statusView.todo;
               return (
-                <li key={subtask.id} className={styles.subtask} data-status={subtask.status}>
-                  <button
-                    type="button"
-                    className={styles.check}
-                    data-status={subtask.status}
-                    disabled={busy}
-                    aria-label={`${taskStatusLabels[subtask.status]}. Toque para ${closed ? "reabrir" : "concluir"} “${subtask.name}”`}
-                    onClick={() => toggleSubtask(subtask)}
-                  >
-                    <TaskStatusIcon status={subtask.status} size={20} />
-                  </button>
-                  <Link href={`${listHref}/${subtask.id}`} className={styles.subtaskName} data-done={closed}>{subtask.name}</Link>
+                <li key={linkedTask.id} data-done={linkedTask.status === "done"}>
+                  <Icon role="img" aria-label={label} />
+                  <span>{linkedTask.name}</span>
                 </li>
               );
             })}
-            <li>
-              {addingSubtask ? (
-                <form className={styles.subtaskForm} onSubmit={addSubtask}>
-                  <input
-                    aria-label="Nome da subtarefa"
-                    placeholder="Nome da subtarefa"
-                    value={subtaskName}
-                    onChange={(event) => setSubtaskName(event.target.value)}
-                    // biome-ignore lint/a11y/noAutofocus: o campo nasce de um toque em "Adicionar subtarefa".
-                    autoFocus
-                  />
-                  <button type="submit" disabled={busy || !subtaskName.trim()}>Adicionar</button>
-                  <button type="button" onClick={() => { setAddingSubtask(false); setSubtaskName(""); }}>Cancelar</button>
-                </form>
-              ) : (
-                <button type="button" className={styles.addSubtask} onClick={() => setAddingSubtask(true)}>
-                  <span><Plus {...icon} /></span>Adicionar subtarefa
-                </button>
-              )}
-            </li>
           </ul>
-        </section>
+        ) : (
+          <p className={styles.empty}>Nenhuma tarefa vinculada.</p>
+        )}
+      </Section>
 
-        {released.length ? (
-          <section aria-label="Libera">
-            <div className={styles.sectionLabel}><h2>Libera</h2></div>
-            <ul className={styles.card}>{released.map(renderRelation)}</ul>
-          </section>
-        ) : null}
+      <Section title="Notas">
+        <p className={styles.empty}>Nenhuma nota ainda.</p>
+      </Section>
+
+      {actionError ? <p role="alert" className={`${styles.message} ${styles.error}`}>{actionError}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * O cartao de resumo. Le-se de cima para baixo: quando, o que mais se sabe do
+ * tarefa, como ele esta marcado e em que ponto do tempo ele esta.
+ */
+function TaskSummary({ task, dayKey }: { task: PreviewTask; dayKey: string }) {
+  const now = useNow();
+  // Sem relogio nao ha situacao no tempo: o HTML do servidor nasce num instante
+  // e hidrata em outro, e os dois discordariam de uma tarefa que acabou de virar.
+  const position = now ? positionOf(task, now) : null;
+  const running = position === "running";
+  const endDayKey = task.finishedAt ? dayKeyOf(task.finishedAt) : null;
+  const metadata = metadataOf(task);
+
+  return (
+    <section className={styles.summary} aria-label="Resumo da tarefa">
+      <div className={styles.schedule}>
+        <p className={styles.range}>
+          <time dateTime={task.startedAt}>{formatTime(task.startedAt)}</time>
+          <span className={styles.separator} aria-hidden>–</span>
+          {task.finishedAt ? (
+            <time dateTime={task.finishedAt}>
+              {formatTime(task.finishedAt)}
+              {endDayKey && endDayKey !== dayKey ? (
+                <span className={styles.endsOnAnotherDay}>{longDate(endDayKey)}</span>
+              ) : null}
+            </time>
+          ) : (
+            <span className={styles.openEnd}>{running ? "em andamento" : "sem hora de fim"}</span>
+          )}
+        </p>
+        <DurationReadout task={task} now={now} running={running} />
       </div>
 
-      {deleting ? (
-        <DeleteTaskDialog
-          taskId={task.id}
-          taskName={task.name}
-          subtaskCount={subtasks.length}
-          onClose={() => setDeleting(false)}
-          onDeleted={() => router.push(listHref)}
-        />
+      {metadata.length ? (
+        <ul className={styles.metadata}>
+          {metadata.map(({ Icon, text }) => (
+            <li key={text}><Icon aria-hidden />{text}</li>
+          ))}
+        </ul>
       ) : null}
-    </main>
+
+      <div className={styles.summaryFoot}>
+        <ul className={styles.tags} aria-label="Tags da tarefa">
+          {task.missed ? <li className={styles.missed}>{missedLabel}</li> : null}
+          {task.tags.map((tag) => <li key={tag}>{tag}</li>)}
+        </ul>
+        <PositionBadge position={position} />
+      </div>
+    </section>
   );
+}
+
+/**
+ * O numero a direita do horario: a duracao de uma tarefa encerrada ou o
+ * cronometro de uma que ainda corre. Sao formatos diferentes de proposito —
+ * "1h 30min" e registro, "1:30:07" e um numero subindo.
+ */
+function DurationReadout({ task, now, running }: { task: PreviewTask; now: Date | null; running: boolean }) {
+  if (running && now) {
+    return (
+      <p className={`${styles.duration} ${styles.live}`} title="Tempo decorrido">
+        {formatStopwatch(elapsedSecondsOf(task.startedAt, now))}
+      </p>
+    );
+  }
+  if (!task.finishedAt) return null;
+  return <p className={styles.duration}>{durationLabel(task.startedAt, task.finishedAt)}</p>;
+}
+
+const positionLabels: Record<TaskPosition, string> = {
+  past: "Já aconteceu",
+  running: "Acontecendo agora",
+  upcoming: "Ainda vai acontecer",
+};
+
+/**
+ * A situacao da tarefa no tempo, num quadro so. Antes da hidratacao ele fica
+ * vazio — um estado errado por um quadro le como informacao, nao como espera.
+ */
+function PositionBadge({ position }: { position: TaskPosition | null }) {
+  if (!position) return <span className={styles.position} aria-hidden />;
+  return (
+    <span className={styles.position} data-position={position} role="img" aria-label={positionLabels[position]} title={positionLabels[position]}>
+      {position === "past" ? <Check aria-hidden /> : <i />}
+    </span>
+  );
+}
+
+/** O menu da tarefa: editar, anotar o que nao aconteceu, excluir. */
+function TaskMenu({ missed, actions }: { missed: boolean; actions?: TaskDetailActions }) {
+  if (!actions) {
+    return (
+      <button type="button" disabled className={styles.iconAction} aria-label="Mais opções da tarefa">
+        <MoreVertical aria-hidden />
+      </button>
+    );
+  }
+
+  function run(target: HTMLElement, action: () => void) {
+    const menu = target.closest("details");
+    if (menu) menu.open = false;
+    action();
+  }
+
+  return (
+    <details
+      className={styles.menu}
+      onKeyDown={(keyboardTask) => {
+        if (keyboardTask.key !== "Escape") return;
+        keyboardTask.currentTarget.open = false;
+        keyboardTask.currentTarget.querySelector("summary")?.focus();
+      }}
+      onBlur={(focusTask) => {
+        if (!focusTask.currentTarget.contains(focusTask.relatedTarget)) focusTask.currentTarget.open = false;
+      }}
+    >
+      <summary className={styles.iconAction} aria-label="Mais opções da tarefa" title="Mais opções da tarefa">
+        <MoreVertical aria-hidden />
+      </summary>
+      <div className={styles.menuPanel}>
+        <button type="button" onClick={(click) => run(click.currentTarget, actions.onEdit)}>
+          <Pencil aria-hidden />Editar tarefa
+        </button>
+        <button type="button" disabled={actions.savingMissed} onClick={(click) => run(click.currentTarget, actions.onToggleMissed)}>
+          <CircleSlash aria-hidden />
+          {missed ? `Desmarcar "${missedLabel}"` : `Marcar como ${missedLabel.toLowerCase()}`}
+        </button>
+        <button type="button" className={styles.danger} onClick={(click) => run(click.currentTarget, actions.onDelete)}>
+          <Trash2 aria-hidden />Excluir tarefa
+        </button>
+      </div>
+    </details>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return <section className={styles.section}><h2>{title}</h2>{children}</section>;
+}
+
+const statusView: Record<PreviewStatus, { Icon: LucideIcon; label: string }> = {
+  todo: { Icon: Circle, label: "A fazer" },
+  toDefine: { Icon: CircleDashed, label: "A definir" },
+  inHold: { Icon: CirclePause, label: "Em espera" },
+  done: { Icon: CircleCheck, label: "Concluída" },
+  cancel: { Icon: CircleSlash, label: "Cancelada" },
+};
+
+/**
+ * Os metadados que a tarefa carrega hoje. A prioridade normal nao aparece:
+ * dizer "Normal" gasta uma linha para nao informar nada.
+ */
+function metadataOf(task: PreviewTask): Array<{ Icon: LucideIcon; text: string }> {
+  const rows: Array<{ Icon: LucideIcon; text: string }> = [];
+  if (task.priority !== "normal") rows.push({ Icon: Flag, text: previewPriorityLabels[task.priority] });
+  if (task.notifyOffsetsMinutes.length) {
+    rows.push({ Icon: Bell, text: task.notifyOffsetsMinutes.map(notificationOffsetLabel).join(" · ") });
+  }
+  return rows;
+}
+
+function NoteSection({ note }: { note: PreviewNote }) {
+  if (note.type === "meal") return (
+    <Section title="Refeição">
+      <p className={styles.prose}>{note.data.name}</p>
+      {note.data.description ? <p className={styles.secondary}>{note.data.description}</p> : null}
+      <Nutrition data={note.data} />
+      {note.data.recipe ? <MealRecipeView recipe={note.data.recipe} /> : null}
+    </Section>
+  );
+
+  if (note.type === "training" && note.data.workouts.length) return (
+    <Section title="Treinos">
+      <ul className={styles.list}>
+        {note.data.workouts.map((workout) => (
+          <li key={workout.id}>
+            <p>{workout.workoutName}</p>
+            <span>{workout.duration} min · {workout.calories} kcal</span>
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+
+  if (note.type === "sleep") return (
+    <Section title="Sono">
+      <p className={styles.prose}>
+        {note.data.trackedSleepTime} min monitorados
+        <span className={styles.secondary}> · pontuação {note.data.score}</span>
+      </p>
+    </Section>
+  );
+
+  if (note.type === "text") return (
+    <Section title={note.name}>
+      <MarkdownView source={note.data.body} />
+    </Section>
+  );
+
+  return null;
+}
+
+function Nutrition({ data }: { data: PreviewMeal }) {
+  if (data.generation?.status === "pending" || data.generation?.status === "failed") {
+    return <MealGenerationStatus data={data} />;
+  }
+  const values = [
+    ["Calorias", data.totals.totalCaloriesKcal, "kcal"],
+    ["Proteína", data.totals.totalProteinGrams, "g"],
+    ["Carboidratos", data.totals.totalCarbohydrateGrams, "g"],
+    ["Gorduras", data.totals.totalFatGrams, "g"],
+  ] as const;
+
+  return (
+    <><MealGenerationStatus data={data} /><dl className={styles.nutrition} aria-label="Resumo nutricional">
+      {values.map(([label, value, unit]) => (
+        <div key={label}><dt>{label}</dt><dd>{value}<span>{unit}</span></dd></div>
+      ))}
+    </dl></>
+  );
+}
+
+/** "45 min", "1h", "1h 30min" — o registro do que ja passou. */
+function durationLabel(startedAt: string, finishedAt: string): string {
+  const minutes = Math.max(0, Math.round((new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 60_000));
+  if (minutes < 60) return `${minutes} min`;
+  const remaining = minutes % 60;
+  return `${Math.floor(minutes / 60)}h${remaining ? ` ${remaining}min` : ""}`;
 }

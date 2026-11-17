@@ -1,5 +1,4 @@
 import { parse } from "libpg-query";
-import type { ScopedSqlScope } from "../../../domain/ports";
 import { buildShadowCtes, logicalTables } from "./logical-schema";
 
 type Node = Record<string, unknown>;
@@ -17,10 +16,9 @@ export async function buildScopedSql(
   userSql: string,
   validatedStatement: Node,
   rowLimit: number,
-  scope: ScopedSqlScope,
 ): Promise<string> {
   const body = userSql.trim().replace(/[;\s]+$/, "");
-  const scopedSql = `WITH ${buildShadowCtes(scope)}\nSELECT * FROM (\n${body}\n) AS agent_q\nLIMIT ${Math.trunc(rowLimit)}`;
+  const scopedSql = `WITH ${buildShadowCtes()}\nSELECT * FROM (\n${body}\n) AS agent_q\nLIMIT ${Math.trunc(rowLimit)}`;
 
   let tree: { stmts?: Array<{ stmt?: Node }> };
   try {
@@ -29,7 +27,7 @@ export async function buildScopedSql(
     throw new AgentSqlRewriteError("Não foi possível preparar a consulta. Envie um único SELECT, sem ';' no meio.");
   }
 
-  if (!hasExpectedShape(tree, validatedStatement, scope)) {
+  if (!hasExpectedShape(tree, validatedStatement)) {
     throw new AgentSqlRewriteError("Não foi possível preparar a consulta com segurança.");
   }
   return scopedSql;
@@ -38,7 +36,6 @@ export async function buildScopedSql(
 function hasExpectedShape(
   tree: { stmts?: Array<{ stmt?: Node }> },
   validatedStatement: Node,
-  scope: ScopedSqlScope,
 ): boolean {
   if (tree.stmts?.length !== 1) return false;
   const select = tree.stmts[0].stmt?.SelectStmt as Node | undefined;
@@ -46,7 +43,7 @@ function hasExpectedShape(
 
   const ctes = ((select.withClause as Node | undefined)?.ctes as Node[] | undefined) ?? [];
   const cteNames = ctes.map((entry) => (entry.CommonTableExpr as Node | undefined)?.ctename);
-  if (JSON.stringify(cteNames) !== JSON.stringify(logicalTables(scope).map((table) => table.name))) return false;
+  if (JSON.stringify(cteNames) !== JSON.stringify(logicalTables().map((table) => table.name))) return false;
 
   const from = select.fromClause as Node[] | undefined;
   if (from?.length !== 1) return false;

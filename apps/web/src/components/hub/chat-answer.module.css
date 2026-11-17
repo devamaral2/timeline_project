@@ -1,0 +1,56 @@
+/* A resposta do agente no chat (canvas "Resposta do Hermes — formatação", opção A): prosa com termos tecnicos em
+   codigo, enderecos em mono e passos numerados entre fios. Os nomes de cor sao os do shell (--ink, --muted, --line). */
+.answer { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; text-wrap: pretty; overflow-wrap: anywhere; }
+.answer p { margin: 0; white-space: pre-line; }
+.answer strong { font-weight: 600; }
+
+.answer code { padding: 1px 5px; border-radius: 4px; background: var(--secondary); font-family: var(--font-mono); font-size: 12.5px; }
+.answer pre { margin: 0; max-height: 320px; overflow: auto; padding: 10px 12px; border-radius: var(--radius-xs); background: var(--secondary); line-height: 18px; tab-size: 2; }
+.answer pre code { padding: 0; background: none; font-size: 12px; white-space: pre-wrap; }
+
+.answer a { color: var(--brand-accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.answer a:hover { text-decoration-thickness: 2px; }
+.answer a:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 2px; }
+.answer .url { font-family: var(--font-mono); font-size: 12.5px; }
+/* Dentro do shell todo svg nasce com 20px; aqui a seta acompanha o texto. */
+.answer .linkIcon { display: inline; width: 12px; height: 12px; margin-left: 2px; vertical-align: -1px; stroke-width: 2; transition: transform var(--duration-fast) var(--ease-out); }
+.answer a:hover .linkIcon { transform: translate(1px, -1px); }
+
+/* O rotulo de uma lista ("Os passos") e os titulos que o agente escrever. */
+.answer .label, .answer h3 { margin: 6px 0 -10px; padding-bottom: 8px; border-bottom: 1px solid var(--hairline); font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; white-space: normal; color: var(--muted); }
+
+.answer ol, .answer ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); }
+.answer ol { counter-reset: step; }
+.answer li { position: relative; min-width: 0; padding: 12px 0 12px 30px; border-bottom: 1px solid var(--hairline); }
+.answer li:last-child { border-bottom: 0; }
+.answer ol > li { counter-increment: step; }
+.answer ol > li::before { content: counter(step); position: absolute; left: 0; top: 12px; font-family: var(--font-mono); font-size: 12px; line-height: 24px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.answer ul > li { padding-block: 6px; border-bottom: 0; }
+.answer ul > li::before { content: ""; position: absolute; left: 4px; top: 17px; width: 8px; height: 1px; background: var(--faint); }
+.answer li > p + p, .answer li > ol, .answer li > ul { margin-top: 8px; }
+.answer li li { padding-block: 4px; border-bottom: 0; }
+.answer ol ol > li::before, .answer ul ol > li::before { top: 4px; }
+.answer ol ul > li::before, .answer ul ul > li::before { top: 15px; }
+.answer li input { margin: 0 6px 0 0; vertical-align: -2px; accent-color: var(--brand); }
+
+.answer blockquote { margin: 0; padding-left: 14px; border-left: 1px solid var(--line); color: var(--muted); }
+.answer hr { width: 100%; height: 1px; margin: 0; border: 0; background: var(--hairline); }
+.tableBox { min-width: 0; overflow-x: auto; }
+.answer table { border-collapse: collapse; font-size: 13px; line-height: 20px; }
+.answer th, .answer td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--hairline); text-align: left; vertical-align: top; }
+.answer th { font-weight: 600; color: var(--muted); }
+
+/* As alternativas que o agente pede para dizer: tocar envia a resposta. */
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; min-width: 0; margin: -4px 0 0; padding: 0; border: 0; }
+.choices button { min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--ink); font-size: 14px; font-weight: 600; line-height: 20px; text-align: left; cursor: pointer; transition: border-color var(--duration-fast), background-color var(--duration-fast), transform var(--duration-fast); }
+.choices button:hover { border-color: var(--faint); }
+.choices button:active { transform: translateY(1px); border-color: var(--brand); background: var(--brand-soft); }
+.choices button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.choices:disabled button { color: var(--muted); cursor: default; }
+.choices:disabled button:hover { border-color: var(--line); }
+.choices:disabled button:active { transform: none; border-color: var(--line); background: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .answer .linkIcon, .choices button { transition: none; }
+  .choices button:active { transform: none; }
+}

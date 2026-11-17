@@ -11,12 +11,30 @@ const resolve = (relativePath: string) =>
  * `Tests pass`) depende de a saida ser so a do Vitest.
  */
 const packageAliases = {
+  "@repo/contracts/schemas": resolve("./packages/contracts/src/schemas.ts"),
   "@repo/contracts": resolve("./packages/contracts/src/index.ts"),
   "@repo/theme": resolve("./packages/theme/src/index.ts"),
   "@repo/timeline": resolve("./packages/timeline/src/index.ts"),
 };
 
 export default defineWorkspace([
+  {
+    test: {
+      name: "residuos",
+      root: ".",
+      environment: "node",
+      include: ["test/residuos/**/*.test.ts"],
+    },
+  },
+  {
+    resolve: { alias: packageAliases },
+    test: {
+      name: "corpos",
+      root: ".",
+      environment: "node",
+      include: ["test/corpos/**/*.test.ts"],
+    },
+  },
   {
     resolve: { alias: { ...packageAliases, "@": resolve("./apps/web/src") } },
     test: {
@@ -46,6 +64,14 @@ export default defineWorkspace([
       environment: "node",
       include: ["src/**/*.{test,spec}.ts"],
       exclude: ["src/**/*.integration.{test,spec}.ts"],
+    },
+  },
+  {
+    test: {
+      name: "mcp",
+      root: "./apps/mcp",
+      environment: "node",
+      include: ["src/**/*.{test,spec}.ts"],
     },
   },
   {

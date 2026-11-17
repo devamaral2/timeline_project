@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -60,7 +59,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
@@ -74,6 +72,7 @@ import app.braid.mobile.domain.timeline.formatMinutes
 import app.braid.mobile.domain.timeline.formatTime
 import app.braid.mobile.domain.timeline.minutesBetween
 import app.braid.mobile.domain.timeline.pluralize
+import app.braid.mobile.ui.chat.EntityAiEditBar
 
 private data class DetailVisual(
     val icon: ImageVector,
@@ -87,6 +86,8 @@ fun EventDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit = {},
     onDeleted: () -> Unit = {},
+    /** A edição por IA mudou o evento: a agenda recarrega ao voltar. */
+    onEdited: () -> Unit = {},
     viewModel: EventDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -126,14 +127,24 @@ fun EventDetailScreen(
                     )
                 }
             is EventDetailUiState.Content ->
-                EventDetailBody(
-                    state = current,
-                    modifier = Modifier.padding(paddingValues),
-                    onBack = onBack,
-                    onEdit = onEdit,
-                    onDelete = { showDeleteConfirmation = true },
-                    onToggleMissed = { viewModel.setMissed(!current.event.missed) },
-                )
+                Column(modifier = Modifier.padding(paddingValues)) {
+                    EventDetailBody(
+                        state = current,
+                        modifier = Modifier.weight(1f),
+                        onBack = onBack,
+                        onEdit = onEdit,
+                        onDelete = { showDeleteConfirmation = true },
+                        onToggleMissed = { viewModel.setMissed(!current.event.missed) },
+                    )
+                    EntityAiEditBar(
+                        entityType = "event",
+                        entityId = eventId,
+                        onEdited = {
+                            viewModel.refresh(eventId)
+                            onEdited()
+                        },
+                    )
+                }
             EventDetailUiState.Deleted -> Unit
         }
     }
@@ -357,10 +368,12 @@ private fun StatusIcon(
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp), tint = tint)
         }
-    } else {
+    } else if (position == EventPosition.Running) {
         Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = "Situação: $label", modifier = Modifier.size(28.dp), tint = tint)
         }
+    } else {
+        Box(modifier = Modifier.size(48.dp))
     }
 }
 
@@ -370,8 +383,8 @@ private fun SectionLabelColored(
     color: Color,
 ) {
     Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.3.sp),
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
         color = color,
     )
 }
@@ -488,13 +501,12 @@ private fun DetailMessage(
 
 @Composable
 private fun detailVisual(type: String?): DetailVisual {
-    val palette = eventDetailPalette()
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     return when (type) {
-        "meal" -> DetailVisual(Icons.Outlined.Restaurant, "Refeição", palette.meal)
-        "training" -> DetailVisual(Icons.Outlined.FitnessCenter, "Treino", palette.training)
-        "sleep" -> DetailVisual(Icons.Outlined.Bedtime, "Sono", palette.sleep)
-        "routine" -> DetailVisual(Icons.Outlined.AccessTime, "Rotina", palette.routine)
+        "meal" -> DetailVisual(Icons.Outlined.Restaurant, "Refeição", muted)
+        "training" -> DetailVisual(Icons.Outlined.FitnessCenter, "Treino", muted)
+        "sleep" -> DetailVisual(Icons.Outlined.Bedtime, "Sono", muted)
+        "common" -> DetailVisual(Icons.Outlined.EventAvailable, "Padrão", muted)
         else -> DetailVisual(Icons.Outlined.Circle, "Evento", muted)
     }
 }

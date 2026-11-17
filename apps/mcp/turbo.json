@@ -1,0 +1,9 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "dev": {
+      "passThroughEnv": ["OP_SERVICE_ACCOUNT_TOKEN", "OP_ENVIRONMENT_ID"]
+    }
+  }
+}

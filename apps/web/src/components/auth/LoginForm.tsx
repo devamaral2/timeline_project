@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { primaryButtonClass } from "@/components/ui/button-styles";
 import { signIn, type SignInResult } from "@/lib/session/use-session";
-import { cn } from "@/lib/utils";
+import styles from "./login.module.css";
 
 const FAILURE_MESSAGES: Record<Extract<SignInResult, { ok: false }>["reason"], string> = {
   // Nunca diz qual dos dois estava errado: o apps/auth tambem nao diz.
@@ -11,9 +10,6 @@ const FAILURE_MESSAGES: Record<Extract<SignInResult, { ok: false }>["reason"], s
   rate_limited: "Muitas tentativas. Aguarde um pouco e tente novamente.",
   unavailable: "Não foi possível entrar agora. Tente novamente em instantes.",
 };
-
-const inputClass =
-  "h-10 rounded-lg border border-input bg-card/40 px-3 text-sm text-foreground transition-colors focus:border-ring";
 
 interface LoginFormProps {
   onSignedIn?: (userId: string) => void;
@@ -42,9 +38,9 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
   }
 
   return (
-    <form onSubmit={(event) => void handleSubmit(event)} className="flex w-full flex-col gap-3 text-left">
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-muted-foreground">E-mail</span>
+    <form onSubmit={(event) => void handleSubmit(event)} className={styles.form}>
+      <label className={styles.field}>
+        <span>E-mail</span>
         <input
           type="email"
           required
@@ -52,12 +48,11 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
           autoComplete="username"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className={inputClass}
         />
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-muted-foreground">Senha</span>
+      <label className={styles.field}>
+        <span>Senha</span>
         <input
           type="password"
           required
@@ -65,17 +60,12 @@ export function LoginForm({ onSignedIn }: LoginFormProps) {
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className={inputClass}
         />
       </label>
 
-      {error ? (
-        <p role="alert" className="text-xs text-destructive">
-          {error}
-        </p>
-      ) : null}
+      {error ? <p role="alert" className={styles.error}>{error}</p> : null}
 
-      <button type="submit" disabled={loading || !email || !password} className={cn(primaryButtonClass, "mt-1 w-full")}>
+      <button type="submit" disabled={loading || !email || !password} className={styles.submit}>
         {loading ? "Entrando..." : "Entrar"}
       </button>
     </form>

@@ -1,0 +1,117 @@
+/* A gaveta das subtarefas na lista de tarefas (canvas “Lista de tarefas —
+   subtarefas”, modelo A). Seletores de duas classes nos svg: `.shell svg`
+   força 20px em todo ícone e empata com uma classe só. Cores só por token. */
+
+/* A fração na ponta da linha: pizza das feitas, “1/4” e a seta. */
+.toggle {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  margin-top: -3px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--duration-fast), color var(--duration-fast), transform var(--duration-fast);
+}
+/* A área de toque passa dos 44px sem engordar o desenho. */
+.toggle::after { content: ""; position: absolute; inset: -8px -4px; }
+.toggle:active { transform: scale(.95); }
+.toggle[aria-expanded="true"] { background: var(--secondary); color: var(--foreground); }
+@media (hover: hover) {
+  .toggle:hover { background: var(--secondary); color: var(--foreground); }
+}
+.toggle:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+.toggle .pie { width: 14px; height: 14px; }
+.pieTrack { fill: none; stroke: var(--border); stroke-width: 2.4; }
+.pieFill { fill: none; stroke: var(--success); stroke-width: 2.4; transition: stroke-dasharray var(--duration-slow) var(--ease-out); }
+.toggle .chevron { width: 12px; height: 12px; stroke-width: 2.2; transition: transform var(--duration-slow) var(--ease-out); }
+.toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+/* A gaveta: começa no centro do glifo da principal (12px) e ocupa a largura
+   que sobra da linha. O fio sobe até o glifo e desce até o último cotovelo. */
+.tree {
+  position: relative;
+  flex: 0 0 calc(100% - 12px);
+  min-width: 0;
+  margin: 2px 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+/* O fio entre o glifo da principal e a primeira subtarefa. */
+.tree::before { content: ""; position: absolute; top: -22px; left: 0; width: 1px; height: 22px; background: var(--border); }
+/* Gaveta dentro de uma subtarefa: o fio sai do glifo de 18px dela. */
+.item > .tree { margin: 0 0 4px 33px; }
+.item > .tree::before { top: -11px; height: 11px; }
+/* Cada subtarefa que não é a última leva o fio até a seguinte, passando por
+   uma gaveta aberta dentro dela; a última termina no cotovelo. */
+.item:not(:last-child)::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: var(--border); }
+
+.item { position: relative; animation: subIn 320ms var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * var(--stagger)); }
+.line { position: relative; display: flex; align-items: center; gap: 10px; min-height: 40px; padding-left: 24px; }
+.elbow { position: absolute; top: 0; left: 0; width: 16px; height: 20px; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); border-bottom-left-radius: 9px; }
+
+.glyphButton {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: -9px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: transform var(--duration-fast);
+}
+.glyphButton:active { transform: scale(.88); }
+.glyphButton:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 0; }
+.glyphSlot { flex: none; display: grid; place-items: center; width: 18px; height: 18px; }
+.line .glyphButton svg, .line .glyphSlot svg { width: 18px; height: 18px; }
+
+.name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  color: var(--foreground);
+  font-size: 15px;
+  line-height: 20px;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.name[data-closed="true"] { color: var(--faint); text-decoration: line-through; text-decoration-thickness: 1px; }
+@media (hover: hover) {
+  .name:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+}
+.name:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+
+.when {
+  flex: 1 0 auto;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: right;
+  white-space: nowrap;
+}
+.when[data-overdue="true"] { color: var(--destructive); }
+.line .agentMark { flex: none; width: 16px; height: 16px; stroke-width: 1.9; color: var(--brand-accent); }
+
+@keyframes subIn { from { opacity: 0; transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .item { animation: none; }
+  .toggle .chevron, .pieFill { transition: none; }
+}

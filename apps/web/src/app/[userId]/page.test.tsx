@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 
-vi.mock('../mockups/eventos/agenda-preview', () => ({
-  AgendaPreview: ({ userId, todayKey }: { userId: string; todayKey: string }) => (
+vi.mock('@/components/agenda/agenda-screen', () => ({
+  AgendaScreen: ({ userId, todayKey }: { userId: string; todayKey: string }) => (
     <p>
       Agenda de {userId} em {todayKey}
     </p>

@@ -1,5 +1,5 @@
 /**
- * O vinculo de um evento ou tarefa com a serie que o gerou.
+ * O vinculo de uma tarefa com a serie que o gerou.
  *
  * `detached` marca a ocorrencia que o usuario mexeu a mao: editar a serie
  * regera as ocorrencias futuras, mas nao passa por cima dessas.

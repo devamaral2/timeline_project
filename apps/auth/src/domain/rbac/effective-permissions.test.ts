@@ -4,22 +4,22 @@ import { isAllowed, resolveEffectivePermissions } from "./effective-permissions"
 describe("resolveEffectivePermissions", () => {
   it("une papel e concessao direta sem repetir", () => {
     const result = resolveEffectivePermissions({
-      rolePermissions: ["event:read", "event:create"],
-      directPermissions: [{ permission: "event:read", effect: "allow" }],
+      rolePermissions: ["task:read", "task:create"],
+      directPermissions: [{ permission: "task:read", effect: "allow" }],
     });
 
-    expect(result).toEqual({ permissions: ["event:create", "event:read"], denies: [] });
+    expect(result).toEqual({ permissions: ["task:create", "task:read"], denies: [] });
   });
 
   it("deny explicito derruba o allow do papel", () => {
     const result = resolveEffectivePermissions({
-      rolePermissions: ["event:read", "event:delete"],
-      directPermissions: [{ permission: "event:delete", effect: "deny" }],
+      rolePermissions: ["task:read", "task:delete"],
+      directPermissions: [{ permission: "task:delete", effect: "deny" }],
     });
 
     expect(result).toEqual({
-      permissions: ["event:delete", "event:read"],
-      denies: ["event:delete"],
+      permissions: ["task:delete", "task:read"],
+      denies: ["task:delete"],
     });
   });
 
@@ -34,31 +34,31 @@ describe("resolveEffectivePermissions", () => {
 
   it("descarta permissao fora do catalogo", () => {
     const result = resolveEffectivePermissions({
-      rolePermissions: ["event:read", "timeline:hack" as never],
+      rolePermissions: ["task:read", "timeline:hack" as never],
       directPermissions: [],
     });
 
-    expect(result).toEqual({ permissions: ["event:read"], denies: [] });
+    expect(result).toEqual({ permissions: ["task:read"], denies: [] });
   });
 
   // Mesmo usuario tem que gerar sempre o mesmo JWT: a ordem e parte do contrato.
   it("devolve em ordem estavel", () => {
     const result = resolveEffectivePermissions({
-      rolePermissions: ["tag:read", "event:read", "event:create"],
+      rolePermissions: ["tag:read", "task:read", "task:create"],
       directPermissions: [],
     });
 
-    expect(result).toEqual({ permissions: ["event:create", "event:read", "tag:read"], denies: [] });
+    expect(result).toEqual({ permissions: ["tag:read", "task:create", "task:read"], denies: [] });
   });
 
   it("nega acao coberta por deny especifico mesmo para superadmin", () => {
     const access = resolveEffectivePermissions({
       rolePermissions: ["*:manage"],
-      directPermissions: [{ permission: "event:delete", effect: "deny" }],
+      directPermissions: [{ permission: "task:delete", effect: "deny" }],
     });
 
-    expect(access).toEqual({ permissions: ["*:manage"], denies: ["event:delete"] });
-    expect(isAllowed(access, "event", "delete")).toBe(false);
-    expect(isAllowed(access, "event", "read")).toBe(true);
+    expect(access).toEqual({ permissions: ["*:manage"], denies: ["task:delete"] });
+    expect(isAllowed(access, "task", "delete")).toBe(false);
+    expect(isAllowed(access, "task", "read")).toBe(true);
   });
 });

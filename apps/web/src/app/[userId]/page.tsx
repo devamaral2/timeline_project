@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AgendaPreview } from '../mockups/eventos/agenda-preview';
+import { AgendaScreen } from '@/components/agenda/agenda-screen';
 import { dayKeyOf } from '@repo/timeline';
 
 export const dynamic = 'force-dynamic';
@@ -13,13 +13,13 @@ export async function generateMetadata({
 }: UserTimelinePageProps): Promise<Metadata> {
   const { userId } = await params;
   return {
-    title: `Agenda de ${userId} — Braid`,
+    title: `Agenda de ${userId} — Agente pessoal`,
     description: 'Sono, treinos, refeições e rotina organizados por dia.',
   };
 }
 
 /*
- * A agenda carrega os eventos no cliente.
+ * A agenda carrega as tarefas no cliente.
  *
  * A leitura exige a sessao, e quem sabe renova-la quando o access token de 15
  * minutos expira e o cliente (`authedFetch`). O que sobra para o servidor e o unico
@@ -35,5 +35,5 @@ export default async function UserTimelinePage({
   const { userId } = await params;
   const todayKey = dayKeyOf(new Date());
 
-  return <AgendaPreview userId={userId} todayKey={todayKey} />;
+  return <AgendaScreen userId={userId} todayKey={todayKey} />;
 }

@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
 import { ulid } from "ulid";
 import * as schema from "../database/schema";
-import type { Tx } from "../events/repositories/postgres-event.repository";
+import type { Tx } from "./tx";
 
-/** Tag e uma so por usuario e nome, seja de evento, tarefa ou nota. */
+/** Tag e uma so por usuario e nome, seja de tarefa ou de artefato. */
 export async function upsertTagIds(tx: Tx, userId: string, names: readonly string[]): Promise<string[]> {
   const tagIds: string[] = [];
   for (const name of names) {

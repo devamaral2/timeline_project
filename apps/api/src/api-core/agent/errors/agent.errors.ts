@@ -47,3 +47,18 @@ export class InvalidInputError extends Error {
     this.name = "InvalidInputError";
   }
 }
+
+/**
+ * Uma chamada estruturada ao modelo estourou o orcamento de tempo ou respondeu algo inutilizavel. Nada foi
+ * gravado. Nao e retentavel de proposito: refazer o passo inteiro e o que travava a fila do usuario por minutos.
+ * Quando vem de HTTP 429/5xx carrega o `status`, que a fila trata como transitorio.
+ */
+export class FastStageError extends Error {
+  constructor(
+    readonly reason: "timeout" | "provider" | "invalid",
+    readonly status?: number,
+  ) {
+    super("Não consegui atender o pedido a tempo. Tente de novo em instantes.");
+    this.name = "FastStageError";
+  }
+}

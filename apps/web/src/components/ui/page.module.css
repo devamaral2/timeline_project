@@ -1,0 +1,61 @@
+/*
+ * O esqueleto de uma tela de lista (Tarefas, Notas): a coluna, o cabecalho com
+ * o titulo serifado, os grupos recolhiveis e os estados de carregamento, erro
+ * e vazio. As telas apontam para ca com `composes`, e so guardam no proprio
+ * modulo o que e delas (a linha de tarefa, o cartao de nota).
+ */
+/* A coluna de toda pagina: a largura do conteudo mais a margem lateral fluida,
+   32 de respiro no topo e, no celular, a folga da barra inferior. Quem usa
+   escolhe a largura com `--page-width`: 1040 nas listas (o padrao), menos nos
+   formularios. */
+.container { width: 100%; max-width: calc(var(--page-width, 1040px) + 2 * clamp(16px, 4vw, 56px)); margin: 0 auto; padding: 32px clamp(16px, 4vw, 56px) 48px; }
+.page { composes: container; display: flex; flex-direction: column; gap: 24px; font-size: var(--font-size-md); line-height: 1.5; }
+
+/* Cabecalho: o titulo de pagina (serifa, 44 no desktop e 32 no celular, peso
+   500) e, ao lado, as acoes da tela */
+.pageHead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
+.titleBlock { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.title { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: clamp(2rem, 1.4rem + 2vw, 2.75rem); line-height: 1.1; letter-spacing: -.015em; }
+
+/* Grupos: titulo em caixa alta, contagem em mono, seta que recolhe */
+.groups { display: flex; flex-direction: column; gap: 24px; }
+.group { display: flex; flex-direction: column; }
+.groupTitle { font-size: var(--font-size-sm); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.groupCount { font-family: var(--font-mono); font-size: var(--font-size-sm); font-weight: 400; letter-spacing: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+.groupToggle { display: flex; align-items: center; gap: 12px; width: 100%; min-height: var(--control-md); padding: 0; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+
+/* Carregando, erro e vazio */
+.message { margin: 0; padding: 28px 0; color: var(--muted); }
+.retry { margin-left: 8px; border: 0; background: transparent; color: var(--ink); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px 24px; border: 1px dashed var(--input); border-radius: 14px; text-align: center; }
+.empty svg { width: 32px; height: 32px; color: var(--muted); }
+.emptyTitle { margin: 0; font-family: var(--font-display); font-size: 1.25rem; font-weight: 500; }
+.emptyText { max-width: 44ch; margin: 0; color: var(--muted); }
+
+/*
+ * O molde do redesenho: duas colunas numa moldura de 1184 px. A da esquerda
+ * (400 px) leva o que situa — a data, o calendario, o resumo do registro — e a
+ * da direita, o conteudo. Abaixo de 720 px viram uma coluna so, com a folga da
+ * barra inferior flutuante.
+ */
+.frame { width: 100%; max-width: 1184px; margin: 0 auto; padding: 64px min(32px, 5%) 96px; display: flex; flex-wrap: wrap; align-items: flex-start; column-gap: 96px; row-gap: 48px; font-size: var(--font-size-sm); line-height: 1.45; }
+.lead { flex: 0 1 400px; min-width: 0; display: flex; flex-direction: column; gap: 36px; }
+.body { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+/* A legenda em mono: a data no topo da tela, o rotulo de uma secao. */
+.eyebrow { margin: 0; font-family: var(--font-mono); font-size: var(--font-size-xs); font-weight: 400; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+/* O rotulo de secao: a legenda em mono e um fio ate a margem. */
+.sectionLabel { composes: eyebrow; display: flex; align-items: center; gap: 12px; font-weight: 500; }
+.sectionLabel::after { content: ""; flex: 1; height: 1px; background: var(--hairline); }
+.sectionLabel > span { color: var(--faint); }
+/* O titulo serifado de um registro e de uma lista. */
+.display { margin: 0; font-family: var(--font-display); font-size: 44px; font-weight: 400; line-height: 48px; letter-spacing: -.015em; text-wrap: balance; }
+
+@media (max-width: 720px) {
+  .container { padding: 22px 16px 120px; }
+  .page { gap: 20px; }
+  .frame { flex-direction: column; flex-wrap: nowrap; align-items: stretch; row-gap: 20px; padding: 14px 20px calc(120px + env(safe-area-inset-bottom)); }
+  .lead { flex: none; gap: 14px; }
+  .body { flex: none; }
+  .eyebrow { letter-spacing: .08em; }
+  .display { font-size: 32px; line-height: 36px; }
+}

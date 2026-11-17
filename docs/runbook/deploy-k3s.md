@@ -16,13 +16,12 @@ Navegador → HTTPS :443 Cloudflare → túnel cifrado → Traefik :80 interno
                                                        ├─ web :3000 → API → Postgres
                                                        ├─ API :3001
                                                        ├─ auth :3002
-                                                       ├─ Grafana :80
-                                                       └─ painel RabbitMQ :15672
+                                                       └─ Grafana :80
 ```
 
-SSH continua pela porta 22, como você já configurou. PostgreSQL :5432 e
-RabbitMQ AMQP :5672 ficam internos: são protocolos de banco e fila, não páginas
-HTTP. O painel web do RabbitMQ é outra porta. Não publicaremos a administração
+SSH continua pela porta 22, como você já configurou. PostgreSQL :5432 fica
+interno: é protocolo de banco, não página HTTP. A fila de jobs de IA é uma
+tabela desse mesmo banco, sem serviço próprio. Não publicaremos a administração
 do Kubernetes, o dashboard do Traefik ou o Prometheus.
 
 Escolhemos imagens construídas na própria VPS e importadas no k3s. Isso dispensa
@@ -143,7 +142,6 @@ O domínio raiz não receberá site neste roteiro; usaremos subdomínios:
 | `api.SEUDOMINIO`     | API                            | Público, endpoints exigem sessão do auth |
 | `auth.SEUDOMINIO`    | Serviço de identidade separado | Protegido por Access nesta fase          |
 | `grafana.SEUDOMINIO` | Painel de métricas             | Access + senha Grafana                   |
-| `rabbit.SEUDOMINIO`  | Painel da fila                 | Access + senha RabbitMQ                  |
 
 
 `SEUDOMINIO` significa o nome comprado, sem `https://` nem barras.
@@ -531,7 +529,6 @@ PG_ADMIN_PASSWORD=$(openssl rand -hex 24)
 PG_APP_PASSWORD=$(openssl rand -hex 24)
 AUTH_OWNER_PASSWORD=$(openssl rand -hex 24)
 AUTH_RUNTIME_PASSWORD=$(openssl rand -hex 24)
-RABBIT_PASSWORD=$(openssl rand -hex 24)
 GRAFANA_PASSWORD=$(openssl rand -hex 24)
 AUTH_KEY_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr '+/' '-_' | tr -d '=')
 AUTH_INTERNAL_SERVICE_KEY=$(openssl rand -hex 32)
@@ -541,7 +538,6 @@ printf '%s\n' \
   "PG_APP_PASSWORD=$PG_APP_PASSWORD" \
   "AUTH_OWNER_PASSWORD=$AUTH_OWNER_PASSWORD" \
   "AUTH_RUNTIME_PASSWORD=$AUTH_RUNTIME_PASSWORD" \
-  "RABBIT_PASSWORD=$RABBIT_PASSWORD" \
   "GRAFANA_PASSWORD=$GRAFANA_PASSWORD" \
   "AUTH_KEY_ENCRYPTION_KEY=$AUTH_KEY_ENCRYPTION_KEY" \
   "AUTH_INTERNAL_SERVICE_KEY=$AUTH_INTERNAL_SERVICE_KEY" \
@@ -576,7 +572,7 @@ AUTH_DATABASE_URL=postgres://auth_runtime:<AUTH_RUNTIME_PASSWORD>@postgres.braid
 
 Inclua também `AUTH_KEY_ENCRYPTION_KEY`, `AUTH_INTERNAL_SERVICE_KEY`, os URLs
 internos/externos do passo 8 e `NODE_ENV=production`. O `PG_ADMIN_PASSWORD`,
-`AUTH_OWNER_PASSWORD` e as senhas de RabbitMQ/Grafana continuam nos Secrets
+`AUTH_OWNER_PASSWORD` e a senha do Grafana continuam nos Secrets
 locais correspondentes; não os reutilize como senha de login.
 
 ```bash
@@ -591,9 +587,6 @@ kubectl -n braid create secret generic postgres-env \
   --from-literal=AUTH_OWNER_PASSWORD="$AUTH_OWNER_PASSWORD" \
   --from-literal=AUTH_RUNTIME_PASSWORD="$AUTH_RUNTIME_PASSWORD"
 
-kubectl -n braid create secret generic rabbitmq-env \
-  --from-literal=RABBITMQ_DEFAULT_USER=braid \
-  --from-literal=RABBITMQ_DEFAULT_PASS="$RABBIT_PASSWORD"
 kubectl -n observability create secret generic grafana-admin \
   --from-literal=admin-user=admin \
   --from-literal=admin-password="$GRAFANA_PASSWORD"
@@ -715,84 +708,22 @@ a senha de usuários existentes. Se a inicialização falhar, leia
 `kubectl -n braid logs postgres-0`. Não apague o PVC para tentar corrigir:
 isso pode apagar o banco.
 
-## 11. Subir RabbitMQ
+## 11. Fila de jobs de IA: nada a subir
 
-RabbitMQ entrega os jobs de IA da API (filas duráveis; o estado fica no
-PostgreSQL). A API valida `RABBITMQ_URL` e `AI_JOBS_QUEUE_PREFIX` no boot e não
-sobe sem elas. Cadastre ambas no scope `api-runtime` do Environment de produção:
+Os jobs de IA da API ficam na tabela `jobs` do banco `braid`, criada pelas
+migrations do passo 12. O worker roda dentro do próprio pod da API e lê essa
+tabela; não há broker, Service, Secret nem variável obrigatória para a fila. Os
+ajustes opcionais (`AI_JOBS_CONCURRENCY`, `AI_JOBS_LEASE_MS`,
+`AI_JOBS_MAX_ATTEMPTS`, `AI_JOBS_POLL_MS`) e as consultas de diagnóstico estão
+no [runbook da fila](./ai-jobs.md).
 
-```dotenv
-RABBITMQ_URL=amqp://braid:<RABBIT_PASSWORD>@rabbitmq.braid.svc.cluster.local:5672
-AI_JOBS_QUEUE_PREFIX=production
-```
-
-O container da API não tem `.git`, então o prefixo não é derivado da branch como
-em desenvolvimento: use um nome fixo e único por banco.
-
-**Servidor / Bash:**
-
-```bash
-cat > /opt/braid/k8s/rabbitmq.yaml <<'EOF'
-apiVersion: v1
-kind: Service
-metadata:
-  name: rabbitmq
-  namespace: braid
-spec:
-  type: ClusterIP
-  selector: {app: rabbitmq}
-  ports:
-    - {name: amqp, port: 5672, targetPort: 5672}
-    - {name: management, port: 15672, targetPort: 15672}
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: rabbitmq
-  namespace: braid
-spec:
-  serviceName: rabbitmq
-  replicas: 1
-  selector:
-    matchLabels: {app: rabbitmq}
-  template:
-    metadata:
-      labels: {app: rabbitmq}
-    spec:
-      containers:
-        - name: rabbitmq
-          image: rabbitmq:4-management-alpine
-          envFrom:
-            - secretRef: {name: rabbitmq-env}
-          ports:
-            - {containerPort: 5672}
-            - {containerPort: 15672}
-          volumeMounts:
-            - {name: data, mountPath: /var/lib/rabbitmq}
-          readinessProbe:
-            exec:
-              command: [rabbitmq-diagnostics, -q, ping]
-            initialDelaySeconds: 20
-            periodSeconds: 15
-            timeoutSeconds: 10
-          resources:
-            requests: {cpu: 100m, memory: 256Mi}
-            limits: {cpu: 500m, memory: 768Mi}
-  volumeClaimTemplates:
-    - metadata: {name: data}
-      spec:
-        accessModes: [ReadWriteOnce]
-        storageClassName: local-path
-        resources:
-          requests: {storage: 5Gi}
-EOF
-kubectl apply -f /opt/braid/k8s/rabbitmq.yaml
-kubectl -n braid rollout status statefulset/rabbitmq --timeout=300s
-kubectl -n braid exec rabbitmq-0 -- rabbitmq-diagnostics -q ping
-```
-
-Esperado: diagnóstico bem-sucedido. O painel só ficará acessível externamente
-depois de configurarmos Access, Ingress e Tunnel.
+Se esta VPS já recebeu uma versão anterior deste roteiro, ela ainda tem o
+broker que a API deixou de usar: um StatefulSet com o volume dele, um Service,
+um Secret, o Ingress e a rota do Tunnel do painel da fila, a aplicação Access
+desse painel e duas variáveis no Environment de produção (a URL do broker e o
+prefixo das filas). Nada disso é lido pela versão atual. Remova depois de
+implantar a API nova e confirmar que ela está pronta; apagar o volume é
+irreversível, mas ele só guardava mensagens da fila antiga.
 
 ## 12. Construir as imagens e aplicar migrations
 
@@ -1025,7 +956,7 @@ não configure redirecionamento HTTP→HTTPS no Traefik neste fluxo.
 
 ```bash
 source /opt/braid/env.sh
-for mapping in "timeline web 3000" "api api 3001" "auth auth 3002" "rabbit rabbitmq 15672"; do
+for mapping in "timeline web 3000" "api api 3001" "auth auth 3002"; do
   read -r sub service port <<< "$mapping"
   cat > "/opt/braid/k8s/ingress-$sub.yaml" <<EOF
 apiVersion: networking.k8s.io/v1
@@ -1054,7 +985,7 @@ done
 kubectl get ingress -A
 ```
 
-O laço cria quatro arquivos. O Ingress do Grafana foi criado pelo Helm no passo
+O laço cria três arquivos. O Ingress do Grafana foi criado pelo Helm no passo
 anterior. O campo ADDRESS pode ficar vazio com Traefik ClusterIP; isso não é erro.
 
 Teste o roteamento **antes** de envolver a Cloudflare:
@@ -1064,7 +995,7 @@ TRAEFIK_IP=$(kubectl -n kube-system get svc traefik -o jsonpath='{.spec.clusterI
 curl -fsS -o /dev/null -w 'web=%{http_code}\n' -H "Host: timeline.$DOMAIN" "http://$TRAEFIK_IP"
 curl -fsS -H "Host: auth.$DOMAIN" "http://$TRAEFIK_IP/health/ready"
 curl -fsS -H "Host: auth.$DOMAIN" "http://$TRAEFIK_IP/.well-known/jwks.json" | jq -e '.keys | length > 0'
-curl -sS -o /dev/null -w 'api=%{http_code}\n' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/events"
+curl -sS -o /dev/null -w 'api=%{http_code}\n' -H "Host: api.$DOMAIN" "http://$TRAEFIK_IP/api/tasks"
 ```
 
 Esperado: web 200, readiness do auth saudável, `true` para existência de chave
@@ -1092,9 +1023,9 @@ em caminho restrito. Defina duração de sessão de uma hora.
 6. Adicione uma policy `Allow`. Em **Include**, escolha **Emails** e coloque
 omente seu e-mail completo. Não escolha `Everyone` nem `Bypass`.
 elecione One-time PIN como método de login e salve.
-7. Repita para `rabbit.SEUDOMINIO` e `auth.SEUDOMINIO`, sempre cobrindo todo
+7. Repita para `auth.SEUDOMINIO`, sempre cobrindo todo
  hostname e permitindo só os administradores escolhidos.
-8. Confira na lista que existem as três aplicações e suas policies.
+8. Confira na lista que existem as duas aplicações e suas policies.
 
 Não coloque Access em `timeline` ou `api` neste roteiro: os clientes usam a
 sessão do `apps/auth`. Uma tela de login Access no caminho quebraria requisições
@@ -1181,7 +1112,7 @@ kubectl -n edge rollout status deployment/cloudflared --timeout=300s
 
 Referência: [cloudflared no Kubernetes](https://developers.cloudflare.com/tunnel/deployment-guides/kubernetes/).
 
-## 18. Publicar os cinco endereços pelo Tunnel
+## 18. Publicar os quatro endereços pelo Tunnel
 
 **Navegador:** abra `timeline-vps`, **Routes → Add route → Published application**
 (ou **Public Hostnames → Add a public hostname** na interface anterior).
@@ -1195,7 +1126,6 @@ Crie **uma rota por linha** desta tabela:
 | `api`      | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `api.SEUDOMINIO`      |
 | `auth`     | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `auth.SEUDOMINIO`     |
 | `grafana`  | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `grafana.SEUDOMINIO`  |
-| `rabbit`   | seu domínio | HTTP | `traefik.kube-system.svc.cluster.local:80` | `rabbit.SEUDOMINIO`   |
 
 
 Deixe **Path vazio**. Em cada rota, abra **Additional application settings →
@@ -1207,7 +1137,7 @@ Salve cada rota. A Cloudflare cria o registro DNS correspondente ao túnel.
 Se houver conflito de hostname, confira em **DNS → Records** e remova somente
 o registro anterior daquele subdomínio que você está substituindo.
 
-Não crie rota curinga `*` nem encaminhe diretamente para Grafana/RabbitMQ:
+Não crie rota curinga `*` nem encaminhe diretamente para o Grafana:
 a tabela garante que todas as aplicações passam pelo Traefik.
 
 O navegador continua usando **HTTPS**; `HTTP` nessa tabela descreve apenas o
@@ -1232,7 +1162,7 @@ kubectl top nodes
 kubectl top pods -A
 dig +short "timeline.$DOMAIN"
 curl -fsS -o /dev/null -w '%{http_code}\n' "https://timeline.$DOMAIN"
-curl -sS -o /dev/null -w '%{http_code}\n' "https://api.$DOMAIN/api/events"
+curl -sS -o /dev/null -w '%{http_code}\n' "https://api.$DOMAIN/api/tasks"
 ```
 
 Esperado: pods prontos (Jobs de instalação podem aparecer `Completed`), volumes
@@ -1241,17 +1171,15 @@ O DNS público deve apontar para a borda Cloudflare, não diretamente para a VPS
 
 **Navegador:**
 
-1. Abra `https://timeline.SEUDOMINIO`, faça login Google e crie um evento de
-este. Recarregue a página: ele precisa continuar lá. Isso verifica
+1. Abra `https://timeline.SEUDOMINIO`, faça login Google e crie uma tarefa de
+este. Recarregue a página: ela precisa continuar lá. Isso verifica
 avegador → Cloudflare → Traefik → web → API → banco.
 2. Em janela anônima, abra `https://grafana.SEUDOMINIO`. Deve pedir o código
 o Access **antes** do login Grafana. Use `admin` e a `GRAFANA_PASSWORD`
 uardada. Abra **Dashboards → Browse** e um painel Kubernetes.
-3. Faça o mesmo com `https://rabbit.SEUDOMINIO`. Depois do Access, entre com
-suário `timeline` e `RABBIT_PASSWORD`.
-4. Em `https://auth.SEUDOMINIO/health/ready`, autentique no Access e confirme
+3. Em `https://auth.SEUDOMINIO/health/ready`, autentique no Access e confirme
  resposta saudável. O auth é uma API; não espere uma página de login em `/`.
-5. Sem sessão Access, um pedido a esses três hosts deve receber o desafio,
+4. Sem sessão Access, um pedido a esses dois hosts deve receber o desafio,
 edirecionamento para login ou recusa. Nunca o conteúdo administrativo.
 
 **Computador / PowerShell**, fora da VPS: verifique as portas do IPv4 informado.
@@ -1291,13 +1219,13 @@ do host antes de considerar a publicação protegida por Access.
 
 ### O que “tudo funcionando” significa aqui
 
-Web, API, auth, banco, RabbitMQ, Prometheus, Grafana e Tunnel devem estar prontos.
+Web, API, auth, banco, Prometheus, Grafana e Tunnel devem estar prontos.
 O app Android usa `https://api.SEUDOMINIO` como `BuildConfig.API_BASE_URL` em seu
 próprio build; a geração/instalação nativa não faz parte de subir servidores na
 VPS.
 
-Se deixou OpenRouter pendente, os recursos de IA continuam pendentes. RabbitMQ
-ainda não tem consumidor no código. O auth usa o endereço do socket como IP do cliente:
+Se deixou OpenRouter pendente, os recursos de IA continuam pendentes.
+O auth usa o endereço do socket como IP do cliente:
 atrás do proxy isso pode agrupar clientes nos limites por IP. Por isso permanece
 atrás do Access para uso administrativo até a integração do produto e a política
 de proxies confiáveis serem tratadas no código.
@@ -1426,10 +1354,10 @@ recupere os Secrets e use imagens correspondentes ao commit salvo. O ensaio
 acima deliberadamente ignora donos/permissões para verificar os dados em bases
 temporárias; não é um comando para substituir produção.
 
-Este backup não inclui mensagens RabbitMQ nem os volumes de Prometheus/Grafana.
-É proteção dos dados da aplicação e de sua configuração. Antes de a fila
-armazenar trabalho importante, será necessário acrescentar sua estratégia
-de recuperação. Exporte dashboards personalizados do Grafana se criar algum.
+Este backup não inclui os volumes de Prometheus/Grafana.
+É proteção dos dados da aplicação e de sua configuração. A fila de jobs de IA
+é uma tabela do banco da API e entra no dump junto com ele.
+Exporte dashboards personalizados do Grafana se criar algum.
 
 ## 21. Atualizar o código e voltar à imagem anterior
 
@@ -1510,7 +1438,7 @@ as imagens, normalmente usando registry.
 
 Troca só de credencial: atualize o Secret e execute
 `kubectl -n braid rollout restart deployment/NOME` no app afetado.
-Senha PostgreSQL/RabbitMQ já inicializada exige também alterar a credencial
+Senha do PostgreSQL já inicializada exige também alterar a credencial
 no próprio serviço; editar apenas Secret não basta.
 Se alterar `AUTH_SERVICE_URL` ou `BACKEND_URL`, refaça o build web do passo 12.
 
