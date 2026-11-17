@@ -1,0 +1,198 @@
+{
+  "isStopSpeech": [
+    {
+      "args": [
+        "para"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "Para."
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "pode parar"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "Pode parar!"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "parar de ouvir"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "para de ouvir por favor"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "por favor, pare"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "Chega!"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "chega"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "encerrar"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "Encerra."
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "cancelar"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "cancela"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "stop"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "STOP"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "pare de escutar"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "  chega   "
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "para amanhã"
+      ],
+      "result": false
+    },
+    {
+      "args": [
+        "o que tenho para hoje"
+      ],
+      "result": false
+    },
+    {
+      "args": [
+        "parar o treino de quinta"
+      ],
+      "result": false
+    },
+    {
+      "args": [
+        "parar o carro"
+      ],
+      "result": false
+    },
+    {
+      "args": [
+        "chega de ouvir música"
+      ],
+      "result": false
+    },
+    {
+      "args": [
+        ""
+      ],
+      "result": false
+    },
+    {
+      "args": [
+        "criar tarefa"
+      ],
+      "result": false
+    }
+  ],
+  "speechErrorMessage": [
+    {
+      "args": [
+        "aborted"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "not-allowed"
+      ],
+      "result": "Permita o acesso ao microfone para gravar."
+    },
+    {
+      "args": [
+        "service-not-allowed"
+      ],
+      "result": "Permita o acesso ao microfone para gravar."
+    },
+    {
+      "args": [
+        "no-speech"
+      ],
+      "result": "Não ouvi nada. Tente de novo."
+    },
+    {
+      "args": [
+        "audio-capture"
+      ],
+      "result": "Nenhum microfone encontrado."
+    },
+    {
+      "args": [
+        "network"
+      ],
+      "result": "Sem conexão com o serviço de voz."
+    },
+    {
+      "args": [
+        "unknown"
+      ],
+      "result": "Não foi possível gravar o áudio."
+    },
+    {
+      "args": [
+        "language-not-supported"
+      ],
+      "result": "Não foi possível gravar o áudio."
+    }
+  ]
+}
