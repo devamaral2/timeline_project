@@ -1,0 +1,46 @@
+[
+  {
+    "startDate": "2026-09-20",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 1,
+      "monthDay": 20,
+      "month": 9,
+      "endsOn": ""
+    }
+  },
+  {
+    "startDate": "2026-09-23",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 8,
+      "monthDay": 23,
+      "month": 9,
+      "endsOn": ""
+    }
+  },
+  {
+    "startDate": "2026-12-31",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 16,
+      "monthDay": 31,
+      "month": 12,
+      "endsOn": ""
+    }
+  },
+  {
+    "startDate": "",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 0,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": ""
+    }
+  }
+]

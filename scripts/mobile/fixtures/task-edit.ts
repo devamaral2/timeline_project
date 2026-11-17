@@ -81,7 +81,31 @@ const long = task({
 const done = task({ id: "task-4", name: "Enviar o relatório", status: "done", finishedAt: "2026-09-13T20:00:00.000Z", startedAt: "2026-09-13T15:00:00.000Z", revision: 3 });
 const bare = task({ id: "task-5", name: "Ideia sem data", status: "toDefine", revision: 1 });
 
-const tasks = { full, reference, long, done, bare };
+/** Uma ocorrência da série `rec-1` de `recurrence.ts` (toda segunda e quarta... às 10:30, desde 21 set). */
+const occurrence = task({
+  id: "task-occ",
+  name: "Treino",
+  status: "todo",
+  startedAt: "2026-09-23T13:30:00.000Z",
+  estimatedFinishAt: "2026-09-23T14:30:00.000Z",
+  recurrence: {
+    id: "rec-1",
+    occurrenceOn: "2026-09-23",
+    detached: false,
+    rule: {
+      frequency: "weekly",
+      interval: 1,
+      byWeekday: 42,
+      timeOfDay: "10:30",
+      durationMinutes: 60,
+      timeZone: "America/Sao_Paulo",
+      startsOn: "2026-09-21",
+    },
+  },
+  revision: 6,
+});
+
+const tasks = { full, reference, long, done, bare, occurrence };
 
 function edit(base: ReturnType<typeof task>, changes: Partial<TaskDraft>): TaskDraft {
   return { ...draftFromTask(base), ...changes };
