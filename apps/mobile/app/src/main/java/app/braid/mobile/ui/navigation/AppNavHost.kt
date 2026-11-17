@@ -37,7 +37,7 @@ import app.braid.mobile.ui.documents.DocumentDetailPage
 import app.braid.mobile.ui.documents.DocumentEditPage
 import app.braid.mobile.ui.documents.DocumentsScreen
 import app.braid.mobile.ui.notifications.NotificationsScreen
-import app.braid.mobile.ui.reminders.ReminderPermissionPrompt
+import app.braid.mobile.ui.reminders.ReminderPrompts
 import app.braid.mobile.ui.settings.SettingsScreen
 import app.braid.mobile.ui.settings.SettingsViewModel
 import app.braid.mobile.ui.shell.BraidBottomBar
@@ -213,7 +213,7 @@ fun AppNavHost(
                 ChatOverlay(chat, commands, links)
                 if (settingsOpen) SettingsScreen(settings, onBack = { settingsOpen = false })
             }
-            if (session is SessionState.SignedIn) ReminderPermissionPrompt(Modifier.align(Alignment.TopCenter))
+            if (session is SessionState.SignedIn) ReminderPrompts(Modifier.align(Alignment.TopCenter))
             if (currentTab != null) {
                 if (menuOpen) {
                     // Tocar fora do menu o fecha; o scrim não pinta nada.
