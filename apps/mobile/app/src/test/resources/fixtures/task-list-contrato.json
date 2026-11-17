@@ -1,0 +1,21 @@
+[
+  {
+    "id": "task-2",
+    "actor": "human",
+    "kind": "common",
+    "status": "doing",
+    "priority": "urgent",
+    "name": "Revisar contrato",
+    "description": "",
+    "startedAt": "2026-09-14T13:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [
+      "trabalho"
+    ],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  }
+]

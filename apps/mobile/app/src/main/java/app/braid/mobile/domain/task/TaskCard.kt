@@ -55,6 +55,48 @@ enum class TaskStatus(
     }
 }
 
+/** A prioridade da tarefa, da mais alta à mais baixa: a ordem do enum é a ordem do filtro e do parâmetro `priority`. */
+enum class TaskPriority(
+    val code: String,
+    /** O rótulo da tela. */
+    val label: String,
+) {
+    Urgent("urgent", "Urgente"),
+    High("high", "Alta"),
+    Medium("medium", "Média"),
+    Low("low", "Baixa"),
+    ;
+
+    companion object {
+        fun fromCode(code: String): TaskPriority = entries.firstOrNull { it.code == code } ?: error("Prioridade desconhecida: $code")
+    }
+}
+
+enum class RecurrenceFrequency {
+    Daily,
+    Weekly,
+    Monthly,
+    Yearly,
+}
+
+/** A regra de uma série, só com o que a linha da lista escreve; [byWeekday] é a máscara de dias (bit 0 = domingo). */
+data class RecurrenceRule(
+    val frequency: RecurrenceFrequency,
+    val interval: Int,
+    val byWeekday: Int?,
+    val byMonthDay: Int?,
+    val byMonth: Int?,
+    val timeOfDay: String,
+)
+
+/** A ocorrência de uma série em que o cartão está; [detached] é a que já não segue a regra. */
+data class TaskRecurrence(
+    val id: String,
+    val occurrenceOn: String,
+    val detached: Boolean,
+    val rule: RecurrenceRule,
+)
+
 /**
  * O cartão de tarefa do contrato, do jeito que as listas o leem. Tarefa de pessoa
  * sem [status] é a tarefa de referência ("Só agenda"). Passos, tarefas longas e
@@ -71,4 +113,6 @@ data class TaskCard(
     val longRunning: Boolean,
     val tags: List<String>,
     val revision: Int,
+    val priority: TaskPriority = TaskPriority.Medium,
+    val recurrence: TaskRecurrence? = null,
 )
