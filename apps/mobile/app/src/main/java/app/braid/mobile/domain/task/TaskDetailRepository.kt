@@ -17,6 +17,16 @@ interface TaskDetailRepository {
         priority: TaskPriority,
     )
 
+    /**
+     * Grava a lista inteira de documentos da tarefa, na ordem dada, com a revisão que a tela leu (o "+" do detalhe grava
+     * na hora). Revisão velha (409) sobe como [StaleRevisionException].
+     */
+    suspend fun changeArtifacts(
+        taskId: String,
+        expectedRevision: Int,
+        links: List<ArtifactLink>,
+    )
+
     /** Exclui a tarefa. Uma tarefa que já não existe (404) sobe como [TaskNotFoundException]. */
     suspend fun delete(taskId: String)
 }

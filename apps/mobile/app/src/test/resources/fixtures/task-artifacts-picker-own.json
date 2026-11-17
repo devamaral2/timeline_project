@@ -1,0 +1,60 @@
+[
+  {
+    "id": "doc-note",
+    "name": "Ideias para o projeto",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [
+      "trabalho"
+    ],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "text",
+    "data": {
+      "body": "# Ideias para o projeto\n\nCorpo da nota **Ideias para o projeto**."
+    }
+  },
+  {
+    "id": "doc-other",
+    "name": "Pauta da reunião",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "text",
+    "data": {
+      "body": "# Pauta da reunião\n\nCorpo da nota **Pauta da reunião**."
+    }
+  },
+  {
+    "id": "doc-training",
+    "name": "Treino de peito",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "training",
+    "data": {
+      "workouts": [
+        {
+          "id": "w1",
+          "workoutCode": "running",
+          "workoutName": "Corrida",
+          "calories": 320,
+          "duration": 30,
+          "pace": 6.25,
+          "distance": 4.8
+        }
+      ],
+      "caloriesBurned": 320
+    }
+  }
+]

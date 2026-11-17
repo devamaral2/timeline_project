@@ -18,6 +18,7 @@ interface ArtifactsApi {
         @Query("scope") scope: String?,
         @Query("tag") tag: String?,
         @Query("q") query: String?,
+        @Query("limit") limit: Int? = null,
     ): List<ArtifactDto>
 
     @GET("api/artifacts/{id}")

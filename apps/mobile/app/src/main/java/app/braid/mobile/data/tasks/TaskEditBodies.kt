@@ -1,5 +1,6 @@
 package app.braid.mobile.data.tasks
 
+import app.braid.mobile.domain.task.ArtifactLink
 import app.braid.mobile.domain.task.Clearable
 import app.braid.mobile.domain.task.CreateTask
 import app.braid.mobile.domain.task.FinishedAtChange
@@ -56,4 +57,20 @@ fun TaskPatch.toBody(): JsonObject =
         longRunning?.let { put("longRunning", it) }
         parentTaskId?.let { put("parentTaskId", it.json(::JsonPrimitive)) }
         subtaskIds?.let { put("subtaskIds", JsonArray(it.map(::JsonPrimitive))) }
+        artifacts?.let { put("artifacts", JsonArray(it.map(ArtifactLink::json))) }
+    }
+
+/** Um documento ligado vai com `id` e `relation`; a cópia nova de alimento, com `copyOf` e a quantidade, se houver. */
+private fun ArtifactLink.json(): JsonElement =
+    when (this) {
+        is ArtifactLink.Linked ->
+            buildJsonObject {
+                put("id", id)
+                put("relation", relation.code)
+            }
+        is ArtifactLink.Copy ->
+            buildJsonObject {
+                put("copyOf", copyOf)
+                quantity?.let { put("quantity", it) }
+            }
     }

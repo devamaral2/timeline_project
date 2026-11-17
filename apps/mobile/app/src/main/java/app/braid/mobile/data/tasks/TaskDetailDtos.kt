@@ -1,7 +1,11 @@
 package app.braid.mobile.data.tasks
 
+import app.braid.mobile.data.artifacts.ArtifactDto
+import app.braid.mobile.data.artifacts.toDomain
+import app.braid.mobile.domain.task.ArtifactRelation
 import app.braid.mobile.domain.task.RequestRelation
 import app.braid.mobile.domain.task.TaskActor
+import app.braid.mobile.domain.task.TaskArtifact
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskKind
@@ -12,7 +16,7 @@ import kotlinx.serialization.Serializable
 import java.time.Instant
 import java.time.OffsetDateTime
 
-/** `taskSchema` do `packages/contracts` (`GET /api/tasks/{id}`): o cartão mais o que só o detalhe traz. Os documentos ficam para o ticket 16. */
+/** `taskSchema` do `packages/contracts` (`GET /api/tasks/{id}`): o cartão mais o que só o detalhe traz. */
 @Serializable
 data class TaskDetailDto(
     val id: String,
@@ -34,6 +38,15 @@ data class TaskDetailDto(
     val revision: Int,
     val subtaskIds: List<String> = emptyList(),
     val requests: List<TaskRequestDto> = emptyList(),
+    val artifacts: List<TaskArtifactDto> = emptyList(),
+)
+
+/** `taskArtifactSchema`: o documento ligado, com a relação e se o vínculo veio da série. */
+@Serializable
+data class TaskArtifactDto(
+    val relation: String,
+    val fromRecurrence: Boolean = false,
+    val artifact: ArtifactDto,
 )
 
 @Serializable
@@ -70,6 +83,7 @@ fun TaskDetailDto.toDomain(): TaskDetail =
         recurrence = recurrence?.toDomain(),
         subtaskIds = subtaskIds,
         requests = requests.map { it.toDomain() },
+        artifacts = artifacts.map { TaskArtifact(ArtifactRelation.fromCode(it.relation), it.fromRecurrence, it.artifact.toDomain()) },
     )
 
 private fun TaskRequestDto.toDomain() =

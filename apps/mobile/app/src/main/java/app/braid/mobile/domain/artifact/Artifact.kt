@@ -162,4 +162,6 @@ data class FoodData(
     val generation: FoodGeneration?,
     /** A estimativa nutricional é do modelo. */
     val modelEstimate: Boolean,
+    /** A quantidade que a pessoa deu ao alimento copiado para a tarefa (ticket 16); ausente no que não é cópia. */
+    val quantity: String? = null,
 ) : ArtifactData

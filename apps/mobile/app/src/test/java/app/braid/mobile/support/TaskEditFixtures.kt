@@ -3,6 +3,9 @@ package app.braid.mobile.support
 import app.braid.mobile.core.network.BraidJson
 import app.braid.mobile.data.tasks.TaskDetailDto
 import app.braid.mobile.data.tasks.toDomain
+import app.braid.mobile.domain.artifact.ArtifactType
+import app.braid.mobile.domain.task.ArtifactRelation
+import app.braid.mobile.domain.task.DraftArtifact
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskDraft
 import app.braid.mobile.domain.task.TaskKind
@@ -49,6 +52,25 @@ object TaskEditFixtures {
                     ?.jsonPrimitive
                     ?.content,
             subtaskIds = fields.getValue("subtaskIds").jsonArray.map { it.jsonPrimitive.content },
+            artifacts = fields.getValue("artifacts").jsonArray.map { draftArtifact(it) },
+        )
+    }
+
+    /** Um `DraftArtifact` do web: `copyOf` e `quantity` só existem na cópia e no alimento com quantidade. */
+    fun draftArtifact(element: JsonElement): DraftArtifact {
+        val fields = element.jsonObject
+
+        fun text(name: String) = fields.getValue(name).jsonPrimitive.content
+
+        fun optional(name: String) = fields[name]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content
+        return DraftArtifact(
+            id = text("id"),
+            name = text("name"),
+            type = ArtifactType.fromCode(text("type")),
+            global = fields.getValue("global").jsonPrimitive.boolean,
+            relation = ArtifactRelation.fromCode(text("relation")),
+            copyOf = optional("copyOf"),
+            quantity = optional("quantity"),
         )
     }
 

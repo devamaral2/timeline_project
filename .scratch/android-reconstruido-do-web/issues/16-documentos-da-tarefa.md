@@ -4,13 +4,13 @@
 
 **Blocked by:** 11, 13
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). No web: a seção de documentos do detalhe, os cartões de conteúdo do artefato na tarefa, a seção de documentos na edição e o conteúdo da refeição.
 
-- [ ] O detalhe mostra a seção Documentos com cartões no desenho do web, usando o componente de conteúdo do ticket 11, recolhíveis.
-- [ ] Na refeição, a seção mostra o total de calorias dos alimentos ligados.
-- [ ] Adicionar pelo detalhe grava na hora, com a `revision` lida.
-- [ ] Na edição, Subir, Descer e Remover reordenam e tiram a ligação sem apagar o documento; o que a tarefa criou fica sem posição.
-- [ ] Refeição oferece alimentos globais e próprios e grava cada um como cópia com quantidade (`copyOf` e `quantity`); treino oferece exercícios globais por referência; os demais tipos oferecem os próprios documentos com relação `uses`.
-- [ ] Salvar manda a lista inteira de documentos.
+- [x] O detalhe mostra a seção Documentos com cartões no desenho do web, usando o componente de conteúdo do ticket 11, recolhíveis.
+- [x] Na refeição, a seção mostra o total de calorias dos alimentos ligados.
+- [x] Adicionar pelo detalhe grava na hora, com a `revision` lida.
+- [x] Na edição, Subir, Descer e Remover reordenam e tiram a ligação sem apagar o documento; o que a tarefa criou fica sem posição.
+- [x] Refeição oferece alimentos globais e próprios e grava cada um como cópia com quantidade (`copyOf` e `quantity`); treino oferece exercícios globais por referência; os demais tipos oferecem os próprios documentos com relação `uses`.
+- [x] Salvar manda a lista inteira de documentos.
