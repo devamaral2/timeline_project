@@ -38,7 +38,6 @@ import java.time.Instant
  * grade; a tarefa de agente fecha a linha com o robô, a sua assinatura. Os
  * textos calculados saem do cartão e de [now].
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TaskRow(
     card: TaskCard,
@@ -50,6 +49,31 @@ fun TaskRow(
     onStatusClick: (() -> Unit)? = null,
     /** A lista pede a regra da série no lugar do horário, quando a ocorrência segue uma. */
     ruleInPlaceOfTime: Boolean = false,
+    /** Um controle na ponta da linha, fora da linha tocável: a fração das subtarefas. */
+    aside: @Composable (() -> Unit)? = null,
+) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        TaskRowBody(
+            card = card,
+            now = now,
+            onClick = onClick,
+            onStatusClick = onStatusClick,
+            ruleInPlaceOfTime = ruleInPlaceOfTime,
+            modifier = Modifier.weight(1f),
+        )
+        if (aside != null) Box(Modifier.padding(top = 7.dp)) { aside() }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TaskRowBody(
+    card: TaskCard,
+    now: Instant,
+    onClick: (() -> Unit)?,
+    onStatusClick: (() -> Unit)?,
+    ruleInPlaceOfTime: Boolean,
+    modifier: Modifier,
 ) {
     val isAgent = card.actor == TaskActor.Agent
     val overdue = cardIsOverdue(card, now)
