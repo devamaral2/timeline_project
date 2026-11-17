@@ -43,6 +43,7 @@ import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.timeline.daysBetween
 import app.braid.mobile.domain.timeline.longDate
 import app.braid.mobile.domain.timeline.shiftDayKey
+import app.braid.mobile.ui.chat.OnEntitiesChanged
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.PublishSectionMenu
 import app.braid.mobile.ui.shell.SectionChoice
@@ -73,6 +74,8 @@ fun AgendaScreen(
         viewModel.setVisible(true)
         onPauseOrDispose { viewModel.setVisible(false) }
     }
+    // Um pedido do chat que mexeu em tarefas relê a agenda, sem trocar a tela pelo esqueleto.
+    OnEntitiesChanged { viewModel.onResume() }
     AgendaContent(
         state = state,
         onSelectDay = viewModel::selectDay,

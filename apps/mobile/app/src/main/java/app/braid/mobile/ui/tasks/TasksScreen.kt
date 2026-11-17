@@ -58,6 +58,7 @@ import app.braid.mobile.domain.task.TaskGroupKey
 import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.showsSeriesRule
 import app.braid.mobile.ui.agenda.ListSkeleton
+import app.braid.mobile.ui.chat.OnEntitiesChanged
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.PublishSectionMenu
 import app.braid.mobile.ui.shell.SectionChoice
@@ -91,6 +92,8 @@ fun TasksScreen(
         viewModel.setVisible(true)
         onPauseOrDispose { viewModel.setVisible(false) }
     }
+    // Um pedido do chat que mexeu em tarefas relê a lista.
+    OnEntitiesChanged { viewModel.onResume() }
     TasksContent(
         state = state,
         onStatusClick = viewModel::openStatusPicker,

@@ -18,35 +18,22 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.braid.mobile.core.designsystem.SvgIcon
-import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidTokens
-import app.braid.mobile.core.designsystem.svgCircle
-import app.braid.mobile.core.designsystem.svgRect
-
-private const val BOT_GRID = 32f
-private const val BOT_STROKE = 2.3f
-
-/** O robô do Hermes em repouso: antena, corpo com orelhas e os dois olhos, na grade de 32 do web. */
-private val IdleBot =
-    listOf(
-        SvgPart("M16 9.5V6"),
-        SvgPart(svgCircle(16f, 4.6f, 2f), fill = true),
-        SvgPart(svgRect(5.5f, 9.5f, 21f, 16f, 5.5f)),
-        SvgPart("M2.6 15.5v4"),
-        SvgPart("M29.4 15.5v4"),
-        SvgPart(svgCircle(12f, 17.5f, 2.1f), fill = true),
-        SvgPart(svgCircle(20f, 17.5f, 2.1f), fill = true),
-    )
+import app.braid.mobile.ui.chat.BotState
+import app.braid.mobile.ui.chat.ChatIcons
+import app.braid.mobile.ui.chat.HermesBotIcon
 
 /**
- * O botão do agente: um aro da cor da dock em volta do disco da marca com o
- * robô. Fica fora da dock, na ponta. Ainda não abre o chat: ele chega com o
- * ticket do chat; por ora o toque não faz nada.
+ * O botão do agente: um aro da cor da dock em volta do disco da marca com o robô. Fica fora da dock, na ponta. O robô
+ * acompanha o chat mesmo fechado ([bot]: pensa enquanto a IA responde e mostra o desfecho por um instante); com o chat
+ * aberto vira um X que o fecha.
  */
 @Composable
 fun AgentButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    bot: BotState = BotState.Idle,
+    chatOpen: Boolean = false,
     /** Com o menu da seção aberto a dock passa por baixo do círculo e o aro some. */
     blended: Boolean = false,
 ) {
@@ -59,18 +46,21 @@ fun AgentButton(
                 .background(if (blended) Color.Transparent else scheme.surface)
                 .border(1.dp, if (blended) Color.Transparent else scheme.outline, CircleShape)
                 .clickable(role = Role.Button, onClick = onClick)
-                .semantics { contentDescription = "Buscar e criar" },
+                .semantics { contentDescription = if (chatOpen) "Fechar chat com IA" else "Buscar e criar" },
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.size(52.dp).background(braidTokens().brand, CircleShape), contentAlignment = Alignment.Center) {
-            SvgIcon(
-                parts = IdleBot,
-                size = 30.dp,
-                color = scheme.background,
-                strokeWidth = BOT_STROKE,
-                grid = BOT_GRID,
-                modifier = Modifier.clearAndSetSemantics {},
-            )
+            if (chatOpen) {
+                SvgIcon(
+                    ChatIcons.close,
+                    size = 26.dp,
+                    color = scheme.background,
+                    strokeWidth = 2f,
+                    modifier = Modifier.clearAndSetSemantics {},
+                )
+            } else {
+                HermesBotIcon(bot, size = 30.dp, color = scheme.background, modifier = Modifier.clearAndSetSemantics {})
+            }
         }
     }
 }
