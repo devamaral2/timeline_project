@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import app.braid.mobile.domain.time.MINUTES_PER_HOUR
 import app.braid.mobile.domain.timeline.dayKeyOf
 import java.time.Instant
 import java.time.LocalDate
@@ -178,5 +179,4 @@ private fun Wheel(
 
 private const val DEFAULT_HOUR = 9
 private const val HOURS_LAST = 23
-private const val MINUTES_PER_HOUR = 60
 private val WHEEL_HEIGHT = 240.dp

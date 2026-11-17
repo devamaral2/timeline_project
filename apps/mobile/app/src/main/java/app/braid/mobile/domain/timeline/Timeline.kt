@@ -1,5 +1,9 @@
 package app.braid.mobile.domain.timeline
 
+import app.braid.mobile.domain.time.MONTHS_LONG
+import app.braid.mobile.domain.time.MONTHS_SHORT
+import app.braid.mobile.domain.time.MONTHS_TITLE
+import app.braid.mobile.domain.time.WEEKDAYS_LONG
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -18,37 +22,6 @@ import java.time.temporal.ChronoUnit
 const val TIMELINE_TIME_ZONE = "America/Sao_Paulo"
 
 private val timelineZone: ZoneId = ZoneId.of(TIMELINE_TIME_ZONE)
-
-private val MONTHS_SHORT = listOf("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
-
-private val MONTHS_LONG =
-    listOf(
-        "janeiro",
-        "fevereiro",
-        "março",
-        "abril",
-        "maio",
-        "junho",
-        "julho",
-        "agosto",
-        "setembro",
-        "outubro",
-        "novembro",
-        "dezembro",
-    )
-
-private val MONTHS_TITLE = MONTHS_LONG.map { it.replaceFirstChar(Char::uppercaseChar) }
-
-private val WEEKDAYS =
-    listOf(
-        "Domingo",
-        "Segunda-feira",
-        "Terça-feira",
-        "Quarta-feira",
-        "Quinta-feira",
-        "Sexta-feira",
-        "Sábado",
-    )
 
 /** Dias de uma semana, de domingo a sábado. */
 const val DAYS_IN_WEEK = 7
@@ -126,7 +99,7 @@ fun longDate(dayKey: String): String {
 }
 
 /** "Quarta-feira" */
-fun weekday(dayKey: String): String = WEEKDAYS[weekdayIndexOf(dayKey)]
+fun weekday(dayKey: String): String = WEEKDAYS_LONG[weekdayIndexOf(dayKey)]
 
 /** "seg, 14 de set": a data curta do atalho "Hoje" (`briefDate` do web, sem os pontos do `Intl`). */
 fun briefDate(dayKey: String): String {

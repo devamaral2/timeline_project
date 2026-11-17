@@ -1,5 +1,8 @@
 package app.braid.mobile.domain.artifact
 
+import app.braid.mobile.domain.time.MINUTES_PER_HOUR
+import app.braid.mobile.domain.time.MONTHS_ABBREVIATED
+import app.braid.mobile.domain.time.MONTHS_LONG
 import app.braid.mobile.domain.timeline.dayKeyOf
 import app.braid.mobile.domain.timeline.daysBetween
 import app.braid.mobile.domain.timeline.formatTime
@@ -17,11 +20,6 @@ import kotlin.math.floor
  * `lib/tasks/task-detail-format.ts` e `macroShares` (NoteBody.tsx). Cada saída é
  * conferida contra fixtures geradas pelas funções TS.
  */
-
-internal val MONTHS_ABBREVIATED = listOf("jan.", "fev.", "mar.", "abr.", "mai.", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez.")
-
-private val MONTHS_LONG =
-    listOf("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
 
 private fun dayAndMonth(dayKey: String): Pair<Int, Int> {
     val (_, month, day) = dayKey.split("-").map(String::toInt)
@@ -73,8 +71,6 @@ fun dateLineOf(
     }
     return "$startDay de ${MONTHS_LONG[startMonth - 1]} → $endDay de ${MONTHS_LONG[endMonth - 1]}"
 }
-
-private const val MINUTES_PER_HOUR = 60
 
 /** "45 min", "1 h", "7 h 30". */
 fun formatMinutes(total: Double): String {

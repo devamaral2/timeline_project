@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.reminder
 
 import app.braid.mobile.domain.task.TaskCard
+import app.braid.mobile.domain.time.agoLabel
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -56,11 +57,7 @@ fun relativeAgo(
     at: Instant,
 ): String {
     val minutes = maxOf(0L, Math.floorDiv(Duration.between(at, now).toMillis() + MILLIS_PER_MINUTE / 2, MILLIS_PER_MINUTE))
-    return when {
-        minutes < 1 -> "agora"
-        minutes < MINUTES_PER_HOUR -> "há $minutes min"
-        else -> "há ${minutes / MINUTES_PER_HOUR} h"
-    }
+    return agoLabel(minutes, withDays = false)
 }
 
 private val CLOCK_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
@@ -83,4 +80,3 @@ fun upcomingAt(
 }
 
 private const val MILLIS_PER_MINUTE = 60_000L
-private const val MINUTES_PER_HOUR = 60L

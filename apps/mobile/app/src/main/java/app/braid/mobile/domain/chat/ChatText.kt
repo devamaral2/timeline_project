@@ -5,6 +5,7 @@ import app.braid.mobile.domain.request.EntityKind
 import app.braid.mobile.domain.request.RequestEntity
 import app.braid.mobile.domain.request.RequestOperation
 import app.braid.mobile.domain.request.agentFailureText
+import app.braid.mobile.domain.time.hoursAndMinutes
 import app.braid.mobile.domain.timeline.briefDate
 import app.braid.mobile.domain.timeline.formatTime
 import java.time.Instant
@@ -38,12 +39,9 @@ val FreeWindow.end: String get() = if (endsAtMidnight) "24:00" else formatTime(I
 
 /** "2 h 30 min": quanto dura a janela, por extenso, para o pedido. */
 fun windowDuration(minutes: Int): String {
-    val hours = minutes / MINUTES_PER_HOUR
-    val rest = minutes % MINUTES_PER_HOUR
+    val (hours, rest) = hoursAndMinutes(minutes)
     return listOfNotNull(if (hours > 0) "$hours h" else null, if (rest > 0) "$rest min" else null).joinToString(" ")
 }
-
-private const val MINUTES_PER_HOUR = 60
 
 /** O pedido com a janela anexada: o agente só recebe texto, então a janela vai escrita na frente. */
 fun requestWithWindow(

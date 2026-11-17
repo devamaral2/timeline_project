@@ -81,6 +81,7 @@ import app.braid.mobile.domain.chat.start
 import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.timeline.briefDate
+import app.braid.mobile.ui.agenda.freeDurationLabel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
@@ -659,7 +660,7 @@ private fun WindowChip(
             )
         }
         Text(
-            text = durationShort(window.minutes),
+            text = freeDurationLabel(window.minutes),
             modifier = Modifier.padding(end = 4.dp),
             color = brand,
             fontFamily = BraidDisplayFont,
@@ -674,13 +675,6 @@ private fun WindowChip(
             contentAlignment = Alignment.Center,
         ) { SvgIcon(ChatIcons.close, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f) }
     }
-}
-
-/** "2h 30min", "45min": a duração no chip da janela. */
-private fun durationShort(minutes: Int): String {
-    val hours = minutes / 60
-    val rest = minutes % 60
-    return listOfNotNull(if (hours > 0) "${hours}h" else null, if (rest > 0) "${rest}min" else null).joinToString(" ")
 }
 
 /** O botão que liga e desliga a transcrição: a onda do agente, apertada enquanto o microfone está aberto. */

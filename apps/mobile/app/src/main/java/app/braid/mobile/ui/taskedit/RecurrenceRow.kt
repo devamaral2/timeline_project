@@ -48,6 +48,8 @@ import app.braid.mobile.domain.task.newSeriesSummary
 import app.braid.mobile.domain.task.recurrenceLines
 import app.braid.mobile.domain.task.schedule
 import app.braid.mobile.domain.task.scheduleAfterTask
+import app.braid.mobile.domain.time.MONTHS_LONG
+import app.braid.mobile.domain.time.WEEKDAYS_PLAIN
 import app.braid.mobile.domain.timeline.shortDate
 import java.util.TimeZone
 
@@ -68,12 +70,10 @@ private val FREQUENCIES =
         RecurrenceFrequency.Yearly to "Todo ano",
     )
 
-/** Bit 0 = domingo, como a máscara da API. */
-private val WEEKDAYS =
-    listOf("D" to "Domingo", "S" to "Segunda", "T" to "Terça", "Q" to "Quarta", "Q" to "Quinta", "S" to "Sexta", "S" to "Sábado")
+/** Bit 0 = domingo, como a máscara da API: a letra do botão e o nome para o leitor de tela. */
+private val WEEKDAYS = WEEKDAYS_PLAIN.map { it.take(1) to it }
 
-private val MONTHS =
-    listOf("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
+private val MONTHS = MONTHS_LONG
 
 private const val NEW_SERIES_HINT = "A data de início, a hora e a duração vêm do formulário."
 private const val JOINING_HINT = "Esta tarefa fica como está; a série começa no dia seguinte, com a hora e a duração dela."
