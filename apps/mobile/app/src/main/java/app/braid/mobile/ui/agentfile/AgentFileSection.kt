@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.documentTokens
@@ -425,7 +426,7 @@ private fun EditSection(
                 placeholder = "Peça uma mudança neste arquivo",
                 fieldLabel = "Pedir ao Hermes uma edição neste arquivo",
                 statusText = bar.statusText,
-                context = AiEditContext(DetailIcons.fileText, "Pedido de edição", path.substringAfterLast('/')),
+                context = AiEditContext(BraidIcons.fileText, "Pedido de edição", path.substringAfterLast('/')),
                 locked = bar.busy,
                 canSend = bar.canSend,
                 busy = bar.busy,

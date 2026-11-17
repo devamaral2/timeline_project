@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
@@ -96,7 +97,7 @@ fun SettingsContent(
                 .semantics { contentDescription = "Voltar para o chat" },
             contentAlignment = Alignment.Center,
         ) {
-            SvgIcon(SettingsIcons.arrowLeft, size = 22.dp, color = scheme.onBackground, modifier = Modifier.clearAndSetSemantics {})
+            SvgIcon(BraidIcons.arrowLeft, size = 22.dp, color = scheme.onBackground, modifier = Modifier.clearAndSetSemantics {})
         }
         Text(
             text = "Configurações",

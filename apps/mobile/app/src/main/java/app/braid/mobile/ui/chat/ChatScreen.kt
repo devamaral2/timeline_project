@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidDisplayFont
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
@@ -243,7 +244,7 @@ private fun ChatHeader(
                     .semantics { contentDescription = "Nova conversa" },
                 contentAlignment = Alignment.Center,
             ) {
-                SvgIcon(ChatIcons.plus, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f)
+                SvgIcon(BraidIcons.plus, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f)
             }
             Column(Modifier.weight(1f).padding(start = 4.dp)) {
                 Text(
@@ -379,8 +380,8 @@ private fun ChatHome(
 
 private fun commandIcon(command: ChatCommand): List<SvgPart> =
     when (command) {
-        ChatCommand.Task -> ChatIcons.calendarDays
-        ChatCommand.Document -> ChatIcons.fileText
+        ChatCommand.Task -> BraidIcons.calendarDays
+        ChatCommand.Document -> BraidIcons.fileText
         ChatCommand.Notifications -> ChatIcons.bell
         ChatCommand.Settings -> ChatIcons.settings
     }
@@ -607,7 +608,7 @@ private fun ChatField(
                     contentAlignment = Alignment.Center,
                 ) {
                     SvgIcon(
-                        ChatIcons.arrowUp,
+                        BraidIcons.arrowUp,
                         size = 20.dp,
                         color = if (canSend) scheme.onPrimary else scheme.outlineVariant,
                         strokeWidth = 2f,
@@ -643,7 +644,7 @@ private fun WindowChip(
         Box(
             Modifier.size(40.dp),
             contentAlignment = Alignment.Center,
-        ) { SvgIcon(ChatIcons.plus, size = 20.dp, color = brand, strokeWidth = 1.75f) }
+        ) { SvgIcon(BraidIcons.plus, size = 20.dp, color = brand, strokeWidth = 1.75f) }
         Column(Modifier.weight(1f)) {
             Text(
                 text = "Janela livre · ${if (window.dayKey == todayKey) "hoje" else briefDate(window.dayKey)}",
@@ -673,7 +674,7 @@ private fun WindowChip(
                 .clickable(role = Role.Button, onClick = onClear)
                 .semantics { contentDescription = "Tirar a janela livre do pedido" },
             contentAlignment = Alignment.Center,
-        ) { SvgIcon(ChatIcons.close, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f) }
+        ) { SvgIcon(BraidIcons.close, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f) }
     }
 }
 

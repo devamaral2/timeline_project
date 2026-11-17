@@ -17,16 +17,6 @@ import app.braid.mobile.domain.artifact.artifactVisualType
 
 /** Os desenhos dos documentos, os mesmos SVG do web (`NoteSheet.tsx` e o lucide). */
 object DocumentIcons {
-    /** O `FileText` do lucide: o estado vazio. */
-    val fileText =
-        listOf(
-            SvgPart("M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"),
-            SvgPart("M14 2v4a2 2 0 0 0 2 2h4"),
-            SvgPart("M10 9H8"),
-            SvgPart("M16 13H8"),
-            SvgPart("M16 17H8"),
-        )
-
     /** A letra A da nota de texto, a traço na grade de 24. */
     val letterA = listOf(SvgPart("m4.5 20 7.5-16 7.5 16"), SvgPart("M7.3 14h9.4"))
 

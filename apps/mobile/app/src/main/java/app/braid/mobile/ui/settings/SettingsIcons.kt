@@ -5,7 +5,6 @@ import app.braid.mobile.core.designsystem.svgCircle
 
 /** Os ícones da tela de configurações: os mesmos SVG do web (lucide), na grade de 24. */
 internal object SettingsIcons {
-    val arrowLeft = listOf(SvgPart("m12 19-7-7 7-7"), SvgPart("M19 12H5"))
     val moon =
         listOf(
             SvgPart("M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"),

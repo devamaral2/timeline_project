@@ -40,9 +40,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.ui.taskedit.FormField
-import app.braid.mobile.ui.taskedit.TaskEditIcons
 
 const val PICKER_SEARCHING = "Buscando…"
 const val PICKER_NOTHING_FOUND = "Nada encontrado para essa busca."
@@ -104,7 +104,7 @@ fun <T> EntityPickerSheet(
                     contentAlignment = Alignment.Center,
                 ) {
                     SvgIcon(
-                        TaskEditIcons.x,
+                        BraidIcons.close,
                         size = 18.dp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.clearAndSetSemantics {},

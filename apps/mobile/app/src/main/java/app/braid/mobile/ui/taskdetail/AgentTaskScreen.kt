@@ -361,7 +361,7 @@ private fun ProducedRow(
     ) {
         Box(Modifier.size(width = 20.dp, height = 24.dp), contentAlignment = Alignment.Center) {
             SvgIcon(
-                if (entity.kind == EntityKind.Task) DetailIcons.calendarDays else DetailIcons.fileText,
+                if (entity.kind == EntityKind.Task) BraidIcons.calendarDays else BraidIcons.fileText,
                 size = 18.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 strokeWidth = 1.75f,
@@ -551,7 +551,7 @@ private fun ContextCard(request: AgentRequest) {
     ) {
         Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
             SvgIcon(
-                DetailIcons.messageSquare,
+                BraidIcons.messageSquare,
                 size = 20.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 strokeWidth = 1.75f,
@@ -649,7 +649,7 @@ private fun DraftField(
             contentAlignment = Alignment.Center,
         ) {
             SvgIcon(
-                DetailIcons.arrowUp,
+                BraidIcons.arrowUp,
                 size = 20.dp,
                 color = if (ready) scheme.onPrimary else scheme.outline,
                 strokeWidth = 2f,

@@ -17,10 +17,10 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.ui.chat.BotState
-import app.braid.mobile.ui.chat.ChatIcons
 import app.braid.mobile.ui.chat.HermesBotIcon
 
 /**
@@ -52,7 +52,7 @@ fun AgentButton(
         Box(Modifier.size(52.dp).background(braidTokens().brand, CircleShape), contentAlignment = Alignment.Center) {
             if (chatOpen) {
                 SvgIcon(
-                    ChatIcons.close,
+                    BraidIcons.close,
                     size = 26.dp,
                     color = scheme.background,
                     strokeWidth = 2f,

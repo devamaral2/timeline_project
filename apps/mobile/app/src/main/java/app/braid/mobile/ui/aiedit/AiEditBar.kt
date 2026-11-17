@@ -40,12 +40,10 @@ import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidBrand
-import app.braid.mobile.core.designsystem.svgCircle
 import app.braid.mobile.domain.request.RequestStep
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.ui.chat.VoiceButton
 import app.braid.mobile.ui.chat.VoiceUiState
-import app.braid.mobile.ui.taskdetail.DetailIcons
 
 /** O registro que o pedido edita, mostrado acima do campo: o ícone, "Tarefa · sex., 18 set., 09:00" e o nome. */
 data class AiEditContext(
@@ -90,10 +88,6 @@ class AiEditBarActions(
     val onDismiss: () -> Unit,
     val onToggleVoice: () -> Unit = {},
 )
-
-private val CloseIcon = listOf(SvgPart("M18 6 6 18"), SvgPart("m6 6 12 12"))
-private val CircleMark = listOf(SvgPart(svgCircle(12f, 12f, 10f)))
-private val SpinnerMark = listOf(SvgPart("M21 12a9 9 0 1 1-6.219-8.56"))
 
 private const val MAX_DRAFT_LINES = 5
 private const val PLACEHOLDER_ALPHA = 0.7f
@@ -162,9 +156,9 @@ private fun StepList(steps: List<RequestStep>) {
 private fun stepMark(status: TaskStatus): List<SvgPart> =
     when (status) {
         TaskStatus.Done -> BraidIcons.check
-        TaskStatus.Failed, TaskStatus.Cancel -> CloseIcon
-        TaskStatus.Running -> SpinnerMark
-        else -> CircleMark
+        TaskStatus.Failed, TaskStatus.Cancel -> BraidIcons.close
+        TaskStatus.Running -> BraidIcons.spinner
+        else -> BraidIcons.circle
     }
 
 @Composable
@@ -190,7 +184,7 @@ private fun StatusRow(
                     .semantics { contentDescription = "Fechar resultado" },
                 contentAlignment = Alignment.Center,
             ) {
-                SvgIcon(CloseIcon, size = 16.dp, color = scheme.onSurfaceVariant, modifier = Modifier.clearAndSetSemantics {})
+                SvgIcon(BraidIcons.close, size = 16.dp, color = scheme.onSurfaceVariant, modifier = Modifier.clearAndSetSemantics {})
             }
         }
     }
@@ -273,7 +267,7 @@ private fun DraftField(
             contentAlignment = Alignment.Center,
         ) {
             SvgIcon(
-                DetailIcons.arrowUp,
+                BraidIcons.arrowUp,
                 size = 20.dp,
                 color = if (ready) scheme.onPrimary else scheme.outline,
                 strokeWidth = 2f,

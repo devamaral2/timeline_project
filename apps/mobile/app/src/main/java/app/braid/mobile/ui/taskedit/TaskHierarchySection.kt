@@ -33,13 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.domain.task.HierarchySlot
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskDraft
 import app.braid.mobile.domain.task.cardWhenLabel
 import app.braid.mobile.ui.chat.BotState
-import app.braid.mobile.ui.chat.ChatIcons
 import app.braid.mobile.ui.chat.HermesBotIcon
 import app.braid.mobile.ui.picker.EntityPickerSheet
 import app.braid.mobile.ui.taskdetail.Section
@@ -233,7 +233,7 @@ private fun LinkedRow(
             contentAlignment = Alignment.Center,
         ) {
             SvgIcon(
-                TaskEditIcons.x,
+                BraidIcons.close,
                 size = 16.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.clearAndSetSemantics {},
@@ -277,14 +277,14 @@ private fun CreateFooter(
         ) {
             if (footer is PickerFooter.Creating) {
                 SvgIcon(
-                    ChatIcons.spinner,
+                    BraidIcons.spinner,
                     size = 16.dp,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.clearAndSetSemantics {},
                 )
             } else {
                 SvgIcon(
-                    TaskEditIcons.plus,
+                    BraidIcons.plus,
                     size = 16.dp,
                     color = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.clearAndSetSemantics {},

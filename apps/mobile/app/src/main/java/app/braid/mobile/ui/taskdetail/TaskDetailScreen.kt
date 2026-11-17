@@ -229,7 +229,7 @@ internal fun TopBar(
             contentAlignment = Alignment.Center,
         ) {
             SvgIcon(
-                DetailIcons.arrowLeft,
+                BraidIcons.arrowLeft,
                 size = 20.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier =

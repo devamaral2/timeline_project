@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
 import app.braid.mobile.core.designsystem.SvgIcon
@@ -52,7 +53,6 @@ import app.braid.mobile.domain.task.TaskDraft
 import app.braid.mobile.domain.task.TaskDraftField
 import app.braid.mobile.ui.taskartifacts.ArtifactEditActions
 import app.braid.mobile.ui.taskartifacts.TaskEditArtifactsSection
-import app.braid.mobile.ui.taskdetail.DetailIcons
 import app.braid.mobile.ui.taskdetail.Message
 
 /** A rota do formulário de tarefa: criar (sem `taskId`) ou editar. Salvar, Descartar e o voltar do sistema saem da tela. */
@@ -178,7 +178,7 @@ private fun EditBar(
                 contentAlignment = Alignment.Center,
             ) {
                 SvgIcon(
-                    DetailIcons.arrowLeft,
+                    BraidIcons.arrowLeft,
                     size = 20.dp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.clearAndSetSemantics {},

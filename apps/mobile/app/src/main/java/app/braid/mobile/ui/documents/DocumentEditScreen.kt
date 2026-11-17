@@ -56,12 +56,12 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.core.designsystem.tagColors
-import app.braid.mobile.ui.chat.ChatIcons
 
 /**
  * O formulário do documento: criação (o `/nota` do chat, com o nome já digitado) e edição da nota de texto própria.
@@ -377,7 +377,7 @@ private fun TagsSection(
                 ) {
                     Text("#$tag", color = tagColors(tag).color, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium)
                     SvgIcon(
-                        ChatIcons.close,
+                        BraidIcons.close,
                         size = 14.dp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.clearAndSetSemantics {},
@@ -430,7 +430,7 @@ private fun TagField(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 SvgIcon(
-                    ChatIcons.plus,
+                    BraidIcons.plus,
                     size = 14.dp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.clearAndSetSemantics {},
