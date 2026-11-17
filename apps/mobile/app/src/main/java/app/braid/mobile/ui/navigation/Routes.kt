@@ -15,3 +15,15 @@ data object TasksRoute
 
 @Serializable
 data object DocumentsRoute
+
+/** O detalhe de um documento, aberto pela lista; o ViewModel lê o [documentId] do argumento. */
+@Serializable
+data class DocumentDetailRoute(
+    val documentId: String,
+)
+
+/** O detalhe de uma tarefa, aberto pelas ligações dos outros detalhes; o ViewModel lê o [taskId] do argumento. */
+@Serializable
+data class TaskDetailRoute(
+    val taskId: String,
+)

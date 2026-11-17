@@ -27,6 +27,8 @@ import androidx.navigation.compose.rememberNavController
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.ui.agenda.AgendaScreen
 import app.braid.mobile.ui.auth.LoginScreen
+import app.braid.mobile.ui.documents.DocumentDetailPage
+import app.braid.mobile.ui.documents.DocumentsScreen
 import app.braid.mobile.ui.shell.BraidBottomBar
 import app.braid.mobile.ui.shell.EmptyTabScreen
 import app.braid.mobile.ui.shell.LocalSectionMenus
@@ -78,7 +80,15 @@ fun AppNavHost(
                 composable<LoginRoute> { if (session !is SessionState.Unknown) LoginScreen() }
                 composable<AgendaRoute> { AgendaScreen() }
                 composable<TasksRoute> { EmptyTabScreen() }
-                composable<DocumentsRoute> { EmptyTabScreen() }
+                composable<DocumentsRoute> { DocumentsScreen(onOpenDocument = { navController.navigate(DocumentDetailRoute(it)) }) }
+                composable<DocumentDetailRoute> {
+                    DocumentDetailPage(
+                        onBack = { navController.popBackStack() },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                    )
+                }
+                // O detalhe da tarefa chega com o ticket 09; até lá a rota existe para a ligação do documento não quebrar.
+                composable<TaskDetailRoute> { EmptyTabScreen() }
             }
             if (currentTab != null) {
                 if (menuOpen) {

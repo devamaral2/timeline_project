@@ -12,6 +12,7 @@
 import { createRequire } from "node:module";
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { documentsFixtures } from "./fixtures/documents";
 import { executorFixtures } from "./fixtures/executor";
 import { sessionFixtures } from "./fixtures/session";
 import { tasksFixtures } from "./fixtures/tasks";
@@ -26,7 +27,7 @@ export const fixtureDirectory = fileURLToPath(new URL("../../apps/mobile/app/src
 
 export function collectFixtures(): Record<string, unknown> {
   const context: FixtureContext = { z: requireFromContracts("zod").z };
-  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...executorFixtures() };
+  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...executorFixtures(), ...documentsFixtures() };
 }
 
 export function generateFixtures(): string[] {
