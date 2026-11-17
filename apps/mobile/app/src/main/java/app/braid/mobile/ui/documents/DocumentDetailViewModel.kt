@@ -17,12 +17,22 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
 
 /** De quanto em quanto tempo um alimento em cálculo é relido. */
 const val MEAL_POLL_MS = 1_500L
+
+const val DELETE_FAILED_MESSAGE = "Não foi possível excluir a nota. Tente novamente."
+
+/** A confirmação de excluir: aberta, em andamento e o erro da última tentativa. */
+data class DocumentDeleteDialog(
+    val open: Boolean = false,
+    val running: Boolean = false,
+    val error: String? = null,
+)
 
 sealed interface DocumentDetailUiState {
     data object Loading : DocumentDetailUiState
@@ -36,6 +46,9 @@ sealed interface DocumentDetailUiState {
     data class Ready(
         val artifact: Artifact,
         val now: Instant,
+        val delete: DocumentDeleteDialog = DocumentDeleteDialog(),
+        /** O documento foi excluído: a tela volta para a lista. */
+        val deleted: Boolean = false,
     ) : DocumentDetailUiState {
         /** Um alimento que o agente ainda calcula: a tela o relê até terminar. */
         val pendingMeal: Boolean =
@@ -44,7 +57,7 @@ sealed interface DocumentDetailUiState {
         /** Sem tarefa, ou num documento global, a seção "Tarefas" some. */
         val showsTasks: Boolean get() = !artifact.global && artifact.tasks.isNotEmpty()
 
-        /** Editar e excluir valem só para a nota de texto própria (o ticket 17 acende as ações). */
+        /** Editar e excluir valem só para a nota de texto própria. */
         val canEdit: Boolean get() = artifact.type == ArtifactType.Text && !artifact.global
     }
 }
@@ -93,6 +106,30 @@ class DocumentDetailViewModel
                 syncPolling()
             }
         }
+
+        fun askDelete() = updateReady { it.copy(delete = DocumentDeleteDialog(open = true)) }
+
+        fun dismissDelete() = updateReady { if (it.delete.running) it else it.copy(delete = DocumentDeleteDialog()) }
+
+        /** Confirma a exclusão: `DELETE /api/artifacts/{id}`; ao terminar, a tela volta para a lista. */
+        fun confirmDelete() {
+            val ready = mutableState.value as? DocumentDetailUiState.Ready ?: return
+            if (!ready.canEdit || ready.delete.running) return
+            updateReady { it.copy(delete = it.delete.copy(running = true, error = null)) }
+            viewModelScope.launch {
+                try {
+                    artifacts.delete(documentId)
+                    updateReady { it.copy(delete = DocumentDeleteDialog(), deleted = true) }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    updateReady { it.copy(delete = it.delete.copy(running = false, error = DELETE_FAILED_MESSAGE)) }
+                }
+            }
+        }
+
+        private fun updateReady(transform: (DocumentDetailUiState.Ready) -> DocumentDetailUiState.Ready) =
+            mutableState.update { (it as? DocumentDetailUiState.Ready)?.let(transform) ?: it }
 
         private fun pending(): Boolean = (mutableState.value as? DocumentDetailUiState.Ready)?.pendingMeal == true
 

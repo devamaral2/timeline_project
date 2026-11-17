@@ -1,0 +1,18 @@
+{
+  "id": "doc-text",
+  "name": "Ideias para o projeto",
+  "schemaVersion": 1,
+  "global": false,
+  "derived": false,
+  "tags": [
+    "trabalho",
+    "ideias"
+  ],
+  "revision": 4,
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-14T13:00:00.000Z",
+  "type": "text",
+  "data": {
+    "body": "Mudou em outro lugar"
+  }
+}

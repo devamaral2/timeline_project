@@ -1,0 +1,11 @@
+{
+  "name": "Ideias",
+  "tags": [
+    "casa",
+    "ideias"
+  ],
+  "type": "text",
+  "data": {
+    "body": "## Plano\n\n- um\n- dois"
+  }
+}
