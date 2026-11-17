@@ -27,3 +27,13 @@ data class DocumentDetailRoute(
 data class TaskDetailRoute(
     val taskId: String,
 )
+
+/**
+ * O formulário de tarefa: criar (sem [taskId]) ou editar. [name] é o título já digitado no `/tarefa comprar pão` do
+ * chat; o ViewModel lê os dois do argumento.
+ */
+@Serializable
+data class TaskEditRoute(
+    val taskId: String? = null,
+    val name: String? = null,
+)

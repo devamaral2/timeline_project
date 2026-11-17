@@ -23,6 +23,7 @@ import { sessionFixtures } from "./fixtures/session";
 import { taskListFixtures } from "./fixtures/task-list";
 import { tasksFixtures } from "./fixtures/tasks";
 import { taskDetailFixtures } from "./fixtures/task-detail";
+import { taskEditFixtures } from "./fixtures/task-edit";
 import { timelineFixtures } from "./fixtures/timeline";
 
 /** O zod que o `packages/contracts` resolve: o raiz do repositório não o tem. */
@@ -34,7 +35,7 @@ export const fixtureDirectory = fileURLToPath(new URL("../../apps/mobile/app/src
 
 export function collectFixtures(): Record<string, unknown> {
   const context: FixtureContext = { z: requireFromContracts("zod").z };
-  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...executorFixtures(), ...taskDetailFixtures(), ...agendaFixtures(), ...documentsFixtures(), ...agentRequestFixtures(), ...agentFileFixtures(context), ...notificationsFixtures(), ...chatFixtures() };
+  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...executorFixtures(), ...taskDetailFixtures(), ...taskEditFixtures(), ...agendaFixtures(), ...documentsFixtures(), ...agentRequestFixtures(), ...agentFileFixtures(context), ...notificationsFixtures(), ...chatFixtures() };
 }
 
 export function generateFixtures(): string[] {

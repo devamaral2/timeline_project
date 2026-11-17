@@ -24,6 +24,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.braid.mobile.domain.chat.ChatCommand
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.ui.agenda.AgendaScreen
 import app.braid.mobile.ui.auth.LoginScreen
@@ -42,6 +43,7 @@ import app.braid.mobile.ui.shell.SectionMenuBody
 import app.braid.mobile.ui.shell.SectionMenuViewModel
 import app.braid.mobile.ui.shell.SectionMenus
 import app.braid.mobile.ui.taskdetail.TaskDetailPage
+import app.braid.mobile.ui.taskedit.TaskEditPage
 import app.braid.mobile.ui.tasks.TasksScreen
 
 @Composable
@@ -90,7 +92,18 @@ fun AppNavHost(
 
     // Os comandos "/" do chat e os atalhos da tela inicial: cada ticket que entrega uma tela acrescenta a sua entrada
     // (`/tarefa` e `/nota`, `/notificacoes`, `/configuracoes`).
-    val commands = remember { ChatCommandHandlers() }
+    val commands =
+        remember(navController) {
+            ChatCommandHandlers(
+                mapOf(
+                    // `/tarefa comprar pão` abre a criação com o título já preenchido; o chat fecha para mostrá-la.
+                    ChatCommand.Task to { argument ->
+                        chat.close()
+                        navController.navigate(TaskEditRoute(name = argument.ifBlank { null }))
+                    },
+                ),
+            )
+        }
     val links =
         remember(navController) {
             ChatEntityLinks(
@@ -126,10 +139,16 @@ fun AppNavHost(
                         onBack = { navController.popBackStack() },
                         onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
                         onOpenArtifact = { navController.navigate(DocumentDetailRoute(it)) },
+                        onEdit = { navController.navigate(TaskEditRoute(taskId = it)) },
                     )
                 }
-                // "Nova tarefa" leva à criação quando o ticket 13 existir.
-                composable<TasksRoute> { TasksScreen(onNewTask = {}, onOpenTask = { navController.navigate(TaskDetailRoute(it)) }) }
+                composable<TaskEditRoute> { TaskEditPage(onLeave = { navController.popBackStack() }) }
+                composable<TasksRoute> {
+                    TasksScreen(
+                        onNewTask = { navController.navigate(TaskEditRoute()) },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                    )
+                }
                 composable<DocumentsRoute> { DocumentsScreen(onOpenDocument = { navController.navigate(DocumentDetailRoute(it)) }) }
                 composable<DocumentDetailRoute> {
                     DocumentDetailPage(
