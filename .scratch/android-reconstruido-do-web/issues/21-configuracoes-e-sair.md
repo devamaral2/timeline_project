@@ -4,9 +4,9 @@
 
 **Blocked by:** 12
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Leia antes:** o [README](README.md). No web: a vista de configurações do chat.
 
-- [ ] O tema segue o sistema por padrão; a escolha manual fica no DataStore e vale ao reabrir.
-- [ ] "Sair da conta" manda `POST /auth/logout`, apaga a sessão, cancela os lembretes agendados (quando o ticket 22 existir) e volta ao login, mesmo se o Auth não responder.
+- [x] O tema segue o sistema por padrão; a escolha manual fica no DataStore e vale ao reabrir. (Interruptor claro/escuro, como no web: README, "vale o web".)
+- [x] "Sair da conta" manda `POST /auth/logout`, apaga a sessão, cancela os lembretes agendados (quando o ticket 22 existir) e volta ao login, mesmo se o Auth não responder.

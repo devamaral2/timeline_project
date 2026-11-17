@@ -36,7 +36,10 @@ import app.braid.mobile.ui.chat.LocalEntitiesChanged
 import app.braid.mobile.ui.documents.DocumentDetailPage
 import app.braid.mobile.ui.documents.DocumentEditPage
 import app.braid.mobile.ui.documents.DocumentsScreen
+import app.braid.mobile.ui.notifications.NotificationsScreen
 import app.braid.mobile.ui.reminders.ReminderPermissionPrompt
+import app.braid.mobile.ui.settings.SettingsScreen
+import app.braid.mobile.ui.settings.SettingsViewModel
 import app.braid.mobile.ui.shell.BraidBottomBar
 import app.braid.mobile.ui.shell.LocalSectionMenus
 import app.braid.mobile.ui.shell.MainTab
@@ -54,12 +57,15 @@ fun AppNavHost(
     gate: SessionGateViewModel = hiltViewModel(),
     sectionMenu: SectionMenuViewModel = hiltViewModel(),
     chat: ChatViewModel = hiltViewModel(),
+    settings: SettingsViewModel = hiltViewModel(),
 ) {
     val session by gate.state.collectAsStateWithLifecycle()
     val mode by sectionMenu.mode.collectAsStateWithLifecycle()
     val chatState by chat.state.collectAsStateWithLifecycle()
     val menus = remember { SectionMenus() }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
+    // "Configurações" do `/configuracoes`: abre dentro do painel do chat, como no web, e o voltar leva ao chat.
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
     val navController = rememberNavController()
     val destination = navController.currentBackStackEntryAsState().value?.destination
     val currentTab =
@@ -75,6 +81,9 @@ fun AppNavHost(
     BackHandler(enabled = menuOpen) { menuOpen = false }
     // O voltar do sistema fecha o chat antes do resto.
     BackHandler(enabled = chatState.open) { chat.close() }
+    BackHandler(enabled = chatState.open && settingsOpen) { settingsOpen = false }
+    // Fechar o chat (aba, voltar, sessão perdida) fecha também as configurações que estavam nele.
+    LaunchedEffect(chatState.open) { if (!chatState.open) settingsOpen = false }
 
     // A sessão manda: entrar abre a Agenda, e perdê-la (renovação recusada, sair) volta ao login.
     LaunchedEffect(session) {
@@ -106,6 +115,13 @@ fun AppNavHost(
                     ChatCommand.Document to { argument ->
                         chat.close()
                         navController.navigate(NewDocumentRoute(argument.trim().ifEmpty { null }))
+                    },
+                    // As configurações abrem dentro do painel do chat, como no web.
+                    ChatCommand.Settings to { _ -> settingsOpen = true },
+                    // `/notificacoes` troca o chat pelo feed; o voltar da tela o reabre.
+                    ChatCommand.Notifications to {
+                        chat.close()
+                        navController.navigate(NotificationsRoute)
                     },
                 ),
             )
@@ -165,6 +181,15 @@ fun AppNavHost(
                         onDeleted = { navController.openTab(MainTab.Documents) },
                     )
                 }
+                composable<NotificationsRoute> {
+                    NotificationsScreen(
+                        onBack = {
+                            navController.popBackStack()
+                            chat.open()
+                        },
+                        onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                    )
+                }
                 composable<NewDocumentRoute> {
                     DocumentEditPage(
                         // Criado, abre a leitura no lugar do formulário; descartar volta para a lista.
@@ -184,7 +209,10 @@ fun AppNavHost(
                     )
                 }
             }
-            if (chatState.open) ChatOverlay(chat, commands, links)
+            if (chatState.open) {
+                ChatOverlay(chat, commands, links)
+                if (settingsOpen) SettingsScreen(settings, onBack = { settingsOpen = false })
+            }
             if (session is SessionState.SignedIn) ReminderPermissionPrompt(Modifier.align(Alignment.TopCenter))
             if (currentTab != null) {
                 if (menuOpen) {

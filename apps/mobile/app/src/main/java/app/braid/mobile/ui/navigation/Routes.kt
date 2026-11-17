@@ -49,3 +49,7 @@ data class TaskEditRoute(
     val taskId: String? = null,
     val name: String? = null,
 )
+
+/** A tela "Notificações" do chat, aberta pelo `/notificacoes`; voltar reabre o chat. */
+@Serializable
+data object NotificationsRoute

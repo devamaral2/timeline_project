@@ -73,6 +73,19 @@ enum class BotState { Idle, Listening, Thinking, Done, Error }
 /** "Conversa" mostra as respostas; "Processo", a linha do tempo de cada pedido. */
 enum class ChatPane { Conversation, Process }
 
+/** A voz do chat: o microfone aberto, o que já foi ouvido e o que a pessoa precisa saber dele. */
+data class VoiceUiState(
+    /** O aparelho reconhece fala; sem isso o botão do microfone nem aparece. */
+    val available: Boolean = false,
+    val listening: Boolean = false,
+    /** O que a sessão já ouviu (frases fechadas e a que ainda sai): aparece no campo enquanto o microfone está aberto. */
+    val heard: String = "",
+    /** O erro de voz que a pessoa vê: só quando foi ela quem tocou no microfone e o laço de escuta não está de pé. */
+    val notice: String? = null,
+    /** A tela deve mostrar o pedido de permissão do sistema e devolver a resposta em `microphoneResult`. */
+    val askPermission: Boolean = false,
+)
+
 data class ChatUiState(
     val open: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
@@ -88,6 +101,7 @@ data class ChatUiState(
     /** A janela livre da Agenda que abriu o chat: vai anexada ao campo e ao próximo pedido. */
     val freeWindow: FreeWindow? = null,
     val todayKey: String = "",
+    val voice: VoiceUiState = VoiceUiState(),
 ) {
     val isConversation: Boolean get() = messages.isNotEmpty()
 }

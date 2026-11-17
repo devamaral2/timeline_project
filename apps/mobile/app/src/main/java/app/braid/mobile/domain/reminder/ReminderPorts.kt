@@ -30,3 +30,10 @@ interface FiredKeysStore {
 
     suspend fun write(fired: Map<String, Instant>)
 }
+
+/** As chaves dos avisos que o usuário já viu no feed e o instante de referência de cada tarefa, para podar; vive no DataStore. */
+interface ReadKeysStore {
+    suspend fun read(): Map<String, Instant>
+
+    suspend fun write(read: Map<String, Instant>)
+}

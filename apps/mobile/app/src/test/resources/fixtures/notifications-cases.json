@@ -3159,6 +3159,2073 @@
       }
     }
   ],
+  "feedOf": [
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T17:59:00.000Z"
+      ],
+      "result": {
+        "recent": [],
+        "upcoming": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T18:00:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T18:59:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T19:00:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-13T19:00:00.001Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T16:59:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:00:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:59:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:30:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:54:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:55:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T17:59:59.999Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T18:00:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T19:01:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T09:00:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-15T12:00:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-16T11:30:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-16T12:00:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-30T12:00:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-30T11:59:59.999Z"
+      ],
+      "result": {
+        "recent": [],
+        "upcoming": [
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-14T18:30:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:5",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 5,
+            "triggerAtMs": 1789408500000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-15T18:00:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-15T18:01:00.000Z"
+      ],
+      "result": {
+        "recent": [
+          {
+            "key": "bill:2026-09-15T13:00:00.000Z:15",
+            "kind": "reference",
+            "sourceId": "bill",
+            "name": "Pagar o condomínio",
+            "offsetMinutes": 15,
+            "triggerAtMs": 1789476300000,
+            "anchorMs": 1789477200000
+          }
+        ],
+        "upcoming": [
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789556400000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-01T00:00:00.000Z"
+      ],
+      "result": {
+        "recent": [],
+        "upcoming": [
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:1440",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 1440,
+            "triggerAtMs": 1789322400000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "project:2026-09-16T12:00:00.000Z:2880",
+            "kind": "tracked",
+            "sourceId": "project",
+            "name": "Entrega do projeto",
+            "offsetMinutes": 2880,
+            "triggerAtMs": 1789387200000,
+            "anchorMs": 1789560000000
+          },
+          {
+            "key": "agent:2026-09-14T17:00:00.000Z:10",
+            "kind": "tracked",
+            "sourceId": "agent",
+            "name": "Buscar passagens",
+            "offsetMinutes": 10,
+            "triggerAtMs": 1789404600000,
+            "anchorMs": 1789405200000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:60",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 60,
+            "triggerAtMs": 1789405200000,
+            "anchorMs": 1789408800000
+          },
+          {
+            "key": "meeting:2026-09-14T18:00:00.000Z:30",
+            "kind": "tracked",
+            "sourceId": "meeting",
+            "name": "Reunião de planejamento",
+            "offsetMinutes": 30,
+            "triggerAtMs": 1789407000000,
+            "anchorMs": 1789408800000
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        [
+          "meeting",
+          "project",
+          "bill",
+          "finished",
+          "cancelled",
+          "no-date",
+          "long-no-deadline",
+          "agent",
+          "plain",
+          "month-out"
+        ],
+        "2026-09-18T12:00:00.000Z"
+      ],
+      "result": {
+        "recent": [],
+        "upcoming": [
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:43200",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 43200,
+            "triggerAtMs": 1790769600000,
+            "anchorMs": 1793361600000
+          },
+          {
+            "key": "month-out:2026-10-30T12:00:00.000Z:1",
+            "kind": "tracked",
+            "sourceId": "month-out",
+            "name": "Declarar imposto",
+            "offsetMinutes": 1,
+            "triggerAtMs": 1793361540000,
+            "anchorMs": 1793361600000
+          }
+        ]
+      }
+    }
+  ],
   "offsetLabel": [
     {
       "args": [
