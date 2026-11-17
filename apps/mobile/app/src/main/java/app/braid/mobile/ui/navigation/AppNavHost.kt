@@ -95,6 +95,7 @@ fun AppNavHost(
                     TaskDetailPage(
                         onBack = { navController.popBackStack() },
                         onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                        onOpenArtifact = { navController.navigate(DocumentDetailRoute(it)) },
                     )
                 }
                 // "Nova tarefa" leva à criação quando o ticket 13 existir.
