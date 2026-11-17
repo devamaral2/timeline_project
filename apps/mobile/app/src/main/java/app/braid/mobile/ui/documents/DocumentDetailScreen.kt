@@ -17,14 +17,24 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -49,6 +59,7 @@ import app.braid.mobile.domain.artifact.Artifact
 import app.braid.mobile.domain.artifact.ArtifactTaskLink
 import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.artifact.whenLabel
+import app.braid.mobile.ui.taskdetail.DetailIcons
 import java.time.Instant
 
 /** O detalhe de um documento: lê `GET /api/artifacts/{id}` e, num alimento em cálculo, o relê enquanto a tela está à vista. */
@@ -56,14 +67,27 @@ import java.time.Instant
 fun DocumentDetailPage(
     onBack: () -> Unit,
     onOpenTask: (String) -> Unit,
+    onEdit: (String) -> Unit,
+    onDeleted: () -> Unit,
     viewModel: DocumentDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val deleted = (state as? DocumentDetailUiState.Ready)?.deleted == true
+    LaunchedEffect(deleted) { if (deleted) onDeleted() }
     LifecycleResumeEffect(Unit) {
         viewModel.setVisible(true)
         onPauseOrDispose { viewModel.setVisible(false) }
     }
-    DocumentDetailContent(state, onBack = onBack, onOpenTask = onOpenTask, onRetry = viewModel::retry)
+    DocumentDetailContent(
+        state,
+        onBack = onBack,
+        onOpenTask = onOpenTask,
+        onRetry = viewModel::retry,
+        onEdit = onEdit,
+        onAskDelete = viewModel::askDelete,
+        onDismissDelete = viewModel::dismissDelete,
+        onConfirmDelete = viewModel::confirmDelete,
+    )
 }
 
 @Composable
@@ -72,7 +96,13 @@ fun DocumentDetailContent(
     onBack: () -> Unit,
     onOpenTask: (String) -> Unit,
     onRetry: () -> Unit,
+    onEdit: (String) -> Unit,
+    onAskDelete: () -> Unit,
+    onDismissDelete: () -> Unit,
+    onConfirmDelete: () -> Unit,
 ) {
+    val ready = state as? DocumentDetailUiState.Ready
+    val actions = ready?.takeIf { it.canEdit }
     val bottomInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
     Column(
         Modifier
@@ -80,7 +110,7 @@ fun DocumentDetailContent(
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
-        TopBar(onBack)
+        TopBar(onBack, actions = actions?.let { DetailActions(onEdit = { onEdit(it.artifact.id) }, onDelete = onAskDelete) })
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 32.dp + bottomInset),
             verticalArrangement = Arrangement.spacedBy(28.dp),
@@ -96,10 +126,21 @@ fun DocumentDetailContent(
             }
         }
     }
+    if (ready != null && ready.delete.open) DeleteDialog(ready.artifact.name, ready.delete, onDismissDelete, onConfirmDelete)
 }
 
+/** "Editar" e "Excluir" do menu "Mais ações": só a nota de texto própria os tem. */
+private class DetailActions(
+    val onEdit: () -> Unit,
+    val onDelete: () -> Unit,
+)
+
 @Composable
-private fun TopBar(onBack: () -> Unit) {
+private fun TopBar(
+    onBack: () -> Unit,
+    actions: DetailActions?,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier
@@ -117,13 +158,91 @@ private fun TopBar(onBack: () -> Unit) {
         }
         Text(
             text = "Documento",
-            modifier = Modifier.padding(start = 4.dp),
+            modifier = Modifier.padding(start = 4.dp).weight(1f),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 15.sp,
             lineHeight = 20.sp,
             fontWeight = FontWeight.SemiBold,
         )
+        if (actions != null) {
+            Box {
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .clickable(role = Role.Button) { menuOpen = true }
+                        .semantics { contentDescription = "Mais ações" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    SvgIcon(
+                        DetailIcons.ellipsisVertical,
+                        size = 20.dp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.clearAndSetSemantics {},
+                    )
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Editar", fontSize = 14.sp) },
+                        onClick = {
+                            menuOpen = false
+                            actions.onEdit()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Excluir", color = MaterialTheme.colorScheme.error, fontSize = 14.sp) },
+                        leadingIcon = { SvgIcon(DetailIcons.trash, size = 18.dp, color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            menuOpen = false
+                            actions.onDelete()
+                        },
+                    )
+                }
+            }
+        }
     }
+}
+
+@Composable
+private fun DeleteDialog(
+    name: String,
+    dialog: DocumentDeleteDialog,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.background,
+        icon = { SvgIcon(DetailIcons.alertTriangle, size = 24.dp, color = MaterialTheme.colorScheme.error) },
+        title = { Text("Excluir nota", style = MaterialTheme.typography.headlineSmall) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = "“$name” será excluída e não poderá ser recuperada.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp,
+                    lineHeight = 24.sp,
+                )
+                dialog.error?.let {
+                    Text(
+                        it,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
+                    )
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !dialog.running) { Text("Cancelar", color = MaterialTheme.colorScheme.onBackground) }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = !dialog.running) {
+                Text(if (dialog.running) "Excluindo..." else "Excluir", color = MaterialTheme.colorScheme.error)
+            }
+        },
+    )
 }
 
 @Composable
