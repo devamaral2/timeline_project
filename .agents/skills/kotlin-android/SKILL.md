@@ -140,6 +140,9 @@ Peças em `app/src/test/java/app/braid/mobile/support/`:
 - Para observar o `UiState`: Turbine (`state.test { awaitItem() }`) com
   `Dispatchers.setMain(UnconfinedTestDispatcher())`; veja `LoginViewModelTest`.
 
+O gerador de fixtures resolve `@repo/*` e `@/*` pelo `scripts/mobile/tsconfig.json`, então pode importar as funções do web
+e dos pacotes como elas são. O relógio do app é o `AppClock`.
+
 Só relógio, alarmes, voz e armazenamento cifrado são trocados, cada um atrás de
 uma interface pequena. Toda lógica portada à mão do TS (`packages/timeline`,
 `hueForTag`, grupos da lista, tempo livre, lembretes) é testada com entradas e

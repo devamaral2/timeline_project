@@ -1,0 +1,96 @@
+package app.braid.mobile.ui.tasks
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import app.braid.mobile.core.designsystem.BraidIcons
+import app.braid.mobile.core.designsystem.BraidMonoFont
+import app.braid.mobile.core.designsystem.SvgIcon
+import app.braid.mobile.core.designsystem.braidTokens
+import app.braid.mobile.domain.task.TaskActor
+import app.braid.mobile.domain.task.TaskCard
+import app.braid.mobile.domain.task.cardDurationLabel
+import app.braid.mobile.domain.task.cardIsOverdue
+import app.braid.mobile.domain.task.cardWhenLabel
+import java.time.Instant
+
+/**
+ * A linha única das listas: glifo de status, título, uma linha com o tipo, o
+ * "quando" e as tags, e a duração à direita. Pessoa e agente usam a mesma
+ * grade; a tarefa de agente fecha a linha com o robô, a sua assinatura. Os
+ * textos calculados saem do cartão e de [now].
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TaskRow(
+    card: TaskCard,
+    now: Instant,
+    modifier: Modifier = Modifier,
+) {
+    val isAgent = card.actor == TaskActor.Agent
+    val overdue = cardIsOverdue(card, now)
+    val duration = cardDurationLabel(card)
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(
+        modifier = modifier.fillMaxWidth().semantics(mergeDescendants = true) {}.padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            TaskStatusGlyph(actor = card.actor, status = card.status)
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = card.name,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                TaskKindMark(card.kind)
+                Text(
+                    text = cardWhenLabel(card, now),
+                    color = if (overdue) MaterialTheme.colorScheme.error else muted,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                )
+                // No web a linha mostra as tags no cinza do texto de apoio; as cores de tag são dos filtros e da edição.
+                card.tags.forEach { tag ->
+                    Text(text = "#$tag", color = muted, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 1)
+                }
+            }
+        }
+        if (duration != null) {
+            Text(text = duration, color = muted, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 18.sp, maxLines = 1)
+        }
+        if (isAgent) {
+            // Decorativo: o nome do glifo de status já diz "Agente".
+            SvgIcon(
+                BraidIcons.bot,
+                size = 18.dp,
+                color = braidTokens().brandAccent,
+                strokeWidth = 1.9f,
+                modifier = Modifier.padding(top = 2.dp).clearAndSetSemantics {},
+            )
+        }
+    }
+}

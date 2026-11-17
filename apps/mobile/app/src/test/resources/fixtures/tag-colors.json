@@ -1,0 +1,168 @@
+{
+  "hueForTag": [
+    {
+      "args": [
+        "saúde"
+      ],
+      "result": 333
+    },
+    {
+      "args": [
+        "casa"
+      ],
+      "result": 228
+    },
+    {
+      "args": [
+        "trabalho"
+      ],
+      "result": 33
+    },
+    {
+      "args": [
+        "a"
+      ],
+      "result": 97
+    },
+    {
+      "args": [
+        "Treino"
+      ],
+      "result": 235
+    },
+    {
+      "args": [
+        "reunião-semanal"
+      ],
+      "result": 191
+    },
+    {
+      "args": [
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ],
+      "result": 320
+    },
+    {
+      "args": [
+        "日本語"
+      ],
+      "result": 143
+    },
+    {
+      "args": [
+        "😀tag"
+      ],
+      "result": 263
+    },
+    {
+      "args": [
+        "ção"
+      ],
+      "result": 179
+    }
+  ],
+  "light": [
+    {
+      "name": "saúde",
+      "color": "#8b5782",
+      "backgroundColor": "rgba(139, 87, 130, 0.14)"
+    },
+    {
+      "name": "casa",
+      "color": "#247695",
+      "backgroundColor": "rgba(36, 118, 149, 0.14)"
+    },
+    {
+      "name": "trabalho",
+      "color": "#995749",
+      "backgroundColor": "rgba(153, 87, 73, 0.14)"
+    },
+    {
+      "name": "a",
+      "color": "#7b6c27",
+      "backgroundColor": "rgba(123, 108, 39, 0.14)"
+    },
+    {
+      "name": "Treino",
+      "color": "#2d7498",
+      "backgroundColor": "rgba(45, 116, 152, 0.14)"
+    },
+    {
+      "name": "reunião-semanal",
+      "color": "#067c78",
+      "backgroundColor": "rgba(6, 124, 120, 0.14)"
+    },
+    {
+      "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "color": "#835a8c",
+      "backgroundColor": "rgba(131, 90, 140, 0.14)"
+    },
+    {
+      "name": "日本語",
+      "color": "#4b7948",
+      "backgroundColor": "rgba(75, 121, 72, 0.14)"
+    },
+    {
+      "name": "😀tag",
+      "color": "#506ba0",
+      "backgroundColor": "rgba(80, 107, 160, 0.14)"
+    },
+    {
+      "name": "ção",
+      "color": "#197d6d",
+      "backgroundColor": "rgba(25, 125, 109, 0.14)"
+    }
+  ],
+  "dark": [
+    {
+      "name": "saúde",
+      "color": "#deabd4",
+      "backgroundColor": "rgba(222, 171, 212, 0.14)"
+    },
+    {
+      "name": "casa",
+      "color": "#85c8e6",
+      "backgroundColor": "rgba(133, 200, 230, 0.14)"
+    },
+    {
+      "name": "trabalho",
+      "color": "#edab9d",
+      "backgroundColor": "rgba(237, 171, 157, 0.14)"
+    },
+    {
+      "name": "a",
+      "color": "#ccbe82",
+      "backgroundColor": "rgba(204, 190, 130, 0.14)"
+    },
+    {
+      "name": "Treino",
+      "color": "#8ac7ea",
+      "backgroundColor": "rgba(138, 199, 234, 0.14)"
+    },
+    {
+      "name": "reunião-semanal",
+      "color": "#7dcfca",
+      "backgroundColor": "rgba(125, 207, 202, 0.14)"
+    },
+    {
+      "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "color": "#d5adde",
+      "backgroundColor": "rgba(213, 173, 222, 0.14)"
+    },
+    {
+      "name": "日本語",
+      "color": "#a0cc9c",
+      "backgroundColor": "rgba(160, 204, 156, 0.14)"
+    },
+    {
+      "name": "😀tag",
+      "color": "#a3bef2",
+      "backgroundColor": "rgba(163, 190, 242, 0.14)"
+    },
+    {
+      "name": "ção",
+      "color": "#82cfbf",
+      "backgroundColor": "rgba(130, 207, 191, 0.14)"
+    }
+  ]
+}

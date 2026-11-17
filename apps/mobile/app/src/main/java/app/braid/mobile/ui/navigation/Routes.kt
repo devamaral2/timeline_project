@@ -6,6 +6,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object LoginRoute
 
-/** Tela provisória do pós-login; a Agenda a substitui. */
+/** A Agenda é a primeira tela depois de entrar e a base da pilha: o voltar do sistema nela sai do app. */
 @Serializable
-data object SignedInRoute
+data object AgendaRoute
+
+@Serializable
+data object TasksRoute
+
+@Serializable
+data object DocumentsRoute
