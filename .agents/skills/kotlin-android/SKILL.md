@@ -165,7 +165,11 @@ pnpm dev:mobile                            # adb reverse + instala e abre no apa
 
 `ktlintFormat` (`cd apps/mobile && ./gradlew ktlintFormat`) corrige o estilo.
 Mudou `packages/contracts`, `packages/theme` ou `packages/timeline`? Rode o
-`test` do mobile: o gerador de fixtures e o teste de tema pegam a divergência.
+`test` do mobile: o gerador de fixtures regenera os JSON a partir do pacote e os
+testes comparam o Kotlin com eles. Para o tema, o `ThemeTokensFixtureTest` confere
+cada token de `packages/theme` (e o `--faint` escuro do `globals.css`) com o
+`Color.kt`; se ele falhar, rode `pnpm --filter @repo/mobile run generate:theme`.
+(`Color.kt` também é conferido pelo `theme --check` dos testes do `packages/theme`.)
 
 ## Paridade
 

@@ -38,6 +38,43 @@ internal object DarkTokens {
     val training = Color(0xFFA5CB90)
     val meal = Color(0xFFE2B57C)
     val routine = Color(0xFF80C8EE)
+    val faint = Color(0xFF8388A8)
+
+    /** Cada cor pelo nome do token: o teste de tema a confere com os tokens de `packages/theme`. */
+    val byName: Map<String, Color> =
+        mapOf(
+            "background" to background,
+            "foreground" to foreground,
+            "card" to card,
+            "cardForeground" to cardForeground,
+            "primary" to primary,
+            "primaryForeground" to primaryForeground,
+            "secondary" to secondary,
+            "secondaryForeground" to secondaryForeground,
+            "muted" to muted,
+            "mutedForeground" to mutedForeground,
+            "accent" to accent,
+            "accentForeground" to accentForeground,
+            "destructive" to destructive,
+            "destructiveForeground" to destructiveForeground,
+            "warning" to warning,
+            "success" to success,
+            "border" to border,
+            "input" to input,
+            "ring" to ring,
+            "brand" to brand,
+            "brandAccent" to brandAccent,
+            "brandSoft" to brandSoft,
+            "strandTile" to strandTile,
+            "strandNevoa" to strandNevoa,
+            "strandDestaque" to strandDestaque,
+            "strandTinta" to strandTinta,
+            "sleep" to sleep,
+            "training" to training,
+            "meal" to meal,
+            "routine" to routine,
+            "faint" to faint,
+        )
     val tagLightness = 0.8f
     val tagChroma = 0.08f
 }
@@ -73,6 +110,43 @@ internal object LightTokens {
     val training = Color(0xFF52783B)
     val meal = Color(0xFF8F611E)
     val routine = Color(0xFF19759B)
+    val faint = Color(0xFF586A70)
+
+    /** Cada cor pelo nome do token: o teste de tema a confere com os tokens de `packages/theme`. */
+    val byName: Map<String, Color> =
+        mapOf(
+            "background" to background,
+            "foreground" to foreground,
+            "card" to card,
+            "cardForeground" to cardForeground,
+            "primary" to primary,
+            "primaryForeground" to primaryForeground,
+            "secondary" to secondary,
+            "secondaryForeground" to secondaryForeground,
+            "muted" to muted,
+            "mutedForeground" to mutedForeground,
+            "accent" to accent,
+            "accentForeground" to accentForeground,
+            "destructive" to destructive,
+            "destructiveForeground" to destructiveForeground,
+            "warning" to warning,
+            "success" to success,
+            "border" to border,
+            "input" to input,
+            "ring" to ring,
+            "brand" to brand,
+            "brandAccent" to brandAccent,
+            "brandSoft" to brandSoft,
+            "strandTile" to strandTile,
+            "strandNevoa" to strandNevoa,
+            "strandDestaque" to strandDestaque,
+            "strandTinta" to strandTinta,
+            "sleep" to sleep,
+            "training" to training,
+            "meal" to meal,
+            "routine" to routine,
+            "faint" to faint,
+        )
     val tagLightness = 0.53f
     val tagChroma = 0.09f
 }

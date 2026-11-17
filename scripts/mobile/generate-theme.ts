@@ -45,6 +45,19 @@ const tokenNames = [
 
 type ColorTokenName = (typeof tokenNames)[number];
 
+const webGlobalsPath = resolve(fileURLToPath(new URL("../../apps/web/src/styles/globals.css", import.meta.url)));
+
+/**
+ * `--faint` não é um token de `packages/theme`: no claro o web o aponta para `--muted-foreground` e no escuro tem valor
+ * próprio, escrito no `globals.css`. O valor escuro é lido de lá, para não ser copiado à mão para o Kotlin.
+ */
+export function faintOf(mode: "light" | "dark"): string {
+  if (mode === "light") return lightTokens.colors.mutedForeground;
+  const value = /--faint:\s*(oklch\([^)]*\))/.exec(readFileSync(webGlobalsPath, "utf8"))?.[1];
+  if (!value) throw new Error("--faint com valor oklch não encontrado em globals.css (tema escuro)");
+  return value;
+}
+
 function byteToHex(value: number): string {
   return Math.round(value).toString(16).padStart(2, "0").toUpperCase();
 }
@@ -63,12 +76,21 @@ export function toArgb(value: string): string {
 }
 
 function renderTokenObject(name: "DarkTokens" | "LightTokens", tokens: ThemeTokens): string {
-  const colors = tokenNames
-    .map((tokenName) => `    val ${tokenName} = Color(${toArgb(tokens.colors[tokenName as ColorTokenName])})`)
-    .join("\n");
+  const faint = faintOf(name === "DarkTokens" ? "dark" : "light");
+  const colors = [
+    ...tokenNames.map((tokenName) => `    val ${tokenName} = Color(${toArgb(tokens.colors[tokenName as ColorTokenName])})`),
+    `    val faint = Color(${toArgb(faint)})`,
+  ].join("\n");
+  const byName = [...tokenNames, "faint"].map((tokenName) => `"${tokenName}" to ${tokenName}`).join(",\n            ");
 
   return `internal object ${name} {
 ${colors}
+
+    /** Cada cor pelo nome do token: o teste de tema a confere com os tokens de \`packages/theme\`. */
+    val byName: Map<String, Color> =
+        mapOf(
+            ${byName},
+        )
     val tagLightness = ${tokens.tag.lightness}f
     val tagChroma = ${tokens.tag.chroma}f
 }`;
