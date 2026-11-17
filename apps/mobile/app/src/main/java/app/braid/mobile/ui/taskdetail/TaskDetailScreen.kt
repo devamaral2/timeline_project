@@ -69,6 +69,7 @@ import app.braid.mobile.core.designsystem.BraidPill
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.core.designsystem.tagColors
+import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.task.RequestRelation
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
@@ -81,6 +82,8 @@ import app.braid.mobile.domain.task.mapsGeoUri
 import app.braid.mobile.domain.task.mapsUrl
 import app.braid.mobile.domain.task.momentLabel
 import app.braid.mobile.domain.task.taskInfo
+import app.braid.mobile.ui.aiedit.AiEditContext
+import app.braid.mobile.ui.aiedit.EntityEditBar
 import app.braid.mobile.ui.taskedit.TaskEditIcons
 import app.braid.mobile.ui.tasks.TaskKindMark
 import app.braid.mobile.ui.tasks.TaskPriorityMark
@@ -123,6 +126,24 @@ fun TaskDetailPage(
         onAskDelete = viewModel::askDelete,
         onDismissDelete = viewModel::dismissDelete,
         onConfirmDelete = viewModel::confirmDelete,
+        footer =
+            (state as? TaskDetailUiState.Content)?.let { content ->
+                {
+                    EntityEditBar(
+                        entityType = EditEntityType.Task,
+                        entityId = content.task.id,
+                        context =
+                            AiEditContext(
+                                icon = BraidIcons.taskKind(content.task.card.kind.code),
+                                meta =
+                                    content.task.card.startedAt
+                                        ?.let { "Tarefa · ${momentLabel(it)}" } ?: "Tarefa",
+                                title = content.task.card.name,
+                            ),
+                        onEdited = viewModel::reload,
+                    )
+                }
+            },
     )
 }
 
@@ -138,6 +159,8 @@ fun TaskDetailScreen(
     onAskDelete: () -> Unit,
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
+    /** A barra de edição por IA, fixa no pé da tela. */
+    footer: (@Composable () -> Unit)? = null,
 ) {
     val content = state as? TaskDetailUiState.Content
     Column(
@@ -152,7 +175,7 @@ fun TaskDetailScreen(
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 24.dp)
-                .navigationBarsPadding(),
+                .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             when (state) {
@@ -165,6 +188,7 @@ fun TaskDetailScreen(
                 is TaskDetailUiState.Content -> Body(state, onOpenTask, onChangeStatus, onChangePriority)
             }
         }
+        footer?.invoke()
     }
     if (content != null && content.delete.open) {
         DeleteDialog(content.task.card.name, content.delete, onDismissDelete, onConfirmDelete, onGone = onBack)

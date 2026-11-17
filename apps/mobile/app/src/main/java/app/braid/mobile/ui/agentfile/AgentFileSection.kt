@@ -4,8 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,8 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -33,10 +29,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
@@ -45,7 +39,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -55,8 +48,6 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
-import app.braid.mobile.core.designsystem.SvgPart
-import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.core.designsystem.documentTokens
 import app.braid.mobile.domain.agentfile.AgentFileBackup
 import app.braid.mobile.domain.agentfile.backupSizeLabel
@@ -64,6 +55,10 @@ import app.braid.mobile.domain.agentfile.backupWhenLabel
 import app.braid.mobile.domain.agentfile.fileVersion
 import app.braid.mobile.domain.agentfile.splitFrontmatter
 import app.braid.mobile.domain.artifact.AgentFileData
+import app.braid.mobile.ui.aiedit.AiEditBar
+import app.braid.mobile.ui.aiedit.AiEditBarActions
+import app.braid.mobile.ui.aiedit.AiEditBarModel
+import app.braid.mobile.ui.aiedit.AiEditContext
 import app.braid.mobile.ui.documents.MarkdownView
 import app.braid.mobile.ui.taskdetail.DetailIcons
 
@@ -403,8 +398,6 @@ private fun RestoreConfirmation(
     )
 }
 
-private val CloseIcon = listOf(SvgPart("M18 6 6 18"), SvgPart("m6 6 12 12"))
-
 @Composable
 private fun EditSection(
     path: String,
@@ -421,125 +414,22 @@ private fun EditSection(
         )
         return
     }
-    val scheme = MaterialTheme.colorScheme
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        bar.shown?.let {
-            Text(
-                it,
-                modifier = Modifier.semantics { if (bar.error != null) liveRegion = LiveRegionMode.Assertive },
-                color = if (bar.hasFailure) scheme.error else scheme.onBackground,
-                fontSize = 15.sp,
-                lineHeight = 22.sp,
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                bar.statusText,
-                modifier = Modifier.weight(1f, fill = false).semantics { liveRegion = LiveRegionMode.Polite },
-                color = scheme.onSurfaceVariant,
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
-            )
-            if (bar.canDismiss) {
-                Box(
-                    Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .clickable(role = Role.Button, onClick = actions.onDismiss)
-                        .semantics { contentDescription = "Fechar resultado" },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    SvgIcon(CloseIcon, size = 16.dp, color = scheme.onSurfaceVariant, modifier = Modifier.clearAndSetSemantics {})
-                }
-            }
-        }
-        EditContext(path)
-        DraftField(bar, actions)
-    }
-}
-
-@Composable
-private fun EditContext(path: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        SvgIcon(
-            DetailIcons.fileText,
-            size = 18.dp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.clearAndSetSemantics {},
-        )
-        Column {
-            Text("Pedido de edição", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp, lineHeight = 18.sp)
-            Text(
-                path.substringAfterLast('/'),
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
-
-private const val MAX_DRAFT_LINES = 5
-private const val PLACEHOLDER_ALPHA = 0.7f
-private val FieldShape = RoundedCornerShape(18.dp)
-
-@Composable
-private fun DraftField(
-    bar: EditBar,
-    actions: AgentFileActions,
-) {
-    val scheme = MaterialTheme.colorScheme
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val ready = bar.canSend
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .border(1.dp, if (focused) braidBrand() else scheme.outline, FieldShape)
-            .padding(start = 14.dp, end = 4.dp),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        BasicTextField(
-            value = bar.draft,
-            onValueChange = actions.onDraftChange,
-            enabled = !bar.busy,
-            interactionSource = interaction,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = scheme.onBackground, fontSize = 15.sp, lineHeight = 22.sp),
-            cursorBrush = SolidColor(braidBrand()),
-            maxLines = MAX_DRAFT_LINES,
-            modifier = Modifier.weight(1f).semantics { contentDescription = "Pedir ao Hermes uma edição neste arquivo" },
-            decorationBox = { inner ->
-                Box(Modifier.defaultMinSize(minHeight = 44.dp).padding(vertical = 11.dp), contentAlignment = Alignment.CenterStart) {
-                    if (bar.draft.isEmpty()) {
-                        Text(
-                            "Peça uma mudança neste arquivo",
-                            color = scheme.onSurfaceVariant.copy(alpha = PLACEHOLDER_ALPHA),
-                            fontSize = 15.sp,
-                            lineHeight = 22.sp,
-                        )
-                    }
-                    inner()
-                }
-            },
-        )
-        Box(
-            Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .then(if (ready) Modifier.background(scheme.primary) else Modifier.border(1.dp, scheme.outline, CircleShape))
-                .clickable(enabled = ready, role = Role.Button, onClick = actions.onSend)
-                .semantics { contentDescription = if (bar.sending) "Aguardando a resposta" else "Enviar pedido" },
-            contentAlignment = Alignment.Center,
-        ) {
-            SvgIcon(
-                DetailIcons.arrowUp,
-                size = 20.dp,
-                color = if (ready) scheme.onPrimary else scheme.outline,
-                strokeWidth = 2f,
-                modifier = Modifier.clearAndSetSemantics {},
-            )
-        }
-    }
+    AiEditBar(
+        model =
+            AiEditBarModel(
+                draft = bar.draft,
+                placeholder = "Peça uma mudança neste arquivo",
+                fieldLabel = "Pedir ao Hermes uma edição neste arquivo",
+                statusText = bar.statusText,
+                context = AiEditContext(DetailIcons.fileText, "Pedido de edição", path.substringAfterLast('/')),
+                locked = bar.busy,
+                canSend = bar.canSend,
+                busy = bar.busy,
+                canDismiss = bar.canDismiss,
+                message = bar.shown,
+                failed = bar.hasFailure,
+                messageAlert = bar.error != null,
+            ),
+        actions = AiEditBarActions(onDraftChange = actions.onDraftChange, onSend = actions.onSend, onDismiss = actions.onDismiss),
+    )
 }

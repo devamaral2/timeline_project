@@ -6,6 +6,7 @@ import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
 import app.braid.mobile.domain.artifact.FoodData
 import app.braid.mobile.domain.artifact.FoodGeneration
+import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
@@ -105,6 +106,41 @@ class DocumentDetailViewModelTest {
 
             assertTrue((newViewModel("doc-text").settled() as DocumentDetailUiState.Ready).canEdit)
             assertFalse((newViewModel("doc-food").settled() as DocumentDetailUiState.Ready).canEdit)
+        }
+
+    @Test
+    fun `the AI edit bar follows the document, so the global ones have none`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-text", fixture("documents-detail-text"))
+            backend.route("GET", "/api/artifacts/doc-food", fixture("documents-detail-food"))
+            backend.route("GET", "/api/artifacts/doc-global", fixture("documents-detail-text-global"))
+
+            assertEquals(EditEntityType.Text, (newViewModel("doc-text").settled() as DocumentDetailUiState.Ready).editType)
+            assertEquals(EditEntityType.Food, (newViewModel("doc-food").settled() as DocumentDetailUiState.Ready).editType)
+            assertNull((newViewModel("doc-global").settled() as DocumentDetailUiState.Ready).editType)
+        }
+
+    @Test
+    fun `refresh reads the document again without going back to loading, and a failed read keeps what is on screen`() =
+        runTest {
+            val bodies = ArrayDeque(listOf("documents-detail-food-pending", "documents-detail-food-done"))
+            var broken = false
+            backend.route("GET", "/api/artifacts/doc-food") {
+                if (broken) status(503) else fixture(if (bodies.size > 1) bodies.removeFirst() else bodies.first())
+            }
+            val viewModel = newViewModel("doc-food")
+            assertTrue((viewModel.settled() as DocumentDetailUiState.Ready).pendingMeal)
+
+            viewModel.refresh()
+            awaitReads("doc-food", 2)
+            val after = viewModel.state.first { (it as? DocumentDetailUiState.Ready)?.pendingMeal == false } as DocumentDetailUiState.Ready
+            assertNull((after.artifact.data as FoodData).generation)
+
+            broken = true
+            viewModel.refresh()
+            awaitReads("doc-food", 3)
+            withContext(Dispatchers.Default) { delay(100) }
+            assertTrue(viewModel.state.value is DocumentDetailUiState.Ready)
         }
 
     @Test

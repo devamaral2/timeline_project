@@ -59,6 +59,10 @@ import app.braid.mobile.domain.artifact.Artifact
 import app.braid.mobile.domain.artifact.ArtifactTaskLink
 import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.artifact.whenLabel
+import app.braid.mobile.domain.request.EditEntityType
+import app.braid.mobile.domain.request.PENDING_MEAL_EDIT_TEXT
+import app.braid.mobile.ui.aiedit.AiEditContext
+import app.braid.mobile.ui.aiedit.EntityEditBar
 import app.braid.mobile.ui.taskdetail.DetailIcons
 import java.time.Instant
 
@@ -87,6 +91,32 @@ fun DocumentDetailPage(
         onAskDelete = viewModel::askDelete,
         onDismissDelete = viewModel::dismissDelete,
         onConfirmDelete = viewModel::confirmDelete,
+        footer =
+            (state as? DocumentDetailUiState.Ready)?.editType?.let { type ->
+                { EditFooter(state as DocumentDetailUiState.Ready, type, onEdited = viewModel::refresh) }
+            },
+    )
+}
+
+/** A barra de edição por IA do documento aberto; refeição em cálculo a desliga. */
+@Composable
+private fun EditFooter(
+    ready: DocumentDetailUiState.Ready,
+    type: EditEntityType,
+    onEdited: () -> Unit,
+) {
+    val artifact = ready.artifact
+    EntityEditBar(
+        entityType = type,
+        entityId = artifact.id,
+        context =
+            AiEditContext(
+                icon = DocumentIcons.glyph(artifact.type),
+                meta = "${artifactTypeLabel(artifact.type)} · ${whenLabel(artifact.updatedAt, ready.now)}",
+                title = artifact.name,
+            ),
+        onEdited = onEdited,
+        disabledReason = if (ready.pendingMeal) PENDING_MEAL_EDIT_TEXT else null,
     )
 }
 
@@ -100,6 +130,8 @@ fun DocumentDetailContent(
     onAskDelete: () -> Unit,
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
+    /** A barra de edição por IA, fixa no pé da tela. */
+    footer: (@Composable () -> Unit)? = null,
 ) {
     val ready = state as? DocumentDetailUiState.Ready
     val actions = ready?.takeIf { it.canEdit }
@@ -112,7 +144,10 @@ fun DocumentDetailContent(
     ) {
         TopBar(onBack, actions = actions?.let { DetailActions(onEdit = { onEdit(it.artifact.id) }, onDelete = onAskDelete) })
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 32.dp + bottomInset),
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(start = 20.dp, end = 20.dp, bottom = 32.dp + if (footer == null) bottomInset else 0.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
             when (state) {
@@ -125,6 +160,7 @@ fun DocumentDetailContent(
                 is DocumentDetailUiState.Ready -> ReadyContent(state, onOpenTask)
             }
         }
+        footer?.invoke()
     }
     if (ready != null && ready.delete.open) DeleteDialog(ready.artifact.name, ready.delete, onDismissDelete, onConfirmDelete)
 }
