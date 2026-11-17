@@ -28,6 +28,7 @@ import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
 import type { FreeWindow } from "./hub-open";
 import { AgentTrace } from "./agent-trace";
+import { ChatAnswer } from "./chat-answer";
 import { HermesSteps } from "./hermes-steps";
 import { CHANGE_LABELS, EntityRows } from "./entity-rows";
 import { ProcessBox } from "./process-box";
@@ -381,6 +382,7 @@ export function AgentChatPanel({
                 <ChatBubble
                   key={message.id}
                   message={message}
+                  onChoose={message.id === lastMessageId && chat.ready && !chat.pending ? chat.send : undefined}
                   onRetry={chat.pending ? undefined : chat.retry}
                   onCancel={chat.pending ? chat.cancel : undefined}
                   entityHref={entityHref}
@@ -477,20 +479,13 @@ interface ChatBubbleProps {
   message: AgentChatMessage;
   onRetry?: (id: string) => void;
   onCancel?: () => void;
+  /** Envia a alternativa escolhida numa resposta; ausente quando a resposta ja nao espera escolha. */
+  onChoose?: (choice: string) => void;
   entityHref?: (entity: AgentChatEntityRef) => string | undefined;
   onOpenEntity?: () => void;
 }
 
-/** Linhas em branco separam parágrafos; quebras simples ficam dentro do parágrafo. */
-function splitParagraphs(text: string): string[] {
-  const paragraphs = text
-    .split(/\n\s*\n/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean);
-  return paragraphs.length > 0 ? paragraphs : [text];
-}
-
-function ChatBubble({ message, onRetry, onCancel, entityHref, onOpenEntity }: ChatBubbleProps) {
+function ChatBubble({ message, onRetry, onCancel, onChoose, entityHref, onOpenEntity }: ChatBubbleProps) {
   if (message.role === "user") {
     return (
       <li className={styles.chatBubble} data-role="user">
@@ -502,11 +497,7 @@ function ChatBubble({ message, onRetry, onCancel, entityHref, onOpenEntity }: Ch
   if (message.role === "assistant") {
     return (
       <li className={styles.chatBubble} data-role="assistant">
-        <div className={styles.chatProse}>
-          {splitParagraphs(message.text).map((paragraph, index) => (
-            <p key={index}>{paragraph}</p>
-          ))}
-        </div>
+        <ChatAnswer text={message.text} onChoose={onChoose} />
         <EntityRows entities={message.entities} entityHref={entityHref} onOpenEntity={onOpenEntity} />
       </li>
     );

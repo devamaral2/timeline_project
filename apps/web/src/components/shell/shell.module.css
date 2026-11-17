@@ -551,9 +551,7 @@
    (fio e fundo do campo), nao um balao; a resposta e texto solto. O campo segue redondo. */
 .chatBubble[data-role="user"] { margin: 0 -4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-xs); background: var(--background); line-height: 22px; }
 .chatBubble[data-role="assistant"] { padding: 0; }
-.chatProse { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; text-wrap: pretty; }
 .chatBubble[data-role="user"] p { white-space: pre-wrap; }
-.chatProse p { white-space: pre-line; overflow-wrap: anywhere; }
 .chatBubble[data-role="error"] { margin: 0 -4px; padding: 10px 14px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); border-radius: var(--radius-xs); color: var(--destructive); font-size: 13px; line-height: 20px; }
 .chatBubble[data-role="error"] button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; padding: 0; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .chatBubble[data-role="error"] svg { width: 14px; height: 14px; }
