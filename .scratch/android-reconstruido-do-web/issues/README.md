@@ -52,6 +52,12 @@ na largura mobile. Nesses pontos, siga o web e ignore o critério contrário do 
 - **19:** permissão de microfone negada quando a escuta abriu sozinha ao abrir o chat não mostra aviso.
 - **21:** o tema é um interruptor claro/escuro, como no web, com o sistema decidindo até a primeira escolha.
 - **23:** o feed tem lido/não lido (marcar como lido e contador), como no web.
+- **12 (tela):** o chat abre em tela cheia, sem folha que se expande; a história 95 da spec ("folha que posso expandir")
+  vale só como "o chat cobre a tela de baixo e o voltar o fecha".
+- **01 e 21 (fontes):** as fontes são Figtree, Newsreader e JetBrains Mono, as que o web carrega; Manrope e Outfit, da
+  spec (história 116 e a decisão "Tema"), não são usadas.
+- **01 (sessão):** uma renovação que falha com 5xx ou por erro de rede (IO) mantém a sessão; só uma recusa 4xx do Auth
+  apaga os tokens e leva ao login, como o web.
 
 ## Ordem
 
