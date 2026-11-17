@@ -1,6 +1,7 @@
 package app.braid.mobile.support
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import app.braid.mobile.data.agenda.DataStoreFreeTimeRepository
 import app.braid.mobile.data.executor.DataStoreViewModeRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +14,11 @@ class TestViewModes(
     private val file: File,
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    val repository = DataStoreViewModeRepository(PreferenceDataStoreFactory.create(scope = scope) { file })
+    private val store = PreferenceDataStoreFactory.create(scope = scope) { file }
+    val repository = DataStoreViewModeRepository(store)
+
+    /** A escolha "Tempo livre" da Agenda, no mesmo arquivo das preferências. */
+    val freeTime = DataStoreFreeTimeRepository(store)
 
     override fun close() = scope.cancel()
 }

@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.domain.agenda.AgendaRow
+import app.braid.mobile.domain.agenda.FreeWindow
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.ui.tasks.TaskRow
@@ -45,35 +47,46 @@ import java.time.Instant
 /** O que um dia mostra: o esqueleto até chegar, o erro se a leitura falhou, o dia livre ou as linhas. */
 @Composable
 fun AgendaDay(
-    tasks: List<TaskCard>?,
+    dayKey: String,
+    rows: List<AgendaRow>?,
     load: AgendaLoad,
     now: Instant,
     onRetry: () -> Unit,
     onStatusClick: (TaskCard) -> Unit,
+    onPlanFreeWindow: (FreeWindow) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth()) {
         when {
-            tasks != null && tasks.isEmpty() -> FreeDay()
-            tasks != null -> TaskList(tasks, now, onStatusClick)
+            rows != null && rows.isEmpty() -> FreeDay()
+            rows != null -> AgendaRows(dayKey, rows, now, onStatusClick, onPlanFreeWindow)
             load == AgendaLoad.Failed -> LoadFailed(onRetry)
             else -> LoadingDay()
         }
     }
 }
 
+/** As tarefas do dia e, entre elas, as janelas livres: cada janela é um alvo tocável que entrega a [FreeWindow] à tela. */
 @Composable
-private fun TaskList(
-    tasks: List<TaskCard>,
+fun AgendaRows(
+    dayKey: String,
+    rows: List<AgendaRow>,
     now: Instant,
     onStatusClick: (TaskCard) -> Unit,
+    onPlanFreeWindow: (FreeWindow) -> Unit,
 ) {
     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-    tasks.forEachIndexed { index, card ->
+    rows.forEachIndexed { index, row ->
         if (index > 0) HorizontalDivider(Modifier.padding(start = ROW_DIVIDER_INSET), color = MaterialTheme.colorScheme.outline)
-        // O web só abre a escolha pelo ponto azul da tarefa de referência; as outras linhas não reagem ao glifo aqui.
-        val opensPicker = card.actor == TaskActor.Human && card.status == null
-        TaskRow(card = card, now = now, onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null)
+        when (row) {
+            is AgendaRow.Task -> {
+                val card = row.card
+                // O web só abre a escolha pelo ponto azul da tarefa de referência; as outras linhas não reagem ao glifo aqui.
+                val opensPicker = card.actor == TaskActor.Human && card.status == null
+                TaskRow(card = card, now = now, onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null)
+            }
+            is AgendaRow.Free -> FreeTimeRow(row.slot, now) { onPlanFreeWindow(row.window(dayKey)) }
+        }
     }
 }
 
@@ -122,7 +135,7 @@ private fun LoadingDay() {
 }
 
 @Composable
-private fun LoadFailed(onRetry: () -> Unit) {
+fun LoadFailed(onRetry: () -> Unit) {
     HorizontalDivider(color = MaterialTheme.colorScheme.outline)
     Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(

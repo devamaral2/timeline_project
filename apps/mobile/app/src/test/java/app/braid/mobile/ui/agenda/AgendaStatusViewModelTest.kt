@@ -86,6 +86,7 @@ class AgendaStatusViewModelTest {
         AgendaViewModel(
             DefaultTaskRepository(graph.apis.create(TasksApi::class.java)),
             viewModes.repository,
+            viewModes.freeTime,
             AppClock { now },
         ).also(created::add)
 
