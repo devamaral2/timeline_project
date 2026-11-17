@@ -5,7 +5,7 @@
   "scripts": {
     "android": "./gradlew installDebug && adb shell am start -n app.braid.mobile/.MainActivity",
     "lint": "./gradlew ktlintCheck lintDebug",
-    "test": "tsx ../../scripts/mobile/generate-fixtures.ts && ./gradlew testDebugUnitTest",
+    "test": "tsx --tsconfig ../../scripts/mobile/tsconfig.json ../../scripts/mobile/generate-fixtures.ts && ./gradlew testDebugUnitTest",
     "build": "./gradlew assembleDebug",
     "generate:theme": "tsx ../../scripts/mobile/generate-theme.ts"
   }

@@ -1,0 +1,168 @@
+package app.braid.mobile.ui.agenda
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.braid.mobile.core.designsystem.BraidMonoFont
+import app.braid.mobile.domain.timeline.daysBetween
+import app.braid.mobile.domain.timeline.longDate
+import app.braid.mobile.domain.timeline.shiftDayKey
+import kotlin.math.abs
+
+/** Um século de dias para cada lado de hoje: o swipe não tem borda que alguém alcance. */
+private const val DAYS_EACH_SIDE = 36_500
+private const val PAGE_COUNT = DAYS_EACH_SIDE * 2 + 1
+private const val SMOOTH_SCROLL_MAX_DAYS = 7
+
+@Composable
+fun AgendaScreen(viewModel: AgendaViewModel = hiltViewModel()) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    // O primeiro ON_RESUME é o de abrir a tela, e o ViewModel já leu a semana ao nascer.
+    var firstResume by remember { mutableStateOf(true) }
+    LifecycleResumeEffect(Unit) {
+        if (firstResume) firstResume = false else viewModel.onResume()
+        onPauseOrDispose { }
+    }
+    AgendaContent(state = state, onSelectDay = viewModel::selectDay, onRetry = viewModel::retry)
+}
+
+@Composable
+fun AgendaContent(
+    state: AgendaUiState,
+    onSelectDay: (String) -> Unit,
+    onRetry: () -> Unit,
+) {
+    // O dia da página central é o de quando a tela abriu: de lá cada página é um dia a mais ou a menos.
+    val anchorDay = rememberSaveable { state.todayKey }
+    val pager = rememberPagerState(initialPage = pageOf(anchorDay, state.selectedDay)) { PAGE_COUNT }
+    var monthOpen by rememberSaveable { mutableStateOf(false) }
+    val currentOnSelectDay by rememberUpdatedState(onSelectDay)
+
+    DaySwipeSync(pager, anchorDay, state.selectedDay) { currentOnSelectDay(it) }
+
+    fun choose(dayKey: String) {
+        monthOpen = false
+        onSelectDay(dayKey)
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .windowInsetsPadding(WindowInsets.statusBars),
+    ) {
+        Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(
+                text = longDate(state.todayKey).uppercase(),
+                modifier = Modifier.padding(top = 14.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = BraidMonoFont,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                letterSpacing = 0.08.em,
+            )
+            Column(Modifier.padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (monthOpen) {
+                    MonthPicker(
+                        selectedDay = state.selectedDay,
+                        todayKey = state.todayKey,
+                        onSelect = ::choose,
+                        onClose = { monthOpen = false },
+                    )
+                } else {
+                    MonthToggle(
+                        label = monthName(state.selectedDay, state.todayKey),
+                        expanded = false,
+                        onClick = { monthOpen = true },
+                    )
+                    WeekStrip(selectedDay = state.selectedDay, todayKey = state.todayKey, onSelect = ::choose)
+                }
+            }
+        }
+        HorizontalPager(
+            state = pager,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            key = { it },
+        ) { page ->
+            val dayKey = dayKeyAt(anchorDay, page)
+            val bottomInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, bottom = 120.dp + bottomInset),
+            ) {
+                AgendaDay(
+                    tasks = state.tasksByDay[dayKey],
+                    load = state.load,
+                    now = state.now,
+                    onRetry = onRetry,
+                )
+            }
+        }
+    }
+}
+
+/** Mantém o carrossel e o dia escolhido juntos: o swipe escolhe o dia, e escolher um dia leva o carrossel até ele. */
+@Composable
+private fun DaySwipeSync(
+    pager: PagerState,
+    anchorDay: String,
+    selectedDay: String,
+    onSwipeSettled: (String) -> Unit,
+) {
+    LaunchedEffect(selectedDay) {
+        val target = pageOf(anchorDay, selectedDay)
+        when {
+            pager.currentPage == target -> Unit
+            abs(pager.currentPage - target) <= SMOOTH_SCROLL_MAX_DAYS -> pager.animateScrollToPage(target)
+            else -> pager.scrollToPage(target)
+        }
+    }
+    LaunchedEffect(pager) {
+        snapshotFlow { pager.settledPage }.collect { onSwipeSettled(dayKeyAt(anchorDay, it)) }
+    }
+}
+
+private const val CENTER_PAGE = DAYS_EACH_SIDE
+
+private fun pageOf(
+    anchorDay: String,
+    dayKey: String,
+): Int = (CENTER_PAGE + daysBetween(anchorDay, dayKey)).coerceIn(0, PAGE_COUNT - 1)
+
+private fun dayKeyAt(
+    anchorDay: String,
+    page: Int,
+): String = shiftDayKey(anchorDay, page - CENTER_PAGE)

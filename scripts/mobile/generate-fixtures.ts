@@ -13,6 +13,8 @@ import { createRequire } from "node:module";
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { sessionFixtures } from "./fixtures/session";
+import { tasksFixtures } from "./fixtures/tasks";
+import { timelineFixtures } from "./fixtures/timeline";
 
 /** O zod que o `packages/contracts` resolve: o raiz do repositório não o tem. */
 const requireFromContracts = createRequire(new URL("../../packages/contracts/package.json", import.meta.url));
@@ -23,7 +25,7 @@ export const fixtureDirectory = fileURLToPath(new URL("../../apps/mobile/app/src
 
 export function collectFixtures(): Record<string, unknown> {
   const context: FixtureContext = { z: requireFromContracts("zod").z };
-  return { ...sessionFixtures(context) };
+  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures() };
 }
 
 export function generateFixtures(): string[] {
