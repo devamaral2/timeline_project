@@ -8,19 +8,25 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import app.braid.mobile.core.designsystem.BraidTheme
 import app.braid.mobile.domain.reminder.ReminderSync
 import app.braid.mobile.domain.session.SessionRepository
+import app.braid.mobile.domain.settings.ThemeRepository
+import app.braid.mobile.domain.settings.isDark
 import app.braid.mobile.domain.task.TaskChanges
 import app.braid.mobile.ui.navigation.AppNavHost
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -30,6 +36,8 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var session: SessionRepository
 
     @Inject lateinit var taskChanges: TaskChanges
+
+    @Inject lateinit var themes: ThemeRepository
 
     /** A tarefa que a notificação tocada quer abrir, até a navegação consumi-la. */
     private var requestedTask by mutableStateOf<String?>(null)
@@ -45,8 +53,21 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) { reminders.runWhileSignedIn(session.state, taskChanges.signals) }
         }
+        // Lida antes do primeiro quadro: quem escolheu um tema não vê o do sistema piscar na abertura.
+        val savedTheme = runBlocking { themes.choice.first() }
         setContent {
-            BraidTheme(darkTheme = isSystemInDarkTheme()) {
+            val choice by themes.choice.collectAsStateWithLifecycle(initialValue = savedTheme)
+            // Sem escolha o sistema decide; com ela, vale o interruptor das Configurações.
+            val dark = choice.isDark(isSystemInDarkTheme())
+            DisposableEffect(dark) {
+                // Os ícones das barras do sistema seguem o tema do app, não o do sistema.
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark },
+                    navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark },
+                )
+                onDispose {}
+            }
+            BraidTheme(darkTheme = dark) {
                 AppNavHost(openTaskId = requestedTask, onOpenTaskHandled = { requestedTask = null })
             }
         }
