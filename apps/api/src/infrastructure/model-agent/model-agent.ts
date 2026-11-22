@@ -148,8 +148,10 @@ export class ModelAgent implements ModelChat {
     }
 
     try {
+      // Quem responde: sem isso, um modelo treinado com respostas de outro (DeepSeek, por exemplo) diz que e o outro.
+      const identity = `Você é o modelo ${selection.model}, servido por ${provider.name}, com esforço ${effort.toLowerCase()}.`;
       const conversation = provider.open({
-        system: this.config.system, history, context, text, tools: session?.tools ?? [],
+        system: this.config.system, history, context: `${context}\n${identity}`, text, tools: session?.tools ?? [],
         model: selection.model, effort: selection.effort,
       });
       const maxIterations = this.config.maxIterations ?? DEFAULT_MAX_ITERATIONS;

@@ -86,7 +86,14 @@ describe("o turno", () => {
       messages: [
         { role: "user", content: "oi" },
         { role: "assistant", content: "Olá!" },
-        { role: "user", content: [{ type: "text", text: "Agora: quarta-feira." }, { type: "text", text: "marque dentista amanhã às 9h" }] },
+        {
+          role: "user",
+          content: [
+            // Quem responde vai junto da hora: um modelo treinado com respostas de outro nao se confunde.
+            { type: "text", text: "Agora: quarta-feira.\nVocê é o modelo claude-opus-5-5, servido por Anthropic, com esforço médio." },
+            { type: "text", text: "marque dentista amanhã às 9h" },
+          ],
+        },
       ],
     });
     // A resposta do modelo volta inteira (o raciocinio junto) e os dois resultados numa mensagem so.
