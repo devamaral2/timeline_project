@@ -5,6 +5,7 @@ import type {
   AgentRequestKind,
   AgentTraceDto,
   AgentTraceEntryDto,
+  ModelSelection,
   RequestErrorCode,
   RequestQueryResult,
   RequestRoute,
@@ -124,6 +125,7 @@ export class PostgresRequestStore implements RequestStore {
           ...(input.context ? { context: input.context } : {}),
           ...(input.target ? { target: input.target } : {}),
           ...(input.forceFallback ? { forceFallback: true } : {}),
+          ...(input.model ? { model: input.model } : {}),
           ...(input.clientMessageId ? { clientMessageId: input.clientMessageId } : {}),
         },
       });
@@ -150,6 +152,13 @@ export class PostgresRequestStore implements RequestStore {
     const { rows } = await this.database.pool.query<Row>(
       `${REQUEST_SELECT} WHERE e.user_id = $1 AND ${REQUEST_FILTER} ORDER BY e.id DESC LIMIT $2`, [userId, limit]);
     return this.hydrate(rows);
+  }
+
+  async sessionTurns(userId: string, sessionId: string, limit: number): Promise<RequestRecord[]> {
+    const { rows } = await this.database.pool.query<Row>(
+      `${REQUEST_SELECT} WHERE e.user_id = $1 AND (e.id = $2 OR s.from_task_id = $2) AND ${REQUEST_FILTER}
+       ORDER BY e.id DESC LIMIT $3`, [userId, sessionId, limit]);
+    return (await this.hydrate(rows)).reverse();
   }
 
   private async hydrate(rows: readonly Row[]): Promise<RequestRecord[]> {
@@ -508,7 +517,7 @@ const REQUEST_SELECT = `
 
 function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord {
   const data = (row.data ?? {}) as {
-    route?: RequestRoute; context?: RequestScreenContext; target?: RequestTarget; forceFallback?: boolean;
+    route?: RequestRoute; context?: RequestScreenContext; target?: RequestTarget; forceFallback?: boolean; model?: ModelSelection;
     dispatch?: DispatchRecord; failedSteps?: FailedStep[]; errorCode?: RequestErrorCode;
   };
   const messages = entries.filter((entry) => entry.kind === "message");
@@ -539,6 +548,7 @@ function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord 
     ...(data.target ? { target: data.target } : {}),
     ...(data.forceFallback ? { forceFallback: true } : {}),
     ...(row.session_id ? { sessionId: String(row.session_id) } : {}),
+    ...(data.model ? { model: data.model } : {}),
     createdAt: new Date(row.created_at as string | Date),
     updatedAt: new Date(row.updated_at as string | Date),
     ...(row.finished_at ? { finishedAt: date(row.finished_at) } : {}),

@@ -23,7 +23,10 @@ const INITIAL_VALUES = {
   AGENT_FILES_DIR: resolve(homedir(), ".braid", "agent-files"),
 };
 // Chaves do .env.example que o carregador padrao usa quando existem, mas que nao impedem `pnpm dev` de subir.
-const DEFAULT_SCOPE_OPTIONAL_KEYS = new Set(["HERMES_API_KEY"]);
+// O modo modelo (ADR 0019) liga cada provedor cuja chave existe; o token do MCP liga as ferramentas da agenda dele.
+const DEFAULT_SCOPE_OPTIONAL_KEYS = new Set([
+  "HERMES_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "MCP_TOKEN", "MCP_OWNER_USER_ID",
+]);
 const SCOPES = Object.freeze({
   "api-runtime": {
     // A fila de jobs de IA e a tabela `jobs` da propria base (ADR 0013): nao
@@ -38,6 +41,12 @@ const SCOPES = Object.freeze({
       "AGENT_FILES_DIR",
       "AGENT_CONFIG_OWNER_USER_ID",
       "JEV_API_KEY",
+      // Modo modelo do chat (ADR 0019): as chaves dos provedores e o MCP da agenda, com o dono que ele representa.
+      "ANTHROPIC_API_KEY",
+      "OPENAI_API_KEY",
+      "MCP_URL",
+      "MCP_TOKEN",
+      "MCP_OWNER_USER_ID",
       "AI_JOBS_CONCURRENCY",
       "AI_JOBS_LEASE_MS",
       "AI_JOBS_MAX_ATTEMPTS",

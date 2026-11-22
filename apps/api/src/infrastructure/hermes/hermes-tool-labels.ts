@@ -30,6 +30,7 @@ const MCP_LABELS: Record<string, string> = {
   list_tracked_tasks: "Listou as tarefas acompanhadas",
   list_artifacts: "Listou os artefatos",
   list_recurrences: "Listou as recorrências",
+  search_places: "Buscou um lugar",
 };
 
 /** O nome de uma ferramenta vira um rotulo legivel; as do MCP da agenda (`mcp_braid_*`) ficam em portugues. */
@@ -39,4 +40,9 @@ export function toolLabel(tool: string): string {
   const mcp = /^mcp_braid_(.+)$/.exec(tool)?.[1];
   if (mcp && MCP_LABELS[mcp]) return MCP_LABELS[mcp];
   return `Usou ${tool.replace(/_/g, " ")}`;
+}
+
+/** O rotulo de uma ferramenta do MCP da agenda pelo nome puro (`create_task`), como o modo modelo a chama (ADR 0019). */
+export function agendaToolLabel(tool: string): string {
+  return MCP_LABELS[tool] ?? `Usou ${tool.replace(/_/g, " ")}`;
 }

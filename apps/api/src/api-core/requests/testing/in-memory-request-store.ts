@@ -45,6 +45,7 @@ export class InMemoryRequestStore implements RequestStore {
       ...(input.target ? { target: input.target } : {}),
       ...(input.forceFallback ? { forceFallback: true } : {}),
       ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+      ...(input.model ? { model: { ...input.model } } : {}),
       createdAt: this.clock(), updatedAt: this.clock(), failedSteps: [],
     });
     this.jobs.push({ kind: input.job, requestId: id });
@@ -77,6 +78,13 @@ export class InMemoryRequestStore implements RequestStore {
       .filter((request) => request.userId === userId)
       .sort((left, right) => right.id.localeCompare(left.id))
       .slice(0, limit);
+  }
+
+  async sessionTurns(userId: string, sessionId: string, limit: number): Promise<RequestRecord[]> {
+    return [...this.requests.values()]
+      .filter((request) => request.userId === userId && (request.id === sessionId || request.sessionId === sessionId))
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(-limit);
   }
 
   async steps(requestId: string): Promise<StepRecord[]> {

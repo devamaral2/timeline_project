@@ -24,6 +24,16 @@ const serverSchema = z.object({
   AGENT_CONFIG_OWNER_USER_ID: z.string().min(1).optional(),
   // Pasta de skills e agentes compartilhada com o Hermes (ADR 0005). Sem valor, vale o padrao de fabrica.
   AGENT_FILES_DIR: z.string().min(1).optional(),
+  // Modo modelo do chat (ADR 0019): `POST /api/requests/model`. Cada chave liga um provedor no seletor (o OpenRouter
+  // usa a `OPENROUTER_API_KEY` de cima); sem nenhuma, as rotas do modo respondem 404.
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  // O MCP da agenda (apps/mcp), pelo qual o modelo le, cria e edita as entidades do dono. Sem o token, o modelo so
+  // conversa. Sem a URL, vale a porta local do MCP (`MCP_PORT`).
+  MCP_URL: z.string().url().optional(),
+  MCP_TOKEN: z.string().min(32).optional(),
+  // O dono que o MCP representa: so ele usa o modo modelo enquanto as ferramentas da agenda estao ligadas.
+  MCP_OWNER_USER_ID: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
@@ -54,7 +64,17 @@ export function getServerEnv(source?: Record<string, string | undefined>): Serve
     HERMES_API_KEY: read("HERMES_API_KEY"),
     AGENT_CONFIG_OWNER_USER_ID: read("AGENT_CONFIG_OWNER_USER_ID"),
     AGENT_FILES_DIR: read("AGENT_FILES_DIR"),
+    ANTHROPIC_API_KEY: read("ANTHROPIC_API_KEY"),
+    OPENAI_API_KEY: read("OPENAI_API_KEY"),
+    MCP_URL: read("MCP_URL") ?? localMcpUrl(orUndefined(source?.MCP_PORT ?? process.env.MCP_PORT)),
+    MCP_TOKEN: read("MCP_TOKEN"),
+    MCP_OWNER_USER_ID: read("MCP_OWNER_USER_ID"),
   });
+}
+
+/** Em desenvolvimento o MCP sobe no loopback, na porta da worktree (`MCP_PORT`, 3003 por padrao). */
+function localMcpUrl(port: string | undefined): string {
+  return `http://127.0.0.1:${port ?? "3003"}/mcp`;
 }
 
 /**

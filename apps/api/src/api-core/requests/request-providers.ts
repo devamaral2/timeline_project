@@ -9,6 +9,11 @@ import type {
   ScopedSqlQuery,
 } from "../../domain/ports";
 import { AgentFilesBootstrap } from "../../infrastructure/agent-files/agent-files.bootstrap";
+import { McpAgendaTools } from "../../infrastructure/model-agent/agenda-tools";
+import { AnthropicProvider } from "../../infrastructure/model-agent/anthropic-provider";
+import { ModelAgent, type ModelProviderClient } from "../../infrastructure/model-agent/model-agent";
+import { OpenAIProvider } from "../../infrastructure/model-agent/openai-provider";
+import { OpenRouterProvider } from "../../infrastructure/model-agent/openrouter-provider";
 import { HermesClient } from "../../infrastructure/hermes/hermes.client";
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
 import type { PostgresDatabase } from "../../infrastructure/persistence/database/postgres-database";
@@ -32,6 +37,10 @@ import { OpenRouterTaskCommandParsingGateway } from "../tasks/gateways/openroute
 import { OpenRouterFoodParsingGateway } from "../tasks/gateways/openrouter-food-parsing.gateway";
 import { PlaceResolver } from "../tasks/services/place-resolver.service";
 import { PhotonPlaceSearchGateway } from "../../infrastructure/places/photon-place-search.gateway";
+import { providerKeys } from "./model-catalog";
+import { modelAgendaOwner } from "./model-config";
+import { modelSystemPrompt } from "./model-prompt";
+import { ModelTurnWorker } from "./model-turn-worker";
 import { HermesTurnWorker } from "./hermes-turn-worker";
 import { JevClient } from "./jev.client";
 import { RouterArtifactsReconciler } from "./jev-router-artifacts";
@@ -119,12 +128,37 @@ export const REQUEST_PROVIDERS: Provider[] = [
         hermes: new HermesTurnWorker(
           store, env.AI_AUTOMATION === "on" ? new HermesClient({ url: env.HERMES_URL, apiKey: env.HERMES_API_KEY }) : undefined,
         ),
+        // Sem nenhuma chave de provedor nao ha agente: a rota responde 404 e um pedido antigo termina com o aviso.
+        model: new ModelTurnWorker(store, modelAgent()),
         voice: new VoiceTaskWorker({ store, parsing: commandParsing, createTask, batchWriter, places }),
         food,
       });
     },
   },
 ];
+
+/**
+ * O agente do modo modelo (ADR 0019), com um cliente por provedor que tem chave. Com o token do MCP e o dono
+ * configurados, ele usa as ferramentas da agenda; sem eles, so conversa.
+ */
+function modelAgent(): ModelAgent | undefined {
+  const env = getServerEnv();
+  const keys = providerKeys(env);
+  const providers: Partial<Record<"anthropic" | "openai" | "openrouter", ModelProviderClient>> = {
+    ...(keys.anthropic ? { anthropic: new AnthropicProvider(keys.anthropic) } : {}),
+    ...(keys.openai ? { openai: new OpenAIProvider(keys.openai) } : {}),
+    ...(keys.openrouter ? { openrouter: new OpenRouterProvider(keys.openrouter) } : {}),
+  };
+  if (Object.keys(providers).length === 0) return undefined;
+  const agenda = modelAgendaOwner() !== undefined && env.MCP_URL && env.MCP_TOKEN
+    ? new McpAgendaTools({ url: env.MCP_URL, token: env.MCP_TOKEN })
+    : undefined;
+  return new ModelAgent({
+    providers,
+    system: modelSystemPrompt({ agenda: agenda !== undefined }),
+    ...(agenda ? { tools: agenda } : {}),
+  });
+}
 
 /** O que os modulos de funcionalidade usam da IA. */
 export const REQUEST_EXPORTS: NonNullable<ModuleMetadata["exports"]> = [RequestOperations, AgentFilesService];

@@ -11,7 +11,7 @@ import type { Tx } from "../shared/tx";
 export const newOrderedId = monotonicFactory();
 
 /** Por onde o pedido anda; fica em `tasks.data.route`. */
-export type RequestRoute = "steps" | "hermes" | "voice" | "food";
+export type RequestRoute = "steps" | "hermes" | "model" | "voice" | "food";
 
 export interface NewAgentTask {
   id: string;

@@ -24,6 +24,8 @@ import { DeleteRecurrenceModule } from "./features/delete-recurrence/delete-recu
 import { StartRequestModule } from "./features/start-request/start-request.controller";
 import { StartEditRequestModule } from "./features/start-edit-request/start-edit-request.controller";
 import { StartHermesRequestModule } from "./features/start-hermes-request/start-hermes-request.controller";
+import { StartModelRequestModule } from "./features/start-model-request/start-model-request.controller";
+import { GetModelOptionsModule } from "./features/get-model-options/get-model-options.controller";
 import { StartVoiceRequestModule } from "./features/start-voice-request/start-voice-request.controller";
 import { ListRequestsModule } from "./features/list-requests/list-requests.controller";
 import { GetRequestModule } from "./features/get-request/get-request.controller";
@@ -65,6 +67,8 @@ import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/r
     StartRequestModule,
     StartEditRequestModule,
     StartHermesRequestModule,
+    StartModelRequestModule,
+    GetModelOptionsModule,
     StartVoiceRequestModule,
     ListRequestsModule,
     GetRequestModule,

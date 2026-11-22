@@ -28,6 +28,7 @@ export const REQUEST_JOBS = {
   step: "request-step",
   finalize: "request-finalize",
   hermes: "hermes-turn",
+  model: "model-turn",
   voice: "voice-task",
 } as const;
 export type RequestJobKind = (typeof REQUEST_JOBS)[keyof typeof REQUEST_JOBS];

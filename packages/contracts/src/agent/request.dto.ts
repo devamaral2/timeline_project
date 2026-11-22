@@ -1,13 +1,15 @@
 import type { ArtifactType } from "../artifacts/artifact.dto";
 import type { AgentTaskStatus, AgentRequestKind } from "../tasks/task-types";
 import type { AgentTraceDto } from "./agent-trace.dto";
+import type { ModelSelection } from "./model.dto";
 
 /**
  * Por onde o pedido anda: `steps` desdobra o pedido em passos de agentes de
- * entidade (ADR 003); `hermes` entrega a mensagem ao Hermes (ADR 004); `voice`
+ * entidade (ADR 003); `hermes` entrega a mensagem ao Hermes (ADR 004); `model`
+ * conversa com o modelo que o usuario escolheu, que usa a agenda pelo MCP (ADR 0019); `voice`
  * transforma uma fala numa tarefa; `food` calcula os nutrientes de um alimento.
  */
-export type RequestRoute = "steps" | "hermes" | "voice" | "food";
+export type RequestRoute = "steps" | "hermes" | "model" | "voice" | "food";
 
 /** Por que um pedido falhou. */
 export type RequestErrorCode =
@@ -82,6 +84,8 @@ export interface RequestDto {
   progress?: string;
   /** O rastro do pedido, para a aba "Processo". */
   trace?: AgentTraceDto;
+  /** O provedor, o modelo e o esforco escolhidos; so na rota `model`. */
+  model?: ModelSelection;
 }
 
 /** `POST /api/requests`. Responde `202 { requestId }`. */

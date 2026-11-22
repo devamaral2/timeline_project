@@ -22,12 +22,12 @@ function messageOf(request: RequestRecord): string | undefined {
   return request.status === "failed" ? uiConfig.requestFailed : undefined;
 }
 
-/** No Hermes nao ha passos gravados: o que ele pensou e as ferramentas que usou saem do rastro. */
-function traceSteps(trace: AgentTraceDto | undefined): RequestStepDto[] {
+/** No Hermes e no modo modelo nao ha passos gravados: o que pensaram e as ferramentas que usaram saem do rastro. */
+function traceSteps(trace: AgentTraceDto | undefined, route: "hermes" | "model"): RequestStepDto[] {
   return (trace?.entries ?? [])
     .filter((entry) => entry.kind === "thought" || entry.kind === "tool" || entry.kind === "agent")
     .map((entry) => ({
-      id: entry.id, agent: entry.source ?? "hermes", label: entry.label, status: TRACE_STEP_STATUS[entry.status],
+      id: entry.id, agent: entry.source ?? route, label: entry.label, status: TRACE_STEP_STATUS[entry.status],
     }));
 }
 
@@ -46,8 +46,8 @@ export function toRequestDto(
   const trace = request.route === "steps"
     ? toRequestTrace(request, steps, entities, message)
     : request.trace ?? (open ? options.progress?.trace : undefined);
-  const stepDtos: RequestStepDto[] = request.route === "hermes"
-    ? traceSteps(trace)
+  const stepDtos: RequestStepDto[] = request.route === "hermes" || request.route === "model"
+    ? traceSteps(trace, request.route)
     : steps.map((step) => ({
       id: step.id, agent: step.agent, label: step.label, status: step.status,
       ...(step.errorCode ? { errorCode: step.errorCode } : {}),
@@ -76,5 +76,6 @@ export function toRequestDto(
     ...(request.errorCode ? { errorCode: request.errorCode } : {}),
     ...(current ? { progress: current } : {}),
     ...(trace && options.withTrace !== false ? { trace } : {}),
+    ...(request.model ? { model: { ...request.model } } : {}),
   };
 }

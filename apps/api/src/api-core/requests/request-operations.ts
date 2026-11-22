@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, type OnModuleInit } from "@nestjs/common";
 import type {
-  RequestDto, StartEditRequestInput, StartHermesRequestInput, StartRequestInput, StartVoiceRequestInput,
+  RequestDto, StartModelRequestInput, StartEditRequestInput, StartHermesRequestInput, StartRequestInput,
+  StartVoiceRequestInput,
 } from "@repo/contracts";
 import type { FoodGenerationPayload } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
@@ -8,6 +9,7 @@ import { jobErrorCode, type JobFailureHandler, type JobsService } from "../../in
 import { FOOD_GENERATION_JOB } from "../../infrastructure/persistence/artifacts/repositories/food-generation";
 import { assertConfigOwner } from "../agent/config/agent-config-access";
 import type { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
+import type { ModelTurnWorker } from "./model-turn-worker";
 import type { HermesTurnWorker } from "./hermes-turn-worker";
 import { loadAgentDefinition, uiConfig } from "./request-config";
 import type { RequestCreateWorker } from "./request-create-worker";
@@ -38,6 +40,7 @@ export interface RequestWorkers {
   editTarget: RequestEditTargetWorker;
   targetEdit: RequestTargetEditWorker;
   hermes: HermesTurnWorker;
+  model: ModelTurnWorker;
   voice: VoiceTaskWorker;
   food: GenerateFoodUseCase;
 }
@@ -70,6 +73,11 @@ export class RequestOperations implements OnModuleInit {
     }, { onFailure: this.failRequest() });
     this.jobs.register(REQUEST_JOBS.hermes, async (raw, context) => {
       await workers.hermes.run((raw as { requestId: string }).requestId, {
+        signal: context.signal, progress: (value) => context.progress(value),
+      });
+    }, { onFailure: this.failRequest() });
+    this.jobs.register(REQUEST_JOBS.model, async (raw, context) => {
+      await workers.model.run((raw as { requestId: string }).requestId, {
         signal: context.signal, progress: (value) => context.progress(value),
       });
     }, { onFailure: this.failRequest() });
@@ -155,6 +163,21 @@ export class RequestOperations implements OnModuleInit {
     return this.view(requestId, actor);
   }
 
+  /**
+   * `POST /api/requests/model`: a mensagem vai para o modelo escolhido (ADR 0019). Com as ferramentas da agenda
+   * ligadas, o modelo age como o dono do MCP, entao so esse dono (`owner`) fala com ele; sem elas, cada um fala com o
+   * proprio. Quem confere se o provedor e o modelo valem neste ambiente e a rota, antes daqui.
+   */
+  async startModel(input: StartModelRequestInput, actor: AuthenticatedUser, owner?: string): Promise<RequestDto> {
+    if (input.userId !== actor.userId || (owner !== undefined && actor.userId !== owner)) throw new ForbiddenException();
+    await this.assertSession(input.sessionId, actor);
+    const { requestId } = await this.store.start({
+      userId: input.userId, route: "model", text: input.text, sessionId: input.sessionId,
+      clientMessageId: input.clientMessageId, model: input.model, job: REQUEST_JOBS.model,
+    });
+    return this.view(requestId, actor);
+  }
+
   /** `POST /api/requests/voice`: a fala vira um pedido, e o pedido gera a tarefa. */
   async startVoice(input: StartVoiceRequestInput, actor: AuthenticatedUser): Promise<string> {
     const { requestId } = await this.store.start({
@@ -187,7 +210,8 @@ export class RequestOperations implements OnModuleInit {
   }
 
   private async toDto(request: RequestRecord, detailed: boolean): Promise<RequestDto> {
-    const live = detailed && request.route === "hermes" && (request.status === "queued" || request.status === "running");
+    const live = detailed && (request.route === "hermes" || request.route === "model")
+      && (request.status === "queued" || request.status === "running");
     const [steps, entities, progress] = await Promise.all([
       this.store.steps(request.id),
       this.store.entities(request.id),

@@ -2,6 +2,7 @@ import type { AgentTraceDto } from "@repo/contracts";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
 import { getJobsEnv } from "../../config/env";
 import { Artifact, type FoodData } from "../../domain";
+import { ModelRequestError, type ModelChatInput } from "../../infrastructure/model-agent/model-agent";
 import { HermesRequestError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
 import { PostgresEntityBatchWriter } from "../../infrastructure/persistence/agent-batch/postgres-entity-batch-writer";
@@ -21,6 +22,7 @@ import { ArtifactBuilder } from "../artifacts/services/artifact-builder.service"
 import { CreateTaskUseCase } from "../tasks/create-task.usecase";
 import type { ParsedTaskCommand } from "../tasks/gateways/task-command-parsing.gateway";
 import { HermesTurnWorker } from "./hermes-turn-worker";
+import { ModelTurnWorker } from "./model-turn-worker";
 import { RequestAgentRunner } from "./request-agent-runner";
 import { dispatchConfig, uiConfig } from "./request-config";
 import { RequestCreateWorker } from "./request-create-worker";
@@ -46,6 +48,7 @@ let tasks: PostgresTaskRepository;
 let artifacts: PostgresArtifactRepository;
 let dispatch: Record<string, ReturnType<typeof confident>> = {};
 let hermesReply: (input: HermesChatInput) => Promise<{ text: string; trace: AgentTraceDto }>;
+let modelReply: (input: ModelChatInput) => Promise<{ text: string; trace: AgentTraceDto }>;
 let command: ParsedTaskCommand;
 const gateway = new ScriptedStructuredGateway();
 const foodParsing = new ScriptedFoodParsing();
@@ -112,6 +115,7 @@ beforeAll(async () => {
     }),
     targetEdit: new RequestTargetEditWorker({ ...deps, foodParsing, artifactBuilder, files: new FakeAgentFiles() }),
     hermes: new HermesTurnWorker(store, { chat: (input) => hermesReply(input) }),
+    model: new ModelTurnWorker(store, { chat: (input) => modelReply(input) }),
     voice: new VoiceTaskWorker({
       store, parsing: { parseCommand: async () => command }, createTask, batchWriter,
     }),
@@ -135,6 +139,7 @@ beforeEach(async () => {
   };
   command = { input: { name: "Estudar", kind: "common", tags: [] }, schedule: {}, modelProvider: "stub", modelName: "stub" };
   hermesReply = async () => { throw new HermesRequestError("sem resposta combinada"); };
+  modelReply = async () => { throw new ModelRequestError("sem resposta combinada"); };
 });
 
 afterAll(async () => {
@@ -272,6 +277,29 @@ test("consulta: as linhas ficam no passo e so enxergam as tarefas de pessoa do u
   expect(view.status).toBe("done");
   expect(view.steps).toMatchObject([{ agent: "query", status: "done", result: { columns: ["name"], rows: [["Reunião"]], truncated: false } }]);
   expect(gateway.calls.at(-1)?.user).toContain("Esquema:");
+});
+
+test("o modelo recebe a escolha e as trocas anteriores da sessao, lidas do Postgres, e a resposta fica no pedido", async () => {
+  const trace: AgentTraceDto = { route: "model", status: "done", fields: [], entries: [] };
+  const model = { provider: "openrouter", model: "x-ai/grok-4.7", effort: "low" } as const;
+  const selections: ModelChatInput["selection"][] = [];
+  const histories: ModelChatInput["history"][] = [];
+  modelReply = async (input) => {
+    selections.push(input.selection);
+    histories.push(input.history);
+    return { text: `Modelo: ${input.text}`, trace };
+  };
+
+  const first = await operations.startModel({ userId: "user-1", text: "oi", clientMessageId: "model-1", model }, actor);
+  await drain();
+  const second = await operations.startModel({ userId: "user-1", text: "e agora?", sessionId: first.id, clientMessageId: "model-2", model }, actor);
+  await drain();
+
+  expect(histories).toEqual([[], [{ role: "user", text: "oi" }, { role: "assistant", text: "Modelo: oi" }]]);
+  expect(selections).toEqual([model, model]);
+  expect(await operations.view(second.id, actor)).toMatchObject({
+    route: "model", status: "done", message: "Modelo: e agora?", sessionId: first.id, trace: { route: "model" }, model,
+  });
 });
 
 test("o fallback e sempre o Hermes: pedido sem passo e `fallback:` vao a ele, na sessao da conversa", async () => {

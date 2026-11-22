@@ -5,6 +5,7 @@ import { RequestOperations, type RequestWorkers } from "./request-operations";
 import { InMemoryRequestStore } from "./testing/in-memory-request-store";
 
 const actor = { userId: "user-1" };
+const SELECTION = { provider: "anthropic", model: "claude-sonnet-5-5", effort: "medium" } as const;
 
 function setup() {
   const store = new InMemoryRequestStore();
@@ -19,7 +20,7 @@ function setup() {
   const worker = () => ({ run: vi.fn(async () => {}) });
   const workers = {
     dispatcher: worker(), create: worker(), edit: worker(), query: worker(), finalizer: worker(),
-    editTarget: worker(), targetEdit: worker(), hermes: worker(), voice: worker(),
+    editTarget: worker(), targetEdit: worker(), hermes: worker(), model: worker(), voice: worker(),
     food: { execute: vi.fn(async () => "completed"), fail: vi.fn(async () => "failed") },
   };
   const operations = new RequestOperations(jobs, store, workers as unknown as RequestWorkers);
@@ -34,7 +35,7 @@ describe("fila dos pedidos", () => {
   test("um handler por tipo de job da IA, todos com o que fazer quando o job morre", () => {
     const { handlers } = setup();
     expect([...handlers.keys()].sort()).toEqual([
-      "food-generation", "hermes-turn", "request-dispatch", "request-edit-target",
+      "food-generation", "hermes-turn", "model-turn", "request-dispatch", "request-edit-target",
       "request-finalize", "request-step", "voice-task",
     ]);
     for (const [kind, handler] of handlers) expect(handler.onFailure, kind).toBeTypeOf("function");
@@ -131,6 +132,7 @@ describe("iniciar um pedido", () => {
     await expect(operations.start({ userId: "outro", text: "x" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(operations.startEdit({ userId: "outro", text: "x", entityType: "task", entityId: "e1" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(operations.startHermes({ userId: "outro", text: "x", clientMessageId: "m" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(operations.startModel({ userId: "outro", text: "x", clientMessageId: "m", model: SELECTION }, actor)).rejects.toBeInstanceOf(ForbiddenException);
     expect(store.requests.size).toBe(0);
   });
 
@@ -164,6 +166,23 @@ describe("iniciar um pedido", () => {
     expect(hermes).toMatchObject({ route: "hermes", status: "queued", text: "crie uma tarefa", steps: [], entities: [] });
     expect(store.require(voice)).toMatchObject({ route: "voice", userId: "user-1", prompt: "comecei a estudar" });
     expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn", "voice-task"]);
+  });
+
+  test("a mensagem ao modelo vira um pedido da rota dele, com a escolha, na sessao da conversa", async () => {
+    const { store, operations } = setup();
+    store.seed({ id: "01FIRST", prompt: "oi", status: "done" });
+    const claude = await operations.startModel({ userId: "user-1", text: "o que tenho amanhã?", sessionId: "01FIRST", clientMessageId: "m1", model: SELECTION }, actor);
+
+    expect(claude).toMatchObject({ route: "model", status: "queued", text: "o que tenho amanhã?", sessionId: "01FIRST", steps: [], model: SELECTION });
+    expect(store.jobs.map((job) => job.kind)).toEqual(["model-turn"]);
+  });
+
+  test("com as ferramentas da agenda ligadas, so o dono do MCP usa o modo modelo", async () => {
+    const { store, operations } = setup();
+    const input = { userId: "user-1", text: "x", clientMessageId: "m1", model: SELECTION };
+    await expect(operations.startModel(input, actor, "dono")).rejects.toBeInstanceOf(ForbiddenException);
+    expect(store.requests.size).toBe(0);
+    await expect(operations.startModel(input, actor, "user-1")).resolves.toMatchObject({ route: "model" });
   });
 });
 

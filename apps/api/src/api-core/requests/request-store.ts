@@ -1,6 +1,7 @@
 import type {
   AgentRequestKind,
   AgentTraceDto,
+  ModelSelection,
   RequestEditEntityType,
   RequestErrorCode,
   RequestQueryResult,
@@ -68,7 +69,7 @@ export interface RequestOutcome {
   message?: string;
   /** O que o agente de explicacao pensou antes de escrever a mensagem. */
   thought?: string;
-  /** O rastro que precisa sobreviver ao job (o do Hermes, que nao tem passos gravados). */
+  /** O rastro que precisa sobreviver ao job (o do Hermes e o do modo modelo, que nao tem passos gravados). */
   trace?: AgentTraceDto;
 }
 
@@ -88,6 +89,8 @@ export interface RequestRecord {
   forceFallback?: boolean;
   /** O primeiro pedido da sessao; ausente quando este e o primeiro. */
   sessionId?: string;
+  /** O provedor, o modelo e o esforco escolhidos; so na rota `model`. */
+  model?: ModelSelection;
   createdAt: Date;
   updatedAt: Date;
   finishedAt?: Date;
@@ -184,6 +187,8 @@ export interface NewRequest {
   sessionId?: string;
   /** Estavel por mensagem: reenviar o mesmo id devolve o pedido ja aceito. */
   clientMessageId?: string;
+  /** O provedor, o modelo e o esforco escolhidos; so na rota `model`. */
+  model?: ModelSelection;
   /** O job que comeca a executar o pedido. */
   job: RequestJobKind;
 }
@@ -201,9 +206,14 @@ export interface RequestStore {
   find(id: string): Promise<RequestRecord | undefined>;
   /** Os pedidos do usuario, do mais novo para o mais antigo. Passos nao entram. */
   list(userId: string, limit: number): Promise<RequestRecord[]>;
+  /**
+   * A sessao do chat: o primeiro pedido e as continuacoes, do mais antigo para o mais novo, so os `limit` mais
+   * recentes. O modo modelo recebe as trocas anteriores daqui (ADR 0019).
+   */
+  sessionTurns(userId: string, sessionId: string, limit: number): Promise<RequestRecord[]>;
   steps(requestId: string): Promise<StepRecord[]>;
   entities(requestId: string): Promise<RequestEntityRecord[]>;
-  /** O job comecou a trabalhar no pedido que nao se desdobra em passos (Hermes, voz, alimento). */
+  /** O job comecou a trabalhar no pedido que nao se desdobra em passos (Hermes, modo modelo, voz, alimento). */
   markRunning(requestId: string): Promise<void>;
   /** Cria os passos e enfileira todos os jobs de uma vez; o pedido passa a `running`. */
   beginSteps(requestId: string, steps: readonly NewStep[], dispatch?: DispatchRecord): Promise<void>;
