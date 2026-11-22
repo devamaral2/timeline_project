@@ -124,7 +124,7 @@ test("Hermes desligado: a API responde nao encontrado, o chat avisa e sai do mod
   await waitFor(() => expect(result.current.pending).toBeNull());
   expect(hermesPosts()).toHaveLength(1);
   expect(result.current.messages.at(-1)).toMatchObject({ role: "assistant", text: expect.stringContaining("desligado") });
-  expect(result.current.hermesMode).toBe(false);
+  expect(result.current.agentMode).toBeNull();
   expect(onEntitiesChanged).not.toHaveBeenCalled();
 });
 
@@ -132,12 +132,12 @@ test("Hermes desligado no modo Hermes: avisa e volta ao assistente da agenda", a
   serve("off");
   const { result } = setup();
   act(() => { result.current.send("/hermes"); });
-  expect(result.current.hermesMode).toBe(true);
+  expect(result.current.agentMode).toBe("hermes");
 
   act(() => { result.current.send("me diga como conectar ao google agenda"); });
 
   await waitFor(() => expect(result.current.pending).toBeNull());
-  expect(result.current.hermesMode).toBe(false);
+  expect(result.current.agentMode).toBeNull();
   expect(result.current.messages.at(-1)).toMatchObject({ role: "assistant", text: expect.stringContaining("desligado") });
 });
 
@@ -178,7 +178,7 @@ test("depois de /hermes, as mensagens seguintes continuam com o Hermes ate /app"
   const first = await ask(result, "/hermes oi");
   advanceRequest(api, first, { status: "done", message: "Oi." });
   await waitFor(() => expect(result.current.pending).toBeNull());
-  expect(result.current.hermesMode).toBe(true);
+  expect(result.current.agentMode).toBe("hermes");
 
   const second = await ask(result, "me diga como conectar ao google agenda");
   expect(hermesPosts()).toHaveLength(2);
@@ -187,7 +187,7 @@ test("depois de /hermes, as mensagens seguintes continuam com o Hermes ate /app"
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   act(() => { result.current.send("/app"); });
-  expect(result.current.hermesMode).toBe(false);
+  expect(result.current.agentMode).toBeNull();
   expect(result.current.messages.at(-1)).toMatchObject({ role: "assistant", text: expect.stringContaining("De volta") });
 
   await ask(result, "almocei arroz");
@@ -200,7 +200,7 @@ test("/hermes sozinho so liga o modo, sem chamar o servidor", () => {
 
   act(() => { result.current.send("/hermes"); });
 
-  expect(result.current.hermesMode).toBe(true);
+  expect(result.current.agentMode).toBe("hermes");
   expect(result.current.pending).toBeNull();
   expect(result.current.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
   expect(result.current.messages.at(-1)).toMatchObject({ text: expect.stringContaining("/app") });
@@ -215,7 +215,7 @@ test("nova conversa sai do modo Hermes e limpa a sessao", async () => {
 
   act(() => result.current.startNewConversation());
 
-  expect(result.current.hermesMode).toBe(false);
+  expect(result.current.agentMode).toBeNull();
   expect(result.current.messages).toEqual([]);
   await ask(result, "outra conversa");
   expect(stepsPosts()).toHaveLength(1);

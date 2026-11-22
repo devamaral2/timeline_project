@@ -1,7 +1,9 @@
 import type {
+  ModelOptionsDto,
   RequestDto,
   StartEditRequestInput,
   StartHermesRequestInput,
+  StartModelRequestInput,
   StartRequestInput,
   StartRequestResponse,
   StartVoiceRequestInput,
@@ -13,6 +15,8 @@ export const requestsRoutes = {
   startRequest: "POST /api/requests",
   startEditRequest: "POST /api/requests/edit",
   sendHermesMessage: "POST /api/requests/hermes",
+  sendModelMessage: "POST /api/requests/model",
+  getModelOptions: "GET /api/requests/model/options",
   startVoiceRequest: "POST /api/requests/voice",
   getRequest: "GET /api/requests/{requestId}",
   listRequests: "GET /api/requests",
@@ -24,6 +28,14 @@ export class HermesOffError extends Error {
   constructor() {
     super("O Hermes está desligado nesta API.");
     this.name = "HermesOffError";
+  }
+}
+
+/** O modo modelo está desligado nesta API (nenhum provedor com chave): as rotas dele respondem não encontrado. */
+export class ModelOffError extends Error {
+  constructor() {
+    super("O modo modelo está desligado nesta API.");
+    this.name = "ModelOffError";
   }
 }
 
@@ -56,6 +68,29 @@ export async function sendHermesMessage(input: StartHermesRequestInput): Promise
     return await apiRequest<RequestDto>("POST", "/api/requests/hermes", { body: input });
   } catch (error) {
     if (error instanceof ApiRequestError && error.kind === "not_found") throw new HermesOffError();
+    throw error;
+  }
+}
+
+/**
+ * Manda uma mensagem ao modelo que o usuario escolheu (ADR 0019). Devolve o pedido inteiro, como o Hermes. Sem
+ * nenhum provedor com chave, a API responde 404 antes de ler o corpo, e isso vira `ModelOffError`.
+ */
+export async function sendModelMessage(input: StartModelRequestInput): Promise<RequestDto> {
+  try {
+    return await apiRequest<RequestDto>("POST", "/api/requests/model", { body: input });
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.kind === "not_found") throw new ModelOffError();
+    throw error;
+  }
+}
+
+/** Os provedores, os modelos e a escolha padrao deste ambiente. Sem provedor com chave, `ModelOffError`. */
+export async function getModelOptions(): Promise<ModelOptionsDto> {
+  try {
+    return await apiRequest<ModelOptionsDto>("GET", "/api/requests/model/options");
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.kind === "not_found") throw new ModelOffError();
     throw error;
   }
 }

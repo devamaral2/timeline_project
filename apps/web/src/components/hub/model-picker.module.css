@@ -1,0 +1,77 @@
+/* O seletor do modo modelo (canvas "Provedor, modelo e esforço", opção B · Gaveta). Os nomes de cor sao os do shell
+   (--ink, --muted, --line); o verde e o da marca. O painel abre do proprio campo: a linha da grade vai de 0fr a 1fr. */
+
+/* O botao no pe do campo: as quatro barras do esforco e, ao lado, o modelo e o provedor. */
+.picker { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: var(--control-md); padding: 0 12px 0 10px; border-radius: 14px; color: var(--ink); text-align: left; cursor: pointer; transition: background var(--duration-fast); }
+.picker:hover, .picker[data-open="true"] { background: color-mix(in oklab, var(--brand) 14%, transparent); }
+.picker:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.bars { flex: none; display: flex; align-items: flex-end; gap: 2px; height: 19px; }
+.bars span { width: 3px; border-radius: 1px; background: var(--hairline); }
+.bars span[data-on="true"] { background: var(--brand); }
+.bars span:nth-child(1) { height: 7px; }
+.bars span:nth-child(2) { height: 11px; }
+.bars span:nth-child(3) { height: 15px; }
+.bars span:nth-child(4) { height: 19px; }
+.pickerText { min-width: 0; display: flex; flex-direction: column; }
+.pickerModel { overflow: hidden; font-size: 13px; font-weight: 600; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.pickerVia { overflow: hidden; font-family: var(--font-mono); font-size: 12px; line-height: 16px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+
+/* A linha do pe do campo no modo modelo: o botao do seletor, a voz e o envio. */
+.footer { display: flex; align-items: center; gap: 2px; padding: 0 0 0 4px; }
+
+/* O painel: fechado, nao ocupa altura nem recebe foco (`visibility` espera a saida acabar). */
+.panel { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows 280ms cubic-bezier(.4, 0, .2, 1), visibility 0s linear 280ms; }
+.panel[data-open="true"] { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows 460ms cubic-bezier(.2, .8, .2, 1), visibility 0s; }
+.clip { min-height: 0; overflow: hidden; }
+.body { display: grid; gap: 20px; padding: 16px 12px 12px; }
+
+/* Os quatro blocos sobem 12px e aparecem em fila; ao fechar saem juntos, sem espera. */
+.block { min-width: 0; opacity: 0; transform: translateY(12px); transition: opacity 120ms linear, transform 120ms linear; }
+.panel[data-open="true"] .block { opacity: 1; transform: none; transition: opacity 360ms cubic-bezier(.2, .8, .2, 1) var(--delay, 0ms), transform 360ms cubic-bezier(.2, .8, .2, 1) var(--delay, 0ms); }
+.block:nth-child(1) { --delay: 90ms; }
+.block:nth-child(2) { --delay: 140ms; }
+.block:nth-child(3) { --delay: 190ms; }
+.block:nth-child(4) { --delay: 240ms; }
+
+.title { margin: 0 0 10px; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+.name { min-width: 0; overflow-wrap: anywhere; font-size: 15px; font-weight: 600; line-height: 20px; text-align: left; }
+.radio { flex: none; position: relative; width: 18px; height: 18px; border: 2px solid var(--input); border-radius: 50%; transition: border-color var(--duration-fast); }
+.radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand); transform: scale(0); transition: transform var(--duration-fast) var(--ease-out); }
+[aria-pressed="true"] > .radio { border-color: var(--brand); }
+[aria-pressed="true"] > .radio::after { transform: scale(1); }
+
+.providers { display: grid; gap: 8px; }
+.tile { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast); }
+.tile[aria-pressed="true"] { border-color: var(--brand); background: color-mix(in oklab, var(--brand) 14%, transparent); }
+
+.models { display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 14px; color: var(--ink); cursor: pointer; transition: background var(--duration-fast); }
+.row + .row { border-top: 1px solid var(--line); }
+.row[aria-pressed="true"] { background: color-mix(in oklab, var(--brand) 14%, transparent); }
+
+/* O esforco: quatro paradas numa trilha; o verde vai da primeira ate a escolhida, que e a maior. */
+.effort { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.track { position: absolute; top: 13px; left: calc(var(--step) / 2); right: calc(var(--step) / 2); height: 2px; background: var(--hairline); pointer-events: none; }
+.fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--level) * var(--step)); background: var(--brand); transition: width var(--duration-slow) var(--ease-out); }
+.stop { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: var(--control-md); padding: 0; color: var(--ink); cursor: pointer; }
+.dot { box-sizing: border-box; display: block; width: 10px; height: 10px; margin: 8px 0; border: 2px solid var(--hairline); border-radius: 50%; background: var(--card); transition: all var(--duration-fast) var(--ease-out); }
+.stop[data-passed="true"] .dot { border-color: var(--brand); background: var(--brand); }
+.stop[aria-pressed="true"] .dot { width: 18px; height: 18px; margin: 4px 0; border: 5px solid var(--brand); background: var(--card); }
+.stopLabel { font-size: 13px; font-weight: 600; line-height: 18px; }
+.stop:not([aria-pressed="true"]) .stopLabel { color: var(--muted); }
+
+.done { display: grid; place-items: center; width: 100%; min-height: 48px; border-radius: var(--radius-sm); background: var(--primary); color: var(--primary-foreground); font-size: 15px; font-weight: 600; cursor: pointer; }
+
+.tile:focus-visible, .row:focus-visible, .stop:focus-visible, .done:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* O fundo que escurece a conversa enquanto o painel esta aberto; tocar nele fecha. */
+.scrim { position: absolute; inset: 0; z-index: 1; border: 0; background: color-mix(in oklab, var(--background) 62%, transparent); opacity: 0; pointer-events: none; transition: opacity 280ms cubic-bezier(.4, 0, .2, 1); }
+.scrim[data-open="true"] { opacity: 1; pointer-events: auto; transition-duration: 460ms; transition-timing-function: cubic-bezier(.2, .8, .2, 1); }
+
+/* O rodape da resposta: quem respondeu, em mono. */
+.answerModel { margin: 10px 0 0; font-family: var(--font-mono); font-size: 12px; line-height: 16px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .panel, .panel[data-open="true"], .block, .panel[data-open="true"] .block, .scrim, .scrim[data-open="true"], .fill, .dot, .radio, .radio::after, .picker { transition: none; }
+}

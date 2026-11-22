@@ -6,7 +6,7 @@ import { agentFilesRoutes, listAgentFiles, listAgentFileBackups, readAgentFileTe
 import { createArtifact, deleteArtifact, editArtifact, getArtifact, listArtifacts, artifactsRoutes } from "./artifacts";
 import { placesRoutes, searchPlaces } from "./places";
 import { createTask, deleteTask, tasksRoutes, getTask, listAgenda, listTrackedTasks, suggestTags, updateTask } from "./tasks";
-import { cancelRequest, getRequest, listRequests, requestsRoutes, sendHermesMessage, startEditRequest, startRequest, startVoiceRequest } from "./requests";
+import { cancelRequest, getRequest, listRequests, getModelOptions, requestsRoutes, sendHermesMessage, sendModelMessage, startEditRequest, startRequest, startVoiceRequest } from "./requests";
 import { createRecurrence, deleteRecurrence, editRecurrence, getRecurrence, listRecurrences, recurrencesRoutes } from "./recurrences";
 
 /**
@@ -131,6 +131,8 @@ const cases: Case[] = [
     startRequest: () => startRequest(anyBody()),
     startEditRequest: () => startEditRequest(anyBody()),
     sendHermesMessage: () => sendHermesMessage(anyBody()),
+    sendModelMessage: () => sendModelMessage(anyBody()),
+    getModelOptions: () => getModelOptions(),
     startVoiceRequest: () => startVoiceRequest(anyBody()),
     getRequest: () => getRequest("ID"),
     listRequests: () => listRequests(),

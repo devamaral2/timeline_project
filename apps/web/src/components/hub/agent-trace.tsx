@@ -44,7 +44,7 @@ const STATUS_TEXT: Record<AgentTraceStatus, string> = {
   failed: "falhou",
 };
 
-const ROUTE_NAMES: Record<AgentChatTrace["route"], string> = { steps: "Assistente", hermes: "Hermes" };
+const ROUTE_NAMES: Record<AgentChatTrace["route"], string> = { steps: "Assistente", hermes: "Hermes", model: "Modelo" };
 
 /** As raias da linha do tempo: a conversa (o que entrou e o que saiu), o modelo e as ferramentas. */
 const LANES = ["talk", "model", "tool"] as const;

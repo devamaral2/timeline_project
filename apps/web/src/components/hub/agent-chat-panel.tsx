@@ -19,8 +19,9 @@ import field from "@/components/detail/entity-ai-edit-bar.module.css";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import { briefDate } from "@/lib/dates/day-labels";
+import { modelFooter } from "@/lib/agent-chat/model-selection";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
-import type { RequestScreenContext } from "@repo/contracts";
+import type { ModelOptionsDto, RequestScreenContext } from "@repo/contracts";
 import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { useSessionState } from "@/lib/session/use-session";
 import { speechErrorMessage } from "@/lib/speech/speech-error-messages";
@@ -29,11 +30,16 @@ import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
 import type { FreeWindow } from "./hub-open";
 import { AgentTrace } from "./agent-trace";
 import { ChatAnswer } from "./chat-answer";
+import { ModelFooter, ModelPanel, ModelPickerButton } from "./model-picker";
 import { HermesSteps } from "./hermes-steps";
 import { CHANGE_LABELS, EntityRows } from "./entity-rows";
 import { ProcessBox } from "./process-box";
 import { HUB_COMMANDS, type HubCommand, type HubCommandId, isStopSpeech, parseCommand } from "./hub-commands";
 import styles from "@/components/shell/shell.module.css";
+import picker from "./model-picker.module.css";
+
+/** O nome no topo do chat enquanto as mensagens vão a um agente de modo (`/hermes`, `/modelo`). */
+const AGENT_NAMES = { hermes: "Hermes", model: "Modelo" } as const;
 
 /** Quanto a voz precisa ficar parada para o que foi dito seguir para a IA. */
 const SILENCE_SEND_MS = 1800;
@@ -152,6 +158,32 @@ export function AgentChatPanel({
   const [pane, setPane] = useState<"chat" | "process">("chat");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // O seletor do modo modelo: aberto, o painel cresce do campo e a conversa escurece.
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLButtonElement>(null);
+  const pickerPanelId = useId();
+  const { options: modelOptions, selection: modelSelection } = chat.model;
+  const modelPicker = chat.agentMode === "model" && modelOptions && modelSelection ? { options: modelOptions, selection: modelSelection } : null;
+  const showPicker = Boolean(modelPicker);
+  useEffect(() => {
+    if (!showPicker) setPickerOpen(false);
+  }, [showPicker]);
+  // Escape fecha o painel e devolve o foco ao botão do seletor.
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setPickerOpen(false);
+      pickerRef.current?.focus();
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [pickerOpen]);
+  const closePicker = () => {
+    setPickerOpen(false);
+    pickerRef.current?.focus();
+  };
   // Ao abrir o chat, volta a acompanhar os pedidos que ainda rodam (o hook não repete o que já mostra).
   useEffect(() => {
     void chat.recover();
@@ -293,8 +325,29 @@ export function AgentChatPanel({
     setActiveCommand((index) => (Math.min(index, commandMatches.length - 1) + step + commandMatches.length) % commandMatches.length);
   }
 
+  const controls = (
+    <>
+      {voiceSupported ? (
+        <button
+          type="button"
+          className={field.voice}
+          onClick={listening ? () => { setVoiceLoop(false); stop(); } : () => { setQuietVoice(false); start(); }}
+          disabled={!chat.ready || Boolean(chat.pending)}
+          aria-pressed={listening}
+          aria-label={listening ? "Parar de transcrever" : "Transcrever o que eu disser"}
+        >
+          <HermesGlyph />
+        </button>
+      ) : null}
+      <button type="submit" className={field.send} aria-label={chat.pending ? "Aguardando a resposta" : "Enviar mensagem"} disabled={!chat.ready || Boolean(chat.pending) || (!hasText && !highlighted)}>
+        <ArrowUp aria-hidden />
+      </button>
+    </>
+  );
+
   return (
     <div className={styles.assistantPanel} data-chat-view={view}>
+      {modelPicker ? <button type="button" className={picker.scrim} data-open={pickerOpen} tabIndex={-1} aria-hidden onClick={closePicker} /> : null}
       <div className={styles.chatHeader}>
         <button
           type="button"
@@ -306,7 +359,7 @@ export function AgentChatPanel({
           <Plus aria-hidden />
         </button>
         <div className={styles.chatTitle}>
-          <span className={styles.chatLive}>{chat.hermesMode ? "Hermes" : "Assistente"}</span>
+          <span className={styles.chatLive}>{chat.agentMode ? AGENT_NAMES[chat.agentMode] : "Assistente"}</span>
           {view === "conversation" ? <h2>Conversa</h2> : <p>Nova conversa</p>}
         </div>
         {onToggleExpanded ? (
@@ -387,6 +440,7 @@ export function AgentChatPanel({
                   onCancel={chat.pending ? chat.cancel : undefined}
                   entityHref={entityHref}
                   onOpenEntity={onClose}
+                  modelOptions={modelOptions}
                 />
               ))}
             </ol>
@@ -410,11 +464,25 @@ export function AgentChatPanel({
         <form
           className={field.form}
           aria-label="Pedido ao Hermes"
+          data-model={showPicker}
+          data-model-open={pickerOpen}
           onSubmit={(event) => {
             event.preventDefault();
             submit();
           }}
         >
+          {modelPicker ? (
+            <ModelPanel
+              id={pickerPanelId}
+              open={pickerOpen}
+              options={modelPicker.options}
+              selection={modelPicker.selection}
+              onProvider={chat.model.chooseProvider}
+              onModel={chat.model.chooseModel}
+              onEffort={chat.model.chooseEffort}
+              onDone={closePicker}
+            />
+          ) : null}
           {freeWindow && range ? (
             <div className={`${field.context} ${styles.chatWindow}`}>
               <span className={field.contextIcon} aria-hidden><Plus /></span>
@@ -453,22 +521,21 @@ export function AgentChatPanel({
               enterKeyHint="send"
               disabled={!chat.ready}
             />
-            {voiceSupported ? (
-              <button
-                type="button"
-                className={field.voice}
-                onClick={listening ? () => { setVoiceLoop(false); stop(); } : () => { setQuietVoice(false); start(); }}
-                disabled={!chat.ready || Boolean(chat.pending)}
-                aria-pressed={listening}
-                aria-label={listening ? "Parar de transcrever" : "Transcrever o que eu disser"}
-              >
-                <HermesGlyph />
-              </button>
-            ) : null}
-            <button type="submit" className={field.send} aria-label={chat.pending ? "Aguardando a resposta" : "Enviar mensagem"} disabled={!chat.ready || Boolean(chat.pending) || (!hasText && !highlighted)}>
-              <ArrowUp aria-hidden />
-            </button>
+            {modelPicker ? null : controls}
           </div>
+          {modelPicker ? (
+            <div className={picker.footer}>
+              <ModelPickerButton
+                options={modelPicker.options}
+                selection={modelPicker.selection}
+                open={pickerOpen}
+                panelId={pickerPanelId}
+                onToggle={() => setPickerOpen((open) => !open)}
+                buttonRef={pickerRef}
+              />
+              {controls}
+            </div>
+          ) : null}
         </form>
       </div>
     </div>
@@ -483,9 +550,11 @@ interface ChatBubbleProps {
   onChoose?: (choice: string) => void;
   entityHref?: (entity: AgentChatEntityRef) => string | undefined;
   onOpenEntity?: () => void;
+  /** O que o servidor oferece ao modo modelo: dá o nome do modelo no rodapé da resposta. */
+  modelOptions?: ModelOptionsDto | null;
 }
 
-function ChatBubble({ message, onRetry, onCancel, onChoose, entityHref, onOpenEntity }: ChatBubbleProps) {
+function ChatBubble({ message, onRetry, onCancel, onChoose, entityHref, onOpenEntity, modelOptions = null }: ChatBubbleProps) {
   if (message.role === "user") {
     return (
       <li className={styles.chatBubble} data-role="user">
@@ -499,6 +568,7 @@ function ChatBubble({ message, onRetry, onCancel, onChoose, entityHref, onOpenEn
       <li className={styles.chatBubble} data-role="assistant">
         <ChatAnswer text={message.text} onChoose={onChoose} />
         <EntityRows entities={message.entities} entityHref={entityHref} onOpenEntity={onOpenEntity} />
+        {message.model ? <ModelFooter text={modelFooter(modelOptions, message.model)} /> : null}
       </li>
     );
   }

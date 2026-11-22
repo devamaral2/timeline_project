@@ -463,7 +463,7 @@
 .hubHeader .creationToggle [aria-pressed="true"] { border-color: var(--ink); background: transparent; box-shadow: 0 0 0 1px var(--ink); color: var(--ink); font-weight: 600; }
 .hubHeader .hubSearch { flex: 1; padding: 2px 14px; border-radius: 999px; }
 
-.assistantPanel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.assistantPanel { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .chatHeader { flex-shrink: 0; display: flex; align-items: center; gap: 4px; min-height: 60px; margin: 0 -8px; border-bottom: 1px solid var(--line); }
 .chatHeader h2, .chatTitle p { min-width: 0; margin: 0; overflow: hidden; font-size: 15px; font-weight: 600; line-height: 20px; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
 /* O titulo da conversa leva em cima quem responde: o assistente da agenda ou o Hermes (`/hermes`). */
@@ -520,6 +520,12 @@
    aqui so a posicao e a janela livre anexada: tracejada, na cor da marca. */
 .chatField { flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
 .chatField form { background: var(--background); }
+/* O modo modelo (`hub/model-picker`): o campo ganha o seletor no pe e fica acima do fundo que escurece a conversa;
+   aberto o painel, a borda e a sombra do campo ficam mais fortes. */
+.chatField { position: relative; z-index: 2; }
+.chatField form[data-model="true"] { border-radius: 22px; transition: border-color 280ms cubic-bezier(.4, 0, .2, 1), box-shadow 280ms cubic-bezier(.4, 0, .2, 1); }
+.chatField form[data-model-open="true"] { border-color: color-mix(in oklab, var(--ink) 45%, var(--line)); box-shadow: 0 -12px 40px color-mix(in oklab, var(--ink) 18%, transparent); }
+@media (prefers-reduced-motion: reduce) { .chatField form[data-model="true"] { transition: none; } }
 .chatWindow { padding-right: 2px; border-style: dashed; border-color: var(--brand); }
 .chatWindow > span:first-child { color: var(--brand); }
 .chatWindowDuration { flex: none; display: flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: 22px; line-height: 22px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--brand); }
