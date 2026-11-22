@@ -526,6 +526,11 @@
 .chatField form[data-model="true"] { border-radius: 22px; transition: border-color 280ms cubic-bezier(.4, 0, .2, 1), box-shadow 280ms cubic-bezier(.4, 0, .2, 1); }
 .chatField form[data-model-open="true"] { border-color: color-mix(in oklab, var(--ink) 45%, var(--line)); box-shadow: 0 -12px 40px color-mix(in oklab, var(--ink) 18%, transparent); }
 @media (prefers-reduced-motion: reduce) { .chatField form[data-model="true"] { transition: none; } }
+/* Aberto o painel, o campo pode ocupar a altura da conversa, mas nao mais que o chat: ele encolhe e o painel rola por
+   dentro, para o seletor e o envio nunca ficarem por baixo da barra de baixo. */
+.chatField:has(form[data-model-open="true"]) { flex-shrink: 1; min-height: 0; }
+.chatField form[data-model="true"] { min-height: 0; }
+.chatField form[data-model="true"] > :not([data-model-panel]) { flex-shrink: 0; }
 .chatWindow { padding-right: 2px; border-style: dashed; border-color: var(--brand); }
 .chatWindow > span:first-child { color: var(--brand); }
 .chatWindowDuration { flex: none; display: flex; align-items: baseline; gap: 3px; font-family: var(--font-display); font-size: 22px; line-height: 22px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--brand); }

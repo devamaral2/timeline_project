@@ -1,7 +1,7 @@
 "use client";
 
 import type { ModelEffort, ModelOptionsDto, ModelProvider, ModelSelection } from "@repo/contracts";
-import { type CSSProperties, type Ref, useEffect, useId, useRef } from "react";
+import { type CSSProperties, type Ref, useEffect, useId, useMemo, useRef, useState } from "react";
 import { EFFORT_LABELS, modelName, providerName, providerOf } from "@/lib/agent-chat/model-selection";
 import styles from "./model-picker.module.css";
 
@@ -11,7 +11,24 @@ import styles from "./model-picker.module.css";
  * em pontos diferentes do campo; quem os monta guarda se está aberto.
  */
 
-const BAR_COUNT = 4;
+/** As quatro barras do esforco, da mais baixa a mais alta. */
+const BARS = [1, 2, 3, 4] as const;
+/** Com mais modelos que isto, a lista ganha a busca. */
+const SEARCH_FROM = 6;
+
+/** Sem acento e sem caixa: "gemini" acha "Google: Gemini 4 Neon", e o id (`google/gemini-4-neon`) tambem conta. */
+function normalize(text: string): string {
+  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+}
+
+function filterModels<T extends { id: string; name: string }>(models: readonly T[], query: string): readonly T[] {
+  const words = normalize(query).split(/\s+/).filter(Boolean);
+  if (words.length === 0) return models;
+  return models.filter((model) => {
+    const haystack = normalize(`${model.name} ${model.id}`);
+    return words.every((word) => haystack.includes(word));
+  });
+}
 
 interface ModelPickerButtonProps {
   options: ModelOptionsDto;
@@ -38,8 +55,8 @@ export function ModelPickerButton({ options, selection, open, panelId, onToggle,
       onClick={onToggle}
     >
       <span className={styles.bars} aria-hidden>
-        {Array.from({ length: BAR_COUNT }, (_, index) => (
-          <span key={index} data-on={index < level} />
+        {BARS.map((bar) => (
+          <span key={bar} data-on={bar <= level} />
         ))}
       </span>
       <span className={styles.pickerText} aria-hidden>
@@ -70,17 +87,29 @@ export function ModelPanel({ id, open, options, selection, onProvider, onModel, 
   const level = Math.max(0, efforts.indexOf(selection.effort));
   const step = 100 / Math.max(1, efforts.length);
   const bodyRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState("");
+  const models = current?.models ?? [];
+  const shown = useMemo(() => filterModels(models, query), [models, query]);
+
+  // A busca vale para a lista aberta agora: trocar de provedor ou fechar o painel a limpa.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: limpa a busca quando o provedor muda ou o painel fecha.
+  useEffect(() => {
+    setQuery("");
+  }, [selection.provider, open]);
 
   // Aberto, o foco vai para a escolha atual do provedor: o painel fica antes do campo e o teclado chega nele.
   useEffect(() => {
-    if (open) bodyRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus();
+    if (!open) return;
+    bodyRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus();
+    // Numa lista longa (OpenRouter), o modelo escolhido aparece sem rolar a mao.
+    bodyRef.current?.querySelector<HTMLElement>('[data-model-row][aria-pressed="true"]')?.scrollIntoView?.({ block: "nearest" });
   }, [open]);
 
   return (
-    <div id={id} className={styles.panel} data-open={open} aria-hidden={!open} inert={!open}>
+    <div id={id} className={styles.panel} data-open={open} data-model-panel aria-hidden={!open} inert={!open}>
       <div className={styles.clip}>
         <div className={styles.body} ref={bodyRef}>
-          <div className={styles.block} role="group" aria-labelledby={`${titles}-provider`}>
+          <fieldset className={styles.block} aria-labelledby={`${titles}-provider`}>
             <h3 id={`${titles}-provider`} className={styles.title}>Provedor</h3>
             <div className={styles.providers} style={{ gridTemplateColumns: `repeat(${Math.min(3, providers.length)}, minmax(0, 1fr))` }}>
               {providers.map((provider) => (
@@ -96,16 +125,30 @@ export function ModelPanel({ id, open, options, selection, onProvider, onModel, 
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
-          <div className={styles.block} role="group" aria-labelledby={`${titles}-model`}>
+          <fieldset className={styles.block} aria-labelledby={`${titles}-model`}>
             <h3 id={`${titles}-model`} className={styles.title}>Modelo</h3>
+            {models.length > SEARCH_FROM ? (
+              <input
+                type="search"
+                className={styles.search}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar modelo"
+                aria-label="Buscar modelo"
+                autoComplete="off"
+                enterKeyHint="search"
+              />
+            ) : null}
             <div className={styles.models}>
-              {(current?.models ?? []).map((model) => (
+              {shown.length === 0 ? <p className={styles.empty}>Nenhum modelo encontrado.</p> : null}
+              {shown.map((model) => (
                 <button
                   key={model.id}
                   type="button"
                   className={styles.row}
+                  data-model-row
                   aria-pressed={model.id === selection.model}
                   onClick={() => onModel(model.id)}
                 >
@@ -114,9 +157,9 @@ export function ModelPanel({ id, open, options, selection, onProvider, onModel, 
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
-          <div className={styles.block} role="group" aria-labelledby={`${titles}-effort`}>
+          <fieldset className={styles.block} aria-labelledby={`${titles}-effort`}>
             <h3 id={`${titles}-effort`} className={styles.title}>Esforço</h3>
             <div className={styles.effort} style={{ "--step": `${step}%`, "--level": level } as CSSProperties}>
               <span className={styles.track} aria-hidden>
@@ -136,7 +179,7 @@ export function ModelPanel({ id, open, options, selection, onProvider, onModel, 
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           <div className={styles.block}>
             <button type="button" className={styles.done} onClick={onDone}>Selecionar</button>

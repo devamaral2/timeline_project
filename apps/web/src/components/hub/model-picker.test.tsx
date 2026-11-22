@@ -182,3 +182,39 @@ test("only the providers with a key are offered, and a saved choice outside the 
   const providers = screen.getByRole("group", { name: "Provedor" });
   expect(within(providers).getAllByRole("button").map((button) => button.textContent)).toEqual(["Anthropic", "OpenRouter"]);
 });
+
+test("a long list gets a search that matches the name or the id, without accents or case", async () => {
+  const router = [
+    "google/gemini-4-neon:Google: Gemini 4 Neon", "x-ai/grok-4.7:SpaceXAI: Grok 4.7",
+    "anthropic/claude-sonnet-5.5:Anthropic: Claude Sonnet 5.5", "anthropic/claude-opus-5.5:Anthropic: Claude Opus 5.5",
+    "deepseek/deepseek-v4-pro:DeepSeek: DeepSeek V4 Pro", "qwen/qwen4-max:Qwen: Qwen4 Max",
+    "z-ai/glm-5.3:Z.ai: GLM 5.3", "baidu/ernie-5.5:Baidu: ERNIÊ 5.5",
+  ].map((entry) => {
+    const [id, ...name] = entry.split(":");
+    return { id: id as string, name: name.join(":").trim() };
+  });
+  const options = modelOptionsFixture();
+  api = createFakeApi({ areas: [requestsArea({
+    model: "on",
+    modelOptions: { ...options, providers: options.providers.map((provider) => (provider.id === "openrouter" ? { ...provider, models: router } : provider)) },
+  })] });
+  net.authedFetch.mockImplementation(api.authedFetch);
+  await enterModelMode("/openrouter");
+  fireEvent.click(picker());
+
+  const search = screen.getByRole("searchbox", { name: "Buscar modelo" });
+  const models = () => within(screen.getByRole("group", { name: "Modelo" })).getAllByRole("button").map((button) => button.textContent);
+
+  fireEvent.change(search, { target: { value: "CLAUDE" } });
+  expect(models()).toEqual(["Anthropic: Claude Sonnet 5.5", "Anthropic: Claude Opus 5.5"]);
+  fireEvent.change(search, { target: { value: "x-ai" } });
+  expect(models()).toEqual(["SpaceXAI: Grok 4.7"]);
+  fireEvent.change(search, { target: { value: "ernie" } });
+  expect(models()).toEqual(["Baidu: ERNIÊ 5.5"]);
+  fireEvent.change(search, { target: { value: "nada assim" } });
+  expect(screen.getByText("Nenhum modelo encontrado.")).toBeInTheDocument();
+
+  // Trocar de provedor limpa a busca; a lista curta nao tem busca.
+  fireEvent.click(within(screen.getByRole("group", { name: "Provedor" })).getByRole("button", { name: /Anthropic/ }));
+  expect(screen.queryByRole("searchbox", { name: "Buscar modelo" })).toBeNull();
+});

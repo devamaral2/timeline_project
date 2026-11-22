@@ -22,18 +22,23 @@
 /* O painel: fechado, nao ocupa altura nem recebe foco (`visibility` espera a saida acabar). */
 .panel { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows 280ms cubic-bezier(.4, 0, .2, 1), visibility 0s linear 280ms; }
 .panel[data-open="true"] { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows 460ms cubic-bezier(.2, .8, .2, 1), visibility 0s; }
-.clip { min-height: 0; overflow: hidden; }
-.body { display: grid; gap: 20px; padding: 16px 12px 12px; }
+/* Aberto, o painel divide a altura do chat com a conversa: a conversa encolhe ate sumir e, se ainda faltar espaco, a
+   lista de modelos rola por dentro. O campo nunca passa por baixo da barra de baixo. */
+.panel { flex: 0 1 auto; min-height: 0; }
+.clip { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 20px; padding: 16px 12px 12px; overflow: hidden; }
+.body > .block { flex: none; }
+.body > .block:nth-child(2) { flex: 1 1 auto; min-height: 120px; display: flex; flex-direction: column; }
 
 /* Os quatro blocos sobem 12px e aparecem em fila; ao fechar saem juntos, sem espera. */
-.block { min-width: 0; opacity: 0; transform: translateY(12px); transition: opacity 120ms linear, transform 120ms linear; }
+.block { min-width: 0; margin: 0; padding: 0; border: 0; opacity: 0; transform: translateY(12px); transition: opacity 120ms linear, transform 120ms linear; }
 .panel[data-open="true"] .block { opacity: 1; transform: none; transition: opacity 360ms cubic-bezier(.2, .8, .2, 1) var(--delay, 0ms), transform 360ms cubic-bezier(.2, .8, .2, 1) var(--delay, 0ms); }
 .block:nth-child(1) { --delay: 90ms; }
 .block:nth-child(2) { --delay: 140ms; }
 .block:nth-child(3) { --delay: 190ms; }
 .block:nth-child(4) { --delay: 240ms; }
 
-.title { margin: 0 0 10px; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.title { flex: none; margin: 0 0 10px; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 
 .name { min-width: 0; overflow-wrap: anywhere; font-size: 15px; font-weight: 600; line-height: 20px; text-align: left; }
 .radio { flex: none; position: relative; width: 18px; height: 18px; border: 2px solid var(--input); border-radius: 50%; transition: border-color var(--duration-fast); }
@@ -45,7 +50,10 @@
 .tile { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast); }
 .tile[aria-pressed="true"] { border-color: var(--brand); background: color-mix(in oklab, var(--brand) 14%, transparent); }
 
-.models { display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.models { flex: 1 1 auto; min-height: 0; max-height: 288px; display: grid; align-content: start; border: 1px solid var(--line); border-radius: 12px; overflow: hidden auto; overscroll-behavior: contain; }
+.search { flex: none; box-sizing: border-box; width: 100%; min-height: 44px; margin: 0 0 8px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--ink); font: inherit; font-size: 15px; }
+.search::placeholder { color: var(--muted); }
+.empty { margin: 0; padding: 14px; font-size: 14px; color: var(--muted); }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 14px; color: var(--ink); cursor: pointer; transition: background var(--duration-fast); }
 .row + .row { border-top: 1px solid var(--line); }
 .row[aria-pressed="true"] { background: color-mix(in oklab, var(--brand) 14%, transparent); }

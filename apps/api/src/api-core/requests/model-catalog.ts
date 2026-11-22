@@ -1,10 +1,12 @@
-import type { ModelEffort, ModelOptionsDto, ModelProvider, ModelProviderOptionDto, ModelSelection } from "@repo/contracts";
+import type {
+  ModelEffort, ModelOptionDto, ModelOptionsDto, ModelProvider, ModelProviderOptionDto, ModelSelection,
+} from "@repo/contracts";
 import { getServerEnv, type ServerEnv } from "../../config/env";
 
 /**
- * Os modelos que o seletor do modo modelo oferece (ADR 0019), por provedor, na ordem em que aparecem. A lista e
- * fechada: o pedido so aceita um modelo daqui, para ninguem mandar um id qualquer que custe caro. Atualizar e
- * editar esta lista.
+ * Os modelos que o seletor do modo modelo oferece (ADR 0019), por provedor, na ordem em que aparecem. Na Anthropic e
+ * na OpenAI a lista e fechada: o pedido so aceita um modelo daqui. No OpenRouter ela vem da API dele (todo modelo que
+ * usa ferramentas), e esta lista curta so vale quando a dele nao responde.
  */
 const CATALOG: Record<ModelProvider, Omit<ModelProviderOptionDto, "id">> = {
   anthropic: {
@@ -65,10 +67,81 @@ export function modelModeEnabled(env: ServerEnv = getServerEnv()): boolean {
   return enabledProviders(env).length > 0;
 }
 
+/** De onde vem a lista de modelos de cada provedor. */
+export interface ModelLists {
+  models(provider: ModelProvider): Promise<ModelOptionDto[]>;
+}
+
+const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
+/** A lista do OpenRouter muda devagar: uma consulta por hora basta. Sem resposta, tenta de novo em um minuto. */
+const OPENROUTER_TTL_MS = 60 * 60 * 1000;
+const OPENROUTER_RETRY_MS = 60 * 1000;
+const OPENROUTER_TIMEOUT_MS = 5_000;
+
+interface OpenRouterModel {
+  id?: unknown;
+  name?: unknown;
+  supported_parameters?: unknown;
+}
+
+/**
+ * A Anthropic e a OpenAI pela lista curada; o OpenRouter pela API publica de modelos dele, filtrada aos que aceitam
+ * ferramentas (o modo usa as da agenda), sem as variantes `:batch`, que nao conversam. Em ordem alfabetica do nome.
+ */
+export class CatalogModelLists implements ModelLists {
+  private cached?: { models: ModelOptionDto[]; until: number };
+  private loading?: Promise<ModelOptionDto[]>;
+
+  constructor(
+    private readonly request: typeof fetch = fetch,
+    private readonly clock: () => number = Date.now,
+  ) {}
+
+  async models(provider: ModelProvider): Promise<ModelOptionDto[]> {
+    if (provider !== "openrouter") return CATALOG[provider].models.map((model) => ({ ...model }));
+    if (this.cached && this.cached.until > this.clock()) return this.cached.models;
+    this.loading ??= this.loadOpenRouter().finally(() => {
+      this.loading = undefined;
+    });
+    return this.loading;
+  }
+
+  private async loadOpenRouter(): Promise<ModelOptionDto[]> {
+    try {
+      const response = await this.request(OPENROUTER_MODELS_URL, { signal: AbortSignal.timeout(OPENROUTER_TIMEOUT_MS) });
+      if (!response.ok) throw new Error(`OpenRouter ${response.status}`);
+      const payload = (await response.json()) as { data?: OpenRouterModel[] };
+      const models = (payload.data ?? [])
+        .flatMap((model): ModelOptionDto[] => {
+          if (typeof model.id !== "string" || model.id.endsWith(":batch")) return [];
+          const parameters = Array.isArray(model.supported_parameters) ? model.supported_parameters : [];
+          if (!parameters.includes("tools")) return [];
+          return [{ id: model.id, name: typeof model.name === "string" && model.name.trim() ? model.name.trim() : model.id }];
+        })
+        .sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
+      if (models.length === 0) throw new Error("OpenRouter sem modelos com ferramentas");
+      this.cached = { models, until: this.clock() + OPENROUTER_TTL_MS };
+      return models;
+    } catch {
+      const fallback = CATALOG.openrouter.models.map((model) => ({ ...model }));
+      this.cached = { models: fallback, until: this.clock() + OPENROUTER_RETRY_MS };
+      return fallback;
+    }
+  }
+}
+
+const sharedLists = new CatalogModelLists();
+
 /** `GET /api/requests/model/options`; `undefined` sem nenhum provedor. */
-export function modelOptions(env: ServerEnv = getServerEnv()): ModelOptionsDto | undefined {
-  const providers = enabledProviders(env).map((id): ModelProviderOptionDto => ({
-    id, ...CATALOG[id], models: CATALOG[id].models.map((model) => ({ ...model })),
+export async function modelOptions(
+  env: ServerEnv = getServerEnv(),
+  lists: ModelLists = sharedLists,
+): Promise<ModelOptionsDto | undefined> {
+  const providers = await Promise.all(enabledProviders(env).map(async (id): Promise<ModelProviderOptionDto> => {
+    const models = await lists.models(id);
+    const preferred = CATALOG[id].defaultModel;
+    const defaultModel = models.some((model) => model.id === preferred) ? preferred : (models[0]?.id ?? preferred);
+    return { id, name: CATALOG[id].name, defaultModel, models };
   }));
   const first = providers[0];
   if (!first) return undefined;
@@ -76,15 +149,15 @@ export function modelOptions(env: ServerEnv = getServerEnv()): ModelOptionsDto |
 }
 
 /** Por que uma escolha nao vale aqui; `undefined` quando vale. */
-export function selectionProblem(selection: ModelSelection, env: ServerEnv = getServerEnv()): string | undefined {
+export async function selectionProblem(
+  selection: ModelSelection,
+  env: ServerEnv = getServerEnv(),
+  lists: ModelLists = sharedLists,
+): Promise<string | undefined> {
   if (!enabledProviders(env).includes(selection.provider)) return `O provedor ${selection.provider} não está ligado neste ambiente.`;
-  if (!CATALOG[selection.provider].models.some((model) => model.id === selection.model)) {
+  const models = await lists.models(selection.provider);
+  if (!models.some((model) => model.id === selection.model)) {
     return `O modelo ${selection.model} não está na lista de ${CATALOG[selection.provider].name}.`;
   }
   return undefined;
-}
-
-/** O nome que o seletor mostra para um modelo; o id quando ele saiu da lista. */
-export function modelName(selection: Pick<ModelSelection, "provider" | "model">): string {
-  return CATALOG[selection.provider]?.models.find((model) => model.id === selection.model)?.name ?? selection.model;
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,21 +28,30 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
@@ -55,6 +65,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -62,6 +73,8 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.braidBrand
+import app.braid.mobile.domain.chat.MODEL_SEARCH_FROM
+import app.braid.mobile.domain.chat.filterModels
 import app.braid.mobile.domain.chat.modelFooter
 import app.braid.mobile.domain.chat.modelName
 import app.braid.mobile.domain.chat.providerName
@@ -97,9 +110,12 @@ private const val TINT_ALPHA = 0.14f
 private val BlockDelays = listOf(90, 140, 190, 240)
 private val BarHeights = listOf(7.dp, 11.dp, 15.dp, 19.dp)
 
+/** A lista de modelos rola por dentro passando de seis linhas. */
+private val MODEL_LIST_MAX_HEIGHT = 288.dp
+
 /** Quem desligou as animações no sistema (escala 0) não vê o painel crescer: ele aparece e some de uma vez. */
 @Composable
-private fun rememberReducedMotion(): Boolean {
+private fun rememberPickerReducedMotion(): Boolean {
     val resolver = LocalContext.current.contentResolver
     return remember(resolver) {
         runCatching { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }.getOrDefault(false)
@@ -120,7 +136,7 @@ private fun <T> motion(
 /** O quanto o painel está aberto, de 0 a 1; o campo usa o mesmo número para reforçar a borda e a sombra. */
 @Composable
 internal fun rememberPickerProgress(open: Boolean): Float {
-    val reduced = rememberReducedMotion()
+    val reduced = rememberPickerReducedMotion()
     val progress by animateFloatAsState(if (open) 1f else 0f, motion(open, reduced), label = "model-picker")
     return progress
 }
@@ -201,7 +217,7 @@ internal fun ModelPanel(
     actions: ModelActions,
     onDone: () -> Unit,
 ) {
-    val reduced = rememberReducedMotion()
+    val reduced = rememberPickerReducedMotion()
     val progress = rememberPickerProgress(open)
     if (!open && progress == 0f) return
     val maxHeight = (LocalConfiguration.current.screenHeightDp * PANEL_MAX_SCREEN_FRACTION).dp
@@ -334,10 +350,40 @@ private fun ModelBlock(
             .providerOf(picker.selection.provider)
             ?.models
             .orEmpty()
+    // A busca vale para a lista aberta agora: trocar de provedor a limpa.
+    var query by remember(picker.selection.provider) { mutableStateOf("") }
+    val shown = remember(models, query) { filterModels(models, query) }
+    val list = rememberLazyListState()
+    // Numa lista longa (OpenRouter), o modelo escolhido aparece sem rolar a mão.
+    LaunchedEffect(picker.selection.provider) {
+        val index = models.indexOfFirst { it.id == picker.selection.model }
+        if (index > 0) list.scrollToItem(index)
+    }
     Column {
         SectionTitle("Modelo")
-        Column(Modifier.fillMaxWidth().clip(shape).border(1.dp, scheme.outline, shape)) {
-            for ((index, model) in models.withIndex()) {
+        if (models.size > MODEL_SEARCH_FROM) {
+            SearchField(query, { query = it }, Modifier.padding(bottom = 8.dp))
+        }
+        LazyColumn(
+            state = list,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = MODEL_LIST_MAX_HEIGHT)
+                    .clip(shape)
+                    .border(1.dp, scheme.outline, shape),
+        ) {
+            if (shown.isEmpty()) {
+                item {
+                    Text(
+                        text = "Nenhum modelo encontrado.",
+                        modifier = Modifier.padding(14.dp),
+                        color = scheme.onSurfaceVariant,
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+            itemsIndexed(shown, key = { _, model -> model.id }) { index, model ->
                 val selected = model.id == picker.selection.model
                 if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(scheme.outline))
                 Row(
@@ -363,6 +409,41 @@ private fun ModelBlock(
             }
         }
     }
+}
+
+/** "Buscar modelo": o campo que filtra a lista longa; com foco, um fio de 1 dp na cor da marca. */
+@Composable
+private fun SearchField(
+    query: String,
+    onQuery: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val brand = braidBrand()
+    val shape = RoundedCornerShape(12.dp)
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    BasicTextField(
+        value = query,
+        onValueChange = onQuery,
+        singleLine = true,
+        interactionSource = interaction,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp, lineHeight = 22.sp, color = scheme.onBackground),
+        cursorBrush = SolidColor(brand),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = 44.dp)
+                .border(1.dp, if (focused) brand else scheme.outline, shape)
+                .semantics { contentDescription = "Buscar modelo" },
+        decorationBox = { inner ->
+            Box(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), contentAlignment = Alignment.CenterStart) {
+                if (query.isEmpty()) Text("Buscar modelo", color = scheme.onSurfaceVariant, fontSize = 15.sp, lineHeight = 22.sp)
+                inner()
+            }
+        },
+    )
 }
 
 /** O esforço: quatro paradas numa trilha; o verde vai da primeira até a escolhida, que é a maior. */

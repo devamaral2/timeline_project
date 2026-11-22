@@ -31,9 +31,11 @@ canvas "Provedor, modelo e esforço".
    abre um pedido de rota `model`, guarda a escolha em `tasks.data.model` e põe o turno na fila (`model-turn`, ADR
    0013). O cliente acompanha em `GET /api/requests/:id`; pensamentos e ferramentas vêm do rastro, e a resposta em
    `message`. Sem nenhuma chave, as duas rotas respondem 404 e o chat avisa que o modo está desligado.
-4. **A lista de modelos é fechada, no servidor.** `model-catalog.ts` tem os modelos de cada provedor; o pedido com um
-   modelo fora da lista, ou de um provedor sem chave, recebe 400. Ninguém manda um id qualquer que custe caro, e a
-   lista muda num lugar só.
+4. **A lista de modelos é do servidor.** Na Anthropic e na OpenAI ela é fechada, em `model-catalog.ts`. No OpenRouter
+   ela vem da API pública dele (`/api/v1/models`): todo modelo que aceita ferramentas, sem as variantes `:batch`, em
+   ordem alfabética, guardada por uma hora; fora do ar, vale uma lista curta curada, por um minuto. O pedido com um
+   modelo fora da lista do provedor, ou de um provedor sem chave, recebe 400. Com mais de seis modelos, o painel
+   ganha a busca "Buscar modelo" (nome ou id, sem acento e sem caixa) e a lista rola por dentro.
 5. **Um loop, três provedores.** O `ModelAgent` roda o turno igual para todos — abrir o MCP, chamar o modelo, rodar as
    ferramentas pedidas, devolver os resultados, até a resposta — e cada provedor só traduz a conversa:
    - **Anthropic**, pelo SDK oficial com `ANTHROPIC_API_KEY`: raciocínio adaptativo com resumo, cache do prompt e o
@@ -76,8 +78,8 @@ canvas "Provedor, modelo e esforço".
   limite, cobrança por uso). O rastro de cada pedido mostra provedor, modelo, esforço, chamadas e tokens.
 - O modelo pode criar e editar entidades do dono como o Hermes: o risco aceito na ADR 004 (um agente enganado
   sobrescrever campos) vale também aqui, com qualquer modelo da lista.
-- Atualizar os modelos é editar `apps/api/src/api-core/requests/model-catalog.ts`; um modelo aposentado pelo provedor
-  falha o turno até sair da lista.
+- Atualizar os modelos da Anthropic e da OpenAI é editar `apps/api/src/api-core/requests/model-catalog.ts`; um modelo
+  aposentado falha o turno até sair da lista. Os do OpenRouter se atualizam sozinhos.
 - Nas worktrees, o MCP age como o `MCP_OWNER_USER_ID` do 1Password, que não é o admin da base da worktree; ali o modo
   com ferramentas responde 403 até o dono da worktree ser o do MCP.
 - A NetworkPolicy mantém o nome `mcp-from-hermes-only` para o `kubectl apply` atualizar a política existente.

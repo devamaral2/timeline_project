@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.chat
 
 import app.braid.mobile.domain.request.ModelEffort
+import app.braid.mobile.domain.request.ModelOption
 import app.braid.mobile.domain.request.ModelOptions
 import app.braid.mobile.domain.request.ModelProvider
 import app.braid.mobile.domain.request.ModelProviderOption
@@ -109,3 +110,28 @@ fun StoredModelSelection.withModel(model: String): StoredModelSelection =
     StoredModelSelection(current.copy(model = model), models + (current.provider to model))
 
 fun StoredModelSelection.withEffort(effort: ModelEffort): StoredModelSelection = copy(current = current.copy(effort = effort))
+
+/** Com mais modelos que isto, a lista do seletor ganha a busca (como no web). */
+const val MODEL_SEARCH_FROM = 6
+
+/**
+ * Os modelos que a busca acha: cada palavra precisa aparecer no nome ou no id, sem acento e sem caixa ("gemini" acha
+ * "Google: Gemini 4 Neon"; "x-ai" acha `x-ai/grok-4.7`). Busca vazia devolve a lista inteira.
+ */
+fun filterModels(
+    models: List<ModelOption>,
+    query: String,
+): List<ModelOption> {
+    val words = searchKey(query).split(Regex("\\s+")).filter { it.isNotEmpty() }
+    if (words.isEmpty()) return models
+    return models.filter { model ->
+        val haystack = searchKey("${model.name} ${model.id}")
+        words.all { haystack.contains(it) }
+    }
+}
+
+private fun searchKey(text: String): String =
+    java.text.Normalizer
+        .normalize(text, java.text.Normalizer.Form.NFD)
+        .replace(Regex("\\p{M}+"), "")
+        .lowercase(Locale.ROOT)

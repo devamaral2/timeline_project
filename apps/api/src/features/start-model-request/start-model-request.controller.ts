@@ -34,7 +34,7 @@ export class StartModelRequestController {
     if (!modelModeEnabled()) throw new NotFoundException();
     const parsed = startModelRequestBody.safeParse(body);
     if (!parsed.success) throw new InvalidInputError(z.prettifyError(parsed.error));
-    const problem = selectionProblem(parsed.data.model);
+    const problem = await selectionProblem(parsed.data.model);
     if (problem) throw new InvalidInputError(problem);
     return this.requests.startModel(parsed.data, actor, modelAgendaOwner());
   }
