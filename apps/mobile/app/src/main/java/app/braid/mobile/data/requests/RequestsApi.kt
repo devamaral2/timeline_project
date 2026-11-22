@@ -29,6 +29,16 @@ interface RequestsApi {
         @Body body: StartHermesBody,
     ): RequestDto
 
+    /** O corpo do Hermes mais a escolha do modelo (ADR 0019); 404 sem nenhum provedor com chave, 400 com provedor sem chave. */
+    @POST("api/requests/model")
+    suspend fun startModel(
+        @Body body: StartModelBody,
+    ): RequestDto
+
+    /** Os provedores com chave, os modelos de cada um e a escolha padrão; 404 sem nenhum provedor com chave. */
+    @GET("api/requests/model/options")
+    suspend fun modelOptions(): ModelOptionsDto
+
     /** Sem parâmetros: os 20 mais novos, do mais novo para o mais antigo. */
     @GET("api/requests")
     suspend fun recent(): List<RequestDto>

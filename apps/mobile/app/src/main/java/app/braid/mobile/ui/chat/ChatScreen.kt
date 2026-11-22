@@ -1,6 +1,7 @@
 package app.braid.mobile.ui.chat
 
 import android.Manifest
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -46,15 +47,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -127,6 +135,7 @@ fun ChatOverlay(
         promptEdits = chat.promptEdits,
         onTyped = chat::typed,
         onDraft = chat::syncDraft,
+        model = ModelActions(chat::chooseProvider, chat::chooseModel, chat::chooseEffort),
         composerActions = {
             if (state.voice.available) {
                 VoiceButton(
@@ -160,6 +169,8 @@ fun ChatScreen(
     onTyped: (String) -> Unit = {},
     /** O que está escrito no campo, para a fala ser somada a isso. */
     onDraft: (String) -> Unit = {},
+    /** As trocas do seletor do modo modelo. */
+    model: ModelActions = ModelActions(),
     composerActions: @Composable RowScope.() -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -176,6 +187,16 @@ fun ChatScreen(
     val reserved = with(density) { DockReserve.toPx() } + WindowInsets.navigationBars.getBottom(density)
     val bottom = with(density) { maxOf(keyboard.toFloat(), reserved).toDp() }
 
+    // O seletor do modo modelo: aberto, o painel cresce do campo e a conversa escurece. Sai junto com o modo.
+    val picker = state.picker
+    var pickerOpen by rememberSaveable { mutableStateOf(false) }
+    val showPicker = picker != null
+    LaunchedEffect(showPicker) { if (!showPicker) pickerOpen = false }
+    BackHandler(enabled = pickerOpen) { pickerOpen = false }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    var fieldHeight by remember { mutableStateOf(0.dp) }
+
     fun submit() {
         val first = matches.firstOrNull()
         if (first != null) {
@@ -186,44 +207,63 @@ fun ChatScreen(
         if (shown.isNotBlank() && onSend(shown)) prompt = ""
     }
 
-    Column(
+    Box(
         modifier
             .fillMaxSize()
             .background(scheme.background)
-            .pointerInput(Unit) { detectTapGestures { } }
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(start = 16.dp, end = 16.dp, bottom = bottom),
+            .pointerInput(Unit) { detectTapGestures { } },
     ) {
-        ChatHeader(state, onNewConversation)
-        if (state.isConversation) ChatPanes(state, onPane)
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            when {
-                matches.isNotEmpty() ->
-                    CommandList(matches) {
-                        commands.run(it, query?.argument.orEmpty())
-                        prompt = ""
-                    }
-                !state.isConversation ->
-                    ChatHome(state, commands) {
-                        commands.run(it, "")
-                        prompt = ""
-                    }
-                state.pane == ChatPane.Process -> AgentTraceView(state.turns, Modifier.padding(top = 20.dp))
-                else -> Conversation(state, links, onChoose, onRetry, onCancel, onClose)
+        Column(
+            Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(start = 16.dp, end = 16.dp, bottom = bottom),
+        ) {
+            ChatHeader(state, onNewConversation)
+            if (state.isConversation) ChatPanes(state, onPane)
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    matches.isNotEmpty() ->
+                        CommandList(matches) {
+                            commands.run(it, query?.argument.orEmpty())
+                            prompt = ""
+                        }
+                    !state.isConversation ->
+                        ChatHome(state, commands) {
+                            commands.run(it, "")
+                            prompt = ""
+                        }
+                    state.pane == ChatPane.Process -> AgentTraceView(state.turns, Modifier.padding(top = 20.dp))
+                    else -> Conversation(state, links, onChoose, onRetry, onCancel, onClose)
+                }
             }
+            ChatField(
+                state = state,
+                prompt = shown,
+                onPrompt = {
+                    onTyped(it.take(PROMPT_MAX_LENGTH))
+                    prompt = it.take(PROMPT_MAX_LENGTH)
+                },
+                canSend = state.ready && state.pending == null && (shown.isNotBlank() || matches.isNotEmpty()),
+                onSubmit = ::submit,
+                onClearWindow = onClearWindow,
+                picker = picker,
+                pickerOpen = pickerOpen,
+                onPickerToggle = {
+                    pickerOpen = !pickerOpen
+                    if (pickerOpen) {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                    }
+                },
+                onPickerDone = { pickerOpen = false },
+                model = model,
+                onHeight = { fieldHeight = with(density) { it.toDp() } },
+                composerActions = composerActions,
+            )
         }
-        ChatField(
-            state = state,
-            prompt = shown,
-            onPrompt = {
-                onTyped(it.take(PROMPT_MAX_LENGTH))
-                prompt = it.take(PROMPT_MAX_LENGTH)
-            },
-            canSend = state.ready && state.pending == null && (shown.isNotBlank() || matches.isNotEmpty()),
-            onSubmit = ::submit,
-            onClearWindow = onClearWindow,
-            composerActions = composerActions,
-        )
+        // O fundo cobre tudo acima do campo (cabeçalho e conversa); o campo fica por cima, como no web.
+        if (showPicker) ModelScrim(pickerOpen, { pickerOpen = false }, Modifier.fillMaxSize().padding(bottom = bottom + fieldHeight))
     }
 }
 
@@ -248,7 +288,7 @@ private fun ChatHeader(
             }
             Column(Modifier.weight(1f).padding(start = 4.dp)) {
                 Text(
-                    text = (if (state.hermesMode) "Hermes" else "Assistente").uppercase(),
+                    text = (state.agentMode?.title ?: "Assistente").uppercase(),
                     color = scheme.onSurfaceVariant,
                     fontFamily = BraidMonoFont,
                     fontSize = 12.sp,
@@ -471,6 +511,7 @@ private fun Conversation(
                                 },
                         )
                         EntityRows(message.entities, links, onClose)
+                        message.model?.let { ModelFooter(state.model.options, it) }
                     }
                 is ChatMessage.Process ->
                     ProcessBox(
@@ -501,6 +542,12 @@ private fun ChatField(
     canSend: Boolean,
     onSubmit: () -> Unit,
     onClearWindow: () -> Unit,
+    picker: ModelPicker?,
+    pickerOpen: Boolean,
+    onPickerToggle: () -> Unit,
+    onPickerDone: () -> Unit,
+    model: ModelActions,
+    onHeight: (Int) -> Unit,
     composerActions: @Composable RowScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -531,7 +578,13 @@ private fun ChatField(
     LaunchedEffect(state.ready) {
         if (state.ready) runCatching { focus.requestFocus() }
     }
-    Column(Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // Aberto o painel, a borda e a sombra do campo ficam mais fortes.
+    val emphasis = rememberPickerProgress(pickerOpen)
+    val shape = RoundedCornerShape(if (picker != null) 22.dp else 28.dp)
+    Column(
+        Modifier.fillMaxWidth().onSizeChanged { onHeight(it.height) }.padding(top = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         val notice = state.voice.notice
         if (notice != null) {
             Text(
@@ -562,14 +615,41 @@ private fun ChatField(
                 lineHeight = 20.sp,
             )
         }
+        val sendButton =
+            @Composable {
+                Box(
+                    Modifier
+                        .size(44.dp)
+                        .background(if (canSend) scheme.primary else androidx.compose.ui.graphics.Color.Transparent, CircleShape)
+                        .then(if (canSend) Modifier else Modifier.border(1.dp, scheme.outline, CircleShape))
+                        .clickable(enabled = canSend, role = Role.Button, onClick = onSubmit)
+                        .semantics { contentDescription = if (state.pending != null) "Aguardando a resposta" else "Enviar mensagem" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    SvgIcon(
+                        BraidIcons.arrowUp,
+                        size = 20.dp,
+                        color = if (canSend) scheme.onPrimary else scheme.outlineVariant,
+                        strokeWidth = 2f,
+                    )
+                }
+            }
+        val strong = lerp(scheme.outline, scheme.onBackground.copy(alpha = 0.45f).compositeOver(scheme.outline), emphasis)
         Column(
             Modifier
                 .fillMaxWidth()
-                .background(scheme.surface, RoundedCornerShape(28.dp))
-                .border(1.dp, if (focused) braidBrand() else scheme.outline, RoundedCornerShape(28.dp))
+                .shadow(
+                    12.dp * emphasis,
+                    shape,
+                    ambientColor = scheme.onBackground.copy(alpha = 0.18f),
+                    spotColor = scheme.onBackground.copy(alpha = 0.18f),
+                ).background(scheme.surface, shape)
+                .border(1.dp, if (focused) braidBrand() else strong, shape)
+                .clip(shape)
                 .padding(6.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
+            if (picker != null) ModelPanel(picker, pickerOpen, model, onPickerDone)
             if (window != null) WindowChip(window, state.todayKey, onClearWindow)
             Row(Modifier.padding(start = 12.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 BasicTextField(
@@ -597,22 +677,22 @@ private fun ChatField(
                         }
                     },
                 )
-                composerActions()
-                Box(
-                    Modifier
-                        .size(44.dp)
-                        .background(if (canSend) scheme.primary else androidx.compose.ui.graphics.Color.Transparent, CircleShape)
-                        .then(if (canSend) Modifier else Modifier.border(1.dp, scheme.outline, CircleShape))
-                        .clickable(enabled = canSend, role = Role.Button, onClick = onSubmit)
-                        .semantics { contentDescription = if (state.pending != null) "Aguardando a resposta" else "Enviar mensagem" },
-                    contentAlignment = Alignment.Center,
+                // No modo modelo a voz e o envio descem para a linha do seletor.
+                if (picker == null) {
+                    composerActions()
+                    sendButton()
+                }
+            }
+            if (picker != null) {
+                Row(
+                    Modifier.padding(start = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    SvgIcon(
-                        BraidIcons.arrowUp,
-                        size = 20.dp,
-                        color = if (canSend) scheme.onPrimary else scheme.outlineVariant,
-                        strokeWidth = 2f,
-                    )
+                    ModelPickerButton(picker, pickerOpen, onPickerToggle, Modifier.weight(1f, fill = false))
+                    Box(Modifier.weight(1f))
+                    composerActions()
+                    sendButton()
                 }
             }
         }

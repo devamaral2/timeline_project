@@ -98,12 +98,16 @@ data class RequestStep(
     val result: QueryTable? = null,
 )
 
-/** Por onde o pedido anda: `steps` desdobra em passos, `hermes` entrega ao Hermes; as outras duas o chat não mostra. */
+/**
+ * Por onde o pedido anda: `steps` desdobra em passos, `hermes` entrega ao Hermes e `model` ao modelo que a pessoa escolheu
+ * (ADR 0019); as outras duas o chat não mostra.
+ */
 enum class RequestRoute(
     val code: String,
 ) {
     Steps("steps"),
     Hermes("hermes"),
+    Model("model"),
     Voice("voice"),
     Food("food"),
     ;
@@ -161,6 +165,8 @@ data class AgentRequest(
     val text: String? = null,
     /** O rastro com os totais, para a aba "Processo"; [entries] é a lista dele. */
     val trace: AgentTrace? = null,
+    /** O provedor, o modelo e o esforço que atenderam o pedido; só na rota `model`. */
+    val model: ModelSelection? = null,
 )
 
 /** O primeiro pedido da sessão, que a seção "Sessão" mostra e abre. */
@@ -210,6 +216,11 @@ interface AgentRequestRepository {
 class HermesOffException(
     cause: Throwable? = null,
 ) : Exception("O Hermes está desligado nesta API.", cause)
+
+/** O modo modelo está desligado nesta API (nenhum provedor com chave): as rotas dele respondem não encontrado. */
+class ModelOffException(
+    cause: Throwable? = null,
+) : Exception("O modo modelo está desligado nesta API.", cause)
 
 class RequestNotFoundException(
     cause: Throwable? = null,

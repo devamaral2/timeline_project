@@ -2,6 +2,7 @@ package app.braid.mobile.data.chat
 
 import app.braid.mobile.domain.chat.ChatPolling
 import app.braid.mobile.domain.chat.ChatRepository
+import app.braid.mobile.domain.chat.ModelSelectionStore
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -15,6 +16,10 @@ abstract class ChatBindings {
     @Binds
     @Singleton
     abstract fun bindChatRepository(repository: DefaultChatRepository): ChatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindModelSelectionStore(store: DataStoreModelSelectionStore): ModelSelectionStore
 }
 
 @Module

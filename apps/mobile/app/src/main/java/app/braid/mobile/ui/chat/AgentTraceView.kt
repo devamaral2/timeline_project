@@ -46,11 +46,11 @@ import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidTokens
+import app.braid.mobile.domain.chat.ChatAgent
 import app.braid.mobile.domain.chat.TraceLane
 import app.braid.mobile.domain.chat.timelineBars
 import app.braid.mobile.domain.chat.traceDuration
 import app.braid.mobile.domain.request.AgentTrace
-import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.request.TraceEntry
 import app.braid.mobile.domain.request.TraceKind
 import app.braid.mobile.domain.request.TraceRunStatus
@@ -141,7 +141,7 @@ private fun TraceTurn(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = "${if (turn.route == RequestRoute.Hermes) "Hermes" else "Assistente"} · $stateText".uppercase(),
+                text = "${ChatAgent.of(turn.route)?.title ?: "Assistente"} · $stateText".uppercase(),
                 color = if (failed) scheme.error else scheme.onSurfaceVariant,
                 fontFamily = BraidMonoFont,
                 fontSize = 12.sp,

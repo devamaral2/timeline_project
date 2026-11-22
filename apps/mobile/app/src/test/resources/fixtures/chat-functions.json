@@ -208,7 +208,8 @@
         "/hermes"
       ],
       "result": {
-        "kind": "hermes",
+        "kind": "agent",
+        "agent": "hermes",
         "text": null
       }
     },
@@ -217,7 +218,8 @@
         "/hermes  oi tudo bem"
       ],
       "result": {
-        "kind": "hermes",
+        "kind": "agent",
+        "agent": "hermes",
         "text": "oi tudo bem"
       }
     },
@@ -226,7 +228,8 @@
         "/HERMES\nlinha dois"
       ],
       "result": {
-        "kind": "hermes",
+        "kind": "agent",
+        "agent": "hermes",
         "text": "linha dois"
       }
     },
@@ -291,9 +294,133 @@
         "/hermes   "
       ],
       "result": {
-        "kind": "hermes",
+        "kind": "agent",
+        "agent": "hermes",
         "text": null
       }
+    },
+    {
+      "args": [
+        "/claude"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "anthropic",
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/Claude o que tenho amanhã?"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "anthropic",
+        "text": "o que tenho amanhã?"
+      }
+    },
+    {
+      "args": [
+        "/claudes oi"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "claude"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/modelo"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": null,
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/MODELO  qual a previsão?"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": null,
+        "text": "qual a previsão?"
+      }
+    },
+    {
+      "args": [
+        "/openai"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "openai",
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/OpenAI resuma o dia"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "openai",
+        "text": "resuma o dia"
+      }
+    },
+    {
+      "args": [
+        "/openrouter"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "openrouter",
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/openrouter\nlinha dois"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "openrouter",
+        "text": "linha dois"
+      }
+    },
+    {
+      "args": [
+        "/modelos"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/modelo   "
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": null,
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "oi /claude"
+      ],
+      "result": null
     }
   ],
   "parseCommand": [
@@ -1340,6 +1467,1562 @@
         "label": "Reunião antiga",
         "text": "Tarefa apagada"
       }
+    }
+  ],
+  "resolveSelection": [
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        null
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        null
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "max"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "medium"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openai",
+            "model": "gpt-6.2-sol",
+            "effort": "low"
+          },
+          "models": {
+            "openai": "gpt-6.2-sol"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "openai": "gpt-6.2-sol",
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openai",
+            "model": "gpt-6.2-sol",
+            "effort": "low"
+          },
+          "models": {
+            "openai": "gpt-6.2-sol"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "openai": "gpt-6.2-sol",
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-velho",
+            "effort": "low"
+          },
+          "models": {
+            "anthropic": "claude-velho"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "low"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-velho",
+            "effort": "low"
+          },
+          "models": {
+            "anthropic": "claude-velho"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "low"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "max"
+          },
+          "models": {}
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "max"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "max"
+          },
+          "models": {}
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    }
+  ],
+  "withProvider": [
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "anthropic"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "anthropic"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "max"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "openrouter"
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5",
+          "openrouter": "meta/llama-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "openrouter"
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "max"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "openai"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "openai"
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "max"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    }
+  ],
+  "withModel": [
+    {
+      "args": [
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "claude-sonnet-5-5"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    }
+  ],
+  "withEffort": [
+    {
+      "args": [
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "low"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "low"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    }
+  ],
+  "modelFooter": [
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        }
+      ],
+      "result": "sonnet 5.5 · médio · anthropic"
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        }
+      ],
+      "result": "opus 5.5 · alto · anthropic"
+    },
+    {
+      "args": [
+        null,
+        {
+          "provider": "openrouter",
+          "model": "google/gemini-4-neon",
+          "effort": "low"
+        }
+      ],
+      "result": "google/gemini-4-neon · baixo · openrouter"
+    }
+  ],
+  "modelName": [
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        }
+      ],
+      "result": "Sonnet 5.5"
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "provider": "anthropic",
+          "model": "desconhecido"
+        }
+      ],
+      "result": "desconhecido"
+    },
+    {
+      "args": [
+        null,
+        {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        }
+      ],
+      "result": "claude-sonnet-5-5"
+    }
+  ],
+  "providerOffText": [
+    {
+      "args": [
+        "anthropic"
+      ],
+      "result": "A Anthropic não está ligada neste ambiente."
+    },
+    {
+      "args": [
+        "openai"
+      ],
+      "result": "A OpenAI não está ligada neste ambiente."
+    },
+    {
+      "args": [
+        "openrouter"
+      ],
+      "result": "O OpenRouter não está ligado neste ambiente."
     }
   ],
   "failureText": [

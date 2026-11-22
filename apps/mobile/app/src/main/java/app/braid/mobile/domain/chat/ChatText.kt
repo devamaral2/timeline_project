@@ -13,10 +13,14 @@ import java.time.Instant
 /** O texto de falha do chat: o mesmo `ERROR_TEXTS` do web, que o detalhe da tarefa de agente também usa. */
 fun chatFailureText(code: ChatFailureCode): String = agentFailureText(code.code)
 
-const val HERMES_DISABLED_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION)."
+const val CHAT_LEAVE_TEXT = "De volta ao assistente da agenda."
+
+/** O aviso de quando a rota do Hermes não existe nesta API (404). */
+const val HERMES_OFF_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION)."
+
+/** O aviso de quando o modo Hermes liga (`/hermes` sozinho). */
 const val HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda."
-const val HERMES_LEAVE_TEXT = "De volta ao assistente da agenda."
-const val HERMES_PENDING_LABEL = "Falando com o Hermes"
+
 const val STEPS_PENDING_LABEL = "Realizando processos"
 
 /** "Tarefa criada", "Nota alterada"…: a linha de um registro que o pedido tocou. Todo documento aparece como "Nota". */

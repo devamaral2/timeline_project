@@ -1,0 +1,45 @@
+{
+  "providers": [
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "models": [
+        {
+          "id": "claude-opus-5-5",
+          "name": "Opus 5.5"
+        },
+        {
+          "id": "claude-sonnet-5-5",
+          "name": "Sonnet 5.5"
+        }
+      ],
+      "defaultModel": "claude-sonnet-5-5"
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "models": [
+        {
+          "id": "google/gemini-4-neon",
+          "name": "Gemini 4 Neon"
+        },
+        {
+          "id": "meta/llama-5",
+          "name": "Llama 5"
+        }
+      ],
+      "defaultModel": "meta/llama-5"
+    }
+  ],
+  "efforts": [
+    "low",
+    "medium",
+    "high",
+    "max"
+  ],
+  "default": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-5-5",
+    "effort": "medium"
+  }
+}

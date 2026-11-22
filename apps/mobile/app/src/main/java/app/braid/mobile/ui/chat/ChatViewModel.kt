@@ -3,23 +3,38 @@ package app.braid.mobile.ui.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.agenda.FreeWindow
+import app.braid.mobile.domain.chat.CHAT_LEAVE_TEXT
+import app.braid.mobile.domain.chat.ChatAgent
 import app.braid.mobile.domain.chat.ChatFailureCode
 import app.braid.mobile.domain.chat.ChatModeCommand
 import app.braid.mobile.domain.chat.ChatPolling
 import app.braid.mobile.domain.chat.ChatRepository
 import app.braid.mobile.domain.chat.ChatRequestException
-import app.braid.mobile.domain.chat.HERMES_DISABLED_TEXT
 import app.braid.mobile.domain.chat.HERMES_ENTER_TEXT
-import app.braid.mobile.domain.chat.HERMES_LEAVE_TEXT
-import app.braid.mobile.domain.chat.HERMES_PENDING_LABEL
+import app.braid.mobile.domain.chat.HERMES_OFF_TEXT
+import app.braid.mobile.domain.chat.MODEL_OFF_TEXT
+import app.braid.mobile.domain.chat.ModelSelectionStore
 import app.braid.mobile.domain.chat.STEPS_PENDING_LABEL
+import app.braid.mobile.domain.chat.StoredModelSelection
 import app.braid.mobile.domain.chat.chatFailureText
 import app.braid.mobile.domain.chat.hermesStepsOf
+import app.braid.mobile.domain.chat.modelEnterText
 import app.braid.mobile.domain.chat.parseChatCommand
 import app.braid.mobile.domain.chat.parseCommand
+import app.braid.mobile.domain.chat.pendingLabelOf
+import app.braid.mobile.domain.chat.providerOf
+import app.braid.mobile.domain.chat.providerOffText
 import app.braid.mobile.domain.chat.requestWithWindow
+import app.braid.mobile.domain.chat.resolveSelection
+import app.braid.mobile.domain.chat.withEffort
+import app.braid.mobile.domain.chat.withModel
+import app.braid.mobile.domain.chat.withProvider
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.HermesOffException
+import app.braid.mobile.domain.request.ModelEffort
+import app.braid.mobile.domain.request.ModelOffException
+import app.braid.mobile.domain.request.ModelOptions
+import app.braid.mobile.domain.request.ModelProvider
 import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isOpenRequest
@@ -60,7 +75,8 @@ private const val SILENCE_SEND_MS = 1_800L
 /**
  * A conversa com o agente. Vive acima da folha (o `ViewModel` é da atividade): fechar o chat ou trocar de tela não apaga a
  * conversa nem derruba a resposta em andamento; só "Nova conversa" a zera. Cada mensagem vira um pedido na API (rota por
- * passos) ou, depois de `/hermes`, vai ao Hermes; o pedido é acompanhado até o fim e a caixa de processo mostra cada passo.
+ * passos) ou, depois de `/hermes` ou de um comando de modelo (`/modelo`, `/claude`, `/openai`, `/openrouter`), vai ao Hermes ou
+ * ao modelo escolhido (ADR 0019); o pedido é acompanhado até o fim e a caixa de processo mostra cada passo.
  */
 @HiltViewModel
 class ChatViewModel
@@ -70,6 +86,7 @@ class ChatViewModel
         private val session: SessionRepository,
         private val clock: AppClock,
         private val polling: ChatPolling,
+        private val modelStore: ModelSelectionStore,
         private val speech: SpeechRecognizer = NoSpeechRecognizer,
         private val microphone: MicrophonePermission = GrantedMicrophone,
     ) : ViewModel() {
@@ -96,6 +113,12 @@ class ChatViewModel
         private val knownRequests = mutableSetOf<String>()
         private var recovering = false
         private val deferred = mutableListOf<() -> Unit>()
+
+        /** O que o servidor oferece ao modo modelo: lido ao entrar no modo e guardado até "Nova conversa". */
+        private var modelOptions: ModelOptions? = null
+
+        /** A escolha atual (provedor, modelo, esforço) e o último modelo de cada provedor; o aparelho a guarda. */
+        private var modelState: StoredModelSelection? = null
         private var botThinking = false
         private var botTimer: Job? = null
 
@@ -228,26 +251,32 @@ class ChatViewModel
             val notice = { text: String -> ChatMessage.Assistant("$id-notice", text) }
 
             // `/hermes` sozinho só liga o modo; `/app` o desliga. Nenhum dos dois vai ao servidor.
-            if (command is ChatModeCommand.Leave && mutableState.value.hermesMode) {
-                commit { it.copy(hermesMode = false, messages = it.messages + ChatMessage.User(id, trimmed) + notice(HERMES_LEAVE_TEXT)) }
+            if (command is ChatModeCommand.Leave && mutableState.value.agentMode != null) {
+                commit { it.copy(agentMode = null, messages = it.messages + ChatMessage.User(id, trimmed) + notice(CHAT_LEAVE_TEXT)) }
                 return true
             }
             if (command is ChatModeCommand.Hermes && command.text == null) {
-                commit { it.copy(hermesMode = true, messages = it.messages + ChatMessage.User(id, trimmed) + notice(HERMES_ENTER_TEXT)) }
+                commit {
+                    it.copy(
+                        agentMode = ChatAgent.Hermes,
+                        messages =
+                            it.messages + ChatMessage.User(id, trimmed) + notice(HERMES_ENTER_TEXT),
+                    )
+                }
                 return true
             }
-            if (command is ChatModeCommand.Hermes) commit { it.copy(hermesMode = true) }
+            if (command is ChatModeCommand.Hermes) commit { it.copy(agentMode = ChatAgent.Hermes) }
 
-            val hermesText =
-                when {
-                    command is ChatModeCommand.Hermes -> command.text
-                    mutableState.value.hermesMode -> trimmed
-                    else -> null
-                }
+            val agent = mutableState.value.agentMode
             following += id
             commit { it.copy(messages = it.messages + ChatMessage.User(id, trimmed), pending = ChatPending(id, null)) }
             val run = {
-                if (hermesText != null) runHermes(id, hermesText) else runRequest(id, trimmed)
+                when {
+                    command is ChatModeCommand.Model -> enterModelMode(id, command.provider, command.text)
+                    command is ChatModeCommand.Hermes -> runAgent(ChatAgent.Hermes, id, command.text ?: trimmed)
+                    agent != null -> runAgent(agent, id, trimmed)
+                    else -> runRequest(id, trimmed)
+                }
             }
             if (recovering) deferred += run else run()
             return true
@@ -281,8 +310,13 @@ class ChatViewModel
             }
         }
 
-        /** `/hermes <mensagem>`: o pedido vai ao Hermes; sem ele (404) o chat avisa e sai do modo. */
-        private fun runHermes(
+        /**
+         * A mensagem a um agente de modo: vira um pedido na rota dele, com o id da mensagem (reenviar não abre outro) e a
+         * sessão; no modo modelo, com a escolha atual de provedor, modelo e esforço. Com o agente desligado a API responde
+         * 404: o chat avisa e sai do modo.
+         */
+        private fun runAgent(
+            agent: ChatAgent,
             id: String,
             text: String,
         ) {
@@ -290,31 +324,151 @@ class ChatViewModel
             viewModelScope.launch {
                 val request =
                     try {
-                        repository.sendHermes(user, text, sessionId, id)
-                    } catch (_: HermesOffException) {
-                        following -= id
-                        commit {
-                            it.copy(
-                                hermesMode = false,
-                                pending = null,
-                                messages = it.messages + ChatMessage.Assistant("$id-hermes", HERMES_DISABLED_TEXT),
-                            )
+                        when (agent) {
+                            ChatAgent.Hermes -> repository.sendHermes(user, text, sessionId, id)
+                            ChatAgent.Model -> {
+                                loadModelOptions()
+                                val selection = modelState?.current ?: throw ModelOffException()
+                                repository.sendModel(user, text, sessionId, id, selection)
+                            }
                         }
-                        return@launch
-                    } catch (failure: ChatRequestException) {
-                        fail(id, failure.failure)
-                        return@launch
+                    } catch (failure: Exception) {
+                        if (failure is HermesOffException || failure is ModelOffException) {
+                            following -= id
+                            commit {
+                                it.copy(
+                                    agentMode = null,
+                                    pending = null,
+                                    messages =
+                                        it.messages +
+                                            ChatMessage.Assistant(
+                                                "$id-${agent.code}",
+                                                if (agent ==
+                                                    ChatAgent.Hermes
+                                                ) {
+                                                    HERMES_OFF_TEXT
+                                                } else {
+                                                    MODEL_OFF_TEXT
+                                                },
+                                            ),
+                                )
+                            }
+                            return@launch
+                        }
+                        if (failure is ChatRequestException) {
+                            fail(id, failure.failure)
+                            return@launch
+                        }
+                        throw failure
                     }
                 sessionId = sessionId ?: request.id
                 knownRequests += request.id
                 commit {
                     it.copy(
-                        turns = upsertTurn(it.turns, ChatTurn(id, text, RequestRoute.Hermes, running = true, trace = null)),
-                        pending = ChatPending(id, HERMES_PENDING_LABEL, request.id),
+                        turns = upsertTurn(it.turns, ChatTurn(id, text, agent.route, running = true, trace = null)),
+                        pending = ChatPending(id, pendingLabelOf(agent, request.model ?: modelState?.current, modelOptions), request.id),
                     )
                 }
                 followRequest(id, request.id)
             }
+        }
+
+        /**
+         * `/modelo`, `/claude`, `/openai` ou `/openrouter`: lê as opções do servidor, escolhe o provedor do comando (se ele tem
+         * chave aqui), liga o modo e, havendo mensagem depois do comando, a envia. Sem provedor com chave o chat avisa e fica
+         * fora do modo; com o provedor do comando desligado, avisa e deixa o modo como estava.
+         */
+        private fun enterModelMode(
+            id: String,
+            provider: ModelProvider?,
+            text: String?,
+        ) {
+            viewModelScope.launch {
+                val options =
+                    try {
+                        loadModelOptions()
+                    } catch (failure: Exception) {
+                        if (failure is ModelOffException) {
+                            following -= id
+                            commit {
+                                it.copy(
+                                    agentMode = null,
+                                    pending = null,
+                                    messages = it.messages + ChatMessage.Assistant("$id-notice", MODEL_OFF_TEXT),
+                                )
+                            }
+                            return@launch
+                        }
+                        if (failure is ChatRequestException) {
+                            fail(id, failure.failure)
+                            return@launch
+                        }
+                        throw failure
+                    }
+                if (id !in following) return@launch
+                if (provider != null && options.providerOf(provider) == null) {
+                    following -= id
+                    commit {
+                        it.copy(
+                            pending = null,
+                            messages = it.messages + ChatMessage.Assistant("$id-notice", providerOffText(provider)),
+                        )
+                    }
+                    return@launch
+                }
+                val resolved = modelState ?: resolveSelection(options, null)
+                val chosen = if (provider != null) resolved.withProvider(options, provider) else resolved
+                commitModelState(chosen)
+                commit { it.copy(agentMode = ChatAgent.Model) }
+                if (text == null) {
+                    following -= id
+                    commit {
+                        it.copy(
+                            pending = null,
+                            messages = it.messages + ChatMessage.Assistant("$id-notice", modelEnterText(options, chosen.current)),
+                        )
+                    }
+                    return@launch
+                }
+                runAgent(ChatAgent.Model, id, text)
+            }
+        }
+
+        /**
+         * Lê as opções do servidor (uma vez por conversa) e confere a escolha guardada contra elas. Sem nenhum provedor com
+         * chave a API responde 404 e isto sobe [ModelOffException].
+         */
+        private suspend fun loadModelOptions(): ModelOptions {
+            modelOptions?.let { return it }
+            val options = repository.modelOptions()
+            modelOptions = options
+            commitModelState(resolveSelection(options, modelState ?: modelStore.read()))
+            return options
+        }
+
+        /** A escolha vale já na tela e fica no aparelho. */
+        private fun commitModelState(next: StoredModelSelection) {
+            modelState = next
+            commit { it.copy(model = ModelUiState(modelOptions, next.current)) }
+            viewModelScope.launch { modelStore.write(next) }
+        }
+
+        /** Troca o provedor no seletor: o modelo é o que ele tinha na última vez, ou o padrão dele. */
+        fun chooseProvider(provider: ModelProvider) {
+            val state = modelState ?: return
+            val options = modelOptions ?: return
+            commitModelState(state.withProvider(options, provider))
+        }
+
+        fun chooseModel(model: String) {
+            val state = modelState ?: return
+            val options = modelOptions ?: return
+            if (options.providerOf(state.current.provider)?.models?.any { it.id == model } == true) commitModelState(state.withModel(model))
+        }
+
+        fun chooseEffort(effort: ModelEffort) {
+            val state = modelState ?: return
+            commitModelState(state.withEffort(effort))
         }
 
         // endregion
@@ -372,23 +526,24 @@ class ChatViewModel
 
         /**
          * Mostra o estado do pedido na caixa de processo e no rastro da aba "Processo". O pedido por passos que o roteador não
-         * reconhece vai ao Hermes: a caixa sai e a conversa segue como no `/hermes`, com os passos do rastro e a resposta.
+         * reconhece vai ao Hermes: a caixa sai e a conversa segue como no `/hermes`, com os passos do rastro e a resposta. O
+         * modo modelo segue do mesmo jeito.
          */
         private fun applyView(
             id: String,
             view: AgentRequest,
         ) {
             val processId = "$id-process"
-            val hermes = view.route == RequestRoute.Hermes
+            val agent = ChatAgent.of(view.route)
             commit { current ->
                 var messages =
-                    if (hermes) {
+                    if (agent != null) {
                         current.messages.filter { it.id != processId }
                     } else {
                         current.messages.map { if (it.id == processId) ChatMessage.Process(processId, view) else it }
                     }
-                // O Hermes não grava passos: os pensamentos e as ferramentas vêm do rastro, ao vivo e depois do fim.
-                if (hermes) {
+                // O Hermes e o modelo não gravam passos: os pensamentos e as ferramentas vêm do rastro, ao vivo e depois do fim.
+                if (agent != null) {
                     val steps = hermesStepsOf(view.entries)
                     if (steps.isNotEmpty()) {
                         val stepsId = "$id-steps"
@@ -410,6 +565,7 @@ class ChatViewModel
                     }
                 }
                 val pending = current.pending
+                val label = agent?.let { pendingLabelOf(it, view.model ?: modelState?.current, modelOptions) }
                 current.copy(
                     messages = messages,
                     turns =
@@ -418,7 +574,7 @@ class ChatViewModel
                                 id
                             ) {
                                 it.copy(
-                                    route = if (hermes) RequestRoute.Hermes else RequestRoute.Steps,
+                                    route = agent?.route ?: RequestRoute.Steps,
                                     running = isOpenRequest(view.status),
                                     trace = view.trace,
                                 )
@@ -427,8 +583,8 @@ class ChatViewModel
                             }
                         },
                     pending =
-                        if (hermes && isOpenRequest(view.status) && pending?.id == id && pending.label != HERMES_PENDING_LABEL) {
-                            pending.copy(label = HERMES_PENDING_LABEL)
+                        if (label != null && isOpenRequest(view.status) && pending?.id == id && pending.label != label) {
+                            pending.copy(label = label)
                         } else {
                             pending
                         },
@@ -446,10 +602,8 @@ class ChatViewModel
                 following -= id
                 commit { current ->
                     val answer =
-                        if (view.route ==
-                            RequestRoute.Hermes
-                        ) {
-                            listOf(ChatMessage.Assistant("$id-answer", view.message.orEmpty()))
+                        if (ChatAgent.of(view.route) != null) {
+                            listOf(ChatMessage.Assistant("$id-answer", view.message.orEmpty(), model = view.model))
                         } else {
                             emptyList()
                         }
@@ -458,18 +612,18 @@ class ChatViewModel
                         messages = current.messages + answer,
                     )
                 }
-                // O Hermes pode ter mexido em qualquer registro; criar, editar e vincular mudam a agenda, uma consulta pura não.
-                if (view.route == RequestRoute.Hermes || view.entities.isNotEmpty()) mutableEntitiesChanged.tryEmit(Unit)
+                // O agente pode ter mexido em qualquer registro; criar, editar e vincular mudam a agenda, uma consulta pura não.
+                if (ChatAgent.of(view.route) != null || view.entities.isNotEmpty()) mutableEntitiesChanged.tryEmit(Unit)
                 return
             }
             // Um pedido que falhou ou foi cancelado pode ter gravado algo antes de parar.
             if (view.entities.isNotEmpty()) mutableEntitiesChanged.tryEmit(Unit)
-            // O Hermes desligado: o servidor escreve o aviso, que diz mais que o texto do código.
-            val notice = if (view.route == RequestRoute.Hermes && view.errorCode == "unavailable") view.message else null
+            // O agente desligado: o servidor escreve o aviso, que diz mais que o texto do código.
+            val notice = if (ChatAgent.of(view.route) != null && view.errorCode == "unavailable") view.message else null
             fail(id, if (view.status == TaskStatus.Cancel) ChatFailureCode.Cancelled else ChatFailureCode.fromCode(view.errorCode), notice)
         }
 
-        /** [text] troca o texto do código pelo que o servidor escreveu (o aviso do Hermes desligado). */
+        /** [text] troca o texto do código pelo que o servidor escreveu (o aviso do agente desligado). */
         private fun fail(
             id: String,
             code: ChatFailureCode,
@@ -548,12 +702,14 @@ class ChatViewModel
         private fun reset() {
             following.clear()
             sessionId = null
+            modelOptions = null
             commit {
                 it.copy(
+                    model = ModelUiState(null, modelState?.current),
                     messages = emptyList(),
                     turns = emptyList(),
                     pending = null,
-                    hermesMode = false,
+                    agentMode = null,
                     pane = ChatPane.Conversation,
                     freeWindow = null,
                 )
@@ -564,7 +720,7 @@ class ChatViewModel
 
         /**
          * Ao abrir o chat: lê a lista de pedidos e volta a acompanhar os que ainda estão na fila, executando ou aguardando (rota
-         * por passos ou Hermes), como um pedido recém-enviado. Não repete o que a conversa já mostra ou enviou, nem o que já
+         * por passos, Hermes ou modelo), como um pedido recém-enviado. Não repete o que a conversa já mostra ou enviou, nem o que já
          * terminou. Um envio feito enquanto a lista é lida espera o fim dela. Sem lista (rede), a conversa segue.
          */
         private fun recover() {
@@ -577,7 +733,7 @@ class ChatViewModel
                         repository
                             .recent()
                             .filter {
-                                (it.route == RequestRoute.Steps || it.route == RequestRoute.Hermes) &&
+                                (it.route == RequestRoute.Steps || ChatAgent.of(it.route) != null) &&
                                     isOpenRequest(it.status) &&
                                     it.id !in knownRequests
                             }.reversed()
@@ -610,7 +766,8 @@ class ChatViewModel
                         current.pending
                             ?: ChatPending(
                                 newest.id,
-                                if (newest.route == RequestRoute.Hermes) HERMES_PENDING_LABEL else STEPS_PENDING_LABEL,
+                                ChatAgent.of(newest.route)?.let { pendingLabelOf(it, newest.model ?: modelState?.current, modelOptions) }
+                                    ?: STEPS_PENDING_LABEL,
                                 newest.id,
                             ),
                 )

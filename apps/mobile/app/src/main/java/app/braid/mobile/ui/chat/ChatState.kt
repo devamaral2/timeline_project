@@ -1,9 +1,12 @@
 package app.braid.mobile.ui.chat
 
 import app.braid.mobile.domain.agenda.FreeWindow
+import app.braid.mobile.domain.chat.ChatAgent
 import app.braid.mobile.domain.chat.HermesStep
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentTrace
+import app.braid.mobile.domain.request.ModelOptions
+import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.request.RequestEntity
 import app.braid.mobile.domain.request.RequestRoute
 
@@ -22,6 +25,8 @@ sealed interface ChatMessage {
         override val id: String,
         val text: String,
         val entities: List<RequestEntity> = emptyList(),
+        /** A escolha que atendeu a resposta (modo modelo): a conversa a mostra no rodapé dela. */
+        val model: ModelSelection? = null,
     ) : ChatMessage
 
     /**
@@ -42,7 +47,7 @@ sealed interface ChatMessage {
         val request: AgentRequest?,
     ) : ChatMessage
 
-    /** Os passos do Hermes (ferramentas e pensamentos), ao vivo e depois do fim do turno. */
+    /** Os passos do Hermes ou do modelo (ferramentas e pensamentos), ao vivo e depois do fim do turno. */
     data class HermesSteps(
         override val id: String,
         val steps: List<HermesStep>,
@@ -86,13 +91,24 @@ data class VoiceUiState(
     val askPermission: Boolean = false,
 )
 
+/** O seletor do modo modelo: aparece quando o modo está ligado e há [options] e [selection]. */
+data class ModelUiState(
+    val options: ModelOptions? = null,
+    val selection: ModelSelection? = null,
+)
+
 data class ChatUiState(
     val open: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
     val pending: ChatPending? = null,
     val turns: List<ChatTurn> = emptyList(),
-    /** `/hermes` liga o modo: as mensagens seguintes vão ao Hermes até `/app`, ou até começar de novo. */
-    val hermesMode: Boolean = false,
+    /**
+     * O agente que recebe as mensagens: `/hermes` ou um comando de modelo (`/modelo`, `/claude`…) liga o modo até `/app`, ou
+     * até começar de novo. `null` é o assistente da agenda.
+     */
+    val agentMode: ChatAgent? = null,
+    /** O modo modelo: o que o servidor oferece e a escolha atual (cada troca vale já e fica no aparelho). */
+    val model: ModelUiState = ModelUiState(),
     /** Há usuário: sem ele nada é enviado. */
     val ready: Boolean = false,
     val signedOut: Boolean = false,
@@ -104,4 +120,18 @@ data class ChatUiState(
     val voice: VoiceUiState = VoiceUiState(),
 ) {
     val isConversation: Boolean get() = messages.isNotEmpty()
+
+    /** O seletor do modo modelo só existe no modo modelo, com as opções do servidor já lidas. */
+    val picker: ModelPicker?
+        get() {
+            val options = model.options
+            val selection = model.selection
+            return if (agentMode == ChatAgent.Model && options != null && selection != null) ModelPicker(options, selection) else null
+        }
 }
+
+/** O que o seletor mostra: o que o servidor oferece e a escolha atual. */
+data class ModelPicker(
+    val options: ModelOptions,
+    val selection: ModelSelection,
+)

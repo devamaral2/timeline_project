@@ -1,24 +1,68 @@
 package app.braid.mobile.domain.chat
 
+import app.braid.mobile.domain.request.ModelProvider
+import app.braid.mobile.domain.request.RequestRoute
 import java.text.Normalizer
 import java.util.Locale
 
-/** Comandos de modo do chat: `/hermes` entra no modo Hermes (com uma mensagem, já a envia); `/app` volta ao assistente. */
+/** Os agentes que o chat atende por modo: o Hermes (ADR 004) e o modelo que a pessoa escolhe (ADR 0019). */
+enum class ChatAgent(
+    val code: String,
+    val route: RequestRoute,
+    /** O nome no topo do chat e no rastro. */
+    val title: String,
+) {
+    Hermes("hermes", RequestRoute.Hermes, "Hermes"),
+    Model("model", RequestRoute.Model, "Modelo"),
+    ;
+
+    companion object {
+        /** O agente de modo que atende a rota, ou `null` na rota por passos e nas que o chat não mostra. */
+        fun of(route: RequestRoute): ChatAgent? = entries.firstOrNull { it.route == route }
+    }
+}
+
+/**
+ * Comandos de modo do chat. `/hermes` entra no modo do Hermes; `/modelo`, `/claude`, `/openai` e `/openrouter` entram no
+ * modo modelo (os três últimos já escolhem o provedor; `/modelo` mantém o salvo). Com uma mensagem depois, já a enviam.
+ * `/app` volta ao assistente da agenda.
+ */
 sealed interface ChatModeCommand {
     data class Hermes(
+        val text: String?,
+    ) : ChatModeCommand
+
+    data class Model(
+        val provider: ModelProvider?,
         val text: String?,
     ) : ChatModeCommand
 
     data object Leave : ChatModeCommand
 }
 
-private val HERMES_COMMAND = Regex("/hermes(?:\\s+([\\s\\S]+))?", RegexOption.IGNORE_CASE)
+private val AGENT_COMMAND = Regex("/(hermes|modelo|claude|openai|openrouter)(?:\\s+([\\s\\S]+))?", RegexOption.IGNORE_CASE)
 private val LEAVE_COMMAND = Regex("/(?:app|assistente|sair)", RegexOption.IGNORE_CASE)
 
-/** Lê `/hermes`, `/hermes mensagem`, `/app`, `/assistente` e `/sair`; qualquer outro texto não é comando. */
+/** O provedor que cada comando de modelo já escolhe; `/modelo` não escolhe nenhum e mantém o salvo. */
+private val COMMAND_PROVIDERS =
+    mapOf(
+        "modelo" to null,
+        "claude" to ModelProvider.Anthropic,
+        "openai" to ModelProvider.OpenAi,
+        "openrouter" to ModelProvider.OpenRouter,
+    )
+
+/**
+ * Lê `/hermes`, `/modelo`, `/claude`, `/openai`, `/openrouter` (com ou sem mensagem), `/app`, `/assistente` e `/sair`;
+ * qualquer outro texto não é comando.
+ */
 fun parseChatCommand(text: String): ChatModeCommand? {
     val trimmed = text.trim()
-    HERMES_COMMAND.matchEntire(trimmed)?.let { return ChatModeCommand.Hermes(it.groupValues[1].trim().ifEmpty { null }) }
+    AGENT_COMMAND.matchEntire(trimmed)?.let { match ->
+        val name = match.groupValues[1].lowercase(Locale.ROOT)
+        val rest = match.groupValues[2].trim().ifEmpty { null }
+        return if (name == "hermes") ChatModeCommand.Hermes(rest) else ChatModeCommand.Model(COMMAND_PROVIDERS[name], rest)
+    }
     if (LEAVE_COMMAND.matches(trimmed)) return ChatModeCommand.Leave
     return null
 }

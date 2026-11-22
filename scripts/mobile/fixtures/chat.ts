@@ -7,9 +7,12 @@
  * O `css-stub` vem primeiro: os componentes do chat importam módulos CSS, que o Node não lê.
  */
 import "../css-stub";
-import { requestSchema } from "../../../packages/contracts/src/schemas";
+import { modelOptionsSchema, requestSchema } from "../../../packages/contracts/src/schemas";
 import { answerChoices, choiceLabel, remarkAnswer, shortUrl } from "../../../apps/web/src/lib/agent-chat/answer-format";
 import { parseChatCommand } from "../../../apps/web/src/lib/agent-chat/chat-mode-command";
+import {
+  type StoredModelSelection, modelFooter, modelName, providerOffText, resolveSelection, withEffort, withModel, withProvider,
+} from "../../../apps/web/src/lib/agent-chat/model-selection";
 import { hermesStepsOf } from "../../../apps/web/src/lib/agent-chat/hermes-steps";
 import { agentFailureText, type ChatFailureCode } from "../../../apps/web/src/lib/agent-chat/use-agent-chat";
 import { CHANGE_LABELS, requestEntityRef } from "../../../apps/web/src/components/hub/entity-rows";
@@ -115,6 +118,42 @@ const hermesDone = request({
   message: 'Quer o resumo completo? Diga "só gmail" ou "com calendar e drive".',
   trace: hermesTrace("done", true),
 });
+// O modo modelo (ADR 0019): o mesmo formato do Hermes, com as ferramentas da agenda no rastro e a escolha no pedido.
+const MODEL_SELECTION = { provider: "anthropic", model: "claude-sonnet-5-5", effort: "medium" } as const;
+const modelTrace = (status: "running" | "done") => ({
+  route: "model",
+  status,
+  startedAt: "2026-09-14T14:48:00.000Z",
+  durationMs: status === "done" ? 3100 : undefined,
+  fields: status === "done" ? [{ label: "Modelo", value: "claude-sonnet-5-5" }, { label: "Provedor", value: "Anthropic" }] : [],
+  entries: [
+    { id: "request", kind: "request", label: "Pedido", status: "done", startedAt: "2026-09-14T14:48:00.000Z" },
+    { id: "thought-1", kind: "thought", label: "Pensou", status: "done", startedAt: "2026-09-14T14:48:00.400Z", sections: [{ title: "Raciocínio", text: "Ver a agenda de amanhã." }] },
+    { id: "toolu_1", kind: "tool", label: "Listou a agenda", source: "list_agenda_tasks", status, startedAt: "2026-09-14T14:48:01.000Z" },
+  ],
+});
+const modelAccepted = request({ id: FIRST, route: "model", status: "running", title: "O que tenho amanhã?", text: "O que tenho amanhã?", model: MODEL_SELECTION, trace: modelTrace("running") });
+const modelDone = request({ ...modelAccepted, status: "done", message: "Amanhã você tem dentista às 9h.", trace: modelTrace("done") });
+// `GET /api/requests/model/options`: o que o servidor oferece (a OpenAI não tem chave neste ambiente).
+const modelOptions = modelOptionsSchema.parse({
+  providers: [
+    {
+      id: "anthropic",
+      name: "Anthropic",
+      models: [{ id: "claude-opus-5-5", name: "Opus 5.5" }, { id: "claude-sonnet-5-5", name: "Sonnet 5.5" }],
+      defaultModel: "claude-sonnet-5-5",
+    },
+    {
+      id: "openrouter",
+      name: "OpenRouter",
+      models: [{ id: "google/gemini-4-neon", name: "Gemini 4 Neon" }, { id: "meta/llama-5", name: "Llama 5" }],
+      defaultModel: "meta/llama-5",
+    },
+  ],
+  efforts: ["low", "medium", "high", "max"],
+  default: MODEL_SELECTION,
+});
+
 const hermesOff = request({ id: FIRST, route: "hermes", status: "failed", errorCode: "unavailable", title: "Oi", message: "O Hermes está desligado nesta API." });
 const hermesFailed = request({ id: FIRST, route: "hermes", status: "failed", errorCode: "unavailable", title: "Oi", text: "Oi", message: "O Hermes não respondeu a tempo." });
 
@@ -155,7 +194,27 @@ const URLS = [
   "www.nada.com",
 ];
 
-const CHAT_COMMANDS = ["/hermes", "/hermes  oi tudo bem", "/HERMES\nlinha dois", "/app", "/assistente", "/sair", " /sair ", "/appx", "oi /hermes", "/hermesx", "hermes", "/hermes   "];
+const CHAT_COMMANDS = [
+  "/hermes", "/hermes  oi tudo bem", "/HERMES\nlinha dois", "/app", "/assistente", "/sair", " /sair ", "/appx", "oi /hermes", "/hermesx", "hermes", "/hermes   ",
+  "/claude", "/Claude o que tenho amanhã?", "/claudes oi", "claude",
+  "/modelo", "/MODELO  qual a previsão?", "/openai", "/OpenAI resuma o dia", "/openrouter", "/openrouter\nlinha dois", "/modelos", "/modelo   ", "oi /claude",
+];
+
+// A escolha guardada contra o que o servidor oferece, a troca de provedor, de modelo e de esforço, e o rodapé da resposta.
+const ANTHROPIC_OPUS = { provider: "anthropic", model: "claude-opus-5-5", effort: "high" } as const;
+const STORED_CASES: (StoredModelSelection | null)[] = [
+  null,
+  { current: ANTHROPIC_OPUS, models: { anthropic: "claude-opus-5-5" } },
+  { current: { provider: "openrouter", model: "meta/llama-5", effort: "max" }, models: { openrouter: "meta/llama-5", anthropic: "claude-opus-5-5" } },
+  // A OpenAI saiu do ambiente: volta ao padrão do servidor.
+  { current: { provider: "openai", model: "gpt-6.2-sol", effort: "low" }, models: { openai: "gpt-6.2-sol" } },
+  // Modelo que saiu da lista: vira o padrão do provedor.
+  { current: { provider: "anthropic", model: "claude-velho", effort: "low" }, models: { anthropic: "claude-velho" } },
+  // Esforço que o servidor não oferece mais: vira o do padrão.
+  { current: { provider: "anthropic", model: "claude-opus-5-5", effort: "max" }, models: {} },
+];
+const SERVER_OPTIONS = { ...modelOptions, efforts: ["low", "medium", "high"] as typeof modelOptions.efforts };
+
 
 const COMMAND_INPUTS = ["/", "/t", "/tar", "/tarefa", "/tarefa comprar pão", "/N", "/nota", "/notificacoes", "/notif", "/config", "/configuracoes", "/ta", "/criar", "/lista", "/pesq", "/buscar", "/x", "oi", "/Tarefa  ", "/nota    texto\ncom linha", "/ajustar", "/tema", "/avisos", "/tipo"];
 
@@ -248,6 +307,9 @@ export function chatFixtures(): Record<string, unknown> {
     "chat-hermes-done": hermesDone,
     "chat-hermes-off": hermesOff,
     "chat-hermes-failed": hermesFailed,
+    "chat-model-accepted": modelAccepted,
+    "chat-model-done": modelDone,
+    "chat-model-options": modelOptions,
     "chat-request-list": listed,
     "chat-functions": {
       answerChoices: CHOICE_TEXTS.map((text) => ({ args: [text], result: answerChoices(text) })),
@@ -273,6 +335,23 @@ export function chatFixtures(): Record<string, unknown> {
         const ref = requestEntityRef(entity as never);
         return { args: [entity], result: { ...ref, text: CHANGE_LABELS[ref.kind][ref.change] } };
       }),
+      resolveSelection: STORED_CASES.flatMap((stored) =>
+        [modelOptions, SERVER_OPTIONS].map((options) => ({ args: [options, stored], result: resolveSelection(options, stored) }))),
+      withProvider: (["anthropic", "openrouter", "openai"] as const).flatMap((provider) =>
+        STORED_CASES.slice(1, 3).map((stored) => ({ args: [modelOptions, stored, provider], result: withProvider(modelOptions, stored as StoredModelSelection, provider) }))),
+      withModel: [{ args: [STORED_CASES[1], "claude-sonnet-5-5"], result: withModel(STORED_CASES[1] as StoredModelSelection, "claude-sonnet-5-5") }],
+      withEffort: [{ args: [STORED_CASES[1], "low"], result: withEffort(STORED_CASES[1] as StoredModelSelection, "low") }],
+      modelFooter: [
+        { args: [modelOptions, MODEL_SELECTION], result: modelFooter(modelOptions, MODEL_SELECTION) },
+        { args: [modelOptions, ANTHROPIC_OPUS], result: modelFooter(modelOptions, ANTHROPIC_OPUS) },
+        { args: [null, { provider: "openrouter", model: "google/gemini-4-neon", effort: "low" }], result: modelFooter(null, { provider: "openrouter", model: "google/gemini-4-neon", effort: "low" }) },
+      ],
+      modelName: [
+        { args: [modelOptions, MODEL_SELECTION], result: modelName(modelOptions, MODEL_SELECTION) },
+        { args: [modelOptions, { provider: "anthropic", model: "desconhecido" }], result: modelName(modelOptions, { provider: "anthropic", model: "desconhecido" }) },
+        { args: [null, MODEL_SELECTION], result: modelName(null, MODEL_SELECTION) },
+      ],
+      providerOffText: (["anthropic", "openai", "openrouter"] as const).map((provider) => ({ args: [provider], result: providerOffText(provider) })),
       failureText: FAILURE_CODES.map((code) => ({ args: [code], result: agentFailureText(code) })),
     },
   };

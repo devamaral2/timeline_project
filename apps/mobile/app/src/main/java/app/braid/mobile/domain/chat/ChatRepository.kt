@@ -2,6 +2,9 @@ package app.braid.mobile.domain.chat
 
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.HermesOffException
+import app.braid.mobile.domain.request.ModelOffException
+import app.braid.mobile.domain.request.ModelOptions
+import app.braid.mobile.domain.request.ModelSelection
 
 /** Por que um pedido falhou ou não chegou; cada código tem o seu texto em [chatFailureText]. */
 enum class ChatFailureCode(
@@ -52,6 +55,21 @@ interface ChatRepository {
         sessionId: String?,
         clientMessageId: String,
     ): AgentRequest
+
+    /**
+     * Manda a mensagem ao modelo escolhido (ADR 0019) e devolve o pedido inteiro. Sem nenhum provedor com chave, sobe
+     * [ModelOffException].
+     */
+    suspend fun sendModel(
+        userId: String,
+        text: String,
+        sessionId: String?,
+        clientMessageId: String,
+        selection: ModelSelection,
+    ): AgentRequest
+
+    /** Os provedores, os modelos e a escolha padrão deste ambiente. Sem provedor com chave, sobe [ModelOffException]. */
+    suspend fun modelOptions(): ModelOptions
 
     suspend fun request(id: String): AgentRequest
 

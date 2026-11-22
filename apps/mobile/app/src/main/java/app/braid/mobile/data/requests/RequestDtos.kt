@@ -4,6 +4,12 @@ import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentTrace
 import app.braid.mobile.domain.request.EntityKind
+import app.braid.mobile.domain.request.ModelEffort
+import app.braid.mobile.domain.request.ModelOption
+import app.braid.mobile.domain.request.ModelOptions
+import app.braid.mobile.domain.request.ModelProvider
+import app.braid.mobile.domain.request.ModelProviderOption
+import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.request.QueryTable
 import app.braid.mobile.domain.request.RequestEntity
 import app.braid.mobile.domain.request.RequestOperation
@@ -45,6 +51,8 @@ data class RequestDto(
     /** A resposta do Hermes quando o pedido termina (`done`). */
     val message: String? = null,
     val trace: RequestTraceDto? = null,
+    /** O provedor, o modelo e o esforço escolhidos; só na rota `model`. */
+    val model: ModelSelectionDto? = null,
 )
 
 @Serializable
@@ -143,6 +151,46 @@ data class StartHermesBody(
     val clientMessageId: String,
 )
 
+/** `POST /api/requests/model`: o corpo do Hermes mais a escolha do modelo. */
+@Serializable
+data class StartModelBody(
+    val userId: String,
+    val text: String,
+    val sessionId: String? = null,
+    val clientMessageId: String,
+    val model: ModelSelectionDto,
+)
+
+/** `ModelSelection` do contrato: o provedor, o id do modelo no provedor e o esforço. */
+@Serializable
+data class ModelSelectionDto(
+    val provider: String,
+    val model: String,
+    val effort: String,
+)
+
+/** `modelOptionsSchema` (`GET /api/requests/model/options`). */
+@Serializable
+data class ModelOptionsDto(
+    val providers: List<ModelProviderOptionDto> = emptyList(),
+    val efforts: List<String> = emptyList(),
+    val default: ModelSelectionDto,
+)
+
+@Serializable
+data class ModelProviderOptionDto(
+    val id: String,
+    val name: String,
+    val models: List<ModelOptionDto> = emptyList(),
+    val defaultModel: String,
+)
+
+@Serializable
+data class ModelOptionDto(
+    val id: String,
+    val name: String,
+)
+
 @Serializable
 data class StartRequestResponseDto(
     val requestId: String,
@@ -178,7 +226,28 @@ fun RequestDto.toDomain(): AgentRequest =
         route = RequestRoute.fromCode(route),
         text = text,
         trace = trace?.toDomain(),
+        model = model?.toDomain(),
     )
+
+fun ModelSelection.toDto() = ModelSelectionDto(provider.code, model, effort.code)
+
+/** Um provedor ou esforço que este app não conhece some (a seleção inteira, `null`) em vez de derrubar o pedido. */
+private fun ModelSelectionDto.toDomain(): ModelSelection? {
+    val provider = ModelProvider.fromCodeOrNull(provider) ?: return null
+    val effort = ModelEffort.fromCodeOrNull(effort) ?: return null
+    return ModelSelection(provider, model, effort)
+}
+
+/** As opções do servidor; um provedor ou esforço que este app não conhece some da lista. Sem padrão legível, `null`. */
+fun ModelOptionsDto.toDomain(): ModelOptions? {
+    val providers =
+        providers.mapNotNull { option ->
+            val id = ModelProvider.fromCodeOrNull(option.id) ?: return@mapNotNull null
+            ModelProviderOption(id, option.name, option.models.map { ModelOption(it.id, it.name) }, option.defaultModel)
+        }
+    val default = default.toDomain() ?: return null
+    return ModelOptions(providers, efforts.mapNotNull(ModelEffort::fromCodeOrNull), default)
+}
 
 /** `String(cell)` do web, e o JSON para objetos; a célula nula fica vazia. */
 private fun cellText(cell: JsonElement): String =

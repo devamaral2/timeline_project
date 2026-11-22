@@ -8,6 +8,7 @@ import app.braid.mobile.domain.speech.SpeechError
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.FakeMicrophone
 import app.braid.mobile.support.FakeSpeechRecognizer
+import app.braid.mobile.support.InMemoryModelSelectionStore
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestGraph
@@ -84,6 +85,7 @@ class ChatVoiceTest {
             graph.sessionRepository,
             AppClock { now },
             ChatPolling(),
+            InMemoryModelSelectionStore(),
             speech,
             microphone,
         ).also {
@@ -168,6 +170,7 @@ class ChatVoiceTest {
                     graph.sessionRepository,
                     AppClock { now },
                     ChatPolling(),
+                    InMemoryModelSelectionStore(),
                     speech,
                     microphone,
                 )

@@ -4,11 +4,18 @@ import app.braid.mobile.data.chat.DefaultChatRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
 import app.braid.mobile.domain.agenda.FreeWindow
+import app.braid.mobile.domain.chat.ChatAgent
 import app.braid.mobile.domain.chat.ChatPolling
+import app.braid.mobile.domain.chat.StoredModelSelection
+import app.braid.mobile.domain.chat.modelFooter
 import app.braid.mobile.domain.chat.start
+import app.braid.mobile.domain.request.ModelEffort
+import app.braid.mobile.domain.request.ModelProvider
+import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
+import app.braid.mobile.support.InMemoryModelSelectionStore
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
@@ -56,6 +63,9 @@ class ChatViewModelTest {
     private lateinit var backend: TestBackend
     private lateinit var graph: TestGraph
     private val created = mutableListOf<ChatViewModel>()
+    private val modelStore = InMemoryModelSelectionStore()
+    private val optionsPath = "$requestsPath/model/options"
+    private val modelPath = "$requestsPath/model"
 
     @Before
     fun setUp() {
@@ -79,6 +89,7 @@ class ChatViewModelTest {
             graph.sessionRepository,
             AppClock { now },
             polling,
+            modelStore,
         ).also {
             created += it
             it.state.first { state -> state.ready }
@@ -379,7 +390,7 @@ class ChatViewModelTest {
             val chat = newViewModel()
 
             chat.send("/hermes")
-            val on = chat.until { it.hermesMode }
+            val on = chat.until { it.agentMode == ChatAgent.Hermes }
             assertEquals(
                 "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda.",
                 (on.last() as ChatMessage.Assistant).text,
@@ -387,7 +398,7 @@ class ChatViewModelTest {
             assertEquals(0, backend.requests.size)
 
             chat.send("/app")
-            val off = chat.until { !it.hermesMode }
+            val off = chat.until { it.agentMode == null }
             assertEquals("De volta ao assistente da agenda.", (off.last() as ChatMessage.Assistant).text)
             assertEquals(0, backend.requests.size)
         }
@@ -406,7 +417,7 @@ class ChatViewModelTest {
             assertEquals("oi tudo bem", body.string("text"))
             assertEquals("user-1", body.string("userId"))
             assertFalse(body.containsKey("sessionId"))
-            assertTrue(done.hermesMode)
+            assertEquals(ChatAgent.Hermes, done.agentMode)
             assertEquals(0, backend.requestsTo("POST", requestsPath).size)
             // A caixa de processo não aparece: no lugar dela, os passos do Hermes.
             assertTrue(done.messages.none { it is ChatMessage.Process })
@@ -433,7 +444,7 @@ class ChatViewModelTest {
             chat.send("/hermes oi")
             val off = chat.until { it.pending == null && it.messages.size == 2 }
 
-            assertFalse(off.hermesMode)
+            assertNull(off.agentMode)
             assertEquals("O Hermes está desligado neste ambiente (AI_AUTOMATION).", (off.last() as ChatMessage.Assistant).text)
             assertEquals(0, backend.requestsTo("GET", firstPath).size)
         }
@@ -449,6 +460,249 @@ class ChatViewModelTest {
             val error = chat.until { it.last() is ChatMessage.Error }.last() as ChatMessage.Error
 
             assertEquals("O Hermes não respondeu a tempo.", error.text)
+        }
+
+    private fun serveModel() {
+        backend.route("GET", optionsPath, fixture("chat-model-options"))
+        backend.route("POST", modelPath, fixture("chat-model-accepted", 202))
+        backend.route("GET", firstPath, fixture("chat-model-accepted"), fixture("chat-model-done"))
+    }
+
+    private val sonnet = ModelSelection(ModelProvider.Anthropic, "claude-sonnet-5-5", ModelEffort.Medium)
+
+    private fun JsonObject.selection() = getValue("model").jsonObject
+
+    @Test
+    fun `in model mode the messages go to the model route, with the selection, the steps of the trace and the footer data`() =
+        runTest {
+            serveModel()
+            val chat = newViewModel()
+
+            chat.send("/modelo")
+            val on = chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
+            assertEquals(
+                "Agora você está falando com Sonnet 5.5 (Anthropic). Escreva /app para voltar ao assistente da agenda.",
+                (on.last() as ChatMessage.Assistant).text,
+            )
+            assertEquals(sonnet, on.picker?.selection)
+            assertEquals(0, backend.requestsTo("POST", modelPath).size)
+
+            chat.send("O que tenho amanhã?")
+            val running = chat.until { it.pending?.requestId == first }
+            assertEquals("Falando com Sonnet 5.5", running.pending?.label)
+            val done = chat.until { it.pending == null && it.messages.any { m -> m is ChatMessage.Assistant && m.id.endsWith("-answer") } }
+
+            val body = bodyOf(backend.requestsTo("POST", modelPath).single())
+            assertEquals("O que tenho amanhã?", body.string("text"))
+            assertEquals("user-1", body.string("userId"))
+            assertEquals(0, backend.requestsTo("POST", requestsPath).size)
+            assertEquals(0, backend.requestsTo("POST", "$requestsPath/hermes").size)
+            assertTrue(done.messages.none { it is ChatMessage.Process })
+            val steps = done.messages.filterIsInstance<ChatMessage.HermesSteps>().single()
+            assertEquals(listOf("Pensou", "Listou a agenda"), steps.steps.map { it.label })
+            val answer = done.last() as ChatMessage.Assistant
+            assertEquals("Amanhã você tem dentista às 9h.", answer.text)
+            // O rodapé vem do pedido: o nome do modelo é o da lista do servidor.
+            assertEquals(sonnet, answer.model)
+            assertEquals("sonnet 5.5 · médio · anthropic", modelFooter(done.model.options, requireNotNull(answer.model)))
+            assertEquals(RequestRoute.Model, done.turns.single().route)
+            assertEquals(ChatAgent.Model, done.agentMode)
+        }
+
+    @Test
+    fun `a provider command preselects the provider with its remembered or default model`() =
+        runTest {
+            serveModel()
+            val chat = newViewModel()
+
+            chat.send("/openrouter")
+            val on = chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
+
+            assertEquals(ModelSelection(ModelProvider.OpenRouter, "meta/llama-5", ModelEffort.Medium), on.picker?.selection)
+            assertEquals(
+                "Agora você está falando com Llama 5 (OpenRouter). Escreva /app para voltar ao assistente da agenda.",
+                (on.last() as ChatMessage.Assistant).text,
+            )
+            assertEquals(ModelProvider.OpenRouter, modelStore.stored?.current?.provider)
+
+            // `/claude` volta ao provedor da Anthropic, com o modelo que ele tinha.
+            chat.send("/claude")
+            val back = chat.until { it.messages.size == 4 && it.pending == null }
+            assertEquals(sonnet, back.picker?.selection)
+            // Só uma leitura das opções por conversa.
+            assertEquals(1, backend.requestsTo("GET", optionsPath).size)
+        }
+
+    @Test
+    fun `a provider command with text enters the mode and sends the text with that provider`() =
+        runTest {
+            serveModel()
+            val chat = newViewModel()
+
+            chat.send("/openrouter o que tenho amanhã?")
+            chat.until { it.pending?.requestId == first }
+
+            val body = bodyOf(backend.requestsTo("POST", modelPath).single())
+            assertEquals("o que tenho amanhã?", body.string("text"))
+            assertEquals("openrouter", body.selection().string("provider"))
+            assertEquals("meta/llama-5", body.selection().string("model"))
+        }
+
+    @Test
+    fun `a provider the environment does not have gets a notice and the mode stays as it was`() =
+        runTest {
+            serveModel()
+            val chat = newViewModel()
+
+            chat.send("/openai oi")
+            val off = chat.until { it.pending == null && it.messages.size == 2 }
+            assertEquals("A OpenAI não está ligada neste ambiente.", (off.last() as ChatMessage.Assistant).text)
+            assertEquals(ChatMessage.User(off.messages.first().id, "/openai oi"), off.messages.first())
+            assertNull(off.agentMode)
+            assertEquals(0, backend.requestsTo("POST", modelPath).size)
+
+            // Já no modo modelo, o aviso não tira dele.
+            chat.send("/modelo")
+            chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 4 }
+            chat.send("/openai")
+            val still = chat.until { it.pending == null && it.messages.size == 6 }
+            assertEquals("A OpenAI não está ligada neste ambiente.", (still.last() as ChatMessage.Assistant).text)
+            assertEquals(ChatAgent.Model, still.agentMode)
+            assertEquals(sonnet, still.picker?.selection)
+        }
+
+    @Test
+    fun `without a provider key the options answer 404 and the notice shows with the mode off`() =
+        runTest {
+            backend.route("GET", optionsPath, status(404))
+            val chat = newViewModel()
+
+            chat.send("/modelo")
+            val off = chat.until { it.pending == null && it.messages.size == 2 }
+
+            assertNull(off.agentMode)
+            assertNull(off.picker)
+            assertEquals("O modo modelo está desligado neste ambiente.", (off.last() as ChatMessage.Assistant).text)
+        }
+
+    @Test
+    fun `a 404 on the send shows the same notice and leaves the mode`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            backend.route("POST", modelPath, status(404))
+            val chat = newViewModel()
+
+            chat.send("/modelo")
+            chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
+            chat.send("oi")
+            val off = chat.until { it.pending == null && it.messages.size == 4 }
+
+            assertNull(off.agentMode)
+            assertEquals("O modo modelo está desligado neste ambiente.", (off.last() as ChatMessage.Assistant).text)
+        }
+
+    @Test
+    fun `every model message carries the current selection, changed in the picker`() =
+        runTest {
+            serveModel()
+            val chat = newViewModel()
+            chat.send("/modelo")
+            chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
+
+            chat.chooseProvider(ModelProvider.OpenRouter)
+            chat.chooseModel("google/gemini-4-neon")
+            chat.chooseEffort(ModelEffort.Max)
+            // Um modelo que o provedor não tem não vale.
+            chat.chooseModel("claude-opus-5-5")
+            val picked = ModelSelection(ModelProvider.OpenRouter, "google/gemini-4-neon", ModelEffort.Max)
+            assertEquals(
+                picked,
+                chat.state.value.picker
+                    ?.selection,
+            )
+
+            chat.send("oi")
+            chat.until { it.pending?.requestId == first }
+
+            val body = bodyOf(backend.requestsTo("POST", modelPath).single())
+            assertEquals("openrouter", body.selection().string("provider"))
+            assertEquals("google/gemini-4-neon", body.selection().string("model"))
+            assertEquals("max", body.selection().string("effort"))
+            assertEquals(picked, modelStore.stored?.current)
+        }
+
+    @Test
+    fun `the saved selection is checked against the options and every change is saved`() =
+        runTest {
+            serveModel()
+            // A OpenAI saiu do ambiente e o esforço salvo é o que vale nas outras escolhas.
+            modelStore.stored =
+                StoredModelSelection(
+                    ModelSelection(ModelProvider.OpenAi, "gpt-6.2-sol", ModelEffort.High),
+                    mapOf(ModelProvider.OpenAi to "gpt-6.2-sol"),
+                )
+            val chat = newViewModel()
+
+            chat.send("/modelo")
+            val onDefault = chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
+            assertEquals(sonnet, onDefault.picker?.selection)
+            assertEquals(sonnet, modelStore.stored?.current)
+
+            // Provedor e esforço salvos valem; um modelo que saiu da lista vira o padrão do provedor.
+            val second =
+                InMemoryModelSelectionStore(
+                    StoredModelSelection(ModelSelection(ModelProvider.Anthropic, "claude-velho", ModelEffort.High)),
+                )
+            val other =
+                ChatViewModel(
+                    DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
+                    graph.sessionRepository,
+                    AppClock { now },
+                    ChatPolling(),
+                    second,
+                )
+            created += other
+            other.state.first { it.ready }
+            other.send("/modelo")
+            val stale = other.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
+            assertEquals(ModelSelection(ModelProvider.Anthropic, "claude-sonnet-5-5", ModelEffort.High), stale.picker?.selection)
+
+            // O padrão do provedor entrou no guardado; trocar de provedor e voltar retoma o modelo de cada um.
+            other.chooseModel("claude-opus-5-5")
+            other.chooseProvider(ModelProvider.OpenRouter)
+            other.chooseProvider(ModelProvider.Anthropic)
+            assertEquals(
+                "claude-opus-5-5",
+                other.state.value.picker
+                    ?.selection
+                    ?.model,
+            )
+            assertEquals(
+                mapOf(ModelProvider.Anthropic to "claude-opus-5-5", ModelProvider.OpenRouter to "meta/llama-5"),
+                second.stored?.models,
+            )
+        }
+
+    @Test
+    fun `a new conversation clears the options but keeps the choice, and the next command reads the options again`() =
+        runTest {
+            serveModel()
+            val chat = newViewModel()
+            chat.send("/modelo")
+            chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
+            chat.chooseEffort(ModelEffort.Low)
+
+            chat.startNewConversation()
+            val cleared = chat.state.value
+            assertNull(cleared.agentMode)
+            assertNull(cleared.model.options)
+            assertNull(cleared.picker)
+            assertEquals(ModelEffort.Low, cleared.model.selection?.effort)
+
+            chat.send("/modelo")
+            val again = chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
+            assertEquals(ModelEffort.Low, again.picker?.selection?.effort)
+            assertEquals(2, backend.requestsTo("GET", optionsPath).size)
         }
 
     @Test
@@ -520,7 +774,7 @@ class ChatViewModelTest {
             val empty = chat.state.value
             assertTrue(empty.messages.isEmpty())
             assertTrue(empty.turns.isEmpty())
-            assertFalse(empty.hermesMode)
+            assertNull(empty.agentMode)
 
             chat.send("segunda")
             chat.until { it.pending == null && it.messages.size == 2 }
@@ -618,6 +872,7 @@ class ChatViewModelTest {
                     graph.sessionRepository,
                     AppClock { now },
                     ChatPolling(),
+                    InMemoryModelSelectionStore(),
                 )
             graph.sessionRepository.restore()
             created += chat

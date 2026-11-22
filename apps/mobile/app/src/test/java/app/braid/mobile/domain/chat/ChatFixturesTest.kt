@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.chat
 
 import app.braid.mobile.core.network.BraidJson
+import app.braid.mobile.data.requests.ModelOptionsDto
 import app.braid.mobile.data.requests.RequestDto
 import app.braid.mobile.data.requests.toDomain
 import app.braid.mobile.domain.agenda.FreeWindow
@@ -8,6 +9,10 @@ import app.braid.mobile.domain.markdown.MarkdownInline
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentTrace
 import app.braid.mobile.domain.request.EntityKind
+import app.braid.mobile.domain.request.ModelEffort
+import app.braid.mobile.domain.request.ModelOptions
+import app.braid.mobile.domain.request.ModelProvider
+import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.request.TraceEntry
 import app.braid.mobile.support.fixtureCases
 import kotlinx.serialization.json.JsonArray
@@ -60,8 +65,90 @@ class ChatFixturesTest {
                 assertEquals(case.toString(), ChatModeCommand.Leave, actual)
             } else {
                 val text = expected.jsonObject.getValue("text").let { if (it is JsonNull) null else it.jsonPrimitive.content }
-                assertEquals(case.toString(), ChatModeCommand.Hermes(text), actual)
+                val agent =
+                    expected.jsonObject
+                        .getValue("agent")
+                        .jsonPrimitive.content
+                val provider =
+                    expected.jsonObject["provider"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.content?.let {
+                        requireNotNull(ModelProvider.fromCodeOrNull(it))
+                    }
+                val command = if (agent == "hermes") ChatModeCommand.Hermes(text) else ChatModeCommand.Model(provider, text)
+                assertEquals(case.toString(), command, actual)
             }
+        }
+    }
+
+    private fun options(element: JsonElement): ModelOptions =
+        requireNotNull(BraidJson.decodeFromJsonElement(ModelOptionsDto.serializer(), element).toDomain())
+
+    private fun selection(element: JsonElement): ModelSelection {
+        val json = element.jsonObject
+        return ModelSelection(
+            requireNotNull(ModelProvider.fromCodeOrNull(json.getValue("provider").jsonPrimitive.content)),
+            json.getValue("model").jsonPrimitive.content,
+            requireNotNull(ModelEffort.fromCodeOrNull(json.getValue("effort").jsonPrimitive.content)),
+        )
+    }
+
+    private fun stored(element: JsonElement): StoredModelSelection? {
+        if (element is JsonNull) return null
+        val json = element.jsonObject
+        val models =
+            json.getValue("models").jsonObject.entries.associate { (code, model) ->
+                requireNotNull(ModelProvider.fromCodeOrNull(code)) to model.jsonPrimitive.content
+            }
+        return StoredModelSelection(selection(json.getValue("current")), models)
+    }
+
+    @Test
+    fun `the saved choice is checked against the options as the web checks it`() {
+        for (case in cases("resolveSelection")) {
+            assertEquals(
+                case.toString(),
+                requireNotNull(stored(case.result)),
+                resolveSelection(options(case.args[0]), stored(case.args[1])),
+            )
+        }
+    }
+
+    @Test
+    fun `switching provider, model and effort follow the web`() {
+        for (case in cases("withProvider")) {
+            val provider = requireNotNull(ModelProvider.fromCodeOrNull(case.string(2)))
+            val state = requireNotNull(stored(case.args[1]))
+            assertEquals(case.toString(), requireNotNull(stored(case.result)), state.withProvider(options(case.args[0]), provider))
+        }
+        for (case in cases("withModel")) {
+            assertEquals(
+                case.toString(),
+                requireNotNull(stored(case.result)),
+                requireNotNull(stored(case.args[0])).withModel(case.string(1)),
+            )
+        }
+        for (case in cases("withEffort")) {
+            val effort = requireNotNull(ModelEffort.fromCodeOrNull(case.string(1)))
+            assertEquals(case.toString(), requireNotNull(stored(case.result)), requireNotNull(stored(case.args[0])).withEffort(effort))
+        }
+    }
+
+    @Test
+    fun `the answer footer, the model name and the provider notices are the web texts`() {
+        fun optionsOrNull(element: JsonElement) = if (element is JsonNull) null else options(element)
+
+        for (case in cases(
+            "modelFooter",
+        )) {
+            assertEquals(case.toString(), case.resultString, modelFooter(optionsOrNull(case.args[0]), selection(case.args[1])))
+        }
+        for (case in cases("modelName")) {
+            val json = case.args[1].jsonObject
+            val provider = requireNotNull(ModelProvider.fromCodeOrNull(json.getValue("provider").jsonPrimitive.content))
+            val picked = ModelSelection(provider, json.getValue("model").jsonPrimitive.content, ModelEffort.Medium)
+            assertEquals(case.toString(), case.resultString, modelName(optionsOrNull(case.args[0]), picked))
+        }
+        for (case in cases("providerOffText")) {
+            assertEquals(case.toString(), case.resultString, providerOffText(requireNotNull(ModelProvider.fromCodeOrNull(case.string(0)))))
         }
     }
 
