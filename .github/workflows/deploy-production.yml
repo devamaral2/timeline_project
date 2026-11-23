@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: read
+  # O ci.yml reutilizado declara pull-requests: read no job `changes`; o chamador precisa conceder.
+  pull-requests: read
 
 concurrency:
   group: production-deploy

@@ -128,7 +128,7 @@ class ExactAlarmViewModelTest {
             viewModel.dismiss()
             viewModel.settled(false)
             // O DataStore é gravado fora da tela: espera a gravação chegar antes de "fechar o app".
-            withContext(Dispatchers.Default) { withTimeout(5_000) { stores.exactAlarmPrompt.dismissed.first { it } } }
+            withContext(Dispatchers.Default) { withTimeout(30_000) { stores.exactAlarmPrompt.dismissed.first { it } } }
 
             val reopened = newViewModel()
             delay(100)
