@@ -10,6 +10,7 @@
     "dev:web": "node scripts/onepassword/exec.mjs turbo run dev --filter=@repo/web",
     "dev:mcp": "node scripts/onepassword/exec.mjs turbo run dev --filter=@repo/mcp",
     "dev:mobile": "bash scripts/mobile/dev.sh",
+    "release:mobile": "bash scripts/mobile/release.sh",
     "secrets:check": "node scripts/onepassword/check.mjs",
     "secrets:check-one": "node scripts/onepassword/check-one.mjs",
     "secrets:exec": "node scripts/onepassword/exec.mjs",
