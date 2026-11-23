@@ -40,12 +40,17 @@ class ChatRequestException(
 ) : Exception("Pedido ao assistente falhou: ${failure.code}", cause)
 
 interface ChatRepository {
-    /** Abre o pedido em texto e devolve o id. O [clientMessageId] estável faz o reenvio devolver o mesmo pedido. */
+    /**
+     * Abre o pedido em texto e devolve o id. O [clientMessageId] estável faz o reenvio devolver o mesmo pedido. Com
+     * [selection] (a escolha que o campo mostra), os agentes do pedido rodam com esse provedor, modelo e esforço; `null`
+     * deixa o modelo do servidor.
+     */
     suspend fun start(
         userId: String,
         text: String,
         sessionId: String?,
         clientMessageId: String,
+        selection: ModelSelection?,
     ): String
 
     /** Manda a mensagem ao Hermes e devolve o pedido inteiro. Desligado, sobe [HermesOffException]. */

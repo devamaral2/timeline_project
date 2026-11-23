@@ -44,6 +44,8 @@ class BraidTokens(
     val modeAll: Color,
     /** `--on-primary-brand`: o ponto de hoje sobre o dia escolhido. */
     val onPrimaryBrand: Color,
+    /** `--faint`: o texto de exemplo dos campos do Hermes. */
+    val faint: Color,
 )
 
 private val LightBraidTokens =
@@ -56,6 +58,7 @@ private val LightBraidTokens =
         success = LightTokens.success,
         modeAll = DarkTokens.meal,
         onPrimaryBrand = LightTokens.strandDestaque,
+        faint = LightTokens.faint,
     )
 
 private val DarkBraidTokens =
@@ -68,6 +71,7 @@ private val DarkBraidTokens =
         success = DarkTokens.success,
         modeAll = DarkTokens.meal,
         onPrimaryBrand = DarkTokens.strandDestaque,
+        faint = DarkTokens.faint,
     )
 
 @Composable

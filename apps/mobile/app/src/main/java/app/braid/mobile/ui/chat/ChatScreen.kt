@@ -5,11 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,12 +26,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,17 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -70,7 +58,6 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -84,6 +71,7 @@ import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.domain.agenda.FreeWindow
 import app.braid.mobile.domain.chat.ChatCommand
+import app.braid.mobile.domain.chat.ModelPicker
 import app.braid.mobile.domain.chat.end
 import app.braid.mobile.domain.chat.parseCommand
 import app.braid.mobile.domain.chat.start
@@ -95,7 +83,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
 /** Quanto a barra inferior (dock de 66dp com o respiro de baixo) ocupa: o chat termina logo acima dela. */
-private val DockReserve = 98.dp
+private val DockReserve = 90.dp
+
+/** O respiro entre o campo e o teclado aberto (o mesmo do web, `shell.module.css`): o campo não encosta nas teclas. */
+private val KeyboardGap = 12.dp
 
 /**
  * O chat com o agente, que no celular ocupa a tela toda acima da barra inferior (como o web na largura mobile). Estado e
@@ -169,7 +160,7 @@ fun ChatScreen(
     onTyped: (String) -> Unit = {},
     /** O que está escrito no campo, para a fala ser somada a isso. */
     onDraft: (String) -> Unit = {},
-    /** As trocas do seletor do modo modelo. */
+    /** As trocas do seletor de modelo. */
     model: ModelActions = ModelActions(),
     composerActions: @Composable RowScope.() -> Unit = {},
 ) {
@@ -183,11 +174,13 @@ fun ChatScreen(
     val query = if (listening) null else parseCommand(prompt, commands.available)
     val matches = query?.matches.orEmpty()
     val density = LocalDensity.current
+    // Com o teclado aberto a barra inferior fica atrás dele e o campo sobe até logo acima das teclas.
     val keyboard = WindowInsets.ime.getBottom(density)
+    val aboveKeyboard = if (keyboard > 0) keyboard + with(density) { KeyboardGap.toPx() } else 0f
     val reserved = with(density) { DockReserve.toPx() } + WindowInsets.navigationBars.getBottom(density)
-    val bottom = with(density) { maxOf(keyboard.toFloat(), reserved).toDp() }
+    val bottom = with(density) { maxOf(aboveKeyboard, reserved).toDp() }
 
-    // O seletor do modo modelo: aberto, o painel cresce do campo e a conversa escurece. Sai junto com o modo.
+    // O seletor de modelo: aberto, o painel cresce do campo e a conversa escurece. Some no modo Hermes ou sem as opções.
     val picker = state.picker
     var pickerOpen by rememberSaveable { mutableStateOf(false) }
     val showPicker = picker != null
@@ -422,6 +415,7 @@ private fun commandIcon(command: ChatCommand): List<SvgPart> =
     when (command) {
         ChatCommand.Task -> BraidIcons.calendarDays
         ChatCommand.Document -> BraidIcons.fileText
+        ChatCommand.Search -> BraidIcons.search
         ChatCommand.Notifications -> ChatIcons.bell
         ChatCommand.Settings -> ChatIcons.settings
     }
@@ -571,8 +565,6 @@ private fun ChatField(
             lastIsError -> "Não deu certo"
             else -> "Esperando o seu pedido"
         }
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
     // Abrir o chat foca o campo, para já dar para digitar (o campo só aceita foco depois de a sessão chegar).
     val focus = remember { FocusRequester() }
     LaunchedEffect(state.ready) {
@@ -580,7 +572,6 @@ private fun ChatField(
     }
     // Aberto o painel, a borda e a sombra do campo ficam mais fortes.
     val emphasis = rememberPickerProgress(pickerOpen)
-    val shape = RoundedCornerShape(if (picker != null) 22.dp else 28.dp)
     Column(
         Modifier.fillMaxWidth().onSizeChanged { onHeight(it.height) }.padding(top = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -595,107 +586,44 @@ private fun ChatField(
                 lineHeight = 20.sp,
             )
         }
-        Row(
-            Modifier.heightIn(min = 28.dp).padding(start = 6.dp).semantics { liveRegion = LiveRegionMode.Polite },
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            HermesBotIcon(mark, size = 22.dp, color = if (mark == BotState.Error) scheme.error else scheme.onSurfaceVariant)
-            Text(
-                text = status,
-                color =
-                    if (mark ==
-                        BotState.Error
-                    ) {
-                        scheme.error
-                    } else {
-                        scheme.onSurfaceVariant
-                    },
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
-            )
-        }
-        val sendButton =
-            @Composable {
-                Box(
-                    Modifier
-                        .size(44.dp)
-                        .background(if (canSend) scheme.primary else androidx.compose.ui.graphics.Color.Transparent, CircleShape)
-                        .then(if (canSend) Modifier else Modifier.border(1.dp, scheme.outline, CircleShape))
-                        .clickable(enabled = canSend, role = Role.Button, onClick = onSubmit)
-                        .semantics { contentDescription = if (state.pending != null) "Aguardando a resposta" else "Enviar mensagem" },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    SvgIcon(
-                        BraidIcons.arrowUp,
-                        size = 20.dp,
-                        color = if (canSend) scheme.onPrimary else scheme.outlineVariant,
-                        strokeWidth = 2f,
-                    )
-                }
-            }
-        val strong = lerp(scheme.outline, scheme.onBackground.copy(alpha = 0.45f).compositeOver(scheme.outline), emphasis)
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .shadow(
-                    12.dp * emphasis,
-                    shape,
-                    ambientColor = scheme.onBackground.copy(alpha = 0.18f),
-                    spotColor = scheme.onBackground.copy(alpha = 0.18f),
-                ).background(scheme.surface, shape)
-                .border(1.dp, if (focused) braidBrand() else strong, shape)
-                .clip(shape)
-                .padding(6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            if (picker != null) ModelPanel(picker, pickerOpen, model, onPickerDone)
-            if (window != null) WindowChip(window, state.todayKey, onClearWindow)
-            Row(Modifier.padding(start = 12.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                BasicTextField(
-                    value = prompt,
-                    onValueChange = onPrompt,
+        HermesStatusLine(mark, status, role = MarkRole.Chat)
+        HermesComposer(
+            draft =
+                HermesDraft(
+                    text = prompt,
+                    onChange = onPrompt,
+                    placeholder = if (window != null) "Diga o que quer fazer nesse tempo" else "Diga ou escreva o que precisa",
+                    label = "Mensagem para a IA",
                     enabled = state.ready,
-                    maxLines = 5,
-                    interactionSource = interaction,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp, lineHeight = 22.sp, color = scheme.onBackground),
-                    cursorBrush = SolidColor(braidBrand()),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                    keyboardActions = KeyboardActions(onSend = { if (canSend) onSubmit() }),
-                    modifier = Modifier.weight(1f).focusRequester(focus).semantics { contentDescription = "Mensagem para a IA" },
-                    decorationBox = { inner ->
-                        Box(Modifier.heightIn(min = 44.dp).padding(vertical = 11.dp), contentAlignment = Alignment.CenterStart) {
-                            if (prompt.isEmpty()) {
-                                Text(
-                                    text = if (window != null) "Diga o que quer fazer nesse tempo" else "Diga ou escreva o que precisa",
-                                    color = scheme.outlineVariant,
-                                    fontSize = 15.sp,
-                                    lineHeight = 22.sp,
-                                )
-                            }
-                            inner()
-                        }
-                    },
-                )
-                // No modo modelo a voz e o envio descem para a linha do seletor.
-                if (picker == null) {
-                    composerActions()
-                    sendButton()
-                }
-            }
-            if (picker != null) {
-                Row(
-                    Modifier.padding(start = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    sendOnEnter = true,
+                    modifier = Modifier.focusRequester(focus),
+                ),
+            send =
+                HermesSend(
+                    enabled = canSend,
+                    label = if (state.pending != null) "Aguardando a resposta" else "Enviar mensagem",
+                    onSend = onSubmit,
+                ),
+            role = MarkRole.Chat,
+            context = if (window != null) ({ WindowChip(window, state.todayKey, onClearWindow) }) else null,
+            actions = composerActions,
+            // Com o seletor, o painel cresce do topo do campo e o seletor, a voz e o envio descem para a linha de baixo.
+            panel =
+                if (picker != null) {
+                    ({ ModelPanel(picker, pickerOpen, model, onPickerDone, Modifier.weight(1f, fill = false)) })
+                } else {
+                    null
+                },
+            footer =
+                if (picker !=
+                    null
                 ) {
-                    ModelPickerButton(picker, pickerOpen, onPickerToggle, Modifier.weight(1f, fill = false))
-                    Box(Modifier.weight(1f))
-                    composerActions()
-                    sendButton()
-                }
-            }
-        }
+                    ({ ModelPickerButton(picker, pickerOpen, onPickerToggle, Modifier.weight(1f, fill = false)) })
+                } else {
+                    null
+                },
+            emphasis = emphasis,
+        )
     }
 }
 
@@ -755,25 +683,5 @@ private fun WindowChip(
                 .semantics { contentDescription = "Tirar a janela livre do pedido" },
             contentAlignment = Alignment.Center,
         ) { SvgIcon(BraidIcons.close, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f) }
-    }
-}
-
-/** O botão que liga e desliga a transcrição: a onda do agente, apertada enquanto o microfone está aberto. */
-@Composable
-internal fun VoiceButton(
-    listening: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val scheme = MaterialTheme.colorScheme
-    Box(
-        Modifier
-            .size(44.dp)
-            .alpha(if (enabled || listening) 1f else 0.4f)
-            .toggleable(value = listening, enabled = enabled || listening, role = Role.Switch, onValueChange = { onClick() })
-            .semantics { contentDescription = if (listening) "Parar de transcrever" else "Transcrever o que eu disser" },
-        contentAlignment = Alignment.Center,
-    ) {
-        HermesBotIcon(BotState.Listening, size = 22.dp, color = if (listening) braidBrand() else scheme.onSurfaceVariant)
     }
 }

@@ -2,6 +2,8 @@ package app.braid.mobile.ui.aiedit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.braid.mobile.domain.chat.ModelPicker
+import app.braid.mobile.domain.chat.ModelSelector
 import app.braid.mobile.domain.polling.AGENT_POLL_MS
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
@@ -9,6 +11,8 @@ import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
 import app.braid.mobile.domain.request.EDIT_LOST_TEXT
 import app.braid.mobile.domain.request.EDIT_TIMEOUT_TEXT
 import app.braid.mobile.domain.request.EditEntityType
+import app.braid.mobile.domain.request.ModelEffort
+import app.braid.mobile.domain.request.ModelProvider
 import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.RequestFollow
 import app.braid.mobile.domain.request.agentFailureText
@@ -47,6 +51,8 @@ data class EntityEditUiState(
     /** O texto de falha (envio, pedido que falhou ou foi cancelado, conexão perdida). */
     val error: String? = null,
     val voice: VoiceUiState = VoiceUiState(),
+    /** O seletor de modelo do campo, o mesmo do chat; `null` sem as opções do servidor (o campo fica simples). */
+    val picker: ModelPicker? = null,
 ) {
     val busy: Boolean get() = phase == EditPhase.Sending || phase == EditPhase.Running
     val canDismiss: Boolean get() = phase == EditPhase.Done || phase == EditPhase.Failed
@@ -70,7 +76,8 @@ data class EntityEditUiState(
  * A barra de edição por IA no rodapé dos detalhes (ADR 0006): o que se escreve edita a entidade aberta. Abre o pedido com
  * o tipo e o id da entidade (`POST /api/requests/edit`) e o acompanha com [AGENT_POLL_MS] de intervalo, a primeira leitura
  * só depois da primeira espera, até 180 s. Uma edição por vez. Terminado com entidades mexidas, [edited] avisa para a tela
- * reler a entidade. O microfone só dita: acrescenta ao campo, nunca envia sozinho.
+ * reler a entidade. O microfone só dita: acrescenta ao campo, nunca envia sozinho. O campo mostra a escolha de provedor,
+ * modelo e esforço do app ([ModelSelector], a mesma do chat) e cada pedido a leva.
  */
 @HiltViewModel(assistedFactory = EntityEditViewModel.Factory::class)
 class EntityEditViewModel
@@ -83,6 +90,7 @@ class EntityEditViewModel
         private val clock: AppClock,
         private val speech: SpeechRecognizer,
         private val microphone: MicrophonePermission,
+        private val models: ModelSelector,
     ) : ViewModel() {
         @AssistedFactory
         interface Factory {
@@ -112,15 +120,42 @@ class EntityEditViewModel
                 onTranscript = { transcript -> mutableState.update { it.copy(draft = appendTranscript(it.draft, transcript)) } },
             )
 
-        fun onDraftChange(text: String) = mutableState.update { it.copy(draft = text.take(PROMPT_MAX_LENGTH)) }
-
-        /** A tela está à vista ou não; fora de vista o microfone desliga e o acompanhamento espera. */
-        fun setVisible(value: Boolean) {
-            visible.value = value
-            if (!value) dictation.cancel()
+        init {
+            viewModelScope.launch { models.state.collect { model -> mutableState.update { it.copy(picker = model.picker) } } }
+            // A barra apareceu: lê o que o servidor oferece. Sem as opções o campo fica simples e o pedido vai sem escolha.
+            viewModelScope.launch { models.load() }
         }
 
-        /** Envia o campo. Falha de envio devolve o texto ao campo. */
+        fun onDraftChange(text: String) = mutableState.update { it.copy(draft = text.take(PROMPT_MAX_LENGTH)) }
+
+        /**
+         * A tela está à vista ou não; fora de vista o microfone desliga e o acompanhamento espera. Voltar a ela é a barra
+         * aparecer de novo: as opções de modelo são relidas, por trás (e uma leitura que tinha falhado ganha outra chance).
+         */
+        fun setVisible(value: Boolean) {
+            val returned = value && !visible.value
+            visible.value = value
+            if (!value) dictation.cancel()
+            if (returned) viewModelScope.launch { models.load() }
+        }
+
+        /** As trocas do seletor: valem já, em todas as telas, ficam no aparelho e vão no próximo pedido (mesmo com um em andamento). */
+        fun chooseProvider(provider: ModelProvider) {
+            viewModelScope.launch { models.chooseProvider(provider) }
+        }
+
+        fun chooseModel(model: String) {
+            viewModelScope.launch { models.chooseModel(model) }
+        }
+
+        fun chooseEffort(effort: ModelEffort) {
+            viewModelScope.launch { models.chooseEffort(effort) }
+        }
+
+        /**
+         * Envia o campo, com a escolha de modelo que ele mostra (um envio antes de as opções chegarem espera por elas; sem o
+         * modo modelo, vai sem escolha). Falha de envio devolve o texto ao campo.
+         */
         fun submit() {
             val current = mutableState.value
             val text = current.draft.trim()
@@ -131,7 +166,7 @@ class EntityEditViewModel
             viewModelScope.launch {
                 val id =
                     try {
-                        requests.startEdit(userId, text, entityType, entityId)
+                        requests.startEdit(userId, text, entityType, entityId, models.selectionForRequest())
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (failure: Exception) {

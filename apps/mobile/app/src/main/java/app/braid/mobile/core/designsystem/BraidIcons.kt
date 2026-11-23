@@ -35,6 +35,7 @@ object BraidIcons {
     val chevronUp = listOf(SvgPart("m18 15-6-6-6 6"))
 
     val arrowLeft = listOf(SvgPart("m12 19-7-7 7-7"), SvgPart("M19 12H5"))
+    val search = listOf(SvgPart(svgCircle(11f, 11f, 8f)), SvgPart("m21 21-4.3-4.3"))
     val arrowUp = listOf(SvgPart("m5 12 7-7 7 7"), SvgPart("M12 19V5"))
 
     /** O `X` do lucide: fecha, remove, e marca o pedido que falhou. */
@@ -142,7 +143,7 @@ object BraidIcons {
                     SvgPart("M6.5 12h11"),
                 )
             "request" -> messageSquare
-            "search_request" -> listOf(SvgPart(svgCircle(11f, 11f, 8f)), SvgPart("m21 21-4.3-4.3"))
+            "search_request" -> search
             "build_request" -> wrench
             "inquiry_request" ->
                 listOf(

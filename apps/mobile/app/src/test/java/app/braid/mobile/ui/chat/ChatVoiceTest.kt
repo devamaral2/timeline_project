@@ -4,6 +4,7 @@ import app.braid.mobile.data.chat.DefaultChatRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
 import app.braid.mobile.domain.chat.ChatPolling
+import app.braid.mobile.domain.chat.ModelSelector
 import app.braid.mobile.domain.speech.SpeechError
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.FakeMicrophone
@@ -80,18 +81,14 @@ class ChatVoiceTest {
 
     private suspend fun newViewModel(): ChatViewModel {
         graph.sessionRepository.restore()
-        return ChatViewModel(
-            DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
-            graph.sessionRepository,
-            AppClock { now },
-            ChatPolling(),
-            InMemoryModelSelectionStore(),
-            speech,
-            microphone,
-        ).also {
-            created += it
-            it.state.first { state -> state.ready }
-        }
+        return chatOf().also { it.state.first { state -> state.ready } }
+    }
+
+    private fun chatOf(): ChatViewModel {
+        val repository = DefaultChatRepository(graph.apis.create(RequestsApi::class.java))
+        val models = ModelSelector(repository, InMemoryModelSelectionStore())
+        return ChatViewModel(repository, graph.sessionRepository, AppClock { now }, ChatPolling(), models, speech, microphone)
+            .also { created += it }
     }
 
     private suspend fun ChatViewModel.until(predicate: (ChatUiState) -> Boolean): ChatUiState =
@@ -164,17 +161,7 @@ class ChatVoiceTest {
     fun `a session that arrives after the chat opened starts the microphone once`() =
         runTest {
             graph.storage.session = null
-            val chat =
-                ChatViewModel(
-                    DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
-                    graph.sessionRepository,
-                    AppClock { now },
-                    ChatPolling(),
-                    InMemoryModelSelectionStore(),
-                    speech,
-                    microphone,
-                )
-            created += chat
+            val chat = chatOf()
             chat.open()
             assertEquals(0, speech.starts)
 

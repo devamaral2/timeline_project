@@ -8,6 +8,7 @@ import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.request.FoodRequestCancelException
+import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.request.RequestNotFoundException
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -38,7 +39,11 @@ class DefaultAgentRequestRepository
             text: String,
             entityType: EditEntityType,
             entityId: String,
-        ): String = translatingStartFailures { api.startEdit(StartEditBody(userId, text, entityType.code, entityId)).requestId }
+            selection: ModelSelection?,
+        ): String =
+            translatingStartFailures {
+                api.startEdit(StartEditBody(userId, text, entityType.code, entityId, selection?.toDto())).requestId
+            }
 
         override suspend fun cancel(id: String): AgentRequest =
             try {

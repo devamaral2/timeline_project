@@ -41,7 +41,7 @@ import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 
 /** Quanto a barra inferior (dock de 66dp com o respiro de baixo) ocupa: a tela termina logo acima dela, como o chat. */
-private val DockReserve = 98.dp
+private val DockReserve = 90.dp
 
 /**
  * "Configurações", aberta pelo `/configuracoes` do chat: o interruptor de tema (claro/escuro) e o "Sair da conta".

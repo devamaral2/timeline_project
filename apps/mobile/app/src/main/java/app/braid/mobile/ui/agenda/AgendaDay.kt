@@ -92,7 +92,7 @@ fun AgendaRows(
                     onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null,
                 )
             }
-            is AgendaRow.Free -> FreeTimeRow(row.slot, now) { onPlanFreeWindow(row.window(dayKey)) }
+            is AgendaRow.Free -> FreeTimeRow(row.slot) { onPlanFreeWindow(row.window(dayKey)) }
         }
     }
 }

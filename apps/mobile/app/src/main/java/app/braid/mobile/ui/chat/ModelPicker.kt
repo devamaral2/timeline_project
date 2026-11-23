@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.domain.chat.MODEL_SEARCH_FROM
+import app.braid.mobile.domain.chat.ModelPicker
 import app.braid.mobile.domain.chat.filterModels
 import app.braid.mobile.domain.chat.modelFooter
 import app.braid.mobile.domain.chat.modelName
@@ -86,10 +87,11 @@ import app.braid.mobile.domain.request.ModelSelection
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-// O seletor do modo modelo (canvas "Provedor, modelo e esforço", opção B · Gaveta): o botão no pé do campo, com as quatro
-// barras do esforço e o modelo escolhido, e o painel que cresce do próprio campo. Quem os monta guarda se está aberto.
+// O seletor de modelo (canvas "Provedor, modelo e esforço", opção B · Gaveta): o botão no pé do campo, com as quatro
+// barras do esforço e o modelo escolhido, e o painel que cresce do próprio campo. O chat e a barra de edição dos detalhes
+// montam o mesmo; quem os monta guarda se está aberto.
 
-/** Os três pedidos do seletor ao chat: cada troca vale já e fica no aparelho. */
+/** Os três pedidos do seletor: cada troca vale já, em todas as telas, e fica no aparelho. */
 class ModelActions(
     val onProvider: (ModelProvider) -> Unit = {},
     val onModel: (String) -> Unit = {},
@@ -208,7 +210,9 @@ internal fun ModelPickerButton(
 
 /**
  * O painel da escolha: cresce do topo do campo, empurrando-o para cima, e os quatro blocos sobem 12 dp em fila. Fechado, não
- * ocupa altura nem entra na leitura de tela.
+ * ocupa altura nem entra na leitura de tela. Dentro do campo vai com `weight(1f, fill = false)` no [modifier]: o texto e o pé
+ * do campo são medidos antes, e numa tela baixa o painel fica com o que sobra e rola por dentro, em vez de espremer o campo.
+ * Isso pede um campo com altura limitada (o pé de uma tela); dentro de uma rolagem o peso deixaria o painel sem altura.
  */
 @Composable
 internal fun ModelPanel(
@@ -216,13 +220,14 @@ internal fun ModelPanel(
     open: Boolean,
     actions: ModelActions,
     onDone: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val reduced = rememberPickerReducedMotion()
     val progress = rememberPickerProgress(open)
     if (!open && progress == 0f) return
     val maxHeight = (LocalConfiguration.current.screenHeightDp * PANEL_MAX_SCREEN_FRACTION).dp
     Box(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clipToBounds()
             .layout { measurable, constraints ->
@@ -538,7 +543,7 @@ private fun DoneButton(onDone: () -> Unit) {
     }
 }
 
-/** O fundo que escurece a conversa enquanto o painel está aberto; tocar nele fecha. */
+/** O fundo que escurece o que está atrás do campo (a conversa, o detalhe) enquanto o painel está aberto; tocar nele fecha. */
 @Composable
 internal fun ModelScrim(
     open: Boolean,

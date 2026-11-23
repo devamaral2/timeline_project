@@ -149,6 +149,10 @@ uma interface pequena. Toda lógica portada à mão do TS (`packages/timeline`,
 saídas de fixtures geradas pelas funções TS. Um contrato novo ou uma
 fixture decodificando no DTO entra num teste como `SessionFixturesTest`.
 
+Os testes rodam na JVM do computador, não no Android: o que só o Android recusa passa neles. O caso conhecido é o
+regex. O Android compila `Regex` com o ICU, que recusa a flag embutida `(?U)` (o app fecha ao montar a
+tela). Para o `\s` Unicode do JS, use `[\s\p{Z}\uFEFF]`.
+
 Não há teste instrumentado de Compose: a comparação visual é manual, com o app
 no emulador contra o backend local lado a lado com o web em 390×844.
 

@@ -153,7 +153,7 @@ class ChatFixturesTest {
     }
 
     @Test
-    fun `the slash bar matches the commands the web matches, minus the dead search command`() {
+    fun `the slash bar matches the commands the web matches`() {
         for (case in cases("parseCommand")) {
             val expected = case.result
             val actual = parseCommand(case.string(0))
@@ -161,10 +161,10 @@ class ChatFixturesTest {
                 if (expected is JsonNull) {
                     emptyList()
                 } else {
-                    expected.jsonObject.getValue("slugs").jsonArray.map { it.jsonPrimitive.content }.filter {
-                        it !=
-                            "buscar"
-                    }
+                    expected.jsonObject
+                        .getValue("slugs")
+                        .jsonArray
+                        .map { it.jsonPrimitive.content }
                 }
             if (slugs.isEmpty()) {
                 assertNull(case.toString(), actual)

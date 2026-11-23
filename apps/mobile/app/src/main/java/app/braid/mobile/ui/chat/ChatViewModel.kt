@@ -13,9 +13,8 @@ import app.braid.mobile.domain.chat.ChatRequestException
 import app.braid.mobile.domain.chat.HERMES_ENTER_TEXT
 import app.braid.mobile.domain.chat.HERMES_OFF_TEXT
 import app.braid.mobile.domain.chat.MODEL_OFF_TEXT
-import app.braid.mobile.domain.chat.ModelSelectionStore
+import app.braid.mobile.domain.chat.ModelSelector
 import app.braid.mobile.domain.chat.STEPS_PENDING_LABEL
-import app.braid.mobile.domain.chat.StoredModelSelection
 import app.braid.mobile.domain.chat.chatFailureText
 import app.braid.mobile.domain.chat.hermesStepsOf
 import app.braid.mobile.domain.chat.modelEnterText
@@ -25,15 +24,10 @@ import app.braid.mobile.domain.chat.pendingLabelOf
 import app.braid.mobile.domain.chat.providerOf
 import app.braid.mobile.domain.chat.providerOffText
 import app.braid.mobile.domain.chat.requestWithWindow
-import app.braid.mobile.domain.chat.resolveSelection
-import app.braid.mobile.domain.chat.withEffort
-import app.braid.mobile.domain.chat.withModel
-import app.braid.mobile.domain.chat.withProvider
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.HermesOffException
 import app.braid.mobile.domain.request.ModelEffort
 import app.braid.mobile.domain.request.ModelOffException
-import app.braid.mobile.domain.request.ModelOptions
 import app.braid.mobile.domain.request.ModelProvider
 import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.request.appendTranscript
@@ -62,6 +56,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -76,7 +71,8 @@ private const val SILENCE_SEND_MS = 1_800L
  * A conversa com o agente. Vive acima da folha (o `ViewModel` é da atividade): fechar o chat ou trocar de tela não apaga a
  * conversa nem derruba a resposta em andamento; só "Nova conversa" a zera. Cada mensagem vira um pedido na API (rota por
  * passos) ou, depois de `/hermes` ou de um comando de modelo (`/modelo`, `/claude`, `/openai`, `/openrouter`), vai ao Hermes ou
- * ao modelo escolhido (ADR 0019); o pedido é acompanhado até o fim e a caixa de processo mostra cada passo.
+ * ao modelo escolhido (ADR 0019); o pedido é acompanhado até o fim e a caixa de processo mostra cada passo. A escolha de
+ * provedor, modelo e esforço ([ModelSelector]) aparece no campo desde que o chat abre e vai também nos pedidos por passos.
  */
 @HiltViewModel
 class ChatViewModel
@@ -86,11 +82,11 @@ class ChatViewModel
         private val session: SessionRepository,
         private val clock: AppClock,
         private val polling: ChatPolling,
-        private val modelStore: ModelSelectionStore,
+        private val models: ModelSelector,
         private val speech: SpeechRecognizer = NoSpeechRecognizer,
         private val microphone: MicrophonePermission = GrantedMicrophone,
     ) : ViewModel() {
-        private val mutableState = MutableStateFlow(ChatUiState(todayKey = dayKeyOf(clock.now())))
+        private val mutableState = MutableStateFlow(ChatUiState(todayKey = dayKeyOf(clock.now()), model = models.state.value))
         val state: StateFlow<ChatUiState> = mutableState.asStateFlow()
 
         private val mutableEntitiesChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -114,11 +110,6 @@ class ChatViewModel
         private var recovering = false
         private val deferred = mutableListOf<() -> Unit>()
 
-        /** O que o servidor oferece ao modo modelo: lido ao entrar no modo e guardado até "Nova conversa". */
-        private var modelOptions: ModelOptions? = null
-
-        /** A escolha atual (provedor, modelo, esforço) e o último modelo de cada provedor; o aparelho a guarda. */
-        private var modelState: StoredModelSelection? = null
         private var botThinking = false
         private var botTimer: Job? = null
 
@@ -167,6 +158,8 @@ class ChatViewModel
                     resumeLoop()
                 }
             }
+            // A escolha de modelo é do app inteiro: a troca feita na barra de um detalhe aparece aqui também.
+            viewModelScope.launch { models.state.collect { model -> mutableState.update { it.copy(model = model) } } }
             viewModelScope.launch {
                 session.state.collect { current ->
                     val id = (current as? SessionState.SignedIn)?.user?.userId
@@ -174,6 +167,8 @@ class ChatViewModel
                         // Outra conta (ou nenhuma) não herda a conversa da anterior.
                         if (userId != null) reset()
                         userId = id
+                        // A sessão que chega com o chat já aberto lê as opções que a abertura não pôde ler.
+                        if (mutableState.value.open) loadModels()
                     }
                     mutableState.value = mutableState.value.copy(ready = id != null, signedOut = current is SessionState.SignedOut)
                     tryAutoListen()
@@ -191,6 +186,17 @@ class ChatViewModel
             autoListen = true
             tryAutoListen()
             recover()
+            loadModels()
+        }
+
+        /**
+         * Abrir o chat (e começar uma conversa nova) lê o que o servidor oferece: com as opções, o campo mostra o seletor e
+         * cada pedido leva a escolha. Sem elas (modo modelo desligado, rede) o campo fica simples, e a próxima abertura tenta
+         * de novo.
+         */
+        private fun loadModels() {
+            if (userId == null) return
+            viewModelScope.launch { models.load() }
         }
 
         fun close() {
@@ -282,7 +288,11 @@ class ChatViewModel
             return true
         }
 
-        /** Abre o pedido na API (o id da mensagem é o `clientMessageId`) e o acompanha até o fim. */
+        /**
+         * Abre o pedido na API (o id da mensagem é o `clientMessageId`), com a escolha de modelo que o campo mostra, e o
+         * acompanha até o fim. Um envio antes de as opções chegarem espera por elas; sem o modo modelo neste ambiente (ou sem
+         * rede) o pedido vai sem escolha.
+         */
         private fun runRequest(
             id: String,
             text: String,
@@ -291,7 +301,7 @@ class ChatViewModel
             viewModelScope.launch {
                 val requestId =
                     try {
-                        repository.start(user, text, sessionId, id)
+                        repository.start(user, text, sessionId, id, models.selectionForRequest())
                     } catch (failure: ChatRequestException) {
                         fail(id, failure.failure)
                         return@launch
@@ -326,11 +336,7 @@ class ChatViewModel
                     try {
                         when (agent) {
                             ChatAgent.Hermes -> repository.sendHermes(user, text, sessionId, id)
-                            ChatAgent.Model -> {
-                                loadModelOptions()
-                                val selection = modelState?.current ?: throw ModelOffException()
-                                repository.sendModel(user, text, sessionId, id, selection)
-                            }
+                            ChatAgent.Model -> repository.sendModel(user, text, sessionId, id, models.picker().selection)
                         }
                     } catch (failure: Exception) {
                         if (failure is HermesOffException || failure is ModelOffException) {
@@ -366,7 +372,7 @@ class ChatViewModel
                 commit {
                     it.copy(
                         turns = upsertTurn(it.turns, ChatTurn(id, text, agent.route, running = true, trace = null)),
-                        pending = ChatPending(id, pendingLabelOf(agent, request.model ?: modelState?.current, modelOptions), request.id),
+                        pending = ChatPending(id, pendingLabel(agent, request), request.id),
                     )
                 }
                 followRequest(id, request.id)
@@ -374,9 +380,9 @@ class ChatViewModel
         }
 
         /**
-         * `/modelo`, `/claude`, `/openai` ou `/openrouter`: lê as opções do servidor, escolhe o provedor do comando (se ele tem
-         * chave aqui), liga o modo e, havendo mensagem depois do comando, a envia. Sem provedor com chave o chat avisa e fica
-         * fora do modo; com o provedor do comando desligado, avisa e deixa o modo como estava.
+         * `/modelo`, `/claude`, `/openai` ou `/openrouter`: com as opções do servidor (as já lidas, ou lidas agora), escolhe o
+         * provedor do comando (se ele tem chave aqui), liga o modo e, havendo mensagem depois do comando, a envia. Sem provedor
+         * com chave o chat avisa e fica fora do modo; com o provedor do comando desligado, avisa e deixa o modo como estava.
          */
         private fun enterModelMode(
             id: String,
@@ -384,9 +390,10 @@ class ChatViewModel
             text: String?,
         ) {
             viewModelScope.launch {
-                val options =
+                val picker =
                     try {
-                        loadModelOptions()
+                        // Quem pede o modo quer saber agora se ele existe: sem opções lidas, pergunta de novo ao servidor.
+                        models.picker(askAgain = true)
                     } catch (failure: Exception) {
                         if (failure is ModelOffException) {
                             following -= id
@@ -406,6 +413,7 @@ class ChatViewModel
                         throw failure
                     }
                 if (id !in following) return@launch
+                val options = picker.options
                 if (provider != null && options.providerOf(provider) == null) {
                     following -= id
                     commit {
@@ -416,16 +424,15 @@ class ChatViewModel
                     }
                     return@launch
                 }
-                val resolved = modelState ?: resolveSelection(options, null)
-                val chosen = if (provider != null) resolved.withProvider(options, provider) else resolved
-                commitModelState(chosen)
+                if (provider != null) models.chooseProvider(provider)
+                val chosen = models.state.value.selection ?: picker.selection
                 commit { it.copy(agentMode = ChatAgent.Model) }
                 if (text == null) {
                     following -= id
                     commit {
                         it.copy(
                             pending = null,
-                            messages = it.messages + ChatMessage.Assistant("$id-notice", modelEnterText(options, chosen.current)),
+                            messages = it.messages + ChatMessage.Assistant("$id-notice", modelEnterText(options, chosen)),
                         )
                     }
                     return@launch
@@ -434,41 +441,26 @@ class ChatViewModel
             }
         }
 
-        /**
-         * Lê as opções do servidor (uma vez por conversa) e confere a escolha guardada contra elas. Sem nenhum provedor com
-         * chave a API responde 404 e isto sobe [ModelOffException].
-         */
-        private suspend fun loadModelOptions(): ModelOptions {
-            modelOptions?.let { return it }
-            val options = repository.modelOptions()
-            modelOptions = options
-            commitModelState(resolveSelection(options, modelState ?: modelStore.read()))
-            return options
-        }
-
-        /** A escolha vale já na tela e fica no aparelho. */
-        private fun commitModelState(next: StoredModelSelection) {
-            modelState = next
-            commit { it.copy(model = ModelUiState(modelOptions, next.current)) }
-            viewModelScope.launch { modelStore.write(next) }
-        }
-
-        /** Troca o provedor no seletor: o modelo é o que ele tinha na última vez, ou o padrão dele. */
+        /** Troca o provedor no seletor: o modelo é o que ele tinha na última vez, ou o padrão dele. Vale já e fica no aparelho. */
         fun chooseProvider(provider: ModelProvider) {
-            val state = modelState ?: return
-            val options = modelOptions ?: return
-            commitModelState(state.withProvider(options, provider))
+            viewModelScope.launch { models.chooseProvider(provider) }
         }
 
         fun chooseModel(model: String) {
-            val state = modelState ?: return
-            val options = modelOptions ?: return
-            if (options.providerOf(state.current.provider)?.models?.any { it.id == model } == true) commitModelState(state.withModel(model))
+            viewModelScope.launch { models.chooseModel(model) }
         }
 
         fun chooseEffort(effort: ModelEffort) {
-            val state = modelState ?: return
-            commitModelState(state.withEffort(effort))
+            viewModelScope.launch { models.chooseEffort(effort) }
+        }
+
+        /** "Falando com Sonnet 5.5": a escolha é a do pedido; sem ela (um pedido antigo), a atual. */
+        private fun pendingLabel(
+            agent: ChatAgent,
+            request: AgentRequest,
+        ): String {
+            val model = models.state.value
+            return pendingLabelOf(agent, request.model ?: model.selection, model.options)
         }
 
         // endregion
@@ -565,7 +557,7 @@ class ChatViewModel
                     }
                 }
                 val pending = current.pending
-                val label = agent?.let { pendingLabelOf(it, view.model ?: modelState?.current, modelOptions) }
+                val label = agent?.let { pendingLabel(it, view) }
                 current.copy(
                     messages = messages,
                     turns =
@@ -693,19 +685,22 @@ class ChatViewModel
             }
         }
 
-        /** Começar de novo é estado local: limpa a tela, a sessão e volta ao assistente da agenda. Só sem pedido em andamento. */
+        /**
+         * Começar de novo é estado local: limpa a tela, a sessão e volta ao assistente da agenda. A escolha de modelo e o
+         * seletor ficam no campo. Só sem pedido em andamento.
+         */
         fun startNewConversation() {
             if (mutableState.value.pending != null) return
             reset()
+            // O seletor continua no campo; as opções são lidas de novo, por trás, para a conversa nova.
+            loadModels()
         }
 
         private fun reset() {
             following.clear()
             sessionId = null
-            modelOptions = null
             commit {
                 it.copy(
-                    model = ModelUiState(null, modelState?.current),
                     messages = emptyList(),
                     turns = emptyList(),
                     pending = null,
@@ -766,8 +761,7 @@ class ChatViewModel
                         current.pending
                             ?: ChatPending(
                                 newest.id,
-                                ChatAgent.of(newest.route)?.let { pendingLabelOf(it, newest.model ?: modelState?.current, modelOptions) }
-                                    ?: STEPS_PENDING_LABEL,
+                                ChatAgent.of(newest.route)?.let { pendingLabel(it, newest) } ?: STEPS_PENDING_LABEL,
                                 newest.id,
                             ),
                 )
@@ -799,7 +793,8 @@ class ChatViewModel
                         mutableState.value = withBot(mutableState.value)
                     }
             }
-            mutableState.value = withBot(after)
+            // A escolha de modelo vem sempre do seletor: uma mudança dela que chegou durante esta não se perde.
+            mutableState.value = withBot(after).copy(model = models.state.value)
             tryAutoListen()
             resumeLoop()
         }

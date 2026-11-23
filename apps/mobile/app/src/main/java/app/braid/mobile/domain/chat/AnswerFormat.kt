@@ -10,7 +10,10 @@ import java.util.Locale
  */
 
 private val QUOTED = Regex("[\"“]([^\"“”\\n]{2,48})[\"”]")
-private val JOINER = Regex("(?U)\\s*(?:,|ou|or|,\\s*(?:ou|or))\\s*", RegexOption.IGNORE_CASE)
+
+// O `\s` do JS também casa espaços Unicode (como o U+00A0). Sem `(?U)`, que o regex do Android (ICU) recusa.
+private const val SPACE = "[\\s\\p{Z}\\uFEFF]"
+private val JOINER = Regex("$SPACE*(?:,|ou|or|,$SPACE*(?:ou|or))$SPACE*", RegexOption.IGNORE_CASE)
 private const val MAX_CHOICES = 4
 private const val MIN_CHOICES = 2
 

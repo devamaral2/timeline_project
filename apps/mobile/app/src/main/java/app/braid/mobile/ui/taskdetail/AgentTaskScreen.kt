@@ -1,10 +1,7 @@
 package app.braid.mobile.ui.taskdetail
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +13,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -24,31 +22,21 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -58,7 +46,6 @@ import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
 import app.braid.mobile.core.designsystem.SvgIcon
-import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
@@ -71,6 +58,7 @@ import app.braid.mobile.domain.request.TraceEntry
 import app.braid.mobile.domain.request.entityKindLabel
 import app.braid.mobile.domain.request.entityOperationLabel
 import app.braid.mobile.domain.request.entryText
+import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.stepProgress
 import app.braid.mobile.domain.request.traceKindName
 import app.braid.mobile.domain.task.TaskActor
@@ -80,6 +68,12 @@ import app.braid.mobile.domain.task.elapsedLabel
 import app.braid.mobile.domain.task.momentLabel
 import app.braid.mobile.domain.timeline.formatTime
 import app.braid.mobile.ui.aiedit.MicrophonePermissionEffect
+import app.braid.mobile.ui.chat.BotState
+import app.braid.mobile.ui.chat.HermesComposer
+import app.braid.mobile.ui.chat.HermesContextCard
+import app.braid.mobile.ui.chat.HermesDraft
+import app.braid.mobile.ui.chat.HermesSend
+import app.braid.mobile.ui.chat.HermesStatusLine
 import app.braid.mobile.ui.chat.VoiceButton
 import app.braid.mobile.ui.chat.VoiceUiState
 import app.braid.mobile.ui.tasks.TaskKindMark
@@ -478,29 +472,11 @@ private fun RequestBar(
         composer.error?.let { Alert(it) }
         content.followFailure?.let { Alert(it) }
         voice.notice?.let { Alert(it) }
-        Row(
-            Modifier.fillMaxWidth().defaultMinSize(minHeight = 28.dp).padding(start = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SvgIcon(
-                BraidIcons.bot,
-                size = 18.dp,
-                color = if (tracked?.status == TaskStatus.Failed) scheme.error else braidTokens().brand,
-                strokeWidth = 1.9f,
-                modifier = Modifier.clearAndSetSemantics {},
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                if (voice.listening) EDIT_LISTENING_TEXT else content.statusLine,
-                modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
-                color = if (tracked?.status == TaskStatus.Failed) scheme.error else scheme.onSurfaceVariant,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-            )
+        HermesStatusLine(requestBotState(content, voice.listening), if (voice.listening) EDIT_LISTENING_TEXT else content.statusLine) {
             if (content.canCancel) {
                 Box(
                     Modifier
-                        .defaultMinSize(minHeight = 48.dp)
+                        .heightIn(min = 44.dp)
                         .alpha(if (composer.cancelling) DISABLED_ALPHA else 1f)
                         .clickable(enabled = !composer.cancelling, role = Role.Button, onClick = onCancel)
                         .padding(horizontal = 6.dp),
@@ -510,26 +486,46 @@ private fun RequestBar(
                 }
             }
         }
-        Column(
-            Modifier.fillMaxWidth().border(1.dp, scheme.outline, RoundedCornerShape(CARD_RADIUS)),
-        ) {
-            tracked?.let { ContextCard(it) }
-            DraftField(
-                composer.draft,
-                enabled = tracked != null && !composer.sending,
-                canSend = content.canSend,
-                sending = composer.sending,
-                voice = voice,
-                onDraftChange = onDraftChange,
-                onSend = onSend,
-                onToggleVoice = onToggleVoice,
-            )
-        }
+        val enabled = tracked != null && !composer.sending
+        HermesComposer(
+            draft =
+                HermesDraft(
+                    text = composer.draft,
+                    onChange = onDraftChange,
+                    placeholder = "Responda ou peça uma mudança",
+                    label = "Pedir à IA para editar este pedido",
+                    enabled = enabled,
+                ),
+            send =
+                HermesSend(
+                    enabled = content.canSend && composer.draft.isNotBlank(),
+                    label = if (composer.sending) "Aguardando a resposta" else "Enviar pedido",
+                    onSend = onSend,
+                ),
+            context = tracked?.let { { HermesContextCard(BraidIcons.messageSquare, "Pedido · ${momentLabel(it.createdAt)}", it.title) } },
+            actions = {
+                if (voice.available) VoiceButton(listening = voice.listening, enabled = enabled, onClick = onToggleVoice)
+            },
+        )
+    }
+}
+
+/** O robô da linha de status, como no web: ouvindo, pensando enquanto o pedido anda, o ✓ ou a exclamação no fim. */
+private fun requestBotState(
+    content: AgentTaskUiState.Content,
+    listening: Boolean,
+): BotState {
+    val tracked = content.tracked
+    return when {
+        listening -> BotState.Listening
+        tracked == null || content.composer.sending || isOpenRequest(tracked.status) -> BotState.Thinking
+        tracked.status == TaskStatus.Done -> BotState.Done
+        tracked.status == TaskStatus.Failed -> BotState.Error
+        else -> BotState.Idle
     }
 }
 
 private const val DISABLED_ALPHA = 0.55f
-private val CARD_RADIUS = 22.dp
 
 @Composable
 private fun Alert(text: String) {
@@ -541,123 +537,3 @@ private fun Alert(text: String) {
         lineHeight = 20.sp,
     )
 }
-
-/** O pedido a que o campo responde: "Pedido · quando" e o título. */
-@Composable
-private fun ContextCard(request: AgentRequest) {
-    Row(
-        Modifier.fillMaxWidth().defaultMinSize(minHeight = 52.dp).padding(start = 6.dp, end = 16.dp, top = 5.dp, bottom = 5.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-            SvgIcon(
-                BraidIcons.messageSquare,
-                size = 20.dp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                strokeWidth = 1.75f,
-                modifier = Modifier.clearAndSetSemantics {},
-            )
-        }
-        Column(Modifier.weight(1f)) {
-            Text(
-                "Pedido · ${momentLabel(request.createdAt)}",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-                lineHeight = 18.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                request.title,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 15.sp,
-                lineHeight = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DraftField(
-    draft: String,
-    enabled: Boolean,
-    canSend: Boolean,
-    sending: Boolean,
-    voice: VoiceUiState,
-    onDraftChange: (String) -> Unit,
-    onSend: () -> Unit,
-    onToggleVoice: () -> Unit,
-) {
-    val scheme = MaterialTheme.colorScheme
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val ready = canSend && draft.isNotBlank()
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .then(if (focused) Modifier.border(1.dp, braidBrand(), RoundedCornerShape(CARD_RADIUS)) else Modifier)
-            .padding(start = 12.dp, end = 4.dp),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        BasicTextField(
-            value = draft,
-            onValueChange = onDraftChange,
-            enabled = enabled,
-            interactionSource = interaction,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = scheme.onBackground, fontSize = 15.sp, lineHeight = 22.sp),
-            cursorBrush = SolidColor(braidBrand()),
-            maxLines = MAX_COMPOSER_LINES,
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .semantics { contentDescription = "Pedir à IA para editar este pedido" },
-            decorationBox = { inner ->
-                Box(Modifier.defaultMinSize(minHeight = 44.dp).padding(vertical = 11.dp), contentAlignment = Alignment.CenterStart) {
-                    if (draft.isEmpty()) {
-                        Text(
-                            "Responda ou peça uma mudança",
-                            color = scheme.onSurfaceVariant.copy(alpha = PLACEHOLDER_ALPHA),
-                            fontSize = 15.sp,
-                            lineHeight = 22.sp,
-                        )
-                    }
-                    inner()
-                }
-            },
-        )
-        if (voice.available) {
-            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                VoiceButton(listening = voice.listening, enabled = enabled, onClick = onToggleVoice)
-            }
-        }
-        Box(
-            Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .then(
-                    if (ready) {
-                        Modifier.background(scheme.primary)
-                    } else {
-                        Modifier.border(1.dp, scheme.outline, CircleShape)
-                    },
-                ).clickable(enabled = ready, role = Role.Button, onClick = onSend)
-                .semantics { contentDescription = if (sending) "Aguardando a resposta" else "Enviar pedido" },
-            contentAlignment = Alignment.Center,
-        ) {
-            SvgIcon(
-                BraidIcons.arrowUp,
-                size = 20.dp,
-                color = if (ready) scheme.onPrimary else scheme.outline,
-                strokeWidth = 2f,
-                modifier = Modifier.clearAndSetSemantics {},
-            )
-        }
-    }
-}
-
-private const val MAX_COMPOSER_LINES = 5
-private const val PLACEHOLDER_ALPHA = 0.7f

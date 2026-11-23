@@ -1,5 +1,8 @@
 package app.braid.mobile.ui.shell
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -8,10 +11,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -21,7 +29,10 @@ import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.ui.chat.BotState
-import app.braid.mobile.ui.chat.HermesBotIcon
+import app.braid.mobile.ui.chat.FlightKind
+import app.braid.mobile.ui.chat.HermesBot
+import app.braid.mobile.ui.chat.LocalHermesFlight
+import kotlinx.coroutines.delay
 
 /**
  * O botão do agente: um aro da cor da dock em volta do disco da marca com o robô. Fica fora da dock, na ponta. O robô
@@ -41,7 +52,7 @@ fun AgentButton(
     Box(
         modifier =
             modifier
-                .size(66.dp)
+                .size(58.dp)
                 .clip(CircleShape)
                 .background(if (blended) Color.Transparent else scheme.surface)
                 .border(1.dp, if (blended) Color.Transparent else scheme.outline, CircleShape)
@@ -49,8 +60,57 @@ fun AgentButton(
                 .semantics { contentDescription = if (chatOpen) "Fechar chat com IA" else "Buscar e criar" },
         contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.size(52.dp).background(braidTokens().brand, CircleShape), contentAlignment = Alignment.Center) {
-            if (chatOpen) {
+        AgentCore(bot = bot, chatOpen = chatOpen)
+    }
+}
+
+/** `closeEnter` do web: o X que fica no lugar do botão que voou. */
+private val CloseEnterEasing = CubicBezierEasing(0.2f, 0.7f, 0.2f, 1f)
+private const val CLOSE_ENTER_DELAY_MS = 70L
+private const val CLOSE_ENTER_MS = 120
+private const val CORE_AWAY_MS = 200
+private const val CLOSE_ENTER_SCALE = 0.6f
+private val CoreSize = 46.dp
+
+/**
+ * O disco do botão: o robô, ou o X com o chat aberto. Avisa ao voo onde está; quando o robô sai voando o X surge
+ * crescendo; quando ele volta, o disco se apaga até o pouso; entrando e saindo de um detalhe, fica escondido.
+ */
+@Composable
+private fun AgentCore(
+    bot: BotState,
+    chatOpen: Boolean,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val flightState = LocalHermesFlight.current
+    val flight = flightState?.current
+    val core = remember(flight?.serial) { Animatable(if (flight?.kind == FlightKind.Out) 0f else 1f) }
+    LaunchedEffect(flight?.serial) {
+        when (flight?.kind) {
+            FlightKind.Out -> {
+                delay(CLOSE_ENTER_DELAY_MS)
+                core.animateTo(1f, tween(CLOSE_ENTER_MS, easing = CloseEnterEasing))
+            }
+            FlightKind.Back -> core.animateTo(0f, tween(CORE_AWAY_MS))
+            else -> Unit
+        }
+    }
+    val hidden = flight?.kind == FlightKind.Dock || flight?.kind == FlightKind.Undock
+    val entering = flight?.kind == FlightKind.Out
+    Box(
+        Modifier
+            .size(CoreSize)
+            .onGloballyPositioned { flightState?.buttonMoved(it.boundsInRoot()) }
+            .graphicsLayer {
+                alpha = if (hidden) 0f else core.value
+                val grow = if (entering) CLOSE_ENTER_SCALE + (1f - CLOSE_ENTER_SCALE) * core.value else 1f
+                scaleX = grow
+                scaleY = grow
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (chatOpen) {
+            Box(Modifier.size(CoreSize).background(braidTokens().brand, CircleShape), contentAlignment = Alignment.Center) {
                 SvgIcon(
                     BraidIcons.close,
                     size = 26.dp,
@@ -58,9 +118,9 @@ fun AgentButton(
                     strokeWidth = 2f,
                     modifier = Modifier.clearAndSetSemantics {},
                 )
-            } else {
-                HermesBotIcon(bot, size = 30.dp, color = scheme.background, modifier = Modifier.clearAndSetSemantics {})
             }
+        } else {
+            HermesBot(bot, size = CoreSize)
         }
     }
 }

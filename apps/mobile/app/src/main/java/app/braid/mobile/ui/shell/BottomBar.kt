@@ -66,13 +66,13 @@ enum class MainTab(
     Documents("Documentos", BraidIcons.documentsNav),
 }
 
-private val DockHeight = 66.dp
+private val DockHeight = 58.dp
 private val AgentButtonGap = 10.dp
-private val AgentButtonSize = 66.dp
+private val AgentButtonSize = 58.dp
 
 /**
  * A barra inferior flutua em duas peças: a dock com as três seções e, separado
- * por um respiro de 10dp, o círculo do agente (66dp, a altura da dock). Atrás
+ * por um respiro de 10dp, o círculo do agente (58dp, a altura da dock). Atrás
  * dela o conteúdo se apaga no chão. O rótulo só aparece na seção atual.
  *
  * Tocar de novo na aba atual abre o menu da seção: a dock cresce para cima, passa por
@@ -104,7 +104,7 @@ fun BraidBottomBar(
             Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(140.dp)
+                .height(132.dp)
                 .background(Brush.verticalGradient(0f to Color.Transparent, 0.58f to background, 1f to background)),
         )
         Box(
@@ -150,7 +150,7 @@ private fun Dock(
     modifier: Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(33.dp)
+    val shape = RoundedCornerShape(29.dp)
     Column(
         modifier =
             modifier
@@ -173,7 +173,7 @@ private fun Dock(
                 Modifier
                     .fillMaxWidth()
                     .height(DockHeight)
-                    .padding(start = 6.dp, top = 6.dp, bottom = 6.dp, end = 6.dp + tabsEnd)
+                    .padding(start = 5.dp, top = 5.dp, bottom = 5.dp, end = 5.dp + tabsEnd)
                     .semantics { role = Role.Tab },
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -239,10 +239,10 @@ private fun RowScope.DockTab(
         modifier =
             Modifier
                 .weight(grow)
-                .height(52.dp)
-                .clip(RoundedCornerShape(26.dp))
+                .height(46.dp)
+                .clip(RoundedCornerShape(23.dp))
                 .background(background)
-                .then(if (selected && chatOpen) Modifier.border(1.dp, scheme.outlineVariant, RoundedCornerShape(26.dp)) else Modifier)
+                .then(if (selected && chatOpen) Modifier.border(1.dp, scheme.outlineVariant, RoundedCornerShape(23.dp)) else Modifier)
                 .clickable(role = Role.Tab, onClick = onClick)
                 .semantics {
                     contentDescription = tab.label

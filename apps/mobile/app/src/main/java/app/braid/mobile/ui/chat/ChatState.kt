@@ -3,9 +3,10 @@ package app.braid.mobile.ui.chat
 import app.braid.mobile.domain.agenda.FreeWindow
 import app.braid.mobile.domain.chat.ChatAgent
 import app.braid.mobile.domain.chat.HermesStep
+import app.braid.mobile.domain.chat.ModelPicker
+import app.braid.mobile.domain.chat.ModelSelectorState
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentTrace
-import app.braid.mobile.domain.request.ModelOptions
 import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.request.RequestEntity
 import app.braid.mobile.domain.request.RequestRoute
@@ -91,12 +92,6 @@ data class VoiceUiState(
     val askPermission: Boolean = false,
 )
 
-/** O seletor do modo modelo: aparece quando o modo está ligado e há [options] e [selection]. */
-data class ModelUiState(
-    val options: ModelOptions? = null,
-    val selection: ModelSelection? = null,
-)
-
 data class ChatUiState(
     val open: Boolean = false,
     val messages: List<ChatMessage> = emptyList(),
@@ -107,8 +102,8 @@ data class ChatUiState(
      * até começar de novo. `null` é o assistente da agenda.
      */
     val agentMode: ChatAgent? = null,
-    /** O modo modelo: o que o servidor oferece e a escolha atual (cada troca vale já e fica no aparelho). */
-    val model: ModelUiState = ModelUiState(),
+    /** A escolha de modelo do app: o que o servidor oferece e a escolha atual (cada troca vale já e fica no aparelho). */
+    val model: ModelSelectorState = ModelSelectorState(),
     /** Há usuário: sem ele nada é enviado. */
     val ready: Boolean = false,
     val signedOut: Boolean = false,
@@ -121,17 +116,9 @@ data class ChatUiState(
 ) {
     val isConversation: Boolean get() = messages.isNotEmpty()
 
-    /** O seletor do modo modelo só existe no modo modelo, com as opções do servidor já lidas. */
-    val picker: ModelPicker?
-        get() {
-            val options = model.options
-            val selection = model.selection
-            return if (agentMode == ChatAgent.Model && options != null && selection != null) ModelPicker(options, selection) else null
-        }
+    /**
+     * O seletor de modelo do campo: existe com as opções do servidor lidas, no assistente da agenda (a escolha vai em cada
+     * pedido) e no modo modelo. No modo Hermes não há escolha de modelo, e ele some.
+     */
+    val picker: ModelPicker? get() = if (agentMode == ChatAgent.Hermes) null else model.picker
 }
-
-/** O que o seletor mostra: o que o servidor oferece e a escolha atual. */
-data class ModelPicker(
-    val options: ModelOptions,
-    val selection: ModelSelection,
-)

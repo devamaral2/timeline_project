@@ -1,6 +1,8 @@
 package app.braid.mobile.ui.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -15,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -33,12 +37,21 @@ import app.braid.mobile.ui.chat.ChatCommandHandlers
 import app.braid.mobile.ui.chat.ChatEntityLinks
 import app.braid.mobile.ui.chat.ChatOverlay
 import app.braid.mobile.ui.chat.ChatViewModel
+import app.braid.mobile.ui.chat.FlightKind
+import app.braid.mobile.ui.chat.HermesFlight
+import app.braid.mobile.ui.chat.HermesFlyer
 import app.braid.mobile.ui.chat.LocalEntitiesChanged
+import app.braid.mobile.ui.chat.LocalHermesFlight
+import app.braid.mobile.ui.chat.MarkRole
+import app.braid.mobile.ui.chat.rememberReducedMotion
 import app.braid.mobile.ui.documents.DocumentDetailPage
 import app.braid.mobile.ui.documents.DocumentEditPage
 import app.braid.mobile.ui.documents.DocumentsScreen
 import app.braid.mobile.ui.notifications.NotificationsScreen
 import app.braid.mobile.ui.reminders.ReminderPrompts
+import app.braid.mobile.ui.search.SearchResult
+import app.braid.mobile.ui.search.SearchScreen
+import app.braid.mobile.ui.search.SearchViewModel
 import app.braid.mobile.ui.settings.SettingsScreen
 import app.braid.mobile.ui.settings.SettingsViewModel
 import app.braid.mobile.ui.shell.BraidBottomBar
@@ -50,6 +63,7 @@ import app.braid.mobile.ui.shell.SectionMenus
 import app.braid.mobile.ui.taskdetail.TaskDetailPage
 import app.braid.mobile.ui.taskedit.TaskEditPage
 import app.braid.mobile.ui.tasks.TasksScreen
+import kotlinx.coroutines.delay
 
 @Composable
 fun AppNavHost(
@@ -59,6 +73,7 @@ fun AppNavHost(
     sectionMenu: SectionMenuViewModel = hiltViewModel(),
     chat: ChatViewModel = hiltViewModel(),
     settings: SettingsViewModel = hiltViewModel(),
+    search: SearchViewModel = hiltViewModel(),
 ) {
     val session by gate.state.collectAsStateWithLifecycle()
     val mode by sectionMenu.mode.collectAsStateWithLifecycle()
@@ -72,6 +87,16 @@ fun AppNavHost(
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     // "Configurações" do `/configuracoes`: abre dentro do painel do chat, como no web, e o voltar leva ao chat.
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
+    // A pesquisa aberta no painel do chat, com o texto que veio depois de `/buscar`; nula, fechada.
+    var searchArgument by rememberSaveable { mutableStateOf<String?>(null) }
+    // O voo do botão do Hermes entre a barra e o ícone de status do chat ou de um detalhe.
+    val flight = remember { HermesFlight() }
+    flight.reduced = rememberReducedMotion()
+    // Abrir o chat manda o botão voar até o status; fechar o traz de volta, com o painel à vista até o pouso.
+    remember(chatState.open) {
+        if (chatState.open) flight.chatOpened() else flight.chatClosed()
+        chatState.open
+    }
     val navController = rememberNavController()
     val destination = navController.currentBackStackEntryAsState().value?.destination
     val currentTab =
@@ -88,8 +113,14 @@ fun AppNavHost(
     // O voltar do sistema fecha o chat antes do resto.
     BackHandler(enabled = chatState.open) { chat.close() }
     BackHandler(enabled = chatState.open && settingsOpen) { settingsOpen = false }
+    BackHandler(enabled = chatState.open && searchArgument != null) { searchArgument = null }
     // Fechar o chat (aba, voltar, sessão perdida) fecha também as configurações que estavam nele.
-    LaunchedEffect(chatState.open) { if (!chatState.open) settingsOpen = false }
+    LaunchedEffect(chatState.open) {
+        if (!chatState.open) {
+            settingsOpen = false
+            searchArgument = null
+        }
+    }
 
     // A sessão manda: entrar abre a Agenda, e perdê-la (renovação recusada, sair) volta ao login.
     LaunchedEffect(session) {
@@ -123,6 +154,8 @@ fun AppNavHost(
                         navController.navigate(NewDocumentRoute(argument.trim().ifEmpty { null }))
                     },
                     // As configurações abrem dentro do painel do chat, como no web.
+                    // `/buscar viagem` abre a pesquisa no painel do chat, já buscando o texto.
+                    ChatCommand.Search to { argument -> searchArgument = argument },
                     ChatCommand.Settings to { _ -> settingsOpen = true },
                     // `/notificacoes` troca o chat pelo feed; o voltar da tela o reabre.
                     ChatCommand.Notifications to {
@@ -148,7 +181,44 @@ fun AppNavHost(
         }
     }
 
-    CompositionLocalProvider(LocalSectionMenus provides menus, LocalEntitiesChanged provides chat.entitiesChanged) {
+    // A barra avisa ao voo quando aparece ou sai (entrar num detalhe a esconde).
+    SideEffect { flight.barChanged(currentTab != null) }
+    // A barra que sai se apaga em 126 ms; voltando de um detalhe, reaparece depois que o botão começa a voltar.
+    val barAlpha = remember { Animatable(1f) }
+    var lastTab by remember { mutableStateOf(currentTab) }
+    if (currentTab != null) SideEffect { lastTab = currentTab }
+    val undocking = flight.current?.kind == FlightKind.Undock
+    LaunchedEffect(currentTab != null, undocking) {
+        when {
+            currentTab == null -> barAlpha.animateTo(0f, tween(BAR_AWAY_MS))
+            undocking -> {
+                barAlpha.snapTo(0f)
+                delay(BAR_RETURN_DELAY_MS)
+                barAlpha.animateTo(1f, tween(BAR_RETURN_MS))
+            }
+            else -> barAlpha.snapTo(1f)
+        }
+    }
+    // O painel do chat entra 73 ms depois de o botão partir e, na volta, se apaga enquanto ele voa.
+    val panelFlight = flight.current?.takeIf { it.role == MarkRole.Chat }
+    val panelAlpha = remember(panelFlight?.serial) { Animatable(if (panelFlight?.kind == FlightKind.Out) 0f else 1f) }
+    LaunchedEffect(panelFlight?.serial) {
+        when (panelFlight?.kind) {
+            FlightKind.Out -> {
+                delay(PANEL_ENTER_DELAY_MS)
+                panelAlpha.animateTo(1f, tween(PANEL_ENTER_MS))
+            }
+            FlightKind.Back -> panelAlpha.animateTo(0f, tween(PANEL_AWAY_MS))
+            else -> Unit
+        }
+    }
+    val chatShown = chatState.open || panelFlight?.kind == FlightKind.Back
+
+    CompositionLocalProvider(
+        LocalSectionMenus provides menus,
+        LocalEntitiesChanged provides chat.entitiesChanged,
+        LocalHermesFlight provides flight,
+    ) {
         Box(Modifier.fillMaxSize()) {
             NavHost(navController = navController, startDestination = LoginRoute) {
                 composable<LoginRoute> { if (session !is SessionState.Unknown) LoginScreen() }
@@ -215,13 +285,29 @@ fun AppNavHost(
                     )
                 }
             }
-            if (chatState.open) {
-                ChatOverlay(chat, commands, links)
+            if (chatShown) {
+                ChatOverlay(chat, commands, links, Modifier.graphicsLayer { alpha = panelAlpha.value })
                 if (settingsOpen) SettingsScreen(settings, onBack = { settingsOpen = false })
+                searchArgument?.let { argument ->
+                    SearchScreen(
+                        search,
+                        argument = argument,
+                        onBack = { searchArgument = null },
+                        // Um resultado abre o detalhe; o chat fecha para mostrá-lo.
+                        onOpen = { result ->
+                            chat.close()
+                            when (result) {
+                                is SearchResult.Task -> navController.navigate(TaskDetailRoute(result.id))
+                                is SearchResult.Document -> navController.navigate(DocumentDetailRoute(result.id))
+                            }
+                        },
+                    )
+                }
             }
             if (session is SessionState.SignedIn) ReminderPrompts(Modifier.align(Alignment.TopCenter))
-            if (currentTab != null) {
-                if (menuOpen) {
+            val barTab = currentTab ?: lastTab.takeIf { barAlpha.value > 0f }
+            if (barTab != null) {
+                if (menuOpen && currentTab != null) {
                     // Tocar fora do menu o fecha; o scrim não pinta nada.
                     Box(
                         Modifier
@@ -231,9 +317,9 @@ fun AppNavHost(
                             },
                     )
                 }
-                val model = menus[currentTab]
+                val model = menus[barTab]
                 BraidBottomBar(
-                    current = currentTab,
+                    current = barTab,
                     mode = mode,
                     menuOpen = menuOpen,
                     filtered = model?.filtered == true,
@@ -245,7 +331,7 @@ fun AppNavHost(
                                 if (tab != currentTab) navController.openTab(tab)
                             }
                             // Tocar na aba já selecionada abre ou fecha o menu; em outra, só navega.
-                            tab == currentTab -> menuOpen = !menuOpen
+                            tab == barTab -> menuOpen = !menuOpen
                             else -> navController.openTab(tab)
                         }
                     },
@@ -259,10 +345,10 @@ fun AppNavHost(
                             chat.open()
                         }
                     },
-                    modifier = Modifier.align(Alignment.BottomCenter),
+                    modifier = Modifier.align(Alignment.BottomCenter).graphicsLayer { alpha = barAlpha.value },
                     menu = {
                         SectionMenuBody(
-                            tab = currentTab,
+                            tab = barTab,
                             model = model,
                             mode = mode,
                             open = menuOpen,
@@ -272,9 +358,18 @@ fun AppNavHost(
                     },
                 )
             }
+            // Por cima de tudo, o disco que voa entre a barra e o ícone de status.
+            HermesFlyer(flight, chatState.bot)
         }
     }
 }
+
+private const val BAR_AWAY_MS = 126
+private const val BAR_RETURN_DELAY_MS = 144L
+private const val BAR_RETURN_MS = 216
+private const val PANEL_ENTER_DELAY_MS = 73L
+private const val PANEL_ENTER_MS = 137
+private const val PANEL_AWAY_MS = 234
 
 /** Trocar de seção desfaz o que está acima da Agenda: dela o voltar sai do app, das outras volta a ela. */
 private fun NavHostController.openTab(tab: MainTab) {

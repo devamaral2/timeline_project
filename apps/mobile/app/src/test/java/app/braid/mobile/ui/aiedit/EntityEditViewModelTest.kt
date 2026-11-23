@@ -1,12 +1,20 @@
 package app.braid.mobile.ui.aiedit
 
+import app.braid.mobile.data.chat.DefaultChatRepository
 import app.braid.mobile.data.requests.DefaultAgentRequestRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
+import app.braid.mobile.domain.chat.ModelSelector
+import app.braid.mobile.domain.chat.StoredModelSelection
 import app.braid.mobile.domain.request.EditEntityType
+import app.braid.mobile.domain.request.ModelEffort
+import app.braid.mobile.domain.request.ModelProvider
+import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.speech.SpeechError
 import app.braid.mobile.support.FakeMicrophone
 import app.braid.mobile.support.FakeSpeechRecognizer
+import app.braid.mobile.support.Fixtures
+import app.braid.mobile.support.InMemoryModelSelectionStore
 import app.braid.mobile.support.MutableClock
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
@@ -43,6 +51,8 @@ import org.junit.Test
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 private const val POLL_MS = 3_000L
 
@@ -54,12 +64,14 @@ private const val POLL_MS = 3_000L
 class EntityEditViewModelTest {
     private val editPath = "/api/requests/edit"
     private val requestPath = "/api/requests/req-ed"
+    private val optionsPath = "/api/requests/model/options"
 
     private lateinit var backend: TestBackend
     private lateinit var graph: TestGraph
     private val clock = MutableClock(Instant.parse("2026-09-14T14:00:00.000Z"))
     private val speech = FakeSpeechRecognizer()
     private val microphone = FakeMicrophone()
+    private val modelStore = InMemoryModelSelectionStore()
     private val created = mutableListOf<EntityEditViewModel>()
 
     @Before
@@ -83,14 +95,16 @@ class EntityEditViewModelTest {
         id: String = "task-1",
     ): EntityEditViewModel {
         graph.sessionRepository.restore()
+        val api = graph.apis.create(RequestsApi::class.java)
         return EntityEditViewModel(
             type,
             id,
-            DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
+            DefaultAgentRequestRepository(api),
             graph.sessionRepository,
             clock,
             speech,
             microphone,
+            ModelSelector(DefaultChatRepository(api), modelStore),
         ).also(created::add)
     }
 
@@ -111,6 +125,26 @@ class EntityEditViewModelTest {
         }
 
     private fun body(request: RecordedRequest): JsonObject = Json.parseToJsonElement(request.body.peek().readUtf8()).jsonObject
+
+    private fun edits(): List<JsonObject> = backend.requestsTo("POST", editPath).map(::body)
+
+    private fun JsonObject.string(name: String) = getValue(name).jsonPrimitive.content
+
+    /** A escolha de modelo que o pedido levou. */
+    private fun JsonObject.selection() = getValue("model").jsonObject
+
+    private suspend fun awaitOptionsReads(count: Int) =
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (reads(optionsPath) < count) delay(5) }
+        }
+
+    /** Escreve, envia e espera o pedido terminar; depois fecha o resultado, para a barra aceitar o próximo. */
+    private suspend fun EntityEditViewModel.sendAndFinish(text: String) {
+        onDraftChange(text)
+        submit()
+        until { it.phase == EditPhase.Done }
+        dismiss()
+    }
 
     /** Serve as fixtures do pedido uma por leitura (a última repete) e anota o relógio virtual de cada chegada. */
     private fun TestScope.servingInOrder(vararg names: String): List<Long> {
@@ -148,6 +182,9 @@ class EntityEditViewModelTest {
             assertEquals("task", body(post).getValue("entityType").jsonPrimitive.content)
             assertEquals("task-1", body(post).getValue("entityId").jsonPrimitive.content)
             assertFalse(body(post).containsKey("clientMessageId"))
+            // Sem as opções de modelo (o servidor de teste responde 404) o campo é o simples e o pedido vai sem modelo.
+            assertFalse(body(post).containsKey("model"))
+            assertNull(done.picker)
 
             assertEquals("Pronto", done.statusText)
             assertEquals("Pronto: movi a reunião para as 15h.", done.message)
@@ -362,6 +399,143 @@ class EntityEditViewModelTest {
             viewModel.setVisible(true)
             awaitReads(1)
             assertNotNull(viewModel.until { it.request != null }.request)
+        }
+
+    private val sonnet = ModelSelection(ModelProvider.Anthropic, "claude-sonnet-5-5", ModelEffort.Medium)
+
+    @Test
+    fun `the bar reads the model options when it appears and shows the picker of the chat`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            val viewModel = newViewModel()
+
+            val picker = requireNotNull(viewModel.until { it.picker != null }.picker)
+
+            assertEquals(sonnet, picker.selection)
+            assertEquals(listOf("Anthropic", "OpenRouter"), picker.options.providers.map { it.name })
+            assertEquals("Bearer access", backend.requestsTo("GET", optionsPath).single().getHeader("Authorization"))
+            // A escolha conferida contra as opções fica no aparelho, onde o chat também a lê.
+            assertEquals(sonnet, modelStore.stored?.current)
+        }
+
+    @Test
+    fun `the request carries the current selection, and a change in the picker is saved and goes in the next one`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            servingInOrder("entity-edit-done")
+            val viewModel = newViewModel()
+            viewModel.until { it.picker != null }
+
+            viewModel.sendAndFinish("Mude a reunião para as 15h")
+            // A escolha padrão do servidor, na forma do contrato (`modelSelectionSchema`).
+            assertEquals(Fixtures.json("chat-model-options").jsonObject.getValue("default"), edits().single().getValue("model"))
+
+            viewModel.chooseProvider(ModelProvider.OpenRouter)
+            viewModel.chooseModel("google/gemini-4-neon")
+            viewModel.chooseEffort(ModelEffort.Max)
+            // Um modelo que o provedor não tem não vale.
+            viewModel.chooseModel("claude-opus-5-5")
+            val picked = ModelSelection(ModelProvider.OpenRouter, "google/gemini-4-neon", ModelEffort.Max)
+            assertEquals(
+                picked,
+                viewModel.state.value.picker
+                    ?.selection,
+            )
+            assertEquals(picked, modelStore.stored?.current)
+
+            viewModel.sendAndFinish("Mude de novo")
+            val second = edits()[1]
+            assertEquals("openrouter", second.selection().string("provider"))
+            assertEquals("google/gemini-4-neon", second.selection().string("model"))
+            assertEquals("max", second.selection().string("effort"))
+            assertEquals("Mude de novo", second.string("text"))
+        }
+
+    @Test
+    fun `the picker changes while a request runs, and the change waits for the next request`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            servingInOrder("entity-edit-running")
+            val viewModel = newViewModel()
+            viewModel.until { it.picker != null }
+            viewModel.onDraftChange("Mude")
+            viewModel.submit()
+            viewModel.until { it.phase == EditPhase.Running }
+
+            viewModel.chooseEffort(ModelEffort.High)
+
+            val running = viewModel.state.value
+            assertTrue(running.busy)
+            assertEquals(sonnet.copy(effort = ModelEffort.High), running.picker?.selection)
+            assertEquals(ModelEffort.High, modelStore.stored?.current?.effort)
+            // O pedido em andamento saiu com a escolha de antes.
+            assertEquals("medium", edits().single().selection().string("effort"))
+        }
+
+    @Test
+    fun `a saved selection is checked against the options before it shows and goes in the request`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            servingInOrder("entity-edit-done")
+            // O que o chat deixou guardado: um modelo que saiu da lista vira o padrão do provedor; o esforço vale.
+            modelStore.stored = StoredModelSelection(sonnet.copy(model = "claude-velho", effort = ModelEffort.High))
+            val viewModel = newViewModel()
+
+            val shown = viewModel.until { it.picker != null }
+            assertEquals(sonnet.copy(effort = ModelEffort.High), shown.picker?.selection)
+
+            viewModel.sendAndFinish("Mude")
+            val model = edits().single().selection()
+            assertEquals("claude-sonnet-5-5", model.string("model"))
+            assertEquals("high", model.string("effort"))
+        }
+
+    @Test
+    fun `with the model mode off the bar has no picker, and coming back to the screen tries again`() =
+        runTest {
+            backend.route("GET", optionsPath, status(404), fixture("chat-model-options"))
+            servingInOrder("entity-edit-done")
+            val viewModel = newViewModel()
+            awaitOptionsReads(1)
+
+            viewModel.sendAndFinish("Mude")
+            assertNull(viewModel.state.value.picker)
+            assertFalse(edits().single().containsKey("model"))
+            // O modo desligado fica lembrado: o pedido não pergunta de novo ao servidor.
+            assertEquals(1, reads(optionsPath))
+
+            viewModel.setVisible(false)
+            viewModel.setVisible(true)
+            val shown = viewModel.until { it.picker != null }
+
+            assertEquals(sonnet, shown.picker?.selection)
+            assertEquals(2, reads(optionsPath))
+            viewModel.sendAndFinish("Mude de novo")
+            assertEquals(Fixtures.json("chat-model-options").jsonObject.getValue("default"), edits()[1].getValue("model"))
+        }
+
+    @Test
+    fun `a request sent before the options arrive waits for them and carries the selection`() =
+        runTest {
+            // As opções só chegam depois de o pedido já ter sido enviado pela pessoa.
+            val release = CountDownLatch(1)
+            backend.route("GET", optionsPath) {
+                release.await(5, TimeUnit.SECONDS)
+                fixture("chat-model-options")
+            }
+            servingInOrder("entity-edit-done")
+            val viewModel = newViewModel()
+            awaitOptionsReads(1)
+            viewModel.onDraftChange("Mude")
+            viewModel.submit()
+            assertEquals(EditPhase.Sending, viewModel.state.value.phase)
+            assertEquals(0, edits().size)
+
+            release.countDown()
+            viewModel.until { it.phase == EditPhase.Done }
+
+            assertEquals(Fixtures.json("chat-model-options").jsonObject.getValue("default"), edits().single().getValue("model"))
+            assertEquals(1, reads(optionsPath))
         }
 
     @Test

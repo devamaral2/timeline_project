@@ -33,7 +33,9 @@ class DefaultChatRepository
             text: String,
             sessionId: String?,
             clientMessageId: String,
-        ): String = call { api.start(StartRequestBody(userId, text, sessionId, clientMessageId, AgendaContext)).requestId }
+            selection: ModelSelection?,
+        ): String =
+            call { api.start(StartRequestBody(userId, text, sessionId, clientMessageId, AgendaContext, selection?.toDto())).requestId }
 
         override suspend fun sendHermes(
             userId: String,

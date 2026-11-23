@@ -60,6 +60,13 @@ class EntityPickerController<T>(
             }
     }
 
+    /** Recomeça com [text] no campo e busca na hora, sem a pausa (a pesquisa do chat abre já com o texto do `/buscar`). */
+    fun reset(text: String) {
+        typingJob?.cancel()
+        mutableState.update { it.copy(typed = text) }
+        run(text.trim())
+    }
+
     fun close() {
         typingJob?.cancel()
         searchJob?.cancel()

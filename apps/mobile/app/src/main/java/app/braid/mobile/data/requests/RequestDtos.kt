@@ -51,7 +51,7 @@ data class RequestDto(
     /** A resposta do Hermes quando o pedido termina (`done`). */
     val message: String? = null,
     val trace: RequestTraceDto? = null,
-    /** O provedor, o modelo e o esforço escolhidos; só na rota `model`. */
+    /** O provedor, o modelo e o esforço escolhidos para o pedido; ausente quando ele não levou escolha. */
     val model: ModelSelectionDto? = null,
 )
 
@@ -126,6 +126,8 @@ data class StartRequestBody(
     val clientMessageId: String,
     /** A tela de onde o pedido vem (o chat manda a Agenda). */
     val context: ScreenContextDto? = null,
+    /** A escolha que o campo do chat mostra; ausente, vale o modelo do servidor. */
+    val model: ModelSelectionDto? = null,
 )
 
 @Serializable
@@ -140,6 +142,8 @@ data class StartEditBody(
     val text: String,
     val entityType: String,
     val entityId: String,
+    /** A escolha que o campo do detalhe mostra; ausente, vale o modelo do servidor. */
+    val model: ModelSelectionDto? = null,
 )
 
 /** `POST /api/requests/hermes`. */

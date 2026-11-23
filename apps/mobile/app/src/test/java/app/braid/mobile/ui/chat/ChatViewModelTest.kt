@@ -6,6 +6,8 @@ import app.braid.mobile.data.session.StoredSession
 import app.braid.mobile.domain.agenda.FreeWindow
 import app.braid.mobile.domain.chat.ChatAgent
 import app.braid.mobile.domain.chat.ChatPolling
+import app.braid.mobile.domain.chat.ModelSelectionStore
+import app.braid.mobile.domain.chat.ModelSelector
 import app.braid.mobile.domain.chat.StoredModelSelection
 import app.braid.mobile.domain.chat.modelFooter
 import app.braid.mobile.domain.chat.start
@@ -15,6 +17,7 @@ import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
+import app.braid.mobile.support.Fixtures
 import app.braid.mobile.support.InMemoryModelSelectionStore
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
@@ -51,6 +54,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** O chat com o agente pela fronteira de rede: o ViewModel real, com Retrofit e OkHttp reais, contra o servidor de teste. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -84,17 +88,16 @@ class ChatViewModelTest {
 
     private suspend fun newViewModel(polling: ChatPolling = ChatPolling()): ChatViewModel {
         graph.sessionRepository.restore()
-        return ChatViewModel(
-            DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
-            graph.sessionRepository,
-            AppClock { now },
-            polling,
-            modelStore,
-        ).also {
-            created += it
-            it.state.first { state -> state.ready }
-        }
+        return chatOf(polling = polling).also { it.state.first { state -> state.ready } }
     }
+
+    /** O chat com a ligação de produção; [selector] é a escolha de modelo do app, que outras telas também usam. */
+    private fun chatOf(
+        store: ModelSelectionStore = modelStore,
+        polling: ChatPolling = ChatPolling(),
+        repository: DefaultChatRepository = DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
+        selector: ModelSelector = ModelSelector(repository, store),
+    ): ChatViewModel = ChatViewModel(repository, graph.sessionRepository, AppClock { now }, polling, selector).also { created += it }
 
     private suspend fun ChatViewModel.until(predicate: (ChatUiState) -> Boolean): ChatUiState =
         withContext(Dispatchers.Default) { withTimeout(10_000) { state.first(predicate) } }
@@ -653,15 +656,7 @@ class ChatViewModelTest {
                 InMemoryModelSelectionStore(
                     StoredModelSelection(ModelSelection(ModelProvider.Anthropic, "claude-velho", ModelEffort.High)),
                 )
-            val other =
-                ChatViewModel(
-                    DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
-                    graph.sessionRepository,
-                    AppClock { now },
-                    ChatPolling(),
-                    second,
-                )
-            created += other
+            val other = chatOf(store = second)
             other.state.first { it.ready }
             other.send("/modelo")
             val stale = other.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
@@ -684,25 +679,220 @@ class ChatViewModelTest {
         }
 
     @Test
-    fun `a new conversation clears the options but keeps the choice, and the next command reads the options again`() =
+    fun `a new conversation keeps the picker and the choice, and reads the options again behind the field`() =
         runTest {
             serveModel()
             val chat = newViewModel()
             chat.send("/modelo")
             chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
             chat.chooseEffort(ModelEffort.Low)
+            assertEquals(1, backend.requestsTo("GET", optionsPath).size)
 
             chat.startNewConversation()
             val cleared = chat.state.value
             assertNull(cleared.agentMode)
-            assertNull(cleared.model.options)
-            assertNull(cleared.picker)
-            assertEquals(ModelEffort.Low, cleared.model.selection?.effort)
+            assertTrue(cleared.messages.isEmpty())
+            // De volta ao assistente da agenda, o campo segue com o seletor e a escolha.
+            assertEquals(sonnet.copy(effort = ModelEffort.Low), cleared.picker?.selection)
+            awaitOptionsReads(2)
 
+            // O comando de modelo usa as opções que o campo já tem.
             chat.send("/modelo")
             val again = chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
             assertEquals(ModelEffort.Low, again.picker?.selection?.effort)
             assertEquals(2, backend.requestsTo("GET", optionsPath).size)
+        }
+
+    private suspend fun awaitOptionsReads(count: Int) =
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (backend.requestsTo("GET", optionsPath).size < count) delay(5) }
+        }
+
+    @Test
+    fun `opening the chat reads the model options and the field shows the picker in the default mode`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            val chat = newViewModel()
+            assertNull(chat.state.value.picker)
+            assertEquals(0, backend.requestsTo("GET", optionsPath).size)
+
+            chat.open()
+            val shown = chat.until { it.picker != null }
+            val picker = requireNotNull(shown.picker)
+
+            assertNull(shown.agentMode)
+            assertEquals(sonnet, picker.selection)
+            assertEquals(listOf("Anthropic", "OpenRouter"), picker.options.providers.map { it.name })
+            assertEquals("Bearer access", backend.requestsTo("GET", optionsPath).single().getHeader("Authorization"))
+            // A escolha conferida contra as opções fica no aparelho.
+            assertEquals(sonnet, modelStore.stored?.current)
+        }
+
+    @Test
+    fun `a session that arrives with the chat already open reads the model options then`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            graph.storage.session = null
+            val chat = chatOf()
+            chat.open()
+            assertEquals(0, backend.requests.size)
+
+            graph.storage.session = StoredSession("access", "refresh", "user-1", "ana@example.com", "Ana")
+            graph.sessionRepository.restore()
+            val shown = chat.until { it.picker != null }
+
+            assertEquals(sonnet, shown.picker?.selection)
+            assertEquals(1, backend.requestsTo("GET", optionsPath).size)
+        }
+
+    @Test
+    fun `a message in the default mode goes to the steps route with the current selection`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            serveSteps()
+            val chat = newViewModel()
+            chat.open()
+            chat.until { it.picker != null }
+
+            chat.send("primeira")
+            chat.until { it.pending == null && it.messages.size == 2 }
+            // A escolha padrão do servidor, na forma do contrato (`modelSelectionSchema`).
+            val default = Fixtures.json("chat-model-options").jsonObject.getValue("default")
+            assertEquals(default, bodyOf(backend.requestsTo("POST", requestsPath).single()).getValue("model"))
+
+            // A troca no seletor vale para o próximo pedido e fica no aparelho.
+            chat.chooseProvider(ModelProvider.OpenRouter)
+            chat.chooseModel("google/gemini-4-neon")
+            chat.chooseEffort(ModelEffort.Max)
+            val picked = ModelSelection(ModelProvider.OpenRouter, "google/gemini-4-neon", ModelEffort.Max)
+            assertEquals(
+                picked,
+                chat.state.value.picker
+                    ?.selection,
+            )
+            assertEquals(picked, modelStore.stored?.current)
+            chat.send("segunda")
+            chat.until { it.pending == null && it.messages.size == 4 }
+
+            val second = bodyOf(backend.requestsTo("POST", requestsPath)[1])
+            assertEquals("segunda", second.string("text"))
+            assertEquals("openrouter", second.selection().string("provider"))
+            assertEquals("google/gemini-4-neon", second.selection().string("model"))
+            assertEquals("max", second.selection().string("effort"))
+            // O modo não mudou: nada foi ao modo modelo nem ao Hermes.
+            assertNull(chat.state.value.agentMode)
+            assertEquals(0, backend.requestsTo("POST", modelPath).size)
+            assertEquals(0, backend.requestsTo("POST", "$requestsPath/hermes").size)
+        }
+
+    @Test
+    fun `with the model mode off the field has no picker and the message goes without a model`() =
+        runTest {
+            backend.route("GET", optionsPath, status(404))
+            serveSteps()
+            val chat = newViewModel()
+
+            chat.open()
+            awaitOptionsReads(1)
+            chat.send("oi")
+            val done = chat.until { it.pending == null && it.messages.size == 2 }
+
+            assertNull(done.picker)
+            assertNull(done.model.options)
+            assertFalse(bodyOf(backend.requestsTo("POST", requestsPath).single()).containsKey("model"))
+            // O modo desligado fica lembrado: o pedido não pergunta de novo ao servidor.
+            assertEquals(1, backend.requestsTo("GET", optionsPath).size)
+        }
+
+    @Test
+    fun `a message sent before the options were read asks for them first and carries the selection`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            serveSteps()
+            val chat = newViewModel()
+
+            chat.send("oi")
+            val done = chat.until { it.pending == null && it.messages.size == 2 }
+
+            val default = Fixtures.json("chat-model-options").jsonObject.getValue("default")
+            assertEquals(default, bodyOf(backend.requestsTo("POST", requestsPath).single()).getValue("model"))
+            assertEquals(sonnet, done.picker?.selection)
+            assertEquals(1, backend.requestsTo("GET", optionsPath).size)
+        }
+
+    @Test
+    fun `options that fail to load leave the plain field, and the next opening tries again`() =
+        runTest {
+            val serverUp = AtomicBoolean(false)
+            backend.route("GET", optionsPath) { if (serverUp.get()) fixture("chat-model-options") else status(500) }
+            serveSteps()
+            val chat = newViewModel()
+
+            chat.open()
+            awaitOptionsReads(1)
+            chat.send("oi")
+            chat.until { it.pending == null && it.messages.size == 2 }
+            assertNull(chat.state.value.picker)
+            assertFalse(bodyOf(backend.requestsTo("POST", requestsPath).single()).containsKey("model"))
+
+            serverUp.set(true)
+            chat.close()
+            chat.open()
+            val shown = chat.until { it.picker != null }
+
+            assertEquals(sonnet, shown.picker?.selection)
+        }
+
+    @Test
+    fun `the Hermes mode has no picker, and leaving it brings the picker back`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            backend.route("POST", "$requestsPath/hermes", fixture("chat-hermes-accepted", 202))
+            backend.route("GET", firstPath, fixture("chat-hermes-done"))
+            val chat = newViewModel()
+            chat.open()
+            chat.until { it.picker != null }
+
+            chat.send("/hermes")
+            val hermes = chat.until { it.agentMode == ChatAgent.Hermes }
+            assertNull(hermes.picker)
+
+            // No modo Hermes o pedido não leva escolha de modelo.
+            chat.send("oi")
+            chat.until { it.pending == null && it.messages.any { m -> m.id.endsWith("-answer") } }
+            assertFalse(bodyOf(backend.requestsTo("POST", "$requestsPath/hermes").single()).containsKey("model"))
+            assertNull(chat.state.value.picker)
+
+            chat.send("/app")
+            val back = chat.until { it.agentMode == null }
+            assertEquals(sonnet, back.picker?.selection)
+        }
+
+    @Test
+    fun `a choice made in another screen shows in the chat and goes in its next message`() =
+        runTest {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            serveSteps()
+            graph.sessionRepository.restore()
+            val repository = DefaultChatRepository(graph.apis.create(RequestsApi::class.java))
+            val selector = ModelSelector(repository, modelStore)
+            val chat = chatOf(repository = repository, selector = selector)
+            chat.state.first { it.ready }
+            chat.open()
+            chat.until { it.picker != null }
+
+            // A barra de edição de um detalhe troca a escolha pelo mesmo seletor do app.
+            selector.chooseEffort(ModelEffort.High)
+
+            assertEquals(
+                ModelEffort.High,
+                chat.state.value.picker
+                    ?.selection
+                    ?.effort,
+            )
+            chat.send("oi")
+            chat.until { it.pending?.requestId == first }
+            assertEquals("high", bodyOf(backend.requestsTo("POST", requestsPath).single()).selection().string("effort"))
         }
 
     @Test
@@ -866,20 +1056,14 @@ class ChatViewModelTest {
     fun `nothing is sent without a signed in user, and an empty message is ignored`() =
         runTest {
             graph.storage.session = null
-            val chat =
-                ChatViewModel(
-                    DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
-                    graph.sessionRepository,
-                    AppClock { now },
-                    ChatPolling(),
-                    InMemoryModelSelectionStore(),
-                )
+            val chat = chatOf(store = InMemoryModelSelectionStore())
             graph.sessionRepository.restore()
-            created += chat
             val state = chat.until { it.signedOut }
 
             assertFalse(state.ready)
             assertFalse(chat.send("oi"))
+            // Sem usuário, abrir o chat também não lê as opções de modelo.
+            chat.open()
             assertEquals(0, backend.requests.size)
         }
 }

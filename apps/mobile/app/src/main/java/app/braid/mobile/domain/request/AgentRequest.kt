@@ -165,7 +165,7 @@ data class AgentRequest(
     val text: String? = null,
     /** O rastro com os totais, para a aba "Processo"; [entries] é a lista dele. */
     val trace: AgentTrace? = null,
-    /** O provedor, o modelo e o esforço que atenderam o pedido; só na rota `model`. */
+    /** O provedor, o modelo e o esforço escolhidos para o pedido; ausente quando ele não levou escolha. */
     val model: ModelSelection? = null,
 )
 
@@ -200,12 +200,16 @@ interface AgentRequestRepository {
         clientMessageId: String,
     ): String
 
-    /** Abre um pedido de edição da entidade aberta na tela (`POST /api/requests/edit`) e devolve o id dele. */
+    /**
+     * Abre um pedido de edição da entidade aberta na tela (`POST /api/requests/edit`) e devolve o id dele. Com
+     * [selection] (a escolha que o campo mostra), a edição roda com esse provedor, modelo e esforço.
+     */
     suspend fun startEdit(
         userId: String,
         text: String,
         entityType: EditEntityType,
         entityId: String,
+        selection: ModelSelection?,
     ): String
 
     /** Cancela o que o agente não terminou e devolve o pedido. O pedido de alimento (409) sobe como [FoodRequestCancelException]. */
