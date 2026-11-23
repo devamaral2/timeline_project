@@ -48,6 +48,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import kotlin.time.Duration.Companion.minutes
 
 /** A hierarquia na edição pela rede: o seletor de tarefas, "Criar", "Pedir ao Hermes" e o que o Salvar manda. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -476,7 +477,9 @@ class TaskHierarchyViewModelTest {
 
     @Test
     fun `a request that never finishes is given up after 180 seconds`() =
-        runTest {
+        // Cada consulta passa por HTTP de verdade (o relógio virtual só pula os atrasos): em máquina lenta, como o runner
+        // da CI, as ~60 consultas estouram o limite padrão de 60 s do runTest.
+        runTest(timeout = 5.minutes) {
             testClock = { now.plusMillis(testScheduler.currentTime) }
             backend.route("POST", "/api/requests", fixture("task-hierarchy-request-accepted", 202))
             backend.route("GET", requestPath, fixture("task-hierarchy-request-running"))

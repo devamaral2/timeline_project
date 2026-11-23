@@ -128,7 +128,7 @@ export const EXCECOES_DE_LINHA: { motivo: string; linha: RegExp; palavras: RegEx
   },
   {
     motivo: "parametro `event` de handler de DOM (anotacao com tipo do navegador, cast, `onresult = (event) =>`) e interface que estende `Event`",
-    linha: /\bevent\??:\s*(React\.)?\w*Event\b|\(event as \w*Event\b|\.on[a-z]+\s*=\s*\(event\)\s*=>|\bextends\s+Event\b/,
+    linha: /\bevent\??:\s*(React\.|globalThis\.)?\w*Event\b|\(event as \w*Event\b|\.on[a-z]+\s*=\s*\(event\)\s*=>|\bextends\s+Event\b/,
     palavras: /^(event|Event)$/,
   },
   {
