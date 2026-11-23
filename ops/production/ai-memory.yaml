@@ -57,8 +57,11 @@ spec:
             - {name: AI_MEMORY_AUTH__SECURE_COOKIE, value: "true"}
             # Varias sessoes do Claude Code em paralelo, em projetos diferentes.
             - {name: AI_MEMORY_AUTO_SCOPE__MODE, value: "per_session"}
+            # LLM da consolidacao (sessoes -> paginas). A chave fica no Secret.
+            - {name: AI_MEMORY_LLM_PROVIDER, value: "anthropic"}
+            - {name: AI_MEMORY_LLM_MODEL, value: "claude-haiku-5-5"}
           envFrom:
-            # AI_MEMORY_AUTH_TOKEN (e, se ligar um provedor, as chaves dele).
+            # AI_MEMORY_AUTH_TOKEN e ANTHROPIC_API_KEY.
             - secretRef: {name: ai-memory-env}
           ports:
             - {name: http, containerPort: 49374}
