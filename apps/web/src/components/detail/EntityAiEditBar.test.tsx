@@ -2,6 +2,7 @@ import type { RequestDto } from "@repo/contracts";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, test, vi } from "vitest";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
+import { MODEL_SELECTION_KEY } from "@/lib/agent-chat/model-selection";
 import { advanceRequest, requestsArea } from "@/test/fake-api/requests";
 import { EntityAiEditBar } from "./EntityAiEditBar";
 
@@ -17,11 +18,19 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 
 let api: FakeApi;
 
-beforeEach(() => {
-  api = createFakeApi({ areas: [requestsArea()] });
+/** A API falsa com ou sem provedor com chave: sem nenhum, o campo fica sem o seletor de modelo. */
+function serve(model: "on" | "off") {
+  api = createFakeApi({ areas: [requestsArea({ model })] });
   net.authedFetch.mockReset();
   net.authedFetch.mockImplementation(api.authedFetch);
+}
+
+beforeEach(() => {
+  window.localStorage.clear();
+  serve("off");
 });
+
+const picker = () => screen.getByRole("button", { name: /^Modelo .*\. Trocar$/ });
 
 function setup(props: Partial<React.ComponentProps<typeof EntityAiEditBar>> = {}) {
   const onEdited = vi.fn();
@@ -120,4 +129,82 @@ test("pedido recusado devolve o texto ao campo para tentar de novo, e Fechar lim
   expect(screen.getByText("A IA está indisponível agora. Tente de novo em instantes.")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Fechar resultado" }));
   expect(screen.queryByText("Não deu certo")).not.toBeInTheDocument();
+});
+
+test("o campo mostra sempre o modelo, o esforco e o provedor, e o pedido de edicao vai com a escolha", async () => {
+  serve("on");
+  setup();
+
+  await waitFor(() => expect(picker()).toBeInTheDocument());
+  expect(picker()).toHaveAccessibleName("Modelo Sonnet 5.5, esforço médio, via Anthropic. Trocar");
+  expect(picker()).toHaveTextContent("Sonnet 5.5 · Médio");
+  expect(picker()).toHaveTextContent("via anthropic");
+  // Com o seletor no pe, a onda e a seta descem para a linha dele.
+  expect(picker().parentElement).toContainElement(screen.getByRole("button", { name: "Enviar pedido" }));
+
+  fireEvent.change(screen.getByRole("textbox"), { target: { value: "mude para 19h" } });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
+
+  await waitFor(() => expect(editCall()).toBeDefined());
+  expect(editCall()?.body).toEqual({
+    userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "e1",
+    model: { provider: "anthropic", model: "claude-sonnet-5-5", effort: "medium" },
+  });
+});
+
+test("tocar no modelo abre o painel no proprio campo; a troca vale no proximo pedido e fica no aparelho", async () => {
+  serve("on");
+  setup();
+  await waitFor(() => expect(picker()).toBeInTheDocument());
+  const form = screen.getByRole("textbox").closest("form");
+  expect(form).toHaveAttribute("data-model-open", "false");
+
+  fireEvent.click(picker());
+  expect(form).toHaveAttribute("data-model-open", "true");
+  fireEvent.click(screen.getByRole("button", { name: "OpenAI" }));
+  fireEvent.click(screen.getByRole("button", { name: "Máximo" }));
+  fireEvent.click(screen.getByRole("button", { name: "Selecionar" }));
+
+  expect(form).toHaveAttribute("data-model-open", "false");
+  expect(picker()).toHaveTextContent("GPT 6.2 Sol · Máximo");
+  expect(picker()).toHaveTextContent("via openai");
+  expect(JSON.parse(window.localStorage.getItem(MODEL_SELECTION_KEY) ?? "null").current)
+    .toEqual({ provider: "openai", model: "gpt-6.2-sol", effort: "max" });
+
+  fireEvent.change(screen.getByRole("textbox"), { target: { value: "resuma" } });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
+  await waitFor(() => expect(editCall()).toBeDefined());
+  expect(editCall()?.body).toMatchObject({ model: { provider: "openai", model: "gpt-6.2-sol", effort: "max" } });
+});
+
+test("o fundo e o Escape fecham o painel; com um pedido em andamento ainda da para trocar o modelo", async () => {
+  serve("on");
+  setup();
+  await waitFor(() => expect(picker()).toBeInTheDocument());
+  const form = screen.getByRole("textbox").closest("form");
+  const scrim = document.querySelector<HTMLElement>("button[tabindex='-1'][aria-hidden='true']");
+
+  fireEvent.click(picker());
+  expect(scrim).toHaveAttribute("data-open", "true");
+  fireEvent.click(scrim as HTMLElement);
+  expect(form).toHaveAttribute("data-model-open", "false");
+
+  fireEvent.click(picker());
+  fireEvent.keyDown(window, { key: "Escape" });
+  expect(form).toHaveAttribute("data-model-open", "false");
+  expect(picker()).toHaveFocus();
+
+  fireEvent.change(screen.getByRole("textbox"), { target: { value: "mude para 19h" } });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
+  await waitFor(() => expect(screen.getByRole("textbox")).toBeDisabled());
+  expect(picker()).toBeEnabled();
+  fireEvent.click(picker());
+  expect(form).toHaveAttribute("data-model-open", "true");
+});
+
+test("sem nenhum provedor neste ambiente o campo fica sem o seletor e o pedido vai sem escolha", async () => {
+  setup();
+  await waitFor(() => expect(api.calls.some((call) => call.pathname === "/api/requests/model/options")).toBe(true));
+  expect(screen.queryByRole("button", { name: /Trocar$/ })).toBeNull();
+  expect(screen.getByRole("textbox").parentElement).toContainElement(screen.getByRole("button", { name: "Enviar pedido" }));
 });

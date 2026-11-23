@@ -29,6 +29,7 @@ const startRequestBody = z.object({
   }).optional(),
   sessionId: requestId.optional(),
   clientMessageId: clientMessageId.optional(),
+  model: modelSelectionSchema.optional(),
 });
 
 const startEditBody = z.object({
@@ -36,6 +37,7 @@ const startEditBody = z.object({
   text,
   entityType: z.enum(["task", "artifact", "food_artifact", "sleep_artifact", "training_artifact", "skill_artifact", "agent_artifact"]),
   entityId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  model: modelSelectionSchema.optional(),
 });
 
 const startHermesBody = z.object({
@@ -103,11 +105,13 @@ export function requestsArea(options: RequestsAreaOptions = {}): FakeArea {
   const hermesOn = options.hermes === "on";
   const modelOn = options.model === "on";
   const modelOptions = options.modelOptions ?? modelOptionsFixture();
+  // O que a escolha de um pedido pode ser: com o modo modelo desligado, nenhum provedor tem chave.
+  const offered = modelOn ? modelOptions : undefined;
   return {
     name: "pedidos",
     routes: [
-      { method: "POST", path: "/api/requests", input: startRequestBody, output: acceptedSchema, handle: startText },
-      { method: "POST", path: "/api/requests/edit", input: startEditBody, output: acceptedSchema, handle: startEdit },
+      { method: "POST", path: "/api/requests", input: startRequestBody, output: acceptedSchema, handle: startText(offered) },
+      { method: "POST", path: "/api/requests/edit", input: startEditBody, output: acceptedSchema, handle: startEdit(offered) },
       // Desligado, a API responde 404 antes de ler o corpo: a rota fica sem `input`, então o corpo não é conferido.
       hermesOn
         ? { method: "POST", path: "/api/requests/hermes", input: startHermesBody, output: requestSchema, handle: startHermes }
@@ -225,20 +229,36 @@ function accept(
   return request;
 }
 
-function startText(request: FakeRequest, store: FakeStore): FakeResult {
-  const body = request.body as z.infer<typeof startRequestBody>;
-  const again = replayed(store, body.userId, body.clientMessageId);
-  if (again) return { status: 202, body: { requestId: again } };
-  const fault = sessionFault(store, body.userId, body.sessionId);
-  if (fault) return fault;
-  const created = accept(store, { owner: body.userId, route: "steps", text: body.text, sessionId: body.sessionId, clientMessageId: body.clientMessageId });
-  return { status: 202, body: { requestId: created.id } };
+/** A escolha de um pedido vale aqui: o provedor tem chave e o modelo esta na lista dele. Sem escolha, sempre vale. */
+function offers(options: ModelOptionsDto | undefined, model: ModelSelection | undefined): boolean {
+  if (!model) return true;
+  return Boolean(options?.providers.find((entry) => entry.id === model.provider)?.models.some((entry) => entry.id === model.model));
 }
 
-function startEdit(request: FakeRequest, store: FakeStore): FakeResult {
-  const body = request.body as z.infer<typeof startEditBody>;
-  const created = accept(store, { owner: body.userId, route: "steps", text: body.text });
-  return { status: 202, body: { requestId: created.id } };
+/** O pedido em texto: com a escolha do campo, ela fica no pedido; provedor sem chave ou modelo fora da lista é 400. */
+function startText(options: ModelOptionsDto | undefined) {
+  return (request: FakeRequest, store: FakeStore): FakeResult => {
+    const body = request.body as z.infer<typeof startRequestBody>;
+    if (!offers(options, body.model)) return { status: 400 };
+    const again = replayed(store, body.userId, body.clientMessageId);
+    if (again) return { status: 202, body: { requestId: again } };
+    const fault = sessionFault(store, body.userId, body.sessionId);
+    if (fault) return fault;
+    const created = accept(store, {
+      owner: body.userId, route: "steps", text: body.text, sessionId: body.sessionId, clientMessageId: body.clientMessageId,
+      model: body.model,
+    });
+    return { status: 202, body: { requestId: created.id } };
+  };
+}
+
+function startEdit(options: ModelOptionsDto | undefined) {
+  return (request: FakeRequest, store: FakeStore): FakeResult => {
+    const body = request.body as z.infer<typeof startEditBody>;
+    if (!offers(options, body.model)) return { status: 400 };
+    const created = accept(store, { owner: body.userId, route: "steps", text: body.text, model: body.model });
+    return { status: 202, body: { requestId: created.id } };
+  };
 }
 
 function startHermes(request: FakeRequest, store: FakeStore): FakeResult {
@@ -261,8 +281,7 @@ function startHermes(request: FakeRequest, store: FakeStore): FakeResult {
 function startModel(options: ModelOptionsDto) {
   return (request: FakeRequest, store: FakeStore): FakeResult => {
     const body = request.body as z.infer<typeof startModelBody>;
-    const provider = options.providers.find((entry) => entry.id === body.model.provider);
-    if (!provider || !provider.models.some((entry) => entry.id === body.model.model)) return { status: 400 };
+    if (!offers(options, body.model)) return { status: 400 };
     const again = replayed(store, body.userId, body.clientMessageId);
     if (again) return { status: 202, body: requests(store).get(again) };
     const fault = sessionFault(store, body.userId, body.sessionId);

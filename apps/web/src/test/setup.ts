@@ -4,6 +4,11 @@ import "@testing-library/jest-dom/vitest";
 
 // O auto-cleanup do Testing Library so roda com globals ligado; aqui é explicito.
 afterEach(cleanup);
+// A escolha de modelo e uma so para a pagina: cada teste comeca sem as opcoes do servidor lidas. O import e feito
+// na hora, e nao no topo: aqui ele carregaria a API antes dos `vi.mock` de cada arquivo de teste.
+afterEach(async () => {
+  (await import("@/lib/agent-chat/model-selection-store")).resetModelSelectionStore();
+});
 
 /**
  * A partir do Node 25 existe um `localStorage` global proprio, que vale

@@ -1,4 +1,4 @@
-/* O seletor do modo modelo (canvas "Provedor, modelo e esforço", opção B · Gaveta). Os nomes de cor sao os do shell
+/* O seletor de modelo dos campos do Hermes (canvas "Provedor, modelo e esforço", opção B · Gaveta). Os nomes de cor sao os do shell
    (--ink, --muted, --line); o verde e o da marca. O painel abre do proprio campo: a linha da grade vai de 0fr a 1fr. */
 
 /* O botao no pe do campo: as quatro barras do esforco e, ao lado, o modelo e o provedor. */
@@ -16,7 +16,7 @@
 .pickerModel { overflow: hidden; font-size: 13px; font-weight: 600; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
 .pickerVia { overflow: hidden; font-family: var(--font-mono); font-size: 12px; line-height: 16px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
 
-/* A linha do pe do campo no modo modelo: o botao do seletor, a voz e o envio. */
+/* A linha do pe do campo: o botao do seletor, a voz e o envio. */
 .footer { display: flex; align-items: center; gap: 2px; padding: 0 0 0 4px; }
 
 /* O painel: fechado, nao ocupa altura nem recebe foco (`visibility` espera a saida acabar). */
@@ -61,7 +61,7 @@
 /* O esforco: quatro paradas numa trilha; o verde vai da primeira ate a escolhida, que e a maior. */
 .effort { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .track { position: absolute; top: 13px; left: calc(var(--step) / 2); right: calc(var(--step) / 2); height: 2px; background: var(--hairline); pointer-events: none; }
-.fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--level) * var(--step)); background: var(--brand); transition: width var(--duration-slow) var(--ease-out); }
+.fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--level) / var(--last) * 100%); background: var(--brand); transition: width var(--duration-slow) var(--ease-out); }
 .stop { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: var(--control-md); padding: 0; color: var(--ink); cursor: pointer; }
 .dot { box-sizing: border-box; display: block; width: 10px; height: 10px; margin: 8px 0; border: 2px solid var(--hairline); border-radius: 50%; background: var(--card); transition: all var(--duration-fast) var(--ease-out); }
 .stop[data-passed="true"] .dot { border-color: var(--brand); background: var(--brand); }
@@ -75,6 +75,9 @@
 
 /* O fundo que escurece a conversa enquanto o painel esta aberto; tocar nele fecha. */
 .scrim { position: absolute; inset: 0; z-index: 1; border: 0; background: color-mix(in oklab, var(--background) 62%, transparent); opacity: 0; pointer-events: none; transition: opacity 280ms cubic-bezier(.4, 0, .2, 1); }
+/* No detalhe o campo nao mora num painel: o fundo cobre a tela inteira, por tras do campo (que e o contexto de
+   empilhamento), e apaga mais: aberto, o campo sobe por cima do texto da pagina, que nao pode disputar com ele. */
+.scrim[data-fixed="true"] { position: fixed; z-index: -1; background: color-mix(in oklab, var(--background) 90%, transparent); }
 .scrim[data-open="true"] { opacity: 1; pointer-events: auto; transition-duration: 460ms; transition-timing-function: cubic-bezier(.2, .8, .2, 1); }
 
 /* O rodape da resposta: quem respondeu, em mono. */

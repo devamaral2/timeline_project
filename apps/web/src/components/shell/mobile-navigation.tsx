@@ -20,6 +20,7 @@ import { dayKeyOf } from "@repo/timeline";
 import { useViewMode } from "@/lib/tasks/view-mode";
 import { type SectionId, useSectionMenu } from "@/lib/navigation/section-menu";
 import { SectionMenu } from "./section-menu";
+import { useKeyboardViewport } from "./use-keyboard-viewport";
 import { TaskStatusIcon, statusView } from "@/components/agenda/task-controls";
 
 /** O rosto de uma aba: ícone (com o ponto de filtro ativo) e o título, que só aparece na aba atual. */
@@ -122,6 +123,8 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const startNewConversationRef = useRef(agendaChat.chat.startNewConversation);
   startNewConversationRef.current = agendaChat.chat.startNewConversation;
   const [panel, setPanel] = useState<"hub" | "Tarefa" | "Nota" | null>(null);
+  // O campo do chat (e da busca) fica acima do teclado, não atrás dele.
+  useKeyboardViewport(dialogRef, panel === "hub");
   // O chat e a porta do painel; criar e pesquisar abrem pelos comandos "/" dele.
   const [hubView, setHubView] = useState<"chat" | "create" | "search" | "notifications" | "settings">("chat");
   const [expanded, setExpanded] = useState(false);
@@ -414,7 +417,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
           )}
         </div>
         </div>
-        {/* O chat fica fora da dock: um círculo próprio na ponta. O voo mede o miolo (52 px), não o aro. */}
+        {/* O chat fica fora da dock: um círculo próprio na ponta. O voo mede o miolo (46 px), não o aro. */}
         <button type="button" className={styles.commandButton} data-close={panel === "hub" ? "true" : undefined} onClick={() => panel === "hub" ? closePanel() : openPanel("hub")} aria-haspopup="dialog" aria-expanded={panel === "hub"} aria-controls={dialogId} aria-label={panel === "hub" ? "Fechar chat com IA" : "Buscar e criar"}><span ref={commandRef} className={styles.commandCore}>{panel === "hub" ? <X aria-hidden /> : <HermesBot state={botState} className={styles.commandBot} />}</span></button>
       </nav>
       {flight ? <span ref={flyerRef} className={styles.hermesFlyer} aria-hidden><HermesBot state={botState} className={styles.flyerBot} /></span> : null}

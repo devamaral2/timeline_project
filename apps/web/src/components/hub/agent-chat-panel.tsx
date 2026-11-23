@@ -16,6 +16,7 @@ import {
 import { formatTime } from "@repo/timeline";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import field from "@/components/detail/entity-ai-edit-bar.module.css";
+import { HermesComposer } from "@/components/ui/hermes-composer";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import { briefDate } from "@/lib/dates/day-labels";
@@ -30,13 +31,12 @@ import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
 import type { FreeWindow } from "./hub-open";
 import { AgentTrace } from "./agent-trace";
 import { ChatAnswer } from "./chat-answer";
-import { ModelFooter, ModelPanel, ModelPickerButton } from "./model-picker";
+import { ModelFooter, ModelPickerScrim, useModelPicker } from "./model-picker";
 import { HermesSteps } from "./hermes-steps";
 import { CHANGE_LABELS, EntityRows } from "./entity-rows";
 import { ProcessBox } from "./process-box";
 import { HUB_COMMANDS, type HubCommand, type HubCommandId, isStopSpeech, parseCommand } from "./hub-commands";
 import styles from "@/components/shell/shell.module.css";
-import picker from "./model-picker.module.css";
 
 /** O nome no topo do chat enquanto as mensagens vão a um agente de modo (`/hermes`, `/modelo`). */
 const AGENT_NAMES = { hermes: "Hermes", model: "Modelo" } as const;
@@ -158,32 +158,10 @@ export function AgentChatPanel({
   const [pane, setPane] = useState<"chat" | "process">("chat");
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  // O seletor do modo modelo: aberto, o painel cresce do campo e a conversa escurece.
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const pickerRef = useRef<HTMLButtonElement>(null);
-  const pickerPanelId = useId();
-  const { options: modelOptions, selection: modelSelection } = chat.model;
-  const modelPicker = chat.agentMode === "model" && modelOptions && modelSelection ? { options: modelOptions, selection: modelSelection } : null;
-  const showPicker = Boolean(modelPicker);
-  useEffect(() => {
-    if (!showPicker) setPickerOpen(false);
-  }, [showPicker]);
-  // Escape fecha o painel e devolve o foco ao botão do seletor.
-  useEffect(() => {
-    if (!pickerOpen) return;
-    const onEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setPickerOpen(false);
-      pickerRef.current?.focus();
-    };
-    window.addEventListener("keydown", onEscape);
-    return () => window.removeEventListener("keydown", onEscape);
-  }, [pickerOpen]);
-  const closePicker = () => {
-    setPickerOpen(false);
-    pickerRef.current?.focus();
-  };
+  // O seletor de modelo fica sempre no pé do campo: no assistente da agenda e no modo modelo o pedido roda com a
+  // escolha. Só o Hermes responde com o modelo dele, então no modo dele o seletor sai. Aberto, o painel cresce do
+  // campo e a conversa escurece.
+  const picker = useModelPicker(chat.model, { hidden: chat.agentMode === "hermes" });
   // Ao abrir o chat, volta a acompanhar os pedidos que ainda rodam (o hook não repete o que já mostra).
   useEffect(() => {
     void chat.recover();
@@ -347,7 +325,7 @@ export function AgentChatPanel({
 
   return (
     <div className={styles.assistantPanel} data-chat-view={view}>
-      {modelPicker ? <button type="button" className={picker.scrim} data-open={pickerOpen} tabIndex={-1} aria-hidden onClick={closePicker} /> : null}
+      <ModelPickerScrim picker={picker} />
       <div className={styles.chatHeader}>
         <button
           type="button"
@@ -440,7 +418,7 @@ export function AgentChatPanel({
                   onCancel={chat.pending ? chat.cancel : undefined}
                   entityHref={entityHref}
                   onOpenEntity={onClose}
-                  modelOptions={modelOptions}
+                  modelOptions={chat.model.options}
                 />
               ))}
             </ol>
@@ -461,29 +439,11 @@ export function AgentChatPanel({
           <HermesMark state={state} />
           <span>{statusText}</span>
         </p>
-        <form
-          className={field.form}
-          aria-label="Pedido ao Hermes"
-          data-model={showPicker}
-          data-model-open={pickerOpen}
-          onSubmit={(event) => {
-            event.preventDefault();
-            submit();
-          }}
-        >
-          {modelPicker ? (
-            <ModelPanel
-              id={pickerPanelId}
-              open={pickerOpen}
-              options={modelPicker.options}
-              selection={modelPicker.selection}
-              onProvider={chat.model.chooseProvider}
-              onModel={chat.model.chooseModel}
-              onEffort={chat.model.chooseEffort}
-              onDone={closePicker}
-            />
-          ) : null}
-          {freeWindow && range ? (
+        <HermesComposer
+          model={picker}
+          onSubmit={submit}
+          controls={controls}
+          context={freeWindow && range ? (
             <div className={`${field.context} ${styles.chatWindow}`}>
               <span className={field.contextIcon} aria-hidden><Plus /></span>
               <span className={field.contextText}>
@@ -497,46 +457,31 @@ export function AgentChatPanel({
               <button type="button" className={styles.chatIconButton} onClick={onClearFreeWindow} aria-label="Tirar a janela livre do pedido"><X aria-hidden /></button>
             </div>
           ) : null}
-          <div className={field.row}>
-            <textarea
-              ref={inputRef}
-              className={field.input}
-              rows={1}
-              aria-label="Mensagem para a IA"
-              aria-controls={commandMatches.length > 0 ? commandsId : undefined}
-              aria-activedescendant={highlighted ? `${commandsId}-${highlighted.id}` : undefined}
-              value={draft}
-              onChange={(event) => {
-                // Quem digita assume o campo: a primeira tecla desliga o microfone
-                // e o que ja estava escrito (ouvido ou nao) fica como texto.
-                userTypedRef.current = true;
-                if (listening) cancel();
-                setVoiceLoop(false);
-                updatePrompt(event.target.value.slice(0, 4000));
-              }}
-              onKeyDown={onKeyDown}
-              placeholder={freeWindow ? "Diga o que quer fazer nesse tempo" : "Diga ou escreva o que precisa"}
-              maxLength={4000}
-              autoComplete="off"
-              enterKeyHint="send"
-              disabled={!chat.ready}
-            />
-            {modelPicker ? null : controls}
-          </div>
-          {modelPicker ? (
-            <div className={picker.footer}>
-              <ModelPickerButton
-                options={modelPicker.options}
-                selection={modelPicker.selection}
-                open={pickerOpen}
-                panelId={pickerPanelId}
-                onToggle={() => setPickerOpen((open) => !open)}
-                buttonRef={pickerRef}
-              />
-              {controls}
-            </div>
-          ) : null}
-        </form>
+        >
+          <textarea
+            ref={inputRef}
+            className={field.input}
+            rows={1}
+            aria-label="Mensagem para a IA"
+            aria-controls={commandMatches.length > 0 ? commandsId : undefined}
+            aria-activedescendant={highlighted ? `${commandsId}-${highlighted.id}` : undefined}
+            value={draft}
+            onChange={(event) => {
+              // Quem digita assume o campo: a primeira tecla desliga o microfone
+              // e o que ja estava escrito (ouvido ou nao) fica como texto.
+              userTypedRef.current = true;
+              if (listening) cancel();
+              setVoiceLoop(false);
+              updatePrompt(event.target.value.slice(0, 4000));
+            }}
+            onKeyDown={onKeyDown}
+            placeholder={freeWindow ? "Diga o que quer fazer nesse tempo" : "Diga ou escreva o que precisa"}
+            maxLength={4000}
+            autoComplete="off"
+            enterKeyHint="send"
+            disabled={!chat.ready}
+          />
+        </HermesComposer>
       </div>
     </div>
   );

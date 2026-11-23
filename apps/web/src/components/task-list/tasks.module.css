@@ -168,5 +168,5 @@ textarea.line { height: auto; min-height: 64px; padding: 10px 0; line-height: 1.
   .meta li + li::before { content: none; }
   .date { font-size: 22px; line-height: 22px; }
   .side .priorityText { display: none; }
-  .toast { bottom: calc(98px + env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
 }

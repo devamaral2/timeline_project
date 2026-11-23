@@ -24,7 +24,7 @@ function chat(overrides: Partial<Chat> = {}): Chat {
     ready: true,
     recover: async () => {},
     agentMode: null,
-    model: { options: null, selection: null, chooseProvider: () => {}, chooseModel: () => {}, chooseEffort: () => {} },
+    model: { options: null, selection: null, chooseProvider: () => {}, chooseModel: () => {}, chooseEffort: () => {}, load: async () => {} },
     send: () => false,
     retry: () => {},
     cancel: () => {},

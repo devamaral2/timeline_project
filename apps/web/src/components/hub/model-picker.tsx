@@ -1,18 +1,94 @@
 "use client";
 
 import type { ModelEffort, ModelOptionsDto, ModelProvider, ModelSelection } from "@repo/contracts";
-import { type CSSProperties, type Ref, useEffect, useId, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type Ref, type RefObject, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { EFFORT_LABELS, modelName, providerName, providerOf } from "@/lib/agent-chat/model-selection";
+import type { ModelSelectionControls } from "@/lib/agent-chat/model-selection-store";
 import styles from "./model-picker.module.css";
 
 /**
- * O seletor do modo modelo (canvas "Provedor, modelo e esforço", opção B · Gaveta): o botão no pé do campo, com as
- * quatro barras do esforço e o modelo escolhido, e o painel que cresce do próprio campo. O painel e o botão moram
- * em pontos diferentes do campo; quem os monta guarda se está aberto.
+ * O seletor de modelo dos campos do Hermes (canvas "Provedor, modelo e esforço", opção B · Gaveta): o botão no pé do
+ * campo, com as quatro barras do esforço e o modelo escolhido, e o painel que cresce do próprio campo. O painel e o
+ * botão moram em pontos diferentes do campo; `useModelPicker` guarda se está aberto e o `HermesComposer` os monta.
  */
+
+/** O seletor de um campo: o que ele mostra, se o painel está aberto e como abri-lo, fechá-lo e trocar a escolha. */
+export interface ModelPickerState {
+  /** O que o servidor oferece e a escolha atual; `null` quando o campo fica sem seletor. */
+  choice: { options: ModelOptionsDto; selection: ModelSelection } | null;
+  open: boolean;
+  /** Aberto, e ainda enquanto o painel recolhe: o campo segue acima do fundo até a saída acabar. */
+  lifted: boolean;
+  toggle: () => void;
+  /** Fecha o painel e devolve o foco ao botão do seletor. */
+  close: () => void;
+  panelId: string;
+  buttonRef: RefObject<HTMLButtonElement | null>;
+  controls: ModelSelectionControls;
+}
+
+/**
+ * O seletor de um campo. Lê as opções do servidor quando o campo aparece e mostra a escolha sempre que elas
+ * existem; `hidden` o esconde onde a escolha não vale (o modo Hermes). Sem o modo modelo neste ambiente, `choice` é
+ * `null` e o campo fica sem o pé.
+ */
+export function useModelPicker(controls: ModelSelectionControls, { hidden = false }: { hidden?: boolean } = {}): ModelPickerState {
+  const [open, setOpen] = useState(false);
+  const [lifted, setLifted] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
+  const { options, selection, load } = controls;
+  const choice = useMemo(() => (!hidden && options && selection ? { options, selection } : null), [hidden, options, selection]);
+  const shown = choice !== null;
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+  useEffect(() => {
+    if (!shown) setOpen(false);
+  }, [shown]);
+  useEffect(() => {
+    if (open) {
+      setLifted(true);
+      return;
+    }
+    const settle = window.setTimeout(() => setLifted(false), CLOSE_MS);
+    return () => window.clearTimeout(settle);
+  }, [open]);
+
+  const close = useCallback(() => {
+    setOpen(false);
+    buttonRef.current?.focus();
+  }, []);
+  const toggle = useCallback(() => setOpen((current) => !current), []);
+  // Escape fecha o painel e devolve o foco ao botão do seletor.
+  useEffect(() => {
+    if (!open) return;
+    const onEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      close();
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [open, close]);
+
+  return { choice, open, lifted, toggle, close, panelId, buttonRef, controls };
+}
+
+/**
+ * O fundo que escurece o que está atrás do campo enquanto o painel está aberto; tocar nele fecha. `fixed` cobre a
+ * tela inteira (o campo do detalhe); sem ele, cobre o painel em que o campo mora (o chat).
+ */
+export function ModelPickerScrim({ picker, fixed = false }: { picker: ModelPickerState; fixed?: boolean }) {
+  if (!picker.choice) return null;
+  return <button type="button" className={styles.scrim} data-open={picker.open} data-fixed={fixed} tabIndex={-1} aria-hidden onClick={picker.close} />;
+}
 
 /** As quatro barras do esforco, da mais baixa a mais alta. */
 const BARS = [1, 2, 3, 4] as const;
+/** Quanto o painel leva para recolher (o mesmo tempo da folha de estilo). */
+const CLOSE_MS = 280;
 /** Com mais modelos que isto, a lista ganha a busca. */
 const SEARCH_FROM = 6;
 
@@ -161,7 +237,7 @@ export function ModelPanel({ id, open, options, selection, onProvider, onModel, 
 
           <fieldset className={styles.block} aria-labelledby={`${titles}-effort`}>
             <h3 id={`${titles}-effort`} className={styles.title}>Esforço</h3>
-            <div className={styles.effort} style={{ "--step": `${step}%`, "--level": level } as CSSProperties}>
+            <div className={styles.effort} style={{ "--step": `${step}%`, "--level": level, "--last": Math.max(1, efforts.length - 1) } as CSSProperties}>
               <span className={styles.track} aria-hidden>
                 <span className={styles.fill} />
               </span>

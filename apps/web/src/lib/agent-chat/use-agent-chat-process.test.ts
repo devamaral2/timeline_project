@@ -112,8 +112,11 @@ test("um pedido que falha mostra a mensagem do codigo do erro; tentar de novo ab
 
 test("reenviar a mesma mensagem depois de uma falha de rede nao abre um segundo pedido", async () => {
   // A API aceita o pedido, mas a resposta se perde na rede.
-  net.authedFetch.mockImplementationOnce(async (path: string, init?: RequestInit) => {
-    await api.authedFetch(path, init);
+  let lost = false;
+  net.authedFetch.mockImplementation(async (path: string, init?: RequestInit) => {
+    const response = await api.authedFetch(path, init);
+    if (lost || path !== "/api/requests" || init?.method !== "POST") return response;
+    lost = true;
     throw new TypeError("Failed to fetch");
   });
   const { result } = setup();

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { advanceRequest, modelOptionsFixture, requestFixture, requestsArea } from "@/test/fake-api/requests";
 import { MODEL_SELECTION_KEY } from "./model-selection";
+import { resetModelSelectionStore } from "./model-selection-store";
 import { useAgentChat } from "./use-agent-chat";
 
 // O modo modelo conversa pela API de pedidos, como o Hermes (ADR 0019).
@@ -202,6 +203,8 @@ test("a escolha guardada vale contra as opcoes: provedor desconhecido volta ao p
   expect(first.result.current.model.selection).toEqual({ provider: "openai", model: "gpt-6.2-sol", effort: "max" });
   first.unmount();
 
+  // Outra visita a pagina: as opcoes sao lidas de novo, agora so com a Anthropic.
+  resetModelSelectionStore();
   serve("on", modelOptionsFixture({ providers: [modelOptionsFixture().providers[0] as never] }));
   const second = setup();
   await enter(second.result, "/modelo");
@@ -256,16 +259,77 @@ test("trocar de /hermes para /claude muda o destino sem perder a sessao", async 
   expect(modelPosts()[0]?.body).toMatchObject({ text: "e você?", sessionId: first });
 });
 
-test("nova conversa sai do modo modelo e le as opcoes de novo ao voltar", async () => {
+test("nova conversa sai do modo modelo, mantem o seletor e le as opcoes de novo", async () => {
   const { result } = setup();
   await enter(result, "/modelo");
+  expect(optionsCalls()).toHaveLength(1);
 
   act(() => result.current.startNewConversation());
   expect(result.current.agentMode).toBeNull();
-  expect(result.current.model.options).toBeNull();
+  // O seletor nao some: a escolha segue no campo enquanto as opcoes sao lidas de novo.
+  expect(result.current.model.selection).toEqual({ provider: "anthropic", model: "claude-sonnet-5-5", effort: "medium" });
+  await waitFor(() => expect(optionsCalls()).toHaveLength(2));
 
   await enter(result, "/modelo");
   expect(optionsCalls()).toHaveLength(2);
+});
+
+test("no assistente da agenda o pedido leva a escolha que o campo mostra, sem precisar de comando", async () => {
+  const { result } = setup();
+  await act(() => result.current.model.load());
+  expect(result.current.agentMode).toBeNull();
+  expect(result.current.model.selection).toEqual({ provider: "anthropic", model: "claude-sonnet-5-5", effort: "medium" });
+
+  act(() => result.current.model.chooseProvider("openai"));
+  act(() => result.current.model.chooseEffort("high"));
+  const id = await ask(result, "o que tenho amanhã?");
+
+  expect(modelPosts()).toHaveLength(0);
+  expect(posts("/api/requests")[0]?.body).toEqual({
+    userId: "owner",
+    text: "o que tenho amanhã?",
+    clientMessageId: expect.any(String),
+    model: { provider: "openai", model: "gpt-6.2-sol", effort: "high" },
+  });
+  expect(requests().get(id)).toMatchObject({ route: "steps", model: { provider: "openai", model: "gpt-6.2-sol", effort: "high" } });
+});
+
+test("a primeira mensagem ja leva a escolha, mesmo que o campo ainda nao tenha lido as opcoes", async () => {
+  window.localStorage.setItem(MODEL_SELECTION_KEY, JSON.stringify({
+    current: { provider: "anthropic", model: "claude-opus-5-5", effort: "max" },
+    models: {},
+  }));
+  const { result } = setup();
+  await ask(result, "o que tenho amanhã?");
+
+  expect(posts("/api/requests")[0]?.body).toMatchObject({ model: { provider: "anthropic", model: "claude-opus-5-5", effort: "max" } });
+  expect(result.current.model.selection).toEqual({ provider: "anthropic", model: "claude-opus-5-5", effort: "max" });
+});
+
+test("sem nenhum provedor neste ambiente o pedido do assistente vai sem escolha e as opcoes sao pedidas uma vez so", async () => {
+  serve("off");
+  const { result } = setup();
+  const first = await ask(result, "o que tenho hoje?");
+  advanceRequest(api, first, { status: "done", message: "Nada." });
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  await ask(result, "e amanhã?");
+
+  expect(posts("/api/requests").map((call) => call.body)).toEqual([
+    expect.not.objectContaining({ model: expect.anything() }),
+    expect.not.objectContaining({ model: expect.anything() }),
+  ]);
+  expect(optionsCalls()).toHaveLength(1);
+  expect(result.current.model.selection).toBeNull();
+});
+
+test("a troca feita num campo aparece em todo campo da pagina", async () => {
+  const chat = setup();
+  const other = setup();
+  await act(() => chat.result.current.model.load());
+
+  act(() => chat.result.current.model.chooseEffort("max"));
+
+  expect(other.result.current.model.selection).toMatchObject({ effort: "max" });
 });
 
 test("um pedido ao modelo que ficou aberto volta a ser acompanhado ao abrir o chat", async () => {

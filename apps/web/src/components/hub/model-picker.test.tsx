@@ -51,17 +51,67 @@ beforeEach(() => {
   session.user = { userId: "user-1" };
 });
 
-test("the picker only exists in model mode; the header names the mode", async () => {
+test("a new chat already shows the picker, with no command; it stays through the model mode and back", async () => {
   render(<Harness />);
-  expect(screen.queryByRole("button", { name: /Trocar$/ })).toBeNull();
+  // O chat acabou de abrir, no assistente da agenda: o campo ja mostra o modelo, o esforco e o provedor.
+  await waitFor(() => expect(picker()).toBeInTheDocument());
+  expect(picker()).toHaveTextContent("Sonnet 5.5 · Médio");
+  expect(picker()).toHaveTextContent("via anthropic");
+  expect(screen.getByText("Nova conversa")).toBeInTheDocument();
 
   ask("/claude");
-  await waitFor(() => expect(picker()).toBeInTheDocument());
-  expect(screen.getByRole("heading", { name: "Conversa" }).parentElement).toHaveTextContent("Modelo");
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Conversa" }).parentElement).toHaveTextContent("Modelo"));
   expect(screen.getByText("Agora você está falando com Sonnet 5.5 (Anthropic). Escreva /app para voltar ao assistente da agenda.")).toBeInTheDocument();
+  expect(picker()).toBeInTheDocument();
 
   ask("/app");
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Conversa" }).parentElement).toHaveTextContent("Assistente"));
+  expect(picker()).toBeInTheDocument();
+});
+
+test("in a new chat the picker opens and the pick goes with the next request to the agenda assistant", async () => {
+  render(<Harness />);
+  await waitFor(() => expect(picker()).toBeInTheDocument());
+
+  fireEvent.click(picker());
+  fireEvent.click(screen.getByRole("button", { name: "Opus 5.5" }));
+  fireEvent.click(screen.getByRole("button", { name: "Alto" }));
+  fireEvent.click(screen.getByRole("button", { name: "Selecionar" }));
+  expect(picker()).toHaveTextContent("Opus 5.5 · Alto");
+
+  ask("o que tenho amanhã?");
+
+  const sent = () => api.calls.find((call) => call.method === "POST" && call.pathname === "/api/requests");
+  await waitFor(() => expect(sent()).toBeDefined());
+  expect(sent()?.body).toMatchObject({
+    text: "o que tenho amanhã?", model: { provider: "anthropic", model: "claude-opus-5-5", effort: "high" },
+  });
+  expect(modelPosts()).toHaveLength(0);
+  // A conversa comecou e o seletor continua no campo.
+  expect(picker()).toBeInTheDocument();
+});
+
+test("the Hermes answers with its own model: in its mode the field has no picker", async () => {
+  render(<Harness />);
+  await waitFor(() => expect(picker()).toBeInTheDocument());
+
+  ask("/hermes");
   await waitFor(() => expect(screen.queryByRole("button", { name: /Trocar$/ })).toBeNull());
+  expect(screen.getByRole("textbox", { name: "Mensagem para a IA" }).closest("form")).toHaveAttribute("data-model", "false");
+
+  ask("/app");
+  await waitFor(() => expect(picker()).toBeInTheDocument());
+});
+
+test("with no provider key in this environment the field has no picker and keeps the send button beside the text", async () => {
+  api = createFakeApi({ areas: [requestsArea()] });
+  net.authedFetch.mockImplementation(api.authedFetch);
+  render(<Harness />);
+
+  await waitFor(() => expect(api.calls.some((call) => call.pathname === "/api/requests/model/options")).toBe(true));
+  expect(screen.queryByRole("button", { name: /Trocar$/ })).toBeNull();
+  const textbox = screen.getByRole("textbox", { name: "Mensagem para a IA" });
+  expect(textbox.parentElement).toContainElement(screen.getByRole("button", { name: "Enviar mensagem" }));
 });
 
 test("the picker shows the model, the effort and the provider, and starts closed", async () => {

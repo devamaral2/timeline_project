@@ -1,21 +1,19 @@
 "use client";
 
-import type {
-  AgentTraceDto, ModelEffort, ModelOptionsDto, ModelProvider, ModelSelection, RequestDto, RequestScreenContext,
-} from "@repo/contracts";
+import type { AgentTraceDto, ModelOptionsDto, ModelProvider, ModelSelection, RequestDto, RequestScreenContext } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
 import { ApiRequestError } from "@/lib/api/client-request";
 import {
-  HermesOffError, ModelOffError, cancelRequest, getModelOptions, getRequest, listRequests, sendHermesMessage, sendModelMessage,
-  startRequest,
+  HermesOffError, ModelOffError, cancelRequest, getRequest, listRequests, sendHermesMessage, sendModelMessage, startRequest,
 } from "@/lib/api/requests";
 import { type ChatAgent, parseChatCommand } from "./chat-mode-command";
 import { type HermesStep, hermesStepsOf } from "./hermes-steps";
+import { modelName, providerName, providerOf, providerOffText } from "./model-selection";
 import {
-  type StoredModelSelection, modelName, providerName, providerOf, providerOffText, readStoredSelection, resolveSelection,
-  withEffort, withModel, withProvider, writeStoredSelection,
-} from "./model-selection";
+  chooseModelProvider, currentModelOptions, currentModelSelection, loadModelOptions, modelSelectionForRequest,
+  useModelSelection,
+} from "./model-selection-store";
 import { operationId } from "@/lib/api/operation-id";
 
 /** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (tarefa ou nota). */
@@ -167,6 +165,9 @@ export function startFailureCode(error: unknown): ChatFailureCode {
 /**
  * A conversa da agenda. Cada mensagem vira um pedido na API (rota por passos) ou, com `/hermes` ou um comando de modelo
  * (`/modelo`, `/claude`, `/openai`, `/openrouter`), vai ao Hermes (ADR 004) ou ao modelo escolhido (ADR 0019). O historico e so do que esta na tela: nada e recarregado do servidor.
+ *
+ * A escolha de provedor, modelo e esforco e a da pagina (`model-selection-store`): o campo a mostra sempre e ela vai
+ * em todo pedido que usa modelo, o da rota por passos e o do modo modelo. So o Hermes responde com o modelo dele.
  */
 export function useAgentChat({
   userId,
@@ -182,39 +183,8 @@ export function useAgentChat({
     agentModeRef.current = next;
     setAgentMode(next);
   }, []);
-  /** O que o servidor oferece ao modo modelo; lido ao entrar no modo e guardado ate comecar de novo. */
-  const [modelOptions, setModelOptions] = useState<ModelOptionsDto | null>(null);
-  const modelOptionsRef = useRef<ModelOptionsDto | null>(null);
-  const modelOptionsLoadRef = useRef<Promise<ModelOptionsDto> | null>(null);
-  /** A escolha atual (provedor, modelo, esforco) e o ultimo modelo de cada provedor; o aparelho a guarda. */
-  const [modelState, setModelState] = useState<StoredModelSelection | null>(null);
-  const modelStateRef = useRef<StoredModelSelection | null>(null);
-  const commitModelState = useCallback((next: StoredModelSelection) => {
-    modelStateRef.current = next;
-    setModelState(next);
-    writeStoredSelection(next);
-  }, []);
-  /**
-   * Le as opcoes do servidor (uma vez por conversa) e confere a escolha guardada contra elas. Sem nenhum provedor
-   * com chave a API responde 404 e isto lanca `ModelOffError`.
-   */
-  const loadModelOptions = useCallback(async (): Promise<ModelOptionsDto> => {
-    if (modelOptionsRef.current) return modelOptionsRef.current;
-    modelOptionsLoadRef.current ??= getModelOptions().then(
-      (options) => {
-        modelOptionsLoadRef.current = null;
-        modelOptionsRef.current = options;
-        setModelOptions(options);
-        commitModelState(resolveSelection(options, modelStateRef.current ?? readStoredSelection()));
-        return options;
-      },
-      (error: unknown) => {
-        modelOptionsLoadRef.current = null;
-        throw error;
-      },
-    );
-    return modelOptionsLoadRef.current;
-  }, [commitModelState]);
+  /** O que o servidor oferece e a escolha atual: os mesmos em todo campo da pagina, guardados no aparelho. */
+  const model = useModelSelection();
   /** O primeiro pedido da conversa: toda mensagem seguinte o manda como `sessionId`. */
   const sessionRef = useRef<string | undefined>(undefined);
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
@@ -267,8 +237,8 @@ export function useAgentChat({
     if (pendingRef.current) return;
     commitAgentMode(null);
     commitPending(null);
-    modelOptionsRef.current = null;
-    setModelOptions(null);
+    // O seletor continua no campo; as opcoes sao lidas de novo, por tras, para a conversa nova.
+    void loadModelOptions(true).catch(() => undefined);
     followingRef.current.clear();
     sessionRef.current = undefined;
     messagesRef.current = [];
@@ -330,7 +300,7 @@ export function useAgentChat({
       commitTraces((current) =>
         current.map((entry) =>
           entry.id === id ? { ...entry, route, running: isRequestOpen(view), trace: view.trace ?? null } : entry));
-      const label = agent ? pendingLabelOf(agent, view.model ?? modelStateRef.current?.current, modelOptionsRef.current) : undefined;
+      const label = agent ? pendingLabelOf(agent, view.model ?? currentModelSelection(), currentModelOptions()) : undefined;
       if (label && isRequestOpen(view) && pendingRef.current?.id === id && pendingRef.current.label !== label) {
         commitPending({ ...pendingRef.current, label });
       }
@@ -420,19 +390,22 @@ export function useAgentChat({
 
   /**
    * Abre o pedido na API (com o id da mensagem como `clientMessageId` e, depois da primeira, o da primeira
-   * mensagem como `sessionId`) e o acompanha ate o fim.
+   * mensagem como `sessionId`) e o acompanha ate o fim. O pedido leva a escolha de modelo que o campo mostra: os
+   * agentes dos passos rodam com ela. Sem o modo modelo neste ambiente, vai sem escolha.
    */
   const runRequest = useCallback(
     async (id: string, text: string): Promise<void> => {
       if (!userId) return;
       let requestId: string;
       try {
+        const selection = await modelSelectionForRequest();
         requestId = await startRequest({
           userId,
           text,
           ...(context ? { context } : {}),
           ...(sessionRef.current ? { sessionId: sessionRef.current } : {}),
           clientMessageId: id,
+          ...(selection ? { model: selection } : {}),
         });
       } catch (error) {
         fail(id, startFailureCode(error));
@@ -472,7 +445,7 @@ export function useAgentChat({
         };
         if (agent === "model") {
           await loadModelOptions();
-          const selection = modelStateRef.current?.current;
+          const selection = currentModelSelection();
           if (!selection) throw new ModelOffError();
           request = await sendModelMessage({ ...body, model: selection });
         } else {
@@ -494,11 +467,11 @@ export function useAgentChat({
       knownRequestsRef.current.add(request.id);
 
       showTrace({ id, request: text, route: agent, running: true, trace: null });
-      const label = pendingLabelOf(agent, request.model ?? modelStateRef.current?.current, modelOptionsRef.current);
+      const label = pendingLabelOf(agent, request.model ?? currentModelSelection(), currentModelOptions());
       commitPending({ id, label, requestId: request.id });
       await followRequest(id, request.id);
     },
-    [commitAgentMode, commitMessages, commitPending, fail, followRequest, loadModelOptions, showTrace, userId],
+    [commitAgentMode, commitMessages, commitPending, fail, followRequest, showTrace, userId],
   );
 
   /**
@@ -510,7 +483,8 @@ export function useAgentChat({
     async (id: string, provider: ModelProvider | null, text: string | null): Promise<void> => {
       let options: ModelOptionsDto;
       try {
-        options = await loadModelOptions();
+        // Quem pede o modo quer saber agora se ele existe: sem opcoes lidas, pergunta de novo ao servidor.
+        options = await loadModelOptions(currentModelOptions() === null);
       } catch (error) {
         if (error instanceof ModelOffError) {
           commitAgentMode(null);
@@ -529,22 +503,20 @@ export function useAgentChat({
         commitMessages((current) => [...current, { id: `${id}-notice`, role: "assistant", text: providerOffText(provider), entities: [] }]);
         return;
       }
-      const resolved = modelStateRef.current ?? resolveSelection(options, readStoredSelection());
-      const chosen = provider ? withProvider(options, resolved, provider) : resolved;
-      commitModelState(chosen);
+      const chosen = provider ? chooseModelProvider(provider) : currentModelSelection();
       commitAgentMode("model");
       if (text === null) {
         followingRef.current.delete(id);
         commitPending(null);
         commitMessages((current) => [
           ...current,
-          { id: `${id}-notice`, role: "assistant", text: modelEnterText(options, chosen.current), entities: [] },
+          { id: `${id}-notice`, role: "assistant", text: chosen ? modelEnterText(options, chosen) : MODEL_OFF_TEXT, entities: [] },
         ]);
         return;
       }
       await runAgent("model", id, text);
     },
-    [commitAgentMode, commitMessages, commitModelState, commitPending, fail, loadModelOptions, runAgent],
+    [commitAgentMode, commitMessages, commitPending, fail, runAgent],
   );
 
   /** Envia uma mensagem com o id dado (o da mensagem nova, ou o de uma mensagem que falhou ao ser reenviada). */
@@ -660,7 +632,7 @@ export function useAgentChat({
       const newest = open[open.length - 1];
       if (newest && !pendingRef.current) {
         const agent = agentOf(newest.route);
-        const label = agent ? pendingLabelOf(agent, newest.model ?? modelStateRef.current?.current, modelOptionsRef.current) : "Realizando processos";
+        const label = agent ? pendingLabelOf(agent, newest.model ?? currentModelSelection(), currentModelOptions()) : "Realizando processos";
         commitPending({ id: newest.id, label, requestId: newest.id });
       }
       for (const request of open) void followRequest(request.id, request.id);
@@ -668,32 +640,6 @@ export function useAgentChat({
 
     for (const run of deferredRef.current.splice(0)) run();
   }, [commitMessages, commitPending, commitTraces, followRequest, userId]);
-
-  const chooseProvider = useCallback(
-    (provider: ModelProvider) => {
-      const state = modelStateRef.current;
-      const options = modelOptionsRef.current;
-      if (state && options) commitModelState(withProvider(options, state, provider));
-    },
-    [commitModelState],
-  );
-  const chooseModel = useCallback(
-    (model: string) => {
-      const state = modelStateRef.current;
-      const options = modelOptionsRef.current;
-      if (state && options && providerOf(options, state.current.provider)?.models.some((entry) => entry.id === model)) {
-        commitModelState(withModel(state, model));
-      }
-    },
-    [commitModelState],
-  );
-  const chooseEffort = useCallback(
-    (effort: ModelEffort) => {
-      const state = modelStateRef.current;
-      if (state) commitModelState(withEffort(state, effort));
-    },
-    [commitModelState],
-  );
 
   return {
     messages,
@@ -704,14 +650,11 @@ export function useAgentChat({
     recover,
     /** O agente que recebe as mensagens (`/hermes`, ou o modelo com `/modelo`, `/claude`...), ou `null` no assistente da agenda (`/app`). */
     agentMode,
-    /** O modo modelo: o que o servidor oferece, a escolha atual e como trocá-la (cada troca vale já e fica no aparelho). */
-    model: {
-      options: modelOptions,
-      selection: modelState?.current ?? null,
-      chooseProvider,
-      chooseModel,
-      chooseEffort,
-    },
+    /**
+     * A escolha de modelo do campo: o que o servidor oferece, a escolha atual e como trocá-la (cada troca vale já,
+     * fica no aparelho e vai no próximo pedido, no assistente da agenda e no modo modelo).
+     */
+    model,
     send,
     retry,
     cancel,

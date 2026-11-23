@@ -5,7 +5,9 @@
  * desktop fecha a coluna do conteúdo; no celular fica preso ao pé da tela.
  * Os tokens (--card, --line, --ink, --muted) são os do shell.
  */
-.bar { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.bar { display: flex; flex-direction: column; gap: 10px; width: 100%; isolation: isolate; }
+/* O que nao e o campo nunca encolhe: aberto o painel do seletor, quem cede altura e ele. */
+.bar > :not(form) { flex-shrink: 0; }
 .status { margin: 0; display: flex; align-items: center; gap: 12px; min-height: 28px; padding-left: 6px; font-size: var(--font-size-sm); line-height: 20px; color: var(--muted); }
 .status[data-state="error"] { color: var(--destructive); }
 .status > span:last-of-type { flex: 1; min-width: 0; }
@@ -15,6 +17,12 @@
 
 .form { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 6px; border: 1px solid var(--line); border-radius: 28px; background: var(--card); transition: border-color var(--duration-fast); }
 .form:has(.input:focus) { border-color: var(--brand); }
+/* Com o seletor de modelo no pé (canvas "Provedor, modelo e esforço"), o campo tem um raio menor. Com o painel aberto
+   a borda e a sombra ficam mais fortes, e o campo cede altura: quem encolhe é o painel, nunca o texto nem o pé. */
+.form[data-model="true"] { min-height: 0; border-radius: 22px; transition: border-color 280ms cubic-bezier(.4, 0, .2, 1), box-shadow 280ms cubic-bezier(.4, 0, .2, 1); }
+.form[data-model="true"] > :not([data-model-panel]) { flex-shrink: 0; }
+.form[data-model-open="true"] { border-color: color-mix(in oklab, var(--ink) 45%, var(--line)); box-shadow: 0 -12px 40px color-mix(in oklab, var(--ink) 18%, transparent); }
+@media (prefers-reduced-motion: reduce) { .form[data-model="true"] { transition: none; } }
 .context { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 5px 16px 5px 6px; border: 1px solid var(--line); border-radius: 22px; }
 .contextIcon { flex: none; display: grid; place-items: center; width: 40px; height: 40px; color: var(--muted); }
 .contextIcon svg { width: 20px; height: 20px; stroke-width: 1.75; }
@@ -53,9 +61,15 @@
 @keyframes dock { from { opacity: 0; transform: translateY(14px); } }
 @media (prefers-reduced-motion: reduce) { .bar [data-spin] { animation: none; } }
 
+@media (min-width: 721px) {
+  /* Aberto o painel do seletor (e enquanto ele recolhe), o campo se prende ao pé da janela e cresce para cima, acima
+     do fundo que escurece a tela; se faltar altura, quem cede é o painel. */
+  .bar[data-model-lifted] { position: sticky; bottom: 24px; z-index: var(--z-sticky); max-height: calc(100dvh - 48px); }
+}
+
 @media (max-width: 720px) {
-  /* Preso ao pé da tela; atrás dele o conteúdo se apaga no chão. */
-  .bar { position: fixed; z-index: var(--z-sticky); left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); width: auto; }
+  /* Preso ao pé da tela; atrás dele o conteúdo se apaga no chão. Aberto o painel do seletor, cresce até o topo. */
+  .bar { position: fixed; z-index: var(--z-sticky); left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); width: auto; max-height: calc(100dvh - 32px - env(safe-area-inset-bottom) - env(safe-area-inset-top)); }
   /* O botao do Hermes chega voando da barra inferior (`hermes-flight.ts`): o
      icone de status so aparece no pouso e o resto do campo sobe para o lugar. */
   .bar[data-hermes-flight] [data-hermes-mark] { visibility: hidden; }
