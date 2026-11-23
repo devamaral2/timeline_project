@@ -2,6 +2,7 @@
 
 import type { RequestDto, RequestEditEntityType } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { modelSelectionForRequest } from "@/lib/agent-chat/model-selection-store";
 import { agentFailureText, startFailureCode } from "@/lib/agent-chat/use-agent-chat";
 import { getRequest, startEditRequest } from "@/lib/api/requests";
 import { AGENT_REQUEST_POLL_MS, isOpenRequest } from "@/lib/tasks/agent-request-model";
@@ -26,7 +27,8 @@ const TIMEOUT_TEXT = "O pedido demorou demais. Confira se a mudança foi feita a
 /**
  * A edição da entidade aberta: abre um pedido de edição com o tipo e o id da entidade da tela
  * (`POST /api/requests/edit`) e acompanha o pedido com `getRequest` até o estado final. Uma edição por vez.
- * O texto de falha vem do código do pedido, como no chat.
+ * O pedido leva a escolha de modelo que o campo mostra (o agente de edição roda com ela); sem o modo modelo neste
+ * ambiente, vai sem escolha. O texto de falha vem do código do pedido, como no chat.
  */
 export function useEntityAiEdit({ userId, entityType, entityId, onEdited, pollMs = AGENT_REQUEST_POLL_MS }: Options) {
   const [phase, setPhase] = useState<EntityAiEditPhase>("idle");
@@ -60,7 +62,8 @@ export function useEntityAiEdit({ userId, entityType, entityId, onEdited, pollMs
 
     let requestId: string;
     try {
-      requestId = await startEditRequest({ userId, text: trimmed, entityType, entityId });
+      const model = await modelSelectionForRequest();
+      requestId = await startEditRequest({ userId, text: trimmed, entityType, entityId, ...(model ? { model } : {}) });
     } catch (cause) {
       fail(agentFailureText(startFailureCode(cause)));
       return false;

@@ -1,0 +1,263 @@
+[
+  {
+    "id": "doc-text",
+    "name": "Ideias para o projeto",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [
+      "trabalho",
+      "ideias"
+    ],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "text",
+    "data": {
+      "body": "# Ideias para o projeto\n\nUm **parágrafo** com _ênfase_, `código` e um [link](https://example.com/a).\n\n- Primeiro\n- Segundo\n\n1. Um\n2. Dois\n\n- [x] Feito\n- [ ] A fazer\n\n> Citação\n\n```ts\nconst a = 1;\n```\n"
+    }
+  },
+  {
+    "id": "doc-food",
+    "name": "Almoço de ontem",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tasks": [
+      {
+        "taskId": "task-2",
+        "relation": "creates",
+        "name": "Almoço",
+        "actor": "human",
+        "kind": "meal",
+        "startedAt": "2026-09-13T15:00:00.000Z"
+      }
+    ],
+    "tags": [
+      "casa"
+    ],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "food",
+    "data": {
+      "description": "Arroz, feijão e frango grelhado",
+      "items": [
+        {
+          "id": "item-1",
+          "name": "Arroz",
+          "portion": "4 colheres",
+          "approximateWeightGrams": 120,
+          "caloriesKcal": 156,
+          "macronutrients": {
+            "carbohydratesGrams": 34,
+            "proteinsGrams": 3,
+            "totalFatGrams": 0.5,
+            "fiberGrams": 1
+          }
+        },
+        {
+          "id": "item-2",
+          "name": "Frango grelhado",
+          "portion": "",
+          "approximateWeightGrams": 150,
+          "caloriesKcal": 247.5,
+          "macronutrients": {
+            "carbohydratesGrams": 0,
+            "proteinsGrams": 33,
+            "totalFatGrams": 12,
+            "fiberGrams": 0
+          }
+        }
+      ],
+      "totals": {
+        "totalCaloriesKcal": 612.5,
+        "totalProteinGrams": 38.2,
+        "totalCarbohydrateGrams": 64.05,
+        "totalFatGrams": 21.15,
+        "totalFiberGrams": 9
+      },
+      "recipe": {
+        "source": "model",
+        "servings": 2,
+        "prepTimeMinutes": 75,
+        "ingredients": [
+          {
+            "name": "Arroz",
+            "quantity": "300 g"
+          },
+          {
+            "name": "Sal",
+            "quantity": "a gosto"
+          },
+          {
+            "name": "Sal",
+            "quantity": "1 pitada"
+          }
+        ],
+        "steps": [
+          "Lave o arroz.",
+          "Refogue o alho.",
+          "Cozinhe por 20 minutos."
+        ]
+      },
+      "nutritionSource": "model-estimate"
+    }
+  },
+  {
+    "id": "doc-sleep",
+    "name": "Noite de sono",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tasks": [
+      {
+        "taskId": "task-6",
+        "relation": "creates",
+        "name": "Dormir",
+        "actor": "human",
+        "kind": "sleep",
+        "startedAt": "2026-09-15T01:00:00.000Z",
+        "estimatedFinishAt": "2026-09-15T09:00:00.000Z"
+      }
+    ],
+    "tags": [
+      "saúde"
+    ],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "sleep",
+    "data": {
+      "trackedSleepTime": 450,
+      "score": 87
+    }
+  },
+  {
+    "id": "doc-training",
+    "name": "Treino de peito",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "training",
+    "data": {
+      "workouts": [
+        {
+          "id": "w1",
+          "workoutCode": "running",
+          "workoutName": "Corrida",
+          "calories": 320,
+          "duration": 30,
+          "pace": 6.25,
+          "distance": 4.8
+        },
+        {
+          "id": "w2",
+          "workoutCode": "weightlifting",
+          "workoutName": "Musculação",
+          "calories": 280,
+          "duration": 45,
+          "sets": [
+            {
+              "id": "s1",
+              "exercise": "Supino",
+              "repetitions": 10,
+              "weight": 60
+            },
+            {
+              "id": "s2",
+              "exercise": "Supino",
+              "repetitions": 8,
+              "weight": 62.5
+            },
+            {
+              "id": "s3",
+              "exercise": "Crucifixo",
+              "repetitions": 12,
+              "weight": 14
+            }
+          ]
+        },
+        {
+          "id": "w3",
+          "workoutCode": "free",
+          "workoutName": "Alongamento",
+          "calories": 40,
+          "duration": 15
+        }
+      ],
+      "caloriesBurned": 640
+    }
+  },
+  {
+    "id": "doc-workout",
+    "name": "Corrida",
+    "schemaVersion": 1,
+    "global": true,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "workout",
+    "data": {
+      "code": "running",
+      "category": "cardio",
+      "active": true
+    }
+  },
+  {
+    "id": "doc-skill",
+    "name": "Pesquisar",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "skill",
+    "data": {
+      "path": "hermes/skills/pesquisar/SKILL.md",
+      "hash": "abc",
+      "missing": false,
+      "description": "Pesquisa na web"
+    }
+  },
+  {
+    "id": "doc-agent",
+    "name": "Planejador",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "agent",
+    "data": {
+      "path": "hermes/agents/planejador.md",
+      "hash": "def",
+      "missing": true
+    }
+  },
+  {
+    "id": "doc-router",
+    "name": "Roteador",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "router",
+    "data": {
+      "body": "Roteia pedidos"
+    }
+  }
+]

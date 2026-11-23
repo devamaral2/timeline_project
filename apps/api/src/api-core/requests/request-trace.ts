@@ -1,5 +1,6 @@
 import type { AgentTraceDto, AgentTraceEntryDto, AgentTraceField, AgentTraceSection, AgentTraceStatus } from "@repo/contracts";
 import { dispatchConfig, stepLabel } from "./request-config";
+import { ENTITY_AGENT } from "./request-steps";
 import type { DispatchRecord, RequestEntityRecord, RequestRecord, StepRecord } from "./request-store";
 
 const MAX_TEXT = 4_000;
@@ -10,12 +11,22 @@ const STEP_STATUS: Record<StepRecord["status"], AgentTraceStatus> = {
   queued: "pending", running: "running", done: "done", failed: "failed", cancel: "failed",
 };
 
+/** Por que o pedido foi ao Hermes sem ser uma tarefa de agente. `no_step` e `unsupported` so existem em pedidos antigos. */
 const FALLBACK_REASONS: Record<string, string> = {
-  no_step: "nenhum agente reconhecido para o pedido",
-  unsupported: "o pedido pede uma operação sem agente",
   uncertain: "o roteador não teve certeza",
   forced: "pedido direto, pelo prefixo fallback:",
+  model_unavailable: "o modo modelo não está disponível para este pedido",
+  no_step: "nenhum agente reconhecido para o pedido",
+  unsupported: "o pedido pede uma operação sem agente",
 };
+
+/** O destino que o roteador escolheu, como o rastro o mostra. */
+const ROUTE_LABELS: Record<string, string> = {
+  query: "consultar registros",
+  write: "criar ou atualizar registros",
+  config: "configuração do app (modo modelo)",
+};
+const AGENT_TASK = "tarefa de agente (Hermes)";
 
 /** O agente de fallback que existia antes de o Hermes ser o fallback: so aparece em pedidos antigos. */
 const LEGACY_FALLBACK_AGENT: string = "fallback";
@@ -50,14 +61,25 @@ function elapsed(from: Date | undefined, to: Date | undefined): number | undefin
   return Math.max(0, to.getTime() - from.getTime());
 }
 
+/**
+ * O destino do pedido: o que o roteador escolheu ou, sem nenhum `yes`, o Hermes como tarefa de agente. Nada quando
+ * o pedido foi ao Hermes como fallback, e nada em pedidos antigos, que nao tinham destino.
+ */
+function destinationOf(request: RequestRecord, dispatch: DispatchRecord): string | undefined {
+  if (dispatch.fallbackReason) return undefined;
+  if (dispatch.route) return ROUTE_LABELS[dispatch.route];
+  return request.route === "hermes" ? AGENT_TASK : undefined;
+}
+
 /** O que o servidor fez com a resposta de cada pergunta do roteador, como no log do despacho. */
 function verdict(name: string, dispatch: DispatchRecord): string {
   if (dispatch.uncertain.includes(name)) return "incerta";
-  if (dispatch.unsupported.includes(name)) return "sem agente";
+  if (dispatch.unsupported?.includes(name)) return "sem agente";
   const answer = dispatch.answers[name];
   if (!answer) return "sem resposta";
-  const wanted = name === "query" ? answer.choice === "yes" : answer.choice !== "none";
-  return wanted ? "aciona um agente" : "ignorada";
+  if (name === dispatch.route) return "define o destino";
+  // Pedidos antigos tinham uma pergunta por operacao: toda resposta diferente de "nenhum" acionava um agente.
+  return answer.choice !== "no" && answer.choice !== "none" ? "aciona um agente" : "ignorada";
 }
 
 function requestEntry(request: RequestRecord): AgentTraceEntryDto {
@@ -88,10 +110,12 @@ function routingEntry(request: RequestRecord, steps: readonly StepRecord[]): Age
   if (dispatch.model) fields.push({ label: "Modelo", value: dispatch.model });
   if (dispatch.latencyMs !== undefined) fields.push({ label: "Latência", value: formatDuration(dispatch.latencyMs) });
   fields.push({ label: "Certeza mínima", value: percent(dispatchConfig.minCertainty) });
+  const destination = destinationOf(request, dispatch);
+  if (destination) fields.push({ label: "Destino", value: destination });
   if (dispatch.candidates) {
-    fields.push({
-      label: "Candidatos de edição", value: `${dispatch.candidates.selected} de ${dispatch.candidates.shortlisted}`,
-    });
+    const { selected, shortlisted } = dispatch.candidates;
+    // Hoje o agente de escrita recebe a lista inteira; em pedidos antigos o JEV escolhia parte dela.
+    fields.push({ label: "Candidatos de edição", value: selected === shortlisted ? String(shortlisted) : `${selected} de ${shortlisted}` });
   }
   if (dispatch.fallbackReason) {
     fields.push({ label: "Motivo do fallback", value: FALLBACK_REASONS[dispatch.fallbackReason] ?? "roteador indisponível" });
@@ -101,7 +125,8 @@ function routingEntry(request: RequestRecord, steps: readonly StepRecord[]): Age
   const called = steps.filter((step) => step.agent !== LEGACY_FALLBACK_AGENT).map((step) => stepLabel(step.agent));
   const summary = dispatch.fallbackReason
     ? `Fallback: ${FALLBACK_REASONS[dispatch.fallbackReason] ?? "roteador indisponível"}`
-    : called.length > 0 ? `Aciona: ${called.join(", ")}` : undefined;
+    : called.length > 0 ? `Aciona: ${called.join(", ")}`
+      : destination ? `Destino: ${destination}` : undefined;
   return {
     ...base, status: "done",
     ...(dispatch.model ? { source: dispatch.model } : {}),
@@ -127,7 +152,10 @@ function stepEntry(step: StepRecord, entities: readonly RequestEntityRecord[]): 
   const own = entities.filter((entity) => entity.stepId === step.id);
   const durationMs = elapsed(step.startedAt, step.finishedAt) ?? step.timings?.total;
   // O nome do agente ja vai em `source`.
-  const fields: AgentTraceField[] = [{ label: "Quantidade esperada", value: step.expected === "many" ? "vários" : "um" }];
+  // O agente unico de escrita nao recebe dica de quantidade: decide sozinho quantas coisas o pedido cria ou altera.
+  const fields: AgentTraceField[] = step.agent === ENTITY_AGENT
+    ? []
+    : [{ label: "Quantidade esperada", value: step.expected === "many" ? "vários" : "um" }];
   if (step.errorCode) fields.push({ label: "Erro", value: step.errorCode });
   for (const [name, value] of Object.entries(step.timings ?? {})) {
     fields.push({ label: name === "total" ? "Tempo do agente" : `Tempo · ${name}`, value: formatDuration(value) });

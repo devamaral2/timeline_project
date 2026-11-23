@@ -21,3 +21,4 @@ export type * from "./recurrences/recurrence-rule";
 export type * from "./recurrences/recurrence.dto";
 export type * from "./agent/agent-trace.dto";
 export type * from "./agent/request.dto";
+export type * from "./agent/model.dto";

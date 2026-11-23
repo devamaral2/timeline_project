@@ -1,0 +1,19 @@
+{
+  "frequency": "weekly",
+  "interval": 1,
+  "byWeekday": 4,
+  "timeOfDay": "10:30",
+  "durationMinutes": 60,
+  "timeZone": "America/Sao_Paulo",
+  "startsOn": "2026-09-21",
+  "id": "rec-1",
+  "template": {
+    "kind": "common",
+    "name": "Treino",
+    "description": "",
+    "priority": "medium"
+  },
+  "revision": 4,
+  "createdAt": "2026-09-01T12:00:00.000Z",
+  "updatedAt": "2026-09-02T12:00:00.000Z"
+}

@@ -268,7 +268,7 @@ export const updateRecurrenceInputSchema = z.object(recurrenceRuleShape).partial
 const agentTraceFieldSchema = z.object({ label: z.string(), value: z.string() }).strict();
 
 export const agentTraceSchema = z.object({
-  route: z.enum(["steps", "hermes"]),
+  route: z.enum(["steps", "hermes", "model"]),
   status: z.enum(["running", "done", "failed"]),
   startedAt: z.string().optional(),
   durationMs: z.number().optional(),
@@ -288,10 +288,30 @@ export const agentTraceSchema = z.object({
   }).strict()),
 }).strict();
 
+const modelProviderSchema = z.enum(["anthropic", "openai", "openrouter"]);
+const modelEffortSchema = z.enum(["low", "medium", "high", "max"]);
+
+export const modelSelectionSchema = z.object({
+  provider: modelProviderSchema,
+  model: z.string().min(1).max(200),
+  effort: modelEffortSchema,
+}).strict();
+
+export const modelOptionsSchema = z.object({
+  providers: z.array(z.object({
+    id: modelProviderSchema,
+    name: z.string(),
+    models: z.array(z.object({ id: z.string(), name: z.string() }).strict()),
+    defaultModel: z.string(),
+  }).strict()),
+  efforts: z.array(modelEffortSchema),
+  default: modelSelectionSchema,
+}).strict();
+
 export const requestSchema = z.object({
   id: z.string(),
   kind: agentRequestKindSchema,
-  route: z.enum(["steps", "hermes", "voice", "food"]),
+  route: z.enum(["steps", "hermes", "model", "voice", "food"]),
   status: agentTaskStatusSchema,
   title: z.string(),
   sessionId: z.string().optional(),
@@ -320,9 +340,11 @@ export const requestSchema = z.object({
   errorCode: z.enum(["invalid_input", "forbidden", "limit_reached", "conflict", "unavailable", "cancelled", "internal"]).optional(),
   progress: z.string().optional(),
   trace: agentTraceSchema.optional(),
+  model: modelSelectionSchema.optional(),
 }).strict();
 
 export const contractSchemas = {
+  modelOptions: modelOptionsSchema,
   agendaPage: agendaPageSchema,
   taskCard: taskCardSchema,
   task: taskSchema,

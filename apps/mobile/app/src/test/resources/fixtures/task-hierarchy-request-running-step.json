@@ -1,0 +1,19 @@
+{
+  "id": "req-hermes",
+  "kind": "request",
+  "route": "steps",
+  "status": "running",
+  "title": "Preparar a viagem",
+  "createdAt": "2026-09-14T15:30:00.000Z",
+  "updatedAt": "2026-09-14T15:30:05.000Z",
+  "text": "Preparar a mala",
+  "steps": [
+    {
+      "id": "s1",
+      "agent": "writer",
+      "label": "Montar as tarefas",
+      "status": "running"
+    }
+  ],
+  "entities": []
+}

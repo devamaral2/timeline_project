@@ -1,0 +1,60 @@
+{
+  "id": "doc-training",
+  "name": "Treino de peito",
+  "schemaVersion": 1,
+  "global": false,
+  "derived": false,
+  "tags": [],
+  "revision": 1,
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-14T12:12:00.000Z",
+  "type": "training",
+  "data": {
+    "workouts": [
+      {
+        "id": "w1",
+        "workoutCode": "running",
+        "workoutName": "Corrida",
+        "calories": 320,
+        "duration": 30,
+        "pace": 6.25,
+        "distance": 4.8
+      },
+      {
+        "id": "w2",
+        "workoutCode": "weightlifting",
+        "workoutName": "Musculação",
+        "calories": 280,
+        "duration": 45,
+        "sets": [
+          {
+            "id": "s1",
+            "exercise": "Supino",
+            "repetitions": 10,
+            "weight": 60
+          },
+          {
+            "id": "s2",
+            "exercise": "Supino",
+            "repetitions": 8,
+            "weight": 62.5
+          },
+          {
+            "id": "s3",
+            "exercise": "Crucifixo",
+            "repetitions": 12,
+            "weight": 14
+          }
+        ]
+      },
+      {
+        "id": "w3",
+        "workoutCode": "free",
+        "workoutName": "Alongamento",
+        "calories": 40,
+        "duration": 15
+      }
+    ],
+    "caloriesBurned": 640
+  }
+}

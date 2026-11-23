@@ -1,26 +1,20 @@
+import type { ModelSelection } from "@repo/contracts";
 import { describe, expect, test } from "vitest";
 import { JevUnavailableError } from "./jev.client";
+import type { EditCandidate } from "./request-candidates";
 import { dispatchConfig } from "./request-config";
-import { RequestDispatcher } from "./request-dispatcher";
+import { RequestDispatcher, type RequestDispatcherOptions } from "./request-dispatcher";
 import { parseFallbackCommand } from "./request-steps";
 import { InMemoryRequestStore } from "./testing/in-memory-request-store";
-import type { CandidateQuery, EditCandidate } from "./request-candidates";
-import { confident, result, scriptedJev } from "./testing/request-test-kit";
+import { confident, dispatchAnswers, scriptedJev } from "./testing/request-test-kit";
 
-const NONE = (name: string) => (name === "query" ? "no" : "none");
+const MODEL: ModelSelection = { provider: "anthropic", model: "claude-opus-5-5", effort: "medium" };
 
-/** Todas as perguntas respondidas "nenhum", com as escolhas combinadas por cima. */
-function answers(overrides: Record<string, ReturnType<typeof confident>> = {}) {
-  const all: Record<string, ReturnType<typeof confident>> = {};
-  for (const name of Object.keys(dispatchConfig.questions)) all[name] = confident(NONE(name));
-  return result({ ...all, ...overrides });
-}
-
-function setup(respond: Parameters<typeof scriptedJev>[0]) {
+function setup(respond: Parameters<typeof scriptedJev>[0], options: RequestDispatcherOptions = {}) {
   const store = new InMemoryRequestStore();
   store.seed({ id: "r1", prompt: "pedido", status: "queued" });
   const jev = scriptedJev(respond);
-  return { store, jev, dispatcher: new RequestDispatcher(store, jev.client) };
+  return { store, jev, dispatcher: new RequestDispatcher(store, jev.client, options) };
 }
 
 describe("comando fallback:", () => {
@@ -39,58 +33,103 @@ describe("comando fallback:", () => {
 });
 
 describe("despacho pelo JEV de entrada", () => {
-  test("o exemplo-guia aciona a fila de tarefas (vários) e a de artefatos (uma), de uma vez", async () => {
-    const { store, dispatcher, jev } = setup(() => answers({
-      task_create: confident("many"), artifact_create: confident("one"),
-    }));
-
+  test("uma chamada so, com as tres perguntas de sim ou nao e nada mais", async () => {
+    const { dispatcher, jev } = setup(() => dispatchAnswers("write"));
     await dispatcher.run("r1");
-
-    expect(store.stepRecords.map((step) => [step.agent, step.expected])).toEqual([
-      ["task-create", "many"], ["artifact-create", "one"],
-    ]);
-    expect(store.jobs.map((job) => job.kind)).toEqual(["request-step", "request-step"]);
-    expect(store.require("r1").status).toBe("running");
     expect(jev.ask).toHaveBeenCalledTimes(1);
-    // Uma unica chamada leva todas as perguntas de operacao x entidade e a consulta.
-    expect(Object.keys(jev.ask.mock.calls[0]?.[2] ?? {})).toEqual(Object.keys(dispatchConfig.questions));
-    expect(store.require("r1").dispatch).toMatchObject({ model: "jev-test", uncertain: [], unsupported: [] });
+    const asked = jev.ask.mock.calls[0]?.[2] as Record<string, { criteria: Record<string, string> }>;
+    expect(Object.keys(asked)).toEqual(["query", "write", "config"]);
+    for (const question of Object.values(asked)) expect(Object.keys(question.criteria)).toEqual(["yes", "no"]);
   });
 
-  test("nenhuma operacao reconhecida vai ao Hermes: o pedido muda de rota, sem passo", async () => {
-    const { store, dispatcher } = setup(() => answers());
-    await dispatcher.run("r1");
-    expect(store.stepRecords).toEqual([]);
-    expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn"]);
-    expect(store.require("r1")).toMatchObject({ route: "hermes", status: "queued", dispatch: { fallbackReason: "no_step" } });
-  });
-
-  test("toda pergunta de operacao do JEV tem agente: nenhum pedido reconhecido sobra sem fila", async () => {
-    const { store, dispatcher } = setup(() => answers({
-      recurring_task_create: confident("many"), recurring_task_edit: confident("one"),
-    }));
-    await dispatcher.run("r1");
-    expect(store.stepRecords.map((step) => step.agent)).toEqual([
-      "recurring-task-create", "recurring-task-edit",
-    ]);
-    expect(store.require("r1").dispatch).toMatchObject({ unsupported: [] });
-  });
-
-  test("consulta pura aciona a fila de consulta", async () => {
-    const { store, dispatcher } = setup(() => answers({ query: confident("yes") }));
+  test("so consultar vai ao agente de consulta ao banco", async () => {
+    const { store, dispatcher } = setup(() => dispatchAnswers("query"));
     await dispatcher.run("r1");
     expect(store.stepRecords.map((step) => step.agent)).toEqual(["query"]);
     expect(store.jobs.map((job) => job.kind)).toEqual(["request-step"]);
+    expect(store.require("r1")).toMatchObject({
+      route: "steps", status: "running", dispatch: { model: "jev-test", route: "query", uncertain: [] },
+    });
   });
 
-  test("resposta incerta em qualquer pergunta manda ao Hermes", async () => {
-    const { store, dispatcher } = setup(() => answers({
-      task_create: confident("one"), artifact_create: confident("one", 0.9),
-    }));
+  test("so criar ou atualizar vai ao agente unico de escrita, num passo so", async () => {
+    const { store, dispatcher } = setup(() => dispatchAnswers("write"));
+    await dispatcher.run("r1");
+    expect(store.stepRecords.map((step) => step.agent)).toEqual(["entity"]);
+    expect(store.jobs.map((job) => job.kind)).toEqual(["request-step"]);
+    expect(store.require("r1")).toMatchObject({ route: "steps", status: "running", dispatch: { route: "write" } });
+    expect(store.require("r1").dispatch?.fallbackReason).toBeUndefined();
+  });
+
+  test("configuracao do app vai ao modo modelo: o pedido muda de rota e guarda o modelo que responde", async () => {
+    const asked: string[] = [];
+    const { store, dispatcher } = setup(() => dispatchAnswers("config"), {
+      model: async (userId) => {
+        asked.push(userId);
+        return MODEL;
+      },
+    });
+    await dispatcher.run("r1");
+    expect(asked).toEqual([store.require("r1").userId]);
+    expect(store.stepRecords).toEqual([]);
+    expect(store.jobs.map((job) => job.kind)).toEqual(["model-turn"]);
+    expect(store.require("r1")).toMatchObject({ route: "model", status: "queued", model: MODEL, dispatch: { route: "config" } });
+  });
+
+  test("configuracao num pedido que ja traz a escolha do usuario responde com o modelo dele, nao com o padrao", async () => {
+    const chosen: ModelSelection = { provider: "openai", model: "gpt-6.2-sol", effort: "high" };
+    const { store, dispatcher } = setup(() => dispatchAnswers("config"), { model: async () => MODEL });
+    store.require("r1").model = chosen;
+    await dispatcher.run("r1");
+    expect(store.require("r1")).toMatchObject({ route: "model", model: chosen });
+  });
+
+  test("a escolha do usuario nao abre o modo modelo para quem ele nao vale", async () => {
+    const { store, dispatcher } = setup(() => dispatchAnswers("config"), { model: async () => undefined });
+    store.require("r1").model = MODEL;
+    await dispatcher.run("r1");
+    expect(store.require("r1")).toMatchObject({ route: "hermes", dispatch: { fallbackReason: "model_unavailable" } });
+  });
+
+  test.each([
+    ["sem o modo modelo neste ambiente", {}],
+    ["o modo modelo nao vale para este usuario", { model: async () => undefined }],
+  ])("configuracao com %s vai ao Hermes", async (_, options: RequestDispatcherOptions) => {
+    const { store, dispatcher } = setup(() => dispatchAnswers("config"), options);
+    await dispatcher.run("r1");
+    expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn"]);
+    expect(store.require("r1")).toMatchObject({ route: "hermes", dispatch: { route: "config", fallbackReason: "model_unavailable" } });
+  });
+
+  test("tres respostas nao: e uma tarefa de agente e vai ao Hermes, sem passo e sem motivo de fallback", async () => {
+    const { store, dispatcher } = setup(() => dispatchAnswers());
     await dispatcher.run("r1");
     expect(store.stepRecords).toEqual([]);
-    expect(store.require("r1").route).toBe("hermes");
-    expect(store.require("r1").dispatch).toMatchObject({ fallbackReason: "uncertain", uncertain: ["artifact_create"] });
+    expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn"]);
+    expect(store.require("r1")).toMatchObject({ route: "hermes", status: "queued", dispatch: { uncertain: [] } });
+    expect(store.require("r1").dispatch?.route).toBeUndefined();
+    expect(store.require("r1").dispatch?.fallbackReason).toBeUndefined();
+  });
+
+  test("um sim incerto nao escolhe destino: o pedido vai ao Hermes", async () => {
+    const { store, dispatcher } = setup(() => dispatchAnswers(undefined, { write: confident("yes", dispatchConfig.minCertainty) }));
+    await dispatcher.run("r1");
+    expect(store.stepRecords).toEqual([]);
+    expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn"]);
+    expect(store.require("r1")).toMatchObject({ route: "hermes", dispatch: { fallbackReason: "uncertain", uncertain: ["write"] } });
+  });
+
+  test("mais de um sim nao escolhe destino, mesmo com os dois certos: o pedido mistura coisas e vai ao Hermes", async () => {
+    const { store, dispatcher } = setup(() => dispatchAnswers("write", { query: confident("yes") }));
+    await dispatcher.run("r1");
+    expect(store.stepRecords).toEqual([]);
+    expect(store.require("r1")).toMatchObject({ route: "hermes", dispatch: { fallbackReason: "uncertain", uncertain: ["query", "write"] } });
+  });
+
+  test("um nao incerto nas outras perguntas nao atrapalha o sim certo", async () => {
+    const { store, dispatcher } = setup(() => dispatchAnswers("write", { query: confident("no", 0.4) }));
+    await dispatcher.run("r1");
+    expect(store.stepRecords.map((step) => step.agent)).toEqual(["entity"]);
   });
 
   test.each([
@@ -105,7 +144,7 @@ describe("despacho pelo JEV de entrada", () => {
 
   test("pedido com o prefixo fallback: vai direto ao Hermes, sem consultar o JEV", async () => {
     // O JEV reconheceria uma criacao; com o prefixo ele nem e chamado.
-    const { store, dispatcher, jev } = setup(() => answers({ task_create: confident("one") }));
+    const { store, dispatcher, jev } = setup(() => dispatchAnswers("write"));
 
     store.require("r1").forceFallback = true;
     await dispatcher.run("r1");
@@ -114,11 +153,11 @@ describe("despacho pelo JEV de entrada", () => {
     expect(store.stepRecords).toEqual([]);
     expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn"]);
     expect(store.require("r1")).toMatchObject({ route: "hermes", status: "queued" });
-    expect(store.require("r1").dispatch).toEqual({ answers: {}, uncertain: [], unsupported: [], fallbackReason: "forced" });
+    expect(store.require("r1").dispatch).toEqual({ answers: {}, uncertain: [], fallbackReason: "forced" });
   });
 
   test("so despacha pedidos que ainda esperam despacho", async () => {
-    const { store, dispatcher, jev } = setup(() => answers({ task_create: confident("one") }));
+    const { store, dispatcher, jev } = setup(() => dispatchAnswers("write"));
     store.require("r1").status = "running";
     await dispatcher.run("r1");
     expect(jev.ask).not.toHaveBeenCalled();
@@ -126,105 +165,51 @@ describe("despacho pelo JEV de entrada", () => {
   });
 });
 
-describe("candidatos de edicao escolhidos pelo JEV", () => {
+describe("candidatos do agente de escrita", () => {
   const shortlist: EditCandidate[] = [
     { kind: "task", id: "e1", name: "Reunião", taskKind: "common" },
-    { kind: "task", id: "e2", name: "Almoço", taskKind: "meal" },
     { kind: "artifact", id: "a1", name: "Lista de compras", artifactType: "text" },
-    { kind: "artifact", id: "a2", name: "Ideia", artifactType: "text" },
     { kind: "recurrence", id: "s1", name: "Corrida", cadence: "toda segunda às 07:00" },
   ];
 
-  /** Primeira chamada: despacho. Segunda: uma pergunta binaria por candidato. */
-  function twoStage(chosen: Record<string, ReturnType<typeof confident>>) {
-    const query: CandidateQuery = { shortlist: async () => shortlist };
-    const store = new InMemoryRequestStore();
-    store.seed({ id: "r1", prompt: "terminei a reunião e acrescente leite na lista", status: "queued" });
-    const jev = scriptedJev((questions) => {
-      if ("c1" in questions) return result(chosen);
-      return answers({ task_edit: confident("one"), artifact_edit: confident("one") });
-    });
-    return { store, jev, dispatcher: new RequestDispatcher(store, jev.client, query), query };
-  }
-
-  test("o servidor lista os candidatos dos tipos pedidos e o JEV escolhe; cada passo recebe os do seu tipo", async () => {
-    const calls: string[][] = [];
-    const { store, jev, dispatcher, query } = twoStage({
-      c1: confident("edit"), c2: confident("keep"), c3: confident("edit"), c4: confident("keep"),
-    });
-    query.shortlist = async (input) => {
-      calls.push([...input.kinds]);
-      return shortlist.filter((candidate) => input.kinds.includes(candidate.kind));
-    };
-
-    await dispatcher.run("r1");
-
-    expect(calls).toEqual([["task", "artifact"]]);
-    expect(jev.ask).toHaveBeenCalledTimes(2);
-    const second = jev.ask.mock.calls[1]?.[2] as Record<string, { instructions: string; criteria: Record<string, string> }>;
-    expect(Object.keys(second)).toEqual(["c1", "c2", "c3", "c4"]);
-    expect(second.c1?.instructions).toContain("Reunião");
-    expect(Object.keys(second.c1?.criteria ?? {})).toEqual(["edit", "keep"]);
-    expect(store.stepRecords.map((step) => [step.agent, step.input?.candidates?.map((candidate) => candidate.id)])).toEqual([
-      ["task-edit", ["e1"]], ["artifact-edit", ["a1"]],
-    ]);
-    expect(store.require("r1").dispatch).toMatchObject({ candidates: { shortlisted: 4, selected: 2 } });
-  });
-
-  test("pedido so de criacao nunca lista candidatos nem faz a segunda chamada", async () => {
-    const { store, jev } = twoStage({});
-    jev.ask.mockImplementation(async () => answers({ task_create: confident("one") }));
-    const query = { shortlist: async () => { throw new Error("nao devia listar"); } };
-    await new RequestDispatcher(store, jev.client, query).run("r1");
-    expect(jev.ask).toHaveBeenCalledTimes(1);
-    expect(store.stepRecords.map((step) => step.agent)).toEqual(["task-create"]);
-  });
-
-  test("resposta incerta sobre um candidato nao o escolhe", async () => {
-    const { store, dispatcher } = twoStage({ c1: confident("edit", 0.9), c2: confident("edit") });
-    await dispatcher.run("r1");
-    expect(store.stepRecords[0]?.input?.candidates?.map((candidate) => candidate.id)).toEqual(["e2"]);
-  });
-
-  test("JEV dos candidatos fora do ar: o passo de edicao nasce sem candidatos e pode consultar", async () => {
-    const store = new InMemoryRequestStore();
-    store.seed({ id: "r1", prompt: "terminei a reunião", status: "queued" });
-    const jev = scriptedJev((questions) => ("c1" in questions ? new JevUnavailableError("provider") : answers({ task_edit: confident("one") })));
-    await new RequestDispatcher(store, jev.client, { shortlist: async () => shortlist }).run("r1");
-    expect(store.stepRecords).toMatchObject([{ agent: "task-edit" }]);
-    expect(store.stepRecords[0]?.input).toBeUndefined();
-    expect(store.require("r1").dispatch).toMatchObject({ candidates: { shortlisted: 5, selected: 0 } });
-  });
-
-  test("series: o servidor lista as recorrencias e o agente de series recebe as escolhidas", async () => {
-    const series: EditCandidate[] = [
-      { kind: "recurrence", id: "s1", name: "Corrida", cadence: "toda segunda às 07:00" },
-      { kind: "recurrence", id: "s2", name: "Pagar o aluguel", cadence: "todo dia 5" },
-    ];
-    const store = new InMemoryRequestStore();
-    store.seed({ id: "r1", prompt: "mude a corrida para as 8h e o aluguel para o dia 10", status: "queued" });
+  test("o servidor lista tarefas, artefatos e series e entrega a lista inteira ao agente: o JEV nao escolhe nada", async () => {
     const kinds: string[][] = [];
-    const jev = scriptedJev((questions) => ("c1" in questions
-      ? result({ c1: confident("edit"), c2: confident("edit") })
-      : answers({ recurring_task_edit: confident("many") })));
-    await new RequestDispatcher(store, jev.client, {
-      shortlist: async (input) => { kinds.push([...input.kinds]); return series; },
-    }).run("r1");
+    const { store, dispatcher, jev } = setup(() => dispatchAnswers("write"), {
+      candidates: {
+        shortlist: async (input) => {
+          kinds.push([...input.kinds]);
+          return shortlist;
+        },
+      },
+    });
 
-    expect(kinds).toEqual([["recurrence"]]);
-    expect(store.stepRecords.map((step) => [step.agent, step.input?.candidates?.map((candidate) => candidate.id)])).toEqual([
-      ["recurring-task-edit", ["s1", "s2"]],
-    ]);
-    const asked = jev.ask.mock.calls[1]?.[2] as Record<string, { instructions: string }>;
-    expect(asked.c1?.instructions).toContain("toda segunda");
+    await dispatcher.run("r1");
+
+    expect(kinds).toEqual([["task", "artifact", "recurrence"]]);
+    // A unica chamada ao JEV e a do destino.
+    expect(jev.ask).toHaveBeenCalledTimes(1);
+    expect(store.stepRecords[0]?.input?.candidates).toEqual(shortlist);
+    expect(store.require("r1").dispatch).toMatchObject({ candidates: { shortlisted: 3, selected: 3 } });
   });
 
-  test("lista vazia: segue sem a segunda chamada", async () => {
-    const store = new InMemoryRequestStore();
-    store.seed({ id: "r1", prompt: "terminei a reunião", status: "queued" });
-    const jev = scriptedJev(() => answers({ task_edit: confident("one") }));
-    await new RequestDispatcher(store, jev.client, { shortlist: async () => [] }).run("r1");
-    expect(jev.ask).toHaveBeenCalledTimes(1);
-    expect(store.stepRecords.map((step) => step.agent)).toEqual(["task-edit"]);
+  test("consulta e configuracao nunca listam candidatos", async () => {
+    const candidates = { shortlist: async () => { throw new Error("nao devia listar"); } };
+    for (const route of ["query", "config"] as const) {
+      const { store, dispatcher } = setup(() => dispatchAnswers(route), { candidates, model: async () => MODEL });
+      await dispatcher.run("r1");
+      expect(store.require("r1").dispatch?.candidates).toBeUndefined();
+    }
+  });
+
+  test("lista vazia ou lista que falhou: o passo nasce sem candidatos e o agente ainda pode consultar", async () => {
+    const empty = setup(() => dispatchAnswers("write"), { candidates: { shortlist: async () => [] } });
+    await empty.dispatcher.run("r1");
+    expect(empty.store.stepRecords).toMatchObject([{ agent: "entity" }]);
+    expect(empty.store.stepRecords[0]?.input).toBeUndefined();
+
+    const broken = setup(() => dispatchAnswers("write"), { candidates: { shortlist: async () => { throw new Error("banco fora"); } } });
+    await broken.dispatcher.run("r1");
+    expect(broken.store.stepRecords).toMatchObject([{ agent: "entity" }]);
+    expect(broken.store.stepRecords[0]?.input).toBeUndefined();
   });
 });

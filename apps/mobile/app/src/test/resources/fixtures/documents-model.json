@@ -1,0 +1,601 @@
+{
+  "now": "2026-09-14T15:00:00.000Z",
+  "typeOrder": [
+    "text",
+    "food",
+    "sleep",
+    "training",
+    "workout",
+    "skill",
+    "agent",
+    "router"
+  ],
+  "labels": [
+    {
+      "type": "text",
+      "label": "Nota",
+      "visual": "text"
+    },
+    {
+      "type": "food",
+      "label": "Refeição",
+      "visual": "meal"
+    },
+    {
+      "type": "sleep",
+      "label": "Sono",
+      "visual": "sleep"
+    },
+    {
+      "type": "training",
+      "label": "Treino",
+      "visual": "training"
+    },
+    {
+      "type": "workout",
+      "label": "Exercício",
+      "visual": "training"
+    },
+    {
+      "type": "skill",
+      "label": "Skill",
+      "visual": "skill"
+    },
+    {
+      "type": "agent",
+      "label": "Agente",
+      "visual": "agent"
+    },
+    {
+      "type": "router",
+      "label": "Roteador",
+      "visual": "router"
+    }
+  ],
+  "counts": [
+    {
+      "count": 0,
+      "label": "Nenhum documento"
+    },
+    {
+      "count": 1,
+      "label": "1 documento"
+    },
+    {
+      "count": 2,
+      "label": "2 documentos"
+    },
+    {
+      "count": 17,
+      "label": "17 documentos"
+    }
+  ],
+  "whenLabels": [
+    {
+      "instant": "2026-09-14T12:00:00.000Z",
+      "label": "hoje, 09:00"
+    },
+    {
+      "instant": "2026-09-14T02:59:00.000Z",
+      "label": "ontem, 23:59"
+    },
+    {
+      "instant": "2026-09-13T15:10:00.000Z",
+      "label": "ontem, 12:10"
+    },
+    {
+      "instant": "2026-09-15T11:00:00.000Z",
+      "label": "amanhã, 08:00"
+    },
+    {
+      "instant": "2026-09-11T12:00:00.000Z",
+      "label": "11 set., 09:00"
+    },
+    {
+      "instant": "2026-09-17T12:00:00.000Z",
+      "label": "17 set., 09:00"
+    },
+    {
+      "instant": "2025-12-31T23:30:00.000Z",
+      "label": "31 dez. 2025, 20:30"
+    },
+    {
+      "instant": "2027-01-02T12:00:00.000Z",
+      "label": "2 jan. 2027, 09:00"
+    },
+    {
+      "instant": "2026-01-01T03:00:00.000Z",
+      "label": "1 jan., 00:00"
+    },
+    {
+      "instant": "2026-05-03T12:00:00.000Z",
+      "label": "3 mai., 09:00"
+    },
+    {
+      "instant": "2026-02-20T12:00:00.000Z",
+      "label": "20 fev., 09:00"
+    },
+    {
+      "instant": "2026-10-21T12:00:00.000Z",
+      "label": "21 out., 09:00"
+    },
+    {
+      "instant": "2026-11-30T12:00:00.000Z",
+      "label": "30 nov., 09:00"
+    },
+    {
+      "instant": "2026-12-01T12:00:00.000Z",
+      "label": "1 dez., 09:00"
+    },
+    {
+      "instant": "2026-03-31T12:00:00.000Z",
+      "label": "31 mar., 09:00"
+    },
+    {
+      "instant": "2026-04-01T12:00:00.000Z",
+      "label": "1 abr., 09:00"
+    }
+  ],
+  "markdown": [
+    {
+      "name": "Ideias",
+      "body": "# Ideias\n\nTexto",
+      "result": "Texto"
+    },
+    {
+      "name": "Ideias",
+      "body": "\n\n  ## Ideias  \nTexto\n",
+      "result": "Texto"
+    },
+    {
+      "name": "Ideias",
+      "body": "# Outro título\nTexto",
+      "result": "# Outro título\nTexto"
+    },
+    {
+      "name": "Ideias",
+      "body": "Ideias\r\nresto\r\nmais",
+      "result": "resto\nmais"
+    },
+    {
+      "name": "Ideias",
+      "body": "",
+      "result": ""
+    },
+    {
+      "name": "Ideias",
+      "body": "# Ideias",
+      "result": ""
+    },
+    {
+      "name": "Ideias",
+      "body": "#Ideias\ntexto",
+      "result": "#Ideias\ntexto"
+    },
+    {
+      "name": "Ideias",
+      "body": "####### Ideias\ntexto",
+      "result": "####### Ideias\ntexto"
+    },
+    {
+      "name": "Ideias",
+      "body": "Antes\n# Ideias\ndepois",
+      "result": "Antes\n# Ideias\ndepois"
+    },
+    {
+      "name": "Ideias para o projeto",
+      "body": "# Ideias para o projeto\n\nUm **parágrafo** com _ênfase_, `código` e um [link](https://example.com/a).\n\n- Primeiro\n- Segundo\n\n1. Um\n2. Dois\n\n- [x] Feito\n- [ ] A fazer\n\n> Citação\n\n```ts\nconst a = 1;\n```\n",
+      "result": "Um **parágrafo** com _ênfase_, `código` e um [link](https://example.com/a).\n\n- Primeiro\n- Segundo\n\n1. Um\n2. Dois\n\n- [x] Feito\n- [ ] A fazer\n\n> Citação\n\n```ts\nconst a = 1;\n```"
+    },
+    {
+      "name": "Roteador",
+      "body": "Roteia pedidos",
+      "result": "Roteia pedidos"
+    }
+  ],
+  "sleepAgenda": [
+    {
+      "tasks": [],
+      "result": null
+    },
+    {
+      "tasks": [
+        {
+          "taskId": "t",
+          "relation": "creates",
+          "name": "n",
+          "actor": "human",
+          "kind": "sleep"
+        }
+      ],
+      "result": null
+    },
+    {
+      "tasks": [
+        {
+          "taskId": "t",
+          "relation": "creates",
+          "name": "n",
+          "actor": "human",
+          "kind": "sleep",
+          "startedAt": "2026-09-15T01:00:00.000Z",
+          "estimatedFinishAt": "2026-09-15T09:00:00.000Z"
+        }
+      ],
+      "result": {
+        "title": "Segunda, 14 → terça, 15 de setembro",
+        "agendaMinutes": 480
+      }
+    },
+    {
+      "tasks": [
+        {
+          "taskId": "t",
+          "relation": "creates",
+          "name": "n",
+          "actor": "human",
+          "kind": "sleep",
+          "startedAt": "2026-09-14T14:00:00.000Z"
+        }
+      ],
+      "result": {
+        "title": "Segunda-feira, 14 de setembro",
+        "agendaMinutes": null
+      }
+    },
+    {
+      "tasks": [
+        {
+          "taskId": "t",
+          "relation": "creates",
+          "name": "n",
+          "actor": "human",
+          "kind": "sleep",
+          "startedAt": "2026-09-30T23:00:00.000Z",
+          "estimatedFinishAt": "2026-10-01T07:00:00.000Z"
+        }
+      ],
+      "result": {
+        "title": "30 de setembro → 1 de outubro",
+        "agendaMinutes": 480
+      }
+    },
+    {
+      "tasks": [
+        {
+          "taskId": "t",
+          "relation": "creates",
+          "name": "n",
+          "actor": "human",
+          "kind": "sleep",
+          "startedAt": "2026-09-30T20:00:00.000Z",
+          "estimatedFinishAt": "2026-10-01T20:00:00.000Z"
+        }
+      ],
+      "result": {
+        "title": "30 de setembro → 1 de outubro",
+        "agendaMinutes": 1440
+      }
+    }
+  ],
+  "dateLines": [
+    {
+      "startedAt": "2026-09-14T12:00:00.000Z",
+      "finishedAt": null,
+      "result": "Segunda-feira, 14 de setembro"
+    },
+    {
+      "startedAt": "2026-09-15T01:00:00.000Z",
+      "finishedAt": "2026-09-15T09:00:00.000Z",
+      "result": "Segunda, 14 → terça, 15 de setembro"
+    },
+    {
+      "startedAt": "2026-09-14T22:00:00.000Z",
+      "finishedAt": "2026-09-15T09:00:00.000Z",
+      "result": "Segunda, 14 → terça, 15 de setembro"
+    },
+    {
+      "startedAt": "2026-09-30T23:00:00.000Z",
+      "finishedAt": "2026-10-01T07:00:00.000Z",
+      "result": "30 de setembro → 1 de outubro"
+    },
+    {
+      "startedAt": "2026-09-14T12:00:00.000Z",
+      "finishedAt": "2026-09-14T13:00:00.000Z",
+      "result": "Segunda-feira, 14 de setembro"
+    }
+  ],
+  "minutesBetween": [
+    {
+      "from": "2026-09-15T01:00:00.000Z",
+      "to": "2026-09-15T09:00:00.000Z",
+      "result": 480
+    },
+    {
+      "from": "2026-09-15T09:00:00.000Z",
+      "to": "2026-09-15T01:00:00.000Z",
+      "result": 0
+    }
+  ],
+  "decimals": [
+    {
+      "value": 0,
+      "result": "0"
+    },
+    {
+      "value": 1,
+      "result": "1"
+    },
+    {
+      "value": 0.04,
+      "result": "0"
+    },
+    {
+      "value": 0.05,
+      "result": "0,1"
+    },
+    {
+      "value": 0.15,
+      "result": "0,2"
+    },
+    {
+      "value": 0.25,
+      "result": "0,3"
+    },
+    {
+      "value": 1.05,
+      "result": "1,1"
+    },
+    {
+      "value": 1.15,
+      "result": "1,2"
+    },
+    {
+      "value": 1.25,
+      "result": "1,3"
+    },
+    {
+      "value": 2.35,
+      "result": "2,4"
+    },
+    {
+      "value": 38.2,
+      "result": "38,2"
+    },
+    {
+      "value": 64.05,
+      "result": "64,1"
+    },
+    {
+      "value": 612.5,
+      "result": "612,5"
+    },
+    {
+      "value": 612.55,
+      "result": "612,6"
+    },
+    {
+      "value": 999.95,
+      "result": "1.000"
+    },
+    {
+      "value": 1234.5,
+      "result": "1.234,5"
+    },
+    {
+      "value": 1234.56,
+      "result": "1.234,6"
+    },
+    {
+      "value": 1000000,
+      "result": "1.000.000"
+    },
+    {
+      "value": 21.15,
+      "result": "21,2"
+    },
+    {
+      "value": 62.5,
+      "result": "62,5"
+    },
+    {
+      "value": 0.30000000000000004,
+      "result": "0,3"
+    },
+    {
+      "value": 7.0000001,
+      "result": "7"
+    },
+    {
+      "value": -1.25,
+      "result": "-1,3"
+    }
+  ],
+  "minutes": [
+    {
+      "value": 0,
+      "result": "0 min"
+    },
+    {
+      "value": 1,
+      "result": "1 min"
+    },
+    {
+      "value": 45,
+      "result": "45 min"
+    },
+    {
+      "value": 59,
+      "result": "59 min"
+    },
+    {
+      "value": 59.6,
+      "result": "1 h"
+    },
+    {
+      "value": 60,
+      "result": "1 h"
+    },
+    {
+      "value": 61,
+      "result": "1 h 1"
+    },
+    {
+      "value": 90,
+      "result": "1 h 30"
+    },
+    {
+      "value": 450,
+      "result": "7 h 30"
+    },
+    {
+      "value": 452.4,
+      "result": "7 h 32"
+    },
+    {
+      "value": 1440,
+      "result": "24 h"
+    },
+    {
+      "value": -5,
+      "result": "0 min"
+    }
+  ],
+  "paces": [
+    {
+      "value": 6.25,
+      "result": "6′15″/km"
+    },
+    {
+      "value": 6,
+      "result": "6′00″/km"
+    },
+    {
+      "value": 5.999,
+      "result": "6′00″/km"
+    },
+    {
+      "value": 5.5,
+      "result": "5′30″/km"
+    },
+    {
+      "value": 7.1666,
+      "result": "7′10″/km"
+    },
+    {
+      "value": 4.99,
+      "result": "4′59″/km"
+    },
+    {
+      "value": 8.9999,
+      "result": "9′00″/km"
+    },
+    {
+      "value": 0,
+      "result": "0′00″/km"
+    },
+    {
+      "value": 10.5,
+      "result": "10′30″/km"
+    }
+  ],
+  "plurals": [
+    {
+      "count": 0,
+      "result": "0 séries"
+    },
+    {
+      "count": 1,
+      "result": "1 série"
+    },
+    {
+      "count": 2,
+      "result": "2 séries"
+    }
+  ],
+  "macros": [
+    {
+      "totalProteinGrams": 38.2,
+      "totalCarbohydrateGrams": 64.05,
+      "totalFatGrams": 21.15,
+      "result": [
+        25,
+        43,
+        32
+      ]
+    },
+    {
+      "totalProteinGrams": 0,
+      "totalCarbohydrateGrams": 0,
+      "totalFatGrams": 0,
+      "result": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "totalProteinGrams": 10,
+      "totalCarbohydrateGrams": 0,
+      "totalFatGrams": 0,
+      "result": [
+        100,
+        0,
+        0
+      ]
+    },
+    {
+      "totalProteinGrams": 25,
+      "totalCarbohydrateGrams": 25,
+      "totalFatGrams": 10,
+      "result": [
+        34,
+        34,
+        31
+      ]
+    }
+  ],
+  "setGroups": [
+    {
+      "sets": [
+        {
+          "id": "s1",
+          "exercise": "Supino",
+          "repetitions": 10,
+          "weight": 60
+        },
+        {
+          "id": "s2",
+          "exercise": "Supino",
+          "repetitions": 8,
+          "weight": 62.5
+        },
+        {
+          "id": "s3",
+          "exercise": "Crucifixo",
+          "repetitions": 12,
+          "weight": 14
+        }
+      ],
+      "result": [
+        {
+          "exercise": "Supino",
+          "setIds": [
+            "s1",
+            "s2"
+          ]
+        },
+        {
+          "exercise": "Crucifixo",
+          "setIds": [
+            "s3"
+          ]
+        }
+      ]
+    }
+  ],
+  "messages": {
+    "pending": "Preparando informações nutricionais e receita…",
+    "failed": "Não foi possível gerar as informações da refeição. Seu registro foi preservado."
+  }
+}

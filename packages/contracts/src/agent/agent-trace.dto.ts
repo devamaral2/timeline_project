@@ -53,7 +53,7 @@ export interface AgentTraceEntryDto {
 }
 
 export interface AgentTraceDto {
-  route: "steps" | "hermes";
+  route: "steps" | "hermes" | "model";
   status: "running" | "done" | "failed";
   startedAt?: string;
   durationMs?: number;

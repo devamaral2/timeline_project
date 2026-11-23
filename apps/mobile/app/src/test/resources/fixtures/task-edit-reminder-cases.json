@@ -1,0 +1,155 @@
+{
+  "minutes": [
+    {
+      "amount": 1,
+      "unit": "minutes",
+      "minutes": 1
+    },
+    {
+      "amount": 0,
+      "unit": "minutes",
+      "minutes": null
+    },
+    {
+      "amount": 45,
+      "unit": "minutes",
+      "minutes": 45
+    },
+    {
+      "amount": 1.5,
+      "unit": "minutes",
+      "minutes": null
+    },
+    {
+      "amount": 43200,
+      "unit": "minutes",
+      "minutes": 43200
+    },
+    {
+      "amount": 43201,
+      "unit": "minutes",
+      "minutes": null
+    },
+    {
+      "amount": 1,
+      "unit": "days",
+      "minutes": 1440
+    },
+    {
+      "amount": 30,
+      "unit": "days",
+      "minutes": 43200
+    },
+    {
+      "amount": 31,
+      "unit": "days",
+      "minutes": null
+    },
+    {
+      "amount": -2,
+      "unit": "days",
+      "minutes": null
+    },
+    {
+      "amount": 0.5,
+      "unit": "days",
+      "minutes": null
+    }
+  ],
+  "labels": [
+    {
+      "minutes": 1,
+      "label": "1 min"
+    },
+    {
+      "minutes": 5,
+      "label": "5 min"
+    },
+    {
+      "minutes": 30,
+      "label": "30 min"
+    },
+    {
+      "minutes": 59,
+      "label": "59 min"
+    },
+    {
+      "minutes": 60,
+      "label": "60 min"
+    },
+    {
+      "minutes": 90,
+      "label": "90 min"
+    },
+    {
+      "minutes": 1440,
+      "label": "1 dia"
+    },
+    {
+      "minutes": 2880,
+      "label": "2 dias"
+    },
+    {
+      "minutes": 10080,
+      "label": "7 dias"
+    },
+    {
+      "minutes": 43200,
+      "label": "30 dias"
+    }
+  ],
+  "lists": [
+    {
+      "list": [],
+      "add": 30,
+      "result": [
+        30
+      ]
+    },
+    {
+      "list": [
+        30,
+        1440
+      ],
+      "add": 60,
+      "result": [
+        30,
+        60,
+        1440
+      ]
+    },
+    {
+      "list": [
+        30,
+        1440
+      ],
+      "add": 30,
+      "result": [
+        30,
+        1440
+      ]
+    },
+    {
+      "list": [
+        1440,
+        30
+      ],
+      "add": 5,
+      "result": [
+        5,
+        30,
+        1440
+      ]
+    },
+    {
+      "list": [
+        5
+      ],
+      "add": 43200,
+      "result": [
+        5,
+        43200
+      ]
+    }
+  ]
+}

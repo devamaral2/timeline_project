@@ -1,7 +1,7 @@
 import { Logger } from "@nestjs/common";
 import { Artifact } from "../../domain";
 import type { ArtifactRepository } from "../../domain/ports";
-import { candidatesConfig, dispatchConfig, linkConfig } from "./request-config";
+import { dispatchConfig } from "./request-config";
 
 export interface RouterArtifactSpec {
   name: string;
@@ -20,9 +20,12 @@ function commonParams(config: { endpoint: string; model: string; timeoutMs: numb
   ].join("\n");
 }
 
-/** Um artefato `router` por JEV da rota por passos (ADR 003), escrito a partir dos mesmos parametros que o servidor usa. */
+/**
+ * O artefato `router` do JEV de entrada, escrito a partir dos mesmos parametros que o servidor usa. E o unico JEV do
+ * chat: as tres perguntas que escolhem o destino do pedido.
+ */
 export function jevRouterArtifacts(): RouterArtifactSpec[] {
-  const dispatchQuestions = Object.entries(dispatchConfig.questions)
+  const questions = Object.entries(dispatchConfig.questions)
     .map(([key, question]) => `### \`${key}\`\n\n${question.instructions}\n\n${bullets(question.criteria)}`)
     .join("\n\n");
   return [
@@ -31,34 +34,10 @@ export function jevRouterArtifacts(): RouterArtifactSpec[] {
       tags: ["jev", "despacho"],
       body: [
         "# JEV · Despacho",
-        "Parâmetros de `jev/dispatch.json`. Uma chamada, uma pergunta por operação × entidade, todas respondidas em paralelo; o resultado diz quais agentes o pedido aciona.",
-        `${commonParams(dispatchConfig)}\n- Política de incerteza: \`${dispatchConfig.uncertainPolicy}\` (\`fallback\`: resposta incerta em qualquer pergunta manda o pedido ao fallback, o Hermes; \`ignore\`: conta como nenhum)`,
+        "Parâmetros de `jev/dispatch.json`. Uma chamada com três perguntas de sim ou não, respondidas em paralelo. Um único `yes` certo escolhe o destino: `query` vai ao agente de consulta ao banco, `write` ao agente de criação e atualização de entidades e `config` ao modo modelo. Sem nenhum `yes`, com um `yes` incerto ou com mais de um, o pedido vai ao Hermes.",
+        commonParams(dispatchConfig),
         "## Perguntas",
-        dispatchQuestions,
-      ].join("\n\n"),
-    },
-    {
-      name: "JEV · Vínculo",
-      tags: ["jev", "vinculo"],
-      body: [
-        "# JEV · Vínculo",
-        "Parâmetros de `jev/link.json`. Decide se a entidade recém-concluída deve ser ligada a outra criada no mesmo pedido.",
-        `${commonParams(linkConfig)}\n- Máximo de candidatas: ${linkConfig.maxCandidates}`,
-        "## Pergunta",
-        linkConfig.question.instructions,
-        `- **Nenhuma**: ${linkConfig.question.none}`,
-      ].join("\n\n"),
-    },
-    {
-      name: "JEV · Candidatas de edição",
-      tags: ["jev", "edicao"],
-      body: [
-        "# JEV · Candidatas de edição",
-        "Parâmetros de `jev/candidates.json`. Escolhe, dentre a lista curta montada pelo servidor, quais entidades um pedido de edição altera; uma pergunta binária por candidata, respondidas em paralelo.",
-        commonParams(candidatesConfig),
-        "## Pergunta",
-        candidatesConfig.question.instructions,
-        bullets(candidatesConfig.question.criteria),
+        questions,
       ].join("\n\n"),
     },
   ];

@@ -1,0 +1,12 @@
+{
+  "name": "Ideias revisadas",
+  "tags": [
+    "trabalho",
+    "ideias"
+  ],
+  "expectedRevision": 4,
+  "type": "text",
+  "data": {
+    "body": "# Ideias\n\nTexto novo"
+  }
+}

@@ -2,6 +2,10 @@
 
 Status: **fases A, B, C e D implementadas** atrás de `AI_PROCESS=on` (desligada por padrão). Plano completo: ver "Fases".
 
+> Parcialmente substituída pela ADR 0020 (`docs/adr/0020-jev-com-tres-perguntas-e-agente-unico-de-escrita.md`): o JEV
+> de entrada responde três perguntas de sim ou não, o JEV de candidatos e o de vínculo saíram, e os agentes de criação
+> e de edição por tipo deram lugar a um agente único de escrita.
+
 ## Contexto
 
 O diálogo com a IA tem dois caminhos (ADR 001 e ADR 002): o legado, com loop de ferramentas, e o pipeline rápido, com planejador e especialistas num só job. Ambos tratam o pedido como uma lista de operações resolvida num único job e num único commit, e o especialista de refeição ainda cria a nota junto com o evento.

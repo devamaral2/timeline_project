@@ -1,0 +1,69 @@
+{
+  "id": "R00000000000000000000000A1",
+  "kind": "request",
+  "route": "hermes",
+  "status": "running",
+  "title": "Oi Hermes",
+  "createdAt": "2026-09-14T14:48:00.000Z",
+  "updatedAt": "2026-09-14T14:48:00.000Z",
+  "text": "Oi Hermes",
+  "steps": [],
+  "entities": [],
+  "trace": {
+    "route": "hermes",
+    "status": "running",
+    "startedAt": "2026-09-14T14:48:00.000Z",
+    "fields": [
+      {
+        "label": "Modelo",
+        "value": "gpt-x"
+      }
+    ],
+    "entries": [
+      {
+        "id": "t0",
+        "kind": "request",
+        "label": "Pedido",
+        "status": "done",
+        "startedAt": "2026-09-14T14:48:00.000Z",
+        "durationMs": 20
+      },
+      {
+        "id": "t1",
+        "kind": "thought",
+        "label": "Pensou",
+        "status": "done",
+        "startedAt": "2026-09-14T14:48:00.500Z",
+        "durationMs": 900,
+        "sections": [
+          {
+            "title": "Raciocínio",
+            "text": "Preciso ver a agenda."
+          }
+        ]
+      },
+      {
+        "id": "t2",
+        "kind": "tool",
+        "label": "Executou um comando",
+        "source": "terminal",
+        "summary": "ls /opt/data",
+        "status": "running",
+        "startedAt": "2026-09-14T14:48:01.500Z",
+        "sections": [
+          {
+            "title": "Entrada",
+            "text": "ls /opt/data",
+            "code": true
+          }
+        ]
+      },
+      {
+        "id": "t3",
+        "kind": "tool",
+        "label": "Esperando",
+        "status": "pending"
+      }
+    ]
+  }
+}

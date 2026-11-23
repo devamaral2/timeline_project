@@ -1,0 +1,371 @@
+{
+  "open": [
+    {
+      "status": "queued",
+      "open": true
+    },
+    {
+      "status": "running",
+      "open": true
+    },
+    {
+      "status": "waiting",
+      "open": true
+    },
+    {
+      "status": "done",
+      "open": false
+    },
+    {
+      "status": "failed",
+      "open": false
+    },
+    {
+      "status": "cancel",
+      "open": false
+    }
+  ],
+  "steps": [
+    {
+      "steps": [],
+      "progress": {
+        "done": 0,
+        "total": 0
+      },
+      "running": null
+    },
+    {
+      "steps": [
+        {
+          "id": "s1",
+          "agent": "router",
+          "label": "Entender o pedido",
+          "status": "done"
+        },
+        {
+          "id": "s2",
+          "agent": "search",
+          "label": "Buscar voos",
+          "status": "running"
+        },
+        {
+          "id": "s3",
+          "agent": "writer",
+          "label": "Montar o resumo",
+          "status": "queued"
+        }
+      ],
+      "progress": {
+        "done": 1,
+        "total": 3
+      },
+      "running": "Buscar voos"
+    },
+    {
+      "steps": [
+        {
+          "id": "s1",
+          "agent": "router",
+          "label": "Entender o pedido",
+          "status": "done"
+        },
+        {
+          "id": "s2",
+          "agent": "search",
+          "label": "Buscar voos",
+          "status": "done"
+        },
+        {
+          "id": "s3",
+          "agent": "writer",
+          "label": "Montar o resumo",
+          "status": "done"
+        }
+      ],
+      "progress": {
+        "done": 3,
+        "total": 3
+      },
+      "running": null
+    },
+    {
+      "steps": [
+        {
+          "id": "s1",
+          "agent": "router",
+          "label": "Só um passo",
+          "status": "running"
+        }
+      ],
+      "progress": {
+        "done": 0,
+        "total": 1
+      },
+      "running": "Só um passo"
+    },
+    {
+      "steps": [
+        {
+          "id": "s1",
+          "agent": "router",
+          "label": "Falhou aqui",
+          "status": "failed"
+        },
+        {
+          "id": "s2",
+          "agent": "writer",
+          "label": "Nem começou",
+          "status": "queued"
+        }
+      ],
+      "progress": {
+        "done": 0,
+        "total": 2
+      },
+      "running": null
+    }
+  ],
+  "entries": [
+    {
+      "entry": {
+        "id": "e1",
+        "kind": "request",
+        "label": "Pedido",
+        "summary": "Buscar passagens para sexta",
+        "status": "done",
+        "startedAt": "2026-09-14T14:48:05.000Z"
+      },
+      "text": "Buscar passagens para sexta"
+    },
+    {
+      "entry": {
+        "id": "e2",
+        "kind": "routing",
+        "label": "Escolheu os agentes",
+        "source": "router",
+        "status": "done",
+        "startedAt": "2026-09-14T14:48:09.000Z"
+      },
+      "text": "Escolheu os agentes"
+    },
+    {
+      "entry": {
+        "id": "e3",
+        "kind": "tool",
+        "label": "Executou um comando",
+        "source": "search.flights",
+        "summary": "voos GRU-SDU sexta",
+        "status": "running"
+      },
+      "text": "voos GRU-SDU sexta"
+    }
+  ],
+  "operations": [
+    {
+      "operation": "create",
+      "label": "criado"
+    },
+    {
+      "operation": "update",
+      "label": "alterado"
+    },
+    {
+      "operation": "delete",
+      "label": "apagado"
+    }
+  ],
+  "entities": [
+    {
+      "entity": {
+        "kind": "task",
+        "id": "task-1",
+        "name": "Reunião de planejamento",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Tarefa"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "art-1",
+        "name": "Lista de voos",
+        "artifactType": "text",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Nota"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "art-2",
+        "name": "Café da manhã",
+        "artifactType": "food",
+        "operation": "update",
+        "linkedTo": []
+      },
+      "label": "Refeição"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "art-3",
+        "name": "Rascunho antigo",
+        "artifactType": "sleep",
+        "operation": "delete",
+        "linkedTo": []
+      },
+      "label": "Sono"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "art-4",
+        "name": "Nota solta",
+        "operation": "update",
+        "linkedTo": []
+      },
+      "label": "Nota"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "a-text",
+        "name": "text",
+        "artifactType": "text",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Nota"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "a-food",
+        "name": "food",
+        "artifactType": "food",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Refeição"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "a-sleep",
+        "name": "sleep",
+        "artifactType": "sleep",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Sono"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "a-training",
+        "name": "training",
+        "artifactType": "training",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Treino"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "a-workout",
+        "name": "workout",
+        "artifactType": "workout",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Exercício"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "a-skill",
+        "name": "skill",
+        "artifactType": "skill",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Skill"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "a-agent",
+        "name": "agent",
+        "artifactType": "agent",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Agente"
+    },
+    {
+      "entity": {
+        "kind": "artifact",
+        "id": "a-router",
+        "name": "router",
+        "artifactType": "router",
+        "operation": "create",
+        "linkedTo": []
+      },
+      "label": "Roteador"
+    }
+  ],
+  "failures": [
+    {
+      "code": "invalid_input",
+      "text": "Não consegui ler essa mensagem. Tente escrever de outro jeito."
+    },
+    {
+      "code": "forbidden",
+      "text": "Você não tem permissão para acessar esses dados."
+    },
+    {
+      "code": "limit_reached",
+      "text": "O pedido ficou grande demais e nada foi gravado. Tente dividir em partes menores."
+    },
+    {
+      "code": "conflict",
+      "text": "Os dados mudaram enquanto eu preparava a resposta. Nada foi gravado; tente de novo."
+    },
+    {
+      "code": "unavailable",
+      "text": "A IA está indisponível agora. Tente de novo em instantes."
+    },
+    {
+      "code": "cancelled",
+      "text": "Pedido cancelado."
+    },
+    {
+      "code": "internal",
+      "text": "Algo deu errado. Tente de novo."
+    },
+    {
+      "code": "connection_lost",
+      "text": "A conexão caiu antes da resposta. Se o pedido gravava algo, confira a agenda antes de reenviar."
+    },
+    {
+      "code": "connection_failed",
+      "text": "Não consegui conectar ao assistente. Tente de novo."
+    },
+    {
+      "code": "session_expired",
+      "text": "Sua sessão acabou. Entre de novo para continuar."
+    }
+  ],
+  "kinds": {
+    "request": "Pedido",
+    "routing": "Roteamento",
+    "thought": "Raciocínio",
+    "agent": "Agente",
+    "tool": "Ferramenta",
+    "message": "Comentário",
+    "answer": "Resposta"
+  }
+}

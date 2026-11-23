@@ -31,5 +31,14 @@ campo, texto, cor ou comportamento — precisa da mudança equivalente em
 Mudanças em `packages/contracts` ou `packages/theme` exigem rodar os testes de
 contrato do mobile (`pnpm --filter @repo/mobile run test`).
 
+O CI roda o job `mobile` (lint, testes com o gerador de fixtures e APK de debug como
+artifact `braid-mobile-debug`) nos pull requests que mudam `apps/mobile`,
+`packages/contracts`, `packages/timeline`, `packages/theme`, `scripts/mobile` ou o que o
+gerador de fixtures importa do web (`apps/web/src/lib/**`, as pastas de
+componentes `agenda`, `detail`, `hub`, `shell`, `task-detail`, `tasks` e `ui`, e
+`styles/globals.css`). Acrescentar um import de outra pasta do web em
+`scripts/mobile` pede acrescentá-la ao filtro `changes` de `.github/workflows/ci.yml`.
+Os demais jobs do monorepo excluem `@repo/mobile`.
+
 Para qualquer mudança em `apps/mobile`, carregue `.agents/skills/kotlin-android/SKILL.md`;
 ela documenta as camadas, o procedimento de paridade e a validação Android.

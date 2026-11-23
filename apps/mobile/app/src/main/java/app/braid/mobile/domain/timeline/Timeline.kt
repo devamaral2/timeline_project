@@ -1,104 +1,122 @@
 package app.braid.mobile.domain.timeline
 
-import app.braid.mobile.data.dto.TimelineEventCardDto
+import app.braid.mobile.domain.time.MONTHS_LONG
+import app.braid.mobile.domain.time.MONTHS_SHORT
+import app.braid.mobile.domain.time.MONTHS_TITLE
+import app.braid.mobile.domain.time.WEEKDAYS_LONG
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
-const val TIMELINE_TIME_ZONE: String = "America/Sao_Paulo"
+/*
+ * Port de `packages/timeline` (format-date, week, month, task-days). O fuso é o
+ * da agenda, America/Sao_Paulo, e nunca o do aparelho. Uma chave de dia é a data
+ * civil "YYYY-MM-DD" nesse fuso. Cada função aqui tem a saída conferida contra
+ * as fixtures geradas pela função TS de mesmo nome (`TimelineFixturesTest`).
+ */
+
+const val TIMELINE_TIME_ZONE = "America/Sao_Paulo"
 
 private val timelineZone: ZoneId = ZoneId.of(TIMELINE_TIME_ZONE)
-private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(timelineZone)
-internal val months =
-    listOf(
-        "janeiro",
-        "fevereiro",
-        "março",
-        "abril",
-        "maio",
-        "junho",
-        "julho",
-        "agosto",
-        "setembro",
-        "outubro",
-        "novembro",
-        "dezembro",
-    )
-private val monthTitles = months.map { month -> month.replaceFirstChar { it.uppercase() } }
-internal val weekdays =
-    listOf(
-        "Domingo",
-        "Segunda-feira",
-        "Terça-feira",
-        "Quarta-feira",
-        "Quinta-feira",
-        "Sexta-feira",
-        "Sábado",
-    )
 
-data class TimelineDay(
-    val dayKey: String,
-    val isToday: Boolean,
-    val events: List<TimelineEventCardDto>,
-)
+/** Dias de uma semana, de domingo a sábado. */
+const val DAYS_IN_WEEK = 7
 
-data class TimelinePageState(
-    val items: List<TimelineEventCardDto>,
-    val nextCursor: String? = null,
-)
+/** Seis semanas cobrem qualquer mês, inclusive fevereiro começando no sábado. */
+const val WEEKS_IN_MONTH_GRID = 6
 
-enum class EventPosition {
-    Upcoming,
-    Running,
-    Past,
+private val isoMillis: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
+
+private val clockFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(timelineZone)
+
+private fun offsetMillisAt(epochMillis: Long): Long = timelineZone.rules.getOffset(Instant.ofEpochMilli(epochMillis)).totalSeconds * 1000L
+
+private fun partsOf(dayKey: String): Triple<Int, Int, Int> {
+    val (year, month, day) = dayKey.split("-").map(String::toInt)
+    return Triple(year, month, day)
 }
 
-fun dayKeyOf(instant: String): String =
-    Instant
-        .parse(instant)
-        .atZone(timelineZone)
-        .toLocalDate()
-        .toString()
+/** Data civil (YYYY-MM-DD) do instante no fuso da timeline. */
+fun dayKeyOf(instant: Instant): String = instant.atZone(timelineZone).toLocalDate().toString()
 
-fun zonedDayStart(dayKey: String): Instant = LocalDate.parse(dayKey).atStartOfDay(timelineZone).toInstant()
+/**
+ * Meia-noite local de [dayKey] com duas passadas, como o TS: assim um dia cujo
+ * offset muda na própria fronteira dá o mesmo instante nos dois lados.
+ */
+private fun zonedWallClock(
+    dayKey: String,
+    hour: Int,
+    minute: Int,
+): Instant {
+    val (year, month, day) = partsOf(dayKey)
+    val naiveUtc = LocalDateTime.of(year, month, day, hour, minute).toInstant(ZoneOffset.UTC).toEpochMilli()
+    val firstGuess = naiveUtc - offsetMillisAt(naiveUtc)
+    return Instant.ofEpochMilli(naiveUtc - offsetMillisAt(firstGuess))
+}
 
-fun zonedDayEnd(dayKey: String): Instant =
-    LocalDate
-        .parse(dayKey)
-        .plusDays(1)
-        .atStartOfDay(timelineZone)
-        .toInstant()
-        .minusMillis(1)
+/** Instante da meia-noite daquele dia civil no fuso da timeline. */
+fun zonedDayStart(dayKey: String): Instant = zonedWallClock(dayKey, 0, 0)
 
+/** Instante de uma hora de parede ("HH:MM") naquele dia civil. */
+fun zonedTimeAt(
+    dayKey: String,
+    timeOfDay: String,
+): Instant {
+    val (hour, minute) = timeOfDay.split(":").map(String::toInt)
+    return zonedWallClock(dayKey, hour, minute)
+}
+
+/** Último instante representável daquele dia civil. */
+fun zonedDayEnd(dayKey: String): Instant = Instant.ofEpochMilli(zonedDayStart(shiftDayKey(dayKey, 1)).toEpochMilli() - 1)
+
+/** Soma (ou subtrai) dias civis a uma chave YYYY-MM-DD. */
 fun shiftDayKey(
     dayKey: String,
-    days: Long,
-): String = LocalDate.parse(dayKey).plusDays(days).toString()
+    days: Int,
+): String = LocalDate.parse(dayKey).plusDays(days.toLong()).toString()
 
-fun weekdayIndexOf(dayKey: String): Int = LocalDate.parse(dayKey).dayOfWeek.value % 7
+/** Hora no formato HH:MM no fuso da timeline. */
+fun formatTime(instant: Instant): String = clockFormat.format(instant)
 
-fun weekOf(dayKey: String): List<String> {
-    val sunday = LocalDate.parse(dayKey).minusDays(weekdayIndexOf(dayKey).toLong())
-    return (0..6).map { sunday.plusDays(it.toLong()).toString() }
+/** O instante como `Date.toISOString()` o escreve, com os milissegundos: é o formato de `from` e `to` da API. */
+fun toIsoMillis(instant: Instant): String = isoMillis.format(instant)
+
+/** "19 AGO" */
+fun shortDate(dayKey: String): String {
+    val (_, month, day) = partsOf(dayKey)
+    return "$day ${MONTHS_SHORT[month - 1].uppercase()}"
 }
 
-fun dayKeyRange(
-    startKey: String,
-    count: Int,
-): List<String> = (0 until count.coerceAtLeast(0)).map { shiftDayKey(startKey, it.toLong()) }
+/** "19 de agosto de 2026" */
+fun longDate(dayKey: String): String {
+    val (year, month, day) = partsOf(dayKey)
+    return "$day de ${MONTHS_LONG[month - 1]} de $year"
+}
 
-fun weekday(dayKey: String): String = weekdays[LocalDate.parse(dayKey).dayOfWeek.value % 7]
+/** "Quarta-feira" */
+fun weekday(dayKey: String): String = WEEKDAYS_LONG[weekdayIndexOf(dayKey)]
 
-fun weekdayInitial(dayKey: String): String = weekday(dayKey).take(1)
+/** "seg, 14 de set": a data curta do atalho "Hoje" (`briefDate` do web, sem os pontos do `Intl`). */
+fun briefDate(dayKey: String): String {
+    val (_, month, day) = partsOf(dayKey)
+    return "${weekday(dayKey).take(3).lowercase()}, $day de ${MONTHS_SHORT[month - 1]}"
+}
 
-fun dayNumber(dayKey: String): String = LocalDate.parse(dayKey).dayOfMonth.toString()
+/** Dia do mês, sem zero à esquerda: "22". */
+fun dayNumber(dayKey: String): String = partsOf(dayKey).third.toString()
 
+/** "22 de maio, quinta-feira" */
 fun mediumDate(dayKey: String): String {
-    val date = LocalDate.parse(dayKey)
-    return "${date.dayOfMonth} de ${months[date.monthValue - 1]}, ${weekday(dayKey).lowercase()}"
+    val (_, month, day) = partsOf(dayKey)
+    return "$day de ${MONTHS_LONG[month - 1]}, ${weekday(dayKey).lowercase()}"
 }
 
+/** Título do cabeçalho: os três dias em volta de hoje têm nome próprio, os outros o dia da semana. */
 fun relativeDayLabel(
     dayKey: String,
     todayKey: String,
@@ -110,159 +128,79 @@ fun relativeDayLabel(
         else -> weekday(dayKey)
     }
 
-fun monthLabel(dayKey: String): String {
-    val date = LocalDate.parse(dayKey)
-    return "${monthTitles[date.monthValue - 1]} de ${date.year}"
+/** Índice do dia da semana (0 = domingo) de uma chave; lê a chave como data civil, sem fuso. */
+fun weekdayIndexOf(dayKey: String): Int = LocalDate.parse(dayKey).dayOfWeek.value % DAYS_IN_WEEK
+
+/** Quantos dias civis separam [from] de [to]; negativo quando [to] vem antes. */
+fun daysBetween(
+    from: String,
+    to: String,
+): Int = ChronoUnit.DAYS.between(LocalDate.parse(from), LocalDate.parse(to)).toInt()
+
+/** As sete chaves da semana que contém [dayKey], de domingo a sábado. */
+fun weekOf(dayKey: String): List<String> {
+    val sunday = shiftDayKey(dayKey, -weekdayIndexOf(dayKey))
+    return List(DAYS_IN_WEEK) { shiftDayKey(sunday, it) }
 }
 
+/** [count] chaves seguidas a partir de [startKey], inclusive. */
+fun dayKeyRange(
+    startKey: String,
+    count: Int,
+): List<String> = List(maxOf(0, count)) { shiftDayKey(startKey, it) }
+
+/** "Maio de 2026", o título do seletor de data. */
+fun monthLabel(dayKey: String): String {
+    val (year, month, _) = partsOf(dayKey)
+    return "${MONTHS_TITLE[month - 1]} de $year"
+}
+
+/** Verdadeiro quando as duas chaves caem no mesmo mês do mesmo ano. */
 fun isSameMonth(
     dayKey: String,
     other: String,
 ): Boolean = dayKey.take(7) == other.take(7)
 
+/** O mesmo dia [delta] meses adiante (ou atrás), preso ao último dia quando o mês de destino é mais curto. */
 fun shiftMonthKey(
     dayKey: String,
-    delta: Long,
+    delta: Int,
 ): String {
-    val date = LocalDate.parse(dayKey)
-    val target = date.plusMonths(delta)
-    return target.withDayOfMonth(minOf(date.dayOfMonth, target.lengthOfMonth())).toString()
+    val (year, month, day) = partsOf(dayKey)
+    val target = LocalDate.of(year, month, 1).plusMonths(delta.toLong())
+    return target.withDayOfMonth(minOf(day, target.lengthOfMonth())).toString()
 }
 
+private fun firstDayOfMonth(dayKey: String): String {
+    val (year, month, _) = partsOf(dayKey)
+    return LocalDate.of(year, month, 1).toString()
+}
+
+/** Seis semanas de domingo a sábado cobrindo o mês de [dayKey], com as bordas nos dias dos meses vizinhos. */
 fun monthGridOf(dayKey: String): List<String> {
-    val first = LocalDate.parse(dayKey).withDayOfMonth(1)
-    val start = first.minusDays(weekdayIndexOf(first.toString()).toLong())
-    return (0 until 42).map { start.plusDays(it.toLong()).toString() }
-}
-
-fun formatTime(instant: String): String = timeFormatter.format(Instant.parse(instant))
-
-fun elapsedSecondsOf(
-    startedAt: String,
-    now: Instant = Instant.now(),
-): Long = ((now.toEpochMilli() - Instant.parse(startedAt).toEpochMilli()) / 1_000).coerceAtLeast(0)
-
-fun formatStopwatch(totalSeconds: Long): String {
-    val safe = totalSeconds.coerceAtLeast(0)
-    val hours = safe / 3_600
-    val minutes = (safe % 3_600) / 60
-    val seconds = safe % 60
-    return if (hours > 0) {
-        "%d:%02d:%02d".format(hours, minutes, seconds)
-    } else {
-        "%02d:%02d".format(minutes, seconds)
-    }
-}
-
-fun endLabelOf(
-    event: TimelineEventCardDto,
-    now: Instant = Instant.now(),
-): String = endLabelOf(event.startedAt, event.finishedAt, now)
-
-fun endLabelOf(
-    startedAt: String,
-    finishedAt: String?,
-    now: Instant = Instant.now(),
-): String =
-    finishedAt?.let(::formatTime)
-        ?: if (now.isBefore(Instant.parse(startedAt))) "sem hora de fim" else "em andamento"
-
-fun eventPositionOf(
-    event: TimelineEventCardDto,
-    now: Instant = Instant.now(),
-): EventPosition = eventPositionOf(event.startedAt, event.finishedAt, now)
-
-fun eventPositionOf(
-    startedAt: String,
-    finishedAt: String?,
-    now: Instant = Instant.now(),
-): EventPosition {
-    if (now.isBefore(Instant.parse(startedAt))) return EventPosition.Upcoming
-    val finished = finishedAt?.let(Instant::parse) ?: return EventPosition.Running
-    return if (finished <= now) EventPosition.Past else EventPosition.Running
-}
-
-fun durationMinutesOf(event: TimelineEventCardDto): Int? {
-    val finished = event.finishedAt?.let(Instant::parse) ?: return null
-    return ((finished.toEpochMilli() - Instant.parse(event.startedAt).toEpochMilli()) / 60_000).toInt()
-}
-
-fun trackedMinutesOf(events: List<TimelineEventCardDto>): Int = events.sumOf { durationMinutesOf(it) ?: 0 }
-
-fun longestDurationOf(events: List<TimelineEventCardDto>): Int = events.maxOfOrNull { durationMinutesOf(it) ?: 0 } ?: 0
-
-fun durationRatioOf(
-    event: TimelineEventCardDto,
-    longestMinutes: Int,
-): Float? {
-    val duration = durationMinutesOf(event) ?: return null
-    if (longestMinutes <= 0) return 0.06f
-    return (duration.toFloat() / longestMinutes).coerceIn(0.06f, 1f)
-}
-
-fun mergeTimelinePage(
-    current: List<TimelineEventCardDto>,
-    page: app.braid.mobile.data.dto.TimelineEventPageDto,
-): TimelinePageState {
-    val seen = current.mapTo(mutableSetOf()) { it.id }
-    val merged = current.toMutableList()
-    page.items.forEach { event ->
-        if (seen.add(event.id)) merged += event
-    }
-    return TimelinePageState(merged, page.nextCursor)
+    val first = firstDayOfMonth(dayKey)
+    val start = shiftDayKey(first, -weekdayIndexOf(first))
+    return List(WEEKS_IN_MONTH_GRID * DAYS_IN_WEEK) { shiftDayKey(start, it) }
 }
 
 /**
- * Os dias civis em que o evento aparece: do dia em que começou ao dia em que
- * terminou. Sem hora de fim, ou terminando no mesmo dia, só o dia de início.
- * Um fim exatamente à meia-noite ainda pertence ao dia anterior.
+ * Os dias civis em que a tarefa aparece, do dia em que começou ao dia em que
+ * termina. Sem fim, ou terminando no mesmo dia, só o dia de início; um fim
+ * exatamente à meia-noite ainda pertence ao dia anterior.
  */
-fun eventDayKeysOf(
-    startedAt: String,
-    finishedAt: String?,
+fun taskDayKeysOf(
+    startedAt: Instant,
+    estimatedFinishAt: Instant?,
 ): List<String> {
     val startKey = dayKeyOf(startedAt)
-    val started = Instant.parse(startedAt)
-    val finished = finishedAt?.let(Instant::parse)
-    if (finished == null || !finished.isAfter(started)) return listOf(startKey)
+    if (estimatedFinishAt == null || !(estimatedFinishAt.toEpochMilli() > startedAt.toEpochMilli())) return listOf(startKey)
 
-    val endKey =
-        finished
-            .minusMillis(1)
-            .atZone(timelineZone)
-            .toLocalDate()
-            .toString()
-    return dayKeyRange(startKey, (daysBetweenKeys(startKey, endKey) + 1).toInt())
-}
-
-private fun daysBetweenKeys(
-    from: String,
-    to: String,
-): Long =
-    java.time.temporal.ChronoUnit.DAYS
-        .between(LocalDate.parse(from), LocalDate.parse(to))
-
-/** Os eventos de uma janela que ocorrem em `dayKey`, como `eventDayKeysOf` decide. */
-fun eventsOnDay(
-    dayKey: String,
-    events: List<TimelineEventCardDto>,
-): List<TimelineEventCardDto> = events.filter { dayKey in eventDayKeysOf(it.startedAt, it.finishedAt) }
-
-fun groupEventsByDay(
-    events: List<TimelineEventCardDto>,
-    todayKey: String,
-): List<TimelineDay> {
-    val uniqueEvents = events.distinctBy { it.id }
-    return uniqueEvents
-        .flatMap { event -> eventDayKeysOf(event.startedAt, event.finishedAt).map { it to event } }
-        .groupBy({ it.first }, { it.second })
-        .toList()
-        .sortedByDescending { it.first }
-        .map { (dayKey, dayEvents) ->
-            TimelineDay(
-                dayKey = dayKey,
-                isToday = dayKey == todayKey,
-                events = dayEvents.sortedByDescending { it.startedAt },
-            )
-        }
+    val endKey = dayKeyOf(Instant.ofEpochMilli(estimatedFinishAt.toEpochMilli() - 1))
+    val keys = mutableListOf(startKey)
+    var key = startKey
+    while (key < endKey) {
+        key = shiftDayKey(key, 1)
+        keys += key
+    }
+    return keys
 }

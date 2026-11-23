@@ -1,16 +1,33 @@
 import { Logger } from "@nestjs/common";
-import { isAccepted, JevUnavailableError, type JevAnswer, type JevClient, type JevResult } from "./jev.client";
-import { describeCandidate, type CandidateQuery, type EditCandidate } from "./request-candidates";
-import { candidatesConfig, dispatchConfig, type ChoiceQuestion } from "./request-config";
+import type { ModelSelection } from "@repo/contracts";
+import { isAccepted, JevUnavailableError, type JevClient, type JevResult } from "./jev.client";
+import type { CandidateQuery } from "./request-candidates";
+import { dispatchConfig } from "./request-config";
 import type { DispatchRecord, NewStep, RequestRecord, RequestStore } from "./request-store";
 import { newOrderedId } from "../../infrastructure/persistence/requests/request-rows";
-import { DISPATCH_STEPS, EDIT_AGENTS, EDIT_SELECTOR, isAgent, type EditAgent, type Expected } from "./request-steps";
+import { CANDIDATE_KINDS, DISPATCH_ROUTES, ENTITY_AGENT, type DispatchRoute } from "./request-steps";
 import { formatNow } from "../agent/time";
 
+export interface RequestDispatcherOptions {
+  /** A lista curta das entidades que o agente de escrita pode alterar. Sem ela, ele so cria ou busca por consulta. */
+  candidates?: CandidateQuery;
+  /**
+   * O modelo padrao que responde um pedido de configuracao deste usuario; nada quando o modo modelo nao vale para
+   * ele. O pedido que ja traz a escolha do usuario usa a dele no lugar do padrao.
+   */
+  model?: (userId: string) => Promise<ModelSelection | undefined>;
+}
+
 /**
- * O JEV de entrada: uma chamada, uma pergunta por operacao x entidade. Cada resposta diferente de "nenhum"
- * vira um passo na fila propria, todos de uma vez. Pedido sem passo reconhecido, com resposta incerta ou com o
- * JEV fora do ar vai ao fallback, que e sempre o Hermes: o pedido passa para a rota dele (ADR 0018). Um pedido
+ * O JEV de entrada: uma chamada com tres perguntas de sim ou nao, e so elas. Um unico `yes` certo escolhe o destino:
+ *
+ * - `query`: o pedido so consulta o banco. Um passo do agente de consulta.
+ * - `write`: o pedido so cria ou atualiza entidades. Um passo do agente de escrita, que recebe a lista curta do que
+ *   ja existe e decide sozinho o que criar, o que alterar e o que ligar.
+ * - `config`: o pedido trata da configuracao do app, do modelo ou do provedor. Passa para a rota do modo modelo.
+ *
+ * Sem nenhum `yes`, o pedido e uma tarefa de agente e passa para a rota do Hermes. Um `yes` incerto, mais de um
+ * `yes`, JEV fora do ar ou modo modelo indisponivel tambem vao ao Hermes, como fallback (ADR 0018). Um pedido
  * escrito como `fallback: <pedido>` vai direto ao Hermes, sem a chamada ao JEV.
  */
 export class RequestDispatcher {
@@ -19,7 +36,7 @@ export class RequestDispatcher {
   constructor(
     private readonly store: RequestStore,
     private readonly jev: JevClient,
-    private readonly candidates?: CandidateQuery,
+    private readonly options: RequestDispatcherOptions = {},
   ) {}
 
   async run(requestId: string, signal?: AbortSignal): Promise<void> {
@@ -29,7 +46,7 @@ export class RequestDispatcher {
     // `fallback: <pedido>`: quem pediu ja escolheu o caminho; o JEV nem e consultado.
     if (request.forceFallback) {
       this.logger.log(`request=${requestId} fallback pedido pelo prefixo; JEV de entrada pulado, direto ao Hermes`);
-      await this.fallback(requestId, { answers: {}, uncertain: [], unsupported: [], fallbackReason: "forced" });
+      await this.store.handToHermes(requestId, { answers: {}, uncertain: [], fallbackReason: "forced" });
       return;
     }
 
@@ -45,132 +62,108 @@ export class RequestDispatcher {
       if (signal?.aborted) throw error;
       const reason = error instanceof JevUnavailableError ? `jev_${error.reason}` : "jev_error";
       this.logger.warn(`request=${requestId} JEV de entrada falhou (${reason}); indo ao Hermes`);
-      await this.fallback(requestId, { answers: {}, uncertain: [], unsupported: [], fallbackReason: reason });
+      await this.store.handToHermes(requestId, { answers: {}, uncertain: [], fallbackReason: reason });
       return;
     }
 
-    const record: DispatchRecord = {
-      model: result.model, latencyMs: result.latencyMs, answers: {}, uncertain: [], unsupported: [],
-    };
-    const steps: NewStep[] = [];
-    for (const name of Object.keys(dispatchConfig.questions)) {
-      const answer: JevAnswer | undefined = result.answers[name];
-      if (answer) record.answers[name] = answer;
-      if (!isAccepted(answer, dispatchConfig.minCertainty)) {
-        record.uncertain.push(name);
-        continue;
-      }
-      const wanted = name === "query" ? answer.choice === "yes" : answer.choice !== "none";
-      if (!wanted) continue;
-      const agent = DISPATCH_STEPS[name];
-      if (!agent) {
-        record.unsupported.push(name);
-        continue;
-      }
-      steps.push({ id: newOrderedId(), agent, expected: (answer.choice === "many" ? "many" : "one") satisfies Expected });
+    const record: DispatchRecord = { model: result.model, latencyMs: result.latencyMs, answers: {}, uncertain: [] };
+    for (const name of DISPATCH_ROUTES) {
+      const answer = result.answers[name];
+      if (answer) record.answers[name] = { choice: answer.choice, confidence: answer.confidence, probability: answer.probability };
     }
 
-    const mustFallback = steps.length === 0
-      || record.unsupported.length > 0
-      || (dispatchConfig.uncertainPolicy === "fallback" && record.uncertain.length > 0);
-    if (mustFallback) {
-      record.fallbackReason = steps.length === 0 && record.uncertain.length === 0 && record.unsupported.length === 0
-        ? "no_step"
-        : record.unsupported.length > 0 ? "unsupported" : "uncertain";
-      this.logDispatch(requestId, record, steps, "fallback");
-      await this.fallback(requestId, record);
+    const route = this.routeOf(result, record);
+    if (!route) {
+      await this.toHermes(requestId, record, record.uncertain.length > 0 ? "uncertain" : undefined);
       return;
     }
-    const edits = steps.filter((step): step is NewStep & { agent: EditAgent } => isAgent(EDIT_AGENTS, step.agent));
-    if (edits.length > 0) await this.attachCandidates(request, edits, record, signal);
-    this.logDispatch(requestId, record, steps, "steps");
-    await this.store.beginSteps(requestId, steps, record);
+    record.route = route;
+    switch (route) {
+      case "query":
+        await this.begin(requestId, record, { id: newOrderedId(), agent: "query", expected: "one" });
+        return;
+      case "write": {
+        const step: NewStep = { id: newOrderedId(), agent: ENTITY_AGENT, expected: "many" };
+        await this.attachCandidates(request, step, record);
+        await this.begin(requestId, record, step);
+        return;
+      }
+      case "config": {
+        const standard = await this.options.model?.(request.userId);
+        const model = standard && (request.model ?? standard);
+        if (!model) {
+          await this.toHermes(requestId, record, "model_unavailable");
+          return;
+        }
+        this.logDispatch(requestId, record, `modo modelo: ${model.provider} ${model.model}`);
+        await this.store.handToModel(requestId, record, model);
+        return;
+      }
+    }
   }
 
   /**
-   * Um bloco por despacho: uma linha por pergunta com a resposta do JEV e o que o servidor fez com ela
-   * (passo, ignorada, incerta, sem passo). So escolhas, confiancas e nomes de passos — o texto do pedido nao
-   * vai para o log.
+   * O destino e a unica pergunta respondida `yes`, quando a resposta passa da certeza minima. Mais de um `yes`, ou
+   * um `yes` incerto, deixa o destino em duvida (as perguntas ficam em `uncertain`); nenhum `yes` e o Hermes.
    */
-  private logDispatch(requestId: string, record: DispatchRecord, steps: readonly NewStep[], outcome: "steps" | "fallback"): void {
-    const names = Object.keys(dispatchConfig.questions);
-    const width = Math.max(...names.map((name) => name.length));
-    const rows = names.map((name) => {
+  private routeOf(result: JevResult, record: DispatchRecord): DispatchRoute | undefined {
+    const yes = DISPATCH_ROUTES.filter((name) => result.answers[name]?.choice === "yes");
+    const [only] = yes;
+    if (!only) return undefined;
+    if (yes.length === 1 && isAccepted(result.answers[only], dispatchConfig.minCertainty)) return only;
+    record.uncertain.push(...yes);
+    return undefined;
+  }
+
+  /**
+   * O agente de escrita recebe a lista curta do que o pedido pode estar alterando: tarefas, artefatos e series. Quem
+   * escolhe dentro dela e ele. Falha aqui nao derruba o passo: sem a lista, ele ainda pode buscar por uma consulta.
+   */
+  private async attachCandidates(request: RequestRecord, step: NewStep, record: DispatchRecord): Promise<void> {
+    if (!this.options.candidates) return;
+    try {
+      const shortlist = await this.options.candidates.shortlist({
+        userId: request.userId, now: request.createdAt, kinds: CANDIDATE_KINDS,
+      });
+      record.candidates = { shortlisted: shortlist.length, selected: shortlist.length };
+      if (shortlist.length > 0) step.input = { candidates: shortlist };
+    } catch (error) {
+      this.logger.warn(`request=${request.id} lista de candidatos falhou: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async begin(requestId: string, record: DispatchRecord, step: NewStep): Promise<void> {
+    this.logDispatch(requestId, record, `passo: ${step.agent}`);
+    await this.store.beginSteps(requestId, [step], record);
+  }
+
+  /** O pedido passa para a rota do Hermes: como tarefa de agente ou, com `reason`, como fallback. */
+  private async toHermes(requestId: string, record: DispatchRecord, reason?: string): Promise<void> {
+    if (reason) record.fallbackReason = reason;
+    this.logDispatch(requestId, record, reason ? `hermes (fallback: ${reason})` : "hermes: tarefa de agente");
+    await this.store.handToHermes(requestId, record);
+  }
+
+  /**
+   * Um bloco por despacho: uma linha por pergunta com a resposta do JEV e o que o servidor fez com ela. So
+   * escolhas, confiancas e nomes: o texto do pedido nao vai para o log.
+   */
+  private logDispatch(requestId: string, record: DispatchRecord, outcome: string): void {
+    const width = Math.max(...DISPATCH_ROUTES.map((name) => name.length));
+    const rows = DISPATCH_ROUTES.map((name) => {
       const answer = record.answers[name];
-      const verdict = record.uncertain.includes(name) ? "incerta"
-        : record.unsupported.includes(name) ? "sem passo"
-          : answer && (name === "query" ? answer.choice === "yes" : answer.choice !== "none") ? "-> passo" : "ignorada";
+      const verdict = record.uncertain.includes(name) ? "incerta" : name === record.route ? "destino" : "";
       const given = answer
-        ? `${answer.choice.padEnd(5)} conf ${answer.confidence.toFixed(2)}  prob ${answer.probability.toFixed(2)}`
+        ? `${answer.choice.padEnd(3)} conf ${answer.confidence.toFixed(2)}  prob ${answer.probability.toFixed(2)}`
         : "sem resposta";
-      return `    ${name.padEnd(width)}  ${given.padEnd(30)}  ${verdict}`;
+      return `    ${name.padEnd(width)}  ${given.padEnd(28)}  ${verdict}`.trimEnd();
     });
-    const result = outcome === "steps"
-      ? `passos: ${steps.map((step) => `${step.agent} (${step.expected})`).join(", ")}`
-      : `fallback: ${record.fallbackReason}`;
     const lines = [
       `request=${requestId}  JEV de entrada  modelo=${record.model ?? "?"}  ${record.latencyMs ?? "?"}ms  minCertainty=${dispatchConfig.minCertainty}`,
       ...rows,
-      `  => ${result}`,
+      `  => ${outcome}`,
     ];
-    if (record.candidates) lines.push(`  => candidatos de edicao: ${record.candidates.selected} de ${record.candidates.shortlisted}`);
+    if (record.candidates) lines.push(`  => candidatos para o agente de escrita: ${record.candidates.shortlisted}`);
     this.logger.log(lines.join("\n"));
-  }
-
-  /**
-   * Segunda etapa, so quando ha edicao: o servidor lista os candidatos provaveis e o JEV escolhe quais o
-   * pedido altera (uma pergunta binaria por candidato, em paralelo). Falha aqui nao derruba o passo: sem
-   * candidatos, o agente de edicao ainda pode buscar por uma consulta.
-   */
-  private async attachCandidates(
-    request: RequestRecord,
-    edits: ReadonlyArray<NewStep & { agent: EditAgent }>,
-    record: DispatchRecord,
-    signal?: AbortSignal,
-  ): Promise<void> {
-    if (!this.candidates) return;
-    let shortlist: EditCandidate[];
-    try {
-      shortlist = await this.candidates.shortlist({
-        userId: request.userId, now: request.createdAt, kinds: [...new Set(edits.map((step) => EDIT_SELECTOR[step.agent]))],
-      });
-    } catch (error) {
-      this.logger.warn(`request=${request.id} lista de candidatos falhou: ${error instanceof Error ? error.message : String(error)}`);
-      return;
-    }
-    record.candidates = { shortlisted: shortlist.length, selected: 0 };
-    if (shortlist.length === 0) return;
-
-    const { instructions, criteria } = candidatesConfig.question;
-    const questions: Record<string, ChoiceQuestion> = {};
-    shortlist.forEach((candidate, index) => {
-      questions[`c${index + 1}`] = {
-        type: "choice", criteria, instructions: `${instructions}\n\nEntidade: ${describeCandidate(candidate)}`,
-      };
-    });
-    let chosen: EditCandidate[];
-    try {
-      const result = await this.jev.ask(candidatesConfig, {
-        message: request.prompt, screen: request.context ?? null,
-        now: request.createdAt.toISOString(), nowLocal: formatNow(request.createdAt),
-      }, questions, signal);
-      chosen = shortlist.filter((_, index) => {
-        const answer = result.answers[`c${index + 1}`];
-        return isAccepted(answer, candidatesConfig.minCertainty) && answer.choice === "edit";
-      });
-    } catch (error) {
-      if (signal?.aborted) throw error;
-      this.logger.warn(`request=${request.id} JEV de candidatos falhou; edicao segue sem candidatos`);
-      return;
-    }
-    record.candidates.selected = chosen.length;
-    for (const step of edits) {
-      step.input = { candidates: chosen.filter((candidate) => candidate.kind === EDIT_SELECTOR[step.agent]) };
-    }
-  }
-
-  /** O fallback e o Hermes: o pedido muda de rota e o job do Hermes entra na fila. */
-  private async fallback(requestId: string, record: DispatchRecord): Promise<void> {
-    await this.store.handToHermes(requestId, record);
   }
 }

@@ -1,0 +1,36 @@
+{
+  "id": "doc-text",
+  "name": "Ideias para o projeto",
+  "schemaVersion": 1,
+  "global": false,
+  "derived": false,
+  "tags": [
+    "trabalho",
+    "ideias"
+  ],
+  "revision": 1,
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-14T12:12:00.000Z",
+  "type": "text",
+  "data": {
+    "body": "# Ideias para o projeto\n\nUm **parágrafo** com _ênfase_, `código` e um [link](https://example.com/a).\n\n- Primeiro\n- Segundo\n\n1. Um\n2. Dois\n\n- [x] Feito\n- [ ] A fazer\n\n> Citação\n\n```ts\nconst a = 1;\n```\n"
+  },
+  "tasks": [
+    {
+      "taskId": "task-1",
+      "relation": "creates",
+      "name": "Reunião de planejamento",
+      "actor": "human",
+      "kind": "common",
+      "startedAt": "2026-09-14T12:00:00.000Z"
+    },
+    {
+      "taskId": "task-3",
+      "relation": "uses",
+      "name": "Buscar passagens",
+      "actor": "human",
+      "kind": "search_request",
+      "startedAt": "2026-09-12T12:00:00.000Z"
+    }
+  ]
+}

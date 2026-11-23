@@ -1,6 +1,7 @@
 import type {
   AgentRequestKind,
   AgentTraceDto,
+  ModelSelection,
   RequestEditEntityType,
   RequestErrorCode,
   RequestQueryResult,
@@ -8,21 +9,21 @@ import type {
   RequestScreenContext,
 } from "@repo/contracts";
 import type { EditCandidate } from "./request-candidates";
-import type { EntityKind, Expected, RequestAgent, RequestJobKind } from "./request-steps";
+import type { DispatchRoute, EntityKind, Expected, RequestAgent, RequestJobKind } from "./request-steps";
 
 export type RequestStatus = "queued" | "running" | "waiting" | "done" | "failed" | "cancel";
 export type StepStatus = Exclude<RequestStatus, "waiting">;
 
-/** O que a finalizacao mostra ao JEV sobre uma entidade, lido da propria entidade: nunca o texto bruto do pedido. */
+/** O que o pedido mostra de cada entidade que gravou, lido da propria entidade: nunca o texto bruto do pedido. */
 export interface EntitySummary {
   name: string;
   taskKind?: string;
   artifactType?: string;
   startedAt?: string;
   estimatedFinishAt?: string;
-  /** Inicio do texto do artefato, para o JEV casar alimentos e assunto. */
+  /** Inicio do texto do artefato. */
   text?: string;
-  /** Ocorrencia de uma serie, ainda ligada a ela: nao entra nas ligacoes, que valem para a serie e nao para um dia. */
+  /** Ocorrencia de uma serie, ainda ligada a ela. */
   series?: boolean;
 }
 
@@ -46,12 +47,18 @@ export interface FailedStep {
 export interface DispatchRecord {
   model?: string;
   latencyMs?: number;
+  /** A resposta de cada pergunta de sim ou nao (`query`, `write`, `config`). */
   answers: Record<string, { choice: string; confidence: number; probability: number }>;
+  /** As perguntas que deixaram o destino em duvida: um `yes` abaixo da certeza minima, ou mais de um `yes`. */
   uncertain: string[];
-  unsupported: string[];
+  /** O destino que o JEV escolheu. Ausente quando o pedido foi ao Hermes. */
+  route?: DispatchRoute;
+  /** Por que o pedido foi ao Hermes sem ser uma tarefa de agente: duvida, JEV fora do ar, prefixo `fallback:`. */
   fallbackReason?: string;
-  /** Quantos candidatos de edicao o servidor listou e quantos o JEV escolheu. */
+  /** Quantas entidades o servidor entregou ao agente de escrita como candidatas a alteracao. */
   candidates?: { shortlisted: number; selected: number };
+  /** So em pedidos antigos: perguntas reconhecidas que nao tinham agente. */
+  unsupported?: string[];
 }
 
 /** A entidade aberta na tela de detalhe quando o pedido de edicao foi feito. */
@@ -68,7 +75,7 @@ export interface RequestOutcome {
   message?: string;
   /** O que o agente de explicacao pensou antes de escrever a mensagem. */
   thought?: string;
-  /** O rastro que precisa sobreviver ao job (o do Hermes, que nao tem passos gravados). */
+  /** O rastro que precisa sobreviver ao job (o do Hermes e o do modo modelo, que nao tem passos gravados). */
   trace?: AgentTraceDto;
 }
 
@@ -88,6 +95,11 @@ export interface RequestRecord {
   forceFallback?: boolean;
   /** O primeiro pedido da sessao; ausente quando este e o primeiro. */
   sessionId?: string;
+  /**
+   * O provedor, o modelo e o esforco que o usuario escolheu: quem responde na rota `model` e quem roda os agentes
+   * dos passos na rota `steps`. Ausente quando o pedido nao levou escolha (vale o modelo do servidor).
+   */
+  model?: ModelSelection;
   createdAt: Date;
   updatedAt: Date;
   finishedAt?: Date;
@@ -184,6 +196,8 @@ export interface NewRequest {
   sessionId?: string;
   /** Estavel por mensagem: reenviar o mesmo id devolve o pedido ja aceito. */
   clientMessageId?: string;
+  /** O provedor, o modelo e o esforco que o usuario escolheu para o pedido, em qualquer rota que use modelo. */
+  model?: ModelSelection;
   /** O job que comeca a executar o pedido. */
   job: RequestJobKind;
 }
@@ -201,9 +215,14 @@ export interface RequestStore {
   find(id: string): Promise<RequestRecord | undefined>;
   /** Os pedidos do usuario, do mais novo para o mais antigo. Passos nao entram. */
   list(userId: string, limit: number): Promise<RequestRecord[]>;
+  /**
+   * A sessao do chat: o primeiro pedido e as continuacoes, do mais antigo para o mais novo, so os `limit` mais
+   * recentes. O modo modelo recebe as trocas anteriores daqui (ADR 0019).
+   */
+  sessionTurns(userId: string, sessionId: string, limit: number): Promise<RequestRecord[]>;
   steps(requestId: string): Promise<StepRecord[]>;
   entities(requestId: string): Promise<RequestEntityRecord[]>;
-  /** O job comecou a trabalhar no pedido que nao se desdobra em passos (Hermes, voz, alimento). */
+  /** O job comecou a trabalhar no pedido que nao se desdobra em passos (Hermes, modo modelo, voz, alimento). */
   markRunning(requestId: string): Promise<void>;
   /** Cria os passos e enfileira todos os jobs de uma vez; o pedido passa a `running`. */
   beginSteps(requestId: string, steps: readonly NewStep[], dispatch?: DispatchRecord): Promise<void>;
@@ -230,10 +249,15 @@ export interface RequestStore {
   /** Encerra o pedido se ele ainda esta aberto. */
   finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void>;
   /**
-   * O fallback do pedido por passos e o Hermes: o pedido passa para a rota do Hermes, guarda o que o despacho
+   * O pedido e uma tarefa de agente, ou caiu no fallback: passa para a rota do Hermes, guarda o que o despacho
    * escolheu e o job do Hermes entra na fila, na mesma transacao. Nada acontece se o pedido ja terminou.
    */
   handToHermes(requestId: string, dispatch: DispatchRecord): Promise<void>;
+  /**
+   * O pedido e de configuracao e passa para a rota do modo modelo: guarda o que o JEV escolheu e o modelo que
+   * vai responder, e o turno do modelo entra na fila, na mesma transacao. Nada acontece se o pedido ja terminou.
+   */
+  handToModel(requestId: string, dispatch: DispatchRecord, model: ModelSelection): Promise<void>;
   /** A fala virou uma tarefa de pessoa: a relacao do pedido com ela e o pedido concluido, na transacao da tarefa. */
   completeVoice(tx: unknown, input: { requestId: string; taskId: string }): Promise<void>;
   /**

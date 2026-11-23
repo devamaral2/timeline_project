@@ -19,7 +19,8 @@ export async function askTarget<T extends { edits: Array<{ id: string }> }>(
   const target = step.input?.target;
   if (!target) throw new StepFailure("target_missing");
   const { value } = await runner.run({
-    agent, now: request.createdAt, schema, signal, stepId: step.id, user: describeTargetedEdit(request.prompt, target),
+    agent, now: request.createdAt, schema, signal, stepId: step.id, model: request.model,
+    user: describeTargetedEdit(request.prompt, target),
   });
   if (value.edits.some((edit) => edit.id !== target.id)) throw new StepFailure("target_unknown");
   if (value.edits.length === 0) throw new StepFailure("nothing_to_change");

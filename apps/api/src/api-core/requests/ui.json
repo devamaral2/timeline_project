@@ -1,13 +1,14 @@
 {
-  "_when": "Textos predefinidos do pedido por passos (ADR 003). Nada aqui passa por modelo.",
+  "_when": "Textos predefinidos dos pedidos do chat. Nada aqui passa por modelo. Em `steps`, os rótulos de `task-create`, `artifact-create`, `recurring-task-create`, `recurring-task-edit` e `fallback` só servem aos pedidos antigos.",
   "steps": {
-    "task-create": "Criando tarefas",
-    "artifact-create": "Criando artefatos",
+    "entity": "Criando e atualizando registros",
     "task-edit": "Editando tarefas",
     "artifact-edit": "Editando artefatos",
+    "query": "Consultando dados",
+    "task-create": "Criando tarefas",
+    "artifact-create": "Criando artefatos",
     "recurring-task-create": "Criando tarefas recorrentes",
     "recurring-task-edit": "Editando tarefas recorrentes",
-    "query": "Consultando dados",
     "fallback": "Analisando o pedido",
     "food-edit": "Editando o alimento",
     "sleep-edit": "Editando o sono",

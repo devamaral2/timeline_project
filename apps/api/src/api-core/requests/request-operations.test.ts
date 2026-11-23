@@ -5,6 +5,7 @@ import { RequestOperations, type RequestWorkers } from "./request-operations";
 import { InMemoryRequestStore } from "./testing/in-memory-request-store";
 
 const actor = { userId: "user-1" };
+const SELECTION = { provider: "anthropic", model: "claude-sonnet-5-5", effort: "medium" } as const;
 
 function setup() {
   const store = new InMemoryRequestStore();
@@ -18,8 +19,8 @@ function setup() {
   };
   const worker = () => ({ run: vi.fn(async () => {}) });
   const workers = {
-    dispatcher: worker(), create: worker(), edit: worker(), query: worker(), finalizer: worker(),
-    editTarget: worker(), targetEdit: worker(), hermes: worker(), voice: worker(),
+    dispatcher: worker(), entity: worker(), edit: worker(), query: worker(), finalizer: worker(),
+    editTarget: worker(), targetEdit: worker(), hermes: worker(), model: worker(), voice: worker(),
     food: { execute: vi.fn(async () => "completed"), fail: vi.fn(async () => "failed") },
   };
   const operations = new RequestOperations(jobs, store, workers as unknown as RequestWorkers);
@@ -34,7 +35,7 @@ describe("fila dos pedidos", () => {
   test("um handler por tipo de job da IA, todos com o que fazer quando o job morre", () => {
     const { handlers } = setup();
     expect([...handlers.keys()].sort()).toEqual([
-      "food-generation", "hermes-turn", "request-dispatch", "request-edit-target",
+      "food-generation", "hermes-turn", "model-turn", "request-dispatch", "request-edit-target",
       "request-finalize", "request-step", "voice-task",
     ]);
     for (const [kind, handler] of handlers) expect(handler.onFailure, kind).toBeTypeOf("function");
@@ -44,13 +45,13 @@ describe("fila dos pedidos", () => {
     const { store, handlers, workers, context } = setup();
     store.seed({ id: "r1", prompt: "x" });
     await store.beginSteps("r1", [
-      { id: "s1", agent: "task-create", expected: "one" }, { id: "s2", agent: "artifact-edit", expected: "one" },
+      { id: "s1", agent: "entity", expected: "many" }, { id: "s2", agent: "artifact-edit", expected: "one" },
       { id: "s3", agent: "food-edit", expected: "one" }, { id: "s4", agent: "query", expected: "one" },
     ]);
     const run = handlers.get("request-step")?.run as JobHandler;
     for (const stepId of ["s1", "s2", "s3", "s4"]) await run({ requestId: "r1", stepId }, context);
 
-    expect(workers.create.run).toHaveBeenCalledWith("task-create", { requestId: "r1", stepId: "s1" }, context.signal);
+    expect(workers.entity.run).toHaveBeenCalledWith({ requestId: "r1", stepId: "s1" }, context.signal);
     expect(workers.edit.run).toHaveBeenCalledWith("artifact-edit", { requestId: "r1", stepId: "s2" }, context.signal);
     expect(workers.targetEdit.run).toHaveBeenCalledWith("food-edit", { requestId: "r1", stepId: "s3" }, context.signal);
     expect(workers.query.run).toHaveBeenCalledWith({ requestId: "r1", stepId: "s4" }, context.signal);
@@ -59,7 +60,7 @@ describe("fila dos pedidos", () => {
   test("o job de um passo morreu: o passo fica vermelho com um codigo seguro e a finalizacao fecha o pedido", async () => {
     const { store, handlers, context } = setup();
     store.seed({ id: "r1", prompt: "x" });
-    await store.beginSteps("r1", [{ id: "s1", agent: "task-create", expected: "one" }]);
+    await store.beginSteps("r1", [{ id: "s1", agent: "entity", expected: "many" }]);
 
     await handlers.get("request-step")?.onFailure?.({ requestId: "r1", stepId: "s1" }, context, new Error("senha do banco: 123"));
 
@@ -97,6 +98,21 @@ describe("iniciar um pedido", () => {
     expect(store.require(id)).toMatchObject({ route: "steps", status: "queued", prompt: text, context: { screen: "agenda" } });
     expect(store.require(id).title.length).toBeLessThanOrEqual(80);
     expect(store.jobs).toEqual([{ kind: "request-dispatch", requestId: id }]);
+    expect(store.require(id).model).toBeUndefined();
+  });
+
+  test("o pedido por passos guarda o modelo que o campo do chat mostrava, para os agentes rodarem com ele", async () => {
+    const { store, operations } = setup();
+    const id = await operations.start({ userId: "user-1", text: "o que tenho amanhã?", model: SELECTION }, actor);
+    expect(store.require(id)).toMatchObject({ route: "steps", model: SELECTION });
+    expect((await operations.view(id, actor)).model).toEqual(SELECTION);
+  });
+
+  test("o pedido que foi ao Hermes nao mostra a escolha: quem respondeu foi o modelo dele", async () => {
+    const { store, operations } = setup();
+    const id = await operations.start({ userId: "user-1", text: "pesquise um voo", model: SELECTION }, actor);
+    await store.handToHermes(id, { answers: {}, uncertain: [] });
+    expect((await operations.view(id, actor)).model).toBeUndefined();
   });
 
   test("`fallback: <pedido>` guarda so o pedido e marca o despacho para pular o JEV e ir ao Hermes", async () => {
@@ -131,6 +147,7 @@ describe("iniciar um pedido", () => {
     await expect(operations.start({ userId: "outro", text: "x" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(operations.startEdit({ userId: "outro", text: "x", entityType: "task", entityId: "e1" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(operations.startHermes({ userId: "outro", text: "x", clientMessageId: "m" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(operations.startModel({ userId: "outro", text: "x", clientMessageId: "m", model: SELECTION }, actor)).rejects.toBeInstanceOf(ForbiddenException);
     expect(store.requests.size).toBe(0);
   });
 
@@ -142,6 +159,14 @@ describe("iniciar um pedido", () => {
       target: { entityType: "task", entityId: "01H0TASK" }, context: { screen: "detail", entityId: "01H0TASK" },
     });
     expect(store.jobs).toEqual([{ kind: "request-edit-target", requestId: id }]);
+    expect(store.require(id).model).toBeUndefined();
+  });
+
+  test("a edicao pela tela de detalhe guarda o modelo que o campo mostrava", async () => {
+    const { store, operations } = setup();
+    const id = await operations.startEdit(
+      { userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "01H0TASK", model: SELECTION }, actor);
+    expect(store.require(id)).toMatchObject({ target: { entityType: "task", entityId: "01H0TASK" }, model: SELECTION });
   });
 
   test.each(["skill_artifact", "agent_artifact"] as const)("%s: so o dono da configuracao edita (ADR 0004)", async (entityType) => {
@@ -164,6 +189,23 @@ describe("iniciar um pedido", () => {
     expect(hermes).toMatchObject({ route: "hermes", status: "queued", text: "crie uma tarefa", steps: [], entities: [] });
     expect(store.require(voice)).toMatchObject({ route: "voice", userId: "user-1", prompt: "comecei a estudar" });
     expect(store.jobs.map((job) => job.kind)).toEqual(["hermes-turn", "voice-task"]);
+  });
+
+  test("a mensagem ao modelo vira um pedido da rota dele, com a escolha, na sessao da conversa", async () => {
+    const { store, operations } = setup();
+    store.seed({ id: "01FIRST", prompt: "oi", status: "done" });
+    const claude = await operations.startModel({ userId: "user-1", text: "o que tenho amanhã?", sessionId: "01FIRST", clientMessageId: "m1", model: SELECTION }, actor);
+
+    expect(claude).toMatchObject({ route: "model", status: "queued", text: "o que tenho amanhã?", sessionId: "01FIRST", steps: [], model: SELECTION });
+    expect(store.jobs.map((job) => job.kind)).toEqual(["model-turn"]);
+  });
+
+  test("com as ferramentas da agenda ligadas, so o dono do MCP usa o modo modelo", async () => {
+    const { store, operations } = setup();
+    const input = { userId: "user-1", text: "x", clientMessageId: "m1", model: SELECTION };
+    await expect(operations.startModel(input, actor, "dono")).rejects.toBeInstanceOf(ForbiddenException);
+    expect(store.requests.size).toBe(0);
+    await expect(operations.startModel(input, actor, "user-1")).resolves.toMatchObject({ route: "model" });
   });
 });
 
@@ -214,7 +256,7 @@ describe("acompanhar e cancelar", () => {
   test("cancelar marca o pedido e os passos abertos e cancela os jobs vivos deles", async () => {
     const { store, jobs, operations } = setup();
     store.seed({ id: "r1", prompt: "x" });
-    await store.beginSteps("r1", [{ id: "s1", agent: "task-create", expected: "one" }, { id: "s2", agent: "query", expected: "one" }]);
+    await store.beginSteps("r1", [{ id: "s1", agent: "entity", expected: "many" }, { id: "s2", agent: "query", expected: "one" }]);
     await store.recordQueryResult({ requestId: "r1", stepId: "s2", result: { columns: [], rows: [], truncated: false }, timings: {} });
 
     const cancelled = await operations.cancel("r1", actor);

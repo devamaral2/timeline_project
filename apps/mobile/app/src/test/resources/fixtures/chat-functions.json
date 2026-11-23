@@ -1,0 +1,3090 @@
+{
+  "answerChoices": [
+    {
+      "args": [
+        "Diga \"só gmail\" ou \"com calendar e drive\"."
+      ],
+      "result": [
+        "só gmail",
+        "com calendar e drive"
+      ]
+    },
+    {
+      "args": [
+        "Escolha “hoje”, “amanhã” ou “segunda”."
+      ],
+      "result": [
+        "hoje",
+        "amanhã",
+        "segunda"
+      ]
+    },
+    {
+      "args": [
+        "Quer \"sim\"?"
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        "Diga \"a\", \"b\", \"c\", \"d\" ou \"e\"."
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        "Diga \"ok\", \"não\" e \"talvez\"."
+      ],
+      "result": [
+        "ok",
+        "não"
+      ]
+    },
+    {
+      "args": [
+        "Depois eu digo \"uma\" mas antes \"duas\" ou \"três\"."
+      ],
+      "result": [
+        "duas",
+        "três"
+      ]
+    },
+    {
+      "args": [
+        "\"um\" separa \"dois\" tudo \"três\""
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        "Fale \"x\" ou \"y\""
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        "Primeiro \"alfa\" ou \"beta\" e depois \"gama\" ou \"delta\"."
+      ],
+      "result": [
+        "alfa",
+        "beta"
+      ]
+    },
+    {
+      "args": [
+        "Diga \"mesma\" ou \"mesma\"."
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        "Aspas \"inicial e depois \"\"vazio\"\" ou \"ok ok\"."
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        "Escreva \"um texto bem longo que passa dos quarenta e oito caracteres com certeza\" ou \"curto\"."
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        "Sem aspas nenhuma aqui."
+      ],
+      "result": []
+    },
+    {
+      "args": [
+        "Ou, em inglês: \"yes\" or \"no\"."
+      ],
+      "result": [
+        "yes",
+        "no"
+      ]
+    },
+    {
+      "args": [
+        "Prefere \"café\", \"chá\" ou \"água\"?"
+      ],
+      "result": [
+        "café",
+        "chá",
+        "água"
+      ]
+    }
+  ],
+  "choiceLabel": [
+    {
+      "args": [
+        "só gmail"
+      ],
+      "result": "Só gmail"
+    },
+    {
+      "args": [
+        "éclair"
+      ],
+      "result": "Éclair"
+    },
+    {
+      "args": [
+        "çedilha"
+      ],
+      "result": "Çedilha"
+    },
+    {
+      "args": [
+        "Já maiúscula"
+      ],
+      "result": "Já maiúscula"
+    },
+    {
+      "args": [
+        "ábaco "
+      ],
+      "result": "Ábaco "
+    },
+    {
+      "args": [
+        "1 número"
+      ],
+      "result": "1 número"
+    },
+    {
+      "args": [
+        ""
+      ],
+      "result": ""
+    },
+    {
+      "args": [
+        "ß"
+      ],
+      "result": "SS"
+    }
+  ],
+  "shortUrl": [
+    {
+      "args": [
+        "https://www.example.com/"
+      ],
+      "result": "example.com"
+    },
+    {
+      "args": [
+        "http://example.com/caminho?x=1#topo"
+      ],
+      "result": "example.com/caminho"
+    },
+    {
+      "args": [
+        "https://example.com/um/dois/tres/quatro/cinco/seis/sete/oito"
+      ],
+      "result": "example.com/um…"
+    },
+    {
+      "args": [
+        "https://exemplo-de-dominio-muito-longo.com.br/pasta/arquivo-com-nome-longo.html"
+      ],
+      "result": "exemplo-de-dominio-muito-longo.com.br/pasta…"
+    },
+    {
+      "args": [
+        "https://exemplo-de-dominio-muito-longo-mesmo-demais-para-caber.com.br"
+      ],
+      "result": "exemplo-de-dominio-muito-longo-mesmo-demais-para-caber.com.br…"
+    },
+    {
+      "args": [
+        "www.nada.com"
+      ],
+      "result": "www.nada.com"
+    }
+  ],
+  "parseChatCommand": [
+    {
+      "args": [
+        "/hermes"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "hermes",
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/hermes  oi tudo bem"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "hermes",
+        "text": "oi tudo bem"
+      }
+    },
+    {
+      "args": [
+        "/HERMES\nlinha dois"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "hermes",
+        "text": "linha dois"
+      }
+    },
+    {
+      "args": [
+        "/app"
+      ],
+      "result": {
+        "kind": "leave"
+      }
+    },
+    {
+      "args": [
+        "/assistente"
+      ],
+      "result": {
+        "kind": "leave"
+      }
+    },
+    {
+      "args": [
+        "/sair"
+      ],
+      "result": {
+        "kind": "leave"
+      }
+    },
+    {
+      "args": [
+        " /sair "
+      ],
+      "result": {
+        "kind": "leave"
+      }
+    },
+    {
+      "args": [
+        "/appx"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "oi /hermes"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/hermesx"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "hermes"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/hermes   "
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "hermes",
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/claude"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "anthropic",
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/Claude o que tenho amanhã?"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "anthropic",
+        "text": "o que tenho amanhã?"
+      }
+    },
+    {
+      "args": [
+        "/claudes oi"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "claude"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/modelo"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": null,
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/MODELO  qual a previsão?"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": null,
+        "text": "qual a previsão?"
+      }
+    },
+    {
+      "args": [
+        "/openai"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "openai",
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/OpenAI resuma o dia"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "openai",
+        "text": "resuma o dia"
+      }
+    },
+    {
+      "args": [
+        "/openrouter"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "openrouter",
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "/openrouter\nlinha dois"
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": "openrouter",
+        "text": "linha dois"
+      }
+    },
+    {
+      "args": [
+        "/modelos"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/modelo   "
+      ],
+      "result": {
+        "kind": "agent",
+        "agent": "model",
+        "provider": null,
+        "text": null
+      }
+    },
+    {
+      "args": [
+        "oi /claude"
+      ],
+      "result": null
+    }
+  ],
+  "parseCommand": [
+    {
+      "args": [
+        "/"
+      ],
+      "result": {
+        "slugs": [
+          "tarefa",
+          "nota",
+          "buscar",
+          "notificacoes",
+          "configuracoes"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/t"
+      ],
+      "result": {
+        "slugs": [
+          "tarefa"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/tar"
+      ],
+      "result": {
+        "slugs": [
+          "tarefa"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/tarefa"
+      ],
+      "result": {
+        "slugs": [
+          "tarefa"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/tarefa comprar pão"
+      ],
+      "result": {
+        "slugs": [
+          "tarefa"
+        ],
+        "argument": "comprar pão"
+      }
+    },
+    {
+      "args": [
+        "/N"
+      ],
+      "result": {
+        "slugs": [
+          "nota",
+          "notificacoes"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/nota"
+      ],
+      "result": {
+        "slugs": [
+          "nota"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/notificacoes"
+      ],
+      "result": {
+        "slugs": [
+          "notificacoes"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/notif"
+      ],
+      "result": {
+        "slugs": [
+          "notificacoes"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/config"
+      ],
+      "result": {
+        "slugs": [
+          "configuracoes"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/configuracoes"
+      ],
+      "result": {
+        "slugs": [
+          "configuracoes"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/ta"
+      ],
+      "result": {
+        "slugs": [
+          "tarefa"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/criar"
+      ],
+      "result": {
+        "slugs": [
+          "tarefa",
+          "nota"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/lista"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/pesq"
+      ],
+      "result": {
+        "slugs": [
+          "buscar"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/buscar"
+      ],
+      "result": {
+        "slugs": [
+          "buscar"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/x"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "oi"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/Tarefa  "
+      ],
+      "result": {
+        "slugs": [
+          "tarefa"
+        ],
+        "argument": ""
+      }
+    },
+    {
+      "args": [
+        "/nota    texto\ncom linha"
+      ],
+      "result": {
+        "slugs": [
+          "nota"
+        ],
+        "argument": "texto\ncom linha"
+      }
+    },
+    {
+      "args": [
+        "/ajustar"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/tema"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/avisos"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "/tipo"
+      ],
+      "result": null
+    }
+  ],
+  "hermesStepsOf": [
+    {
+      "args": [
+        [
+          {
+            "id": "a",
+            "kind": "thought",
+            "label": "Pensou",
+            "status": "done",
+            "summary": "Resumo do pensamento",
+            "sections": [
+              {
+                "title": "Raciocínio",
+                "text": "Primeiro bloco"
+              },
+              {
+                "title": "Mais",
+                "text": "Segundo bloco"
+              }
+            ]
+          },
+          {
+            "id": "b",
+            "kind": "tool",
+            "label": "Executou um comando",
+            "status": "running",
+            "summary": "ls /opt/data"
+          },
+          {
+            "id": "c",
+            "kind": "tool",
+            "label": "Falhou",
+            "status": "failed"
+          },
+          {
+            "id": "d",
+            "kind": "answer",
+            "label": "Resposta",
+            "status": "done"
+          },
+          {
+            "id": "e",
+            "kind": "tool",
+            "label": "Esperando",
+            "status": "pending"
+          },
+          {
+            "id": "f",
+            "kind": "thought",
+            "label": "Sem texto",
+            "status": "running"
+          },
+          {
+            "id": "g",
+            "kind": "routing",
+            "label": "Roteou",
+            "status": "done"
+          },
+          {
+            "id": "h",
+            "kind": "thought",
+            "label": "Pensou de novo",
+            "status": "done",
+            "sections": [
+              {
+                "title": "x",
+                "text": ""
+              }
+            ],
+            "summary": "só o resumo"
+          }
+        ]
+      ],
+      "result": [
+        {
+          "id": "a",
+          "kind": "thought",
+          "label": "Pensou",
+          "detail": "Primeiro bloco\n\nSegundo bloco",
+          "status": "done"
+        },
+        {
+          "id": "b",
+          "kind": "tool",
+          "label": "Executou um comando",
+          "detail": "ls /opt/data",
+          "status": "running"
+        },
+        {
+          "id": "c",
+          "kind": "tool",
+          "label": "Falhou",
+          "status": "failed"
+        },
+        {
+          "id": "f",
+          "kind": "thought",
+          "label": "Sem texto",
+          "status": "running"
+        },
+        {
+          "id": "h",
+          "kind": "thought",
+          "label": "Pensou de novo",
+          "detail": "só o resumo",
+          "status": "done"
+        }
+      ]
+    },
+    {
+      "args": [
+        []
+      ],
+      "result": []
+    }
+  ],
+  "traceDuration": [
+    {
+      "args": [
+        0
+      ],
+      "result": "0 ms"
+    },
+    {
+      "args": [
+        1
+      ],
+      "result": "1 ms"
+    },
+    {
+      "args": [
+        849.6
+      ],
+      "result": "850 ms"
+    },
+    {
+      "args": [
+        850
+      ],
+      "result": "850 ms"
+    },
+    {
+      "args": [
+        999
+      ],
+      "result": "999 ms"
+    },
+    {
+      "args": [
+        1000
+      ],
+      "result": "1,0 s"
+    },
+    {
+      "args": [
+        1234
+      ],
+      "result": "1,2 s"
+    },
+    {
+      "args": [
+        1250
+      ],
+      "result": "1,3 s"
+    },
+    {
+      "args": [
+        9950
+      ],
+      "result": "9,9 s"
+    },
+    {
+      "args": [
+        59999
+      ],
+      "result": "60,0 s"
+    },
+    {
+      "args": [
+        60000
+      ],
+      "result": "1 min 00 s"
+    },
+    {
+      "args": [
+        65000
+      ],
+      "result": "1 min 05 s"
+    },
+    {
+      "args": [
+        125400
+      ],
+      "result": "2 min 05 s"
+    },
+    {
+      "args": [
+        3600000
+      ],
+      "result": "60 min 00 s"
+    }
+  ],
+  "timelineBars": [
+    {
+      "args": [
+        {
+          "route": "hermes",
+          "status": "done",
+          "startedAt": "2026-09-14T14:48:00.000Z",
+          "durationMs": 4200,
+          "fields": [
+            {
+              "label": "Modelo",
+              "value": "gpt-x"
+            }
+          ],
+          "entries": [
+            {
+              "id": "t0",
+              "kind": "request",
+              "label": "Pedido",
+              "status": "done",
+              "startedAt": "2026-09-14T14:48:00.000Z",
+              "durationMs": 20
+            },
+            {
+              "id": "t1",
+              "kind": "thought",
+              "label": "Pensou",
+              "status": "done",
+              "startedAt": "2026-09-14T14:48:00.500Z",
+              "durationMs": 900,
+              "sections": [
+                {
+                  "title": "Raciocínio",
+                  "text": "Preciso ver a agenda."
+                }
+              ]
+            },
+            {
+              "id": "t2",
+              "kind": "tool",
+              "label": "Executou um comando",
+              "source": "terminal",
+              "summary": "ls /opt/data",
+              "status": "done",
+              "startedAt": "2026-09-14T14:48:01.500Z",
+              "durationMs": 1500,
+              "sections": [
+                {
+                  "title": "Entrada",
+                  "text": "ls /opt/data",
+                  "code": true
+                }
+              ]
+            },
+            {
+              "id": "t3",
+              "kind": "tool",
+              "label": "Esperando",
+              "status": "pending"
+            },
+            {
+              "id": "t4",
+              "kind": "answer",
+              "label": "Resposta",
+              "status": "done",
+              "startedAt": "2026-09-14T14:48:03.500Z",
+              "durationMs": 600
+            }
+          ]
+        },
+        1789397290000
+      ],
+      "result": {
+        "totalMs": 4200,
+        "bars": [
+          {
+            "id": "t0",
+            "lane": "talk",
+            "left": 0,
+            "width": 0.004761904761904762
+          },
+          {
+            "id": "t1",
+            "lane": "model",
+            "left": 0.11904761904761904,
+            "width": 0.21428571428571427
+          },
+          {
+            "id": "t2",
+            "lane": "tool",
+            "left": 0.35714285714285715,
+            "width": 0.35714285714285715
+          },
+          {
+            "id": "t4",
+            "lane": "talk",
+            "left": 0.8333333333333334,
+            "width": 0.14285714285714285
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        {
+          "route": "hermes",
+          "status": "running",
+          "startedAt": "2026-09-14T14:48:00.000Z",
+          "fields": [
+            {
+              "label": "Modelo",
+              "value": "gpt-x"
+            }
+          ],
+          "entries": [
+            {
+              "id": "t0",
+              "kind": "request",
+              "label": "Pedido",
+              "status": "done",
+              "startedAt": "2026-09-14T14:48:00.000Z",
+              "durationMs": 20
+            },
+            {
+              "id": "t1",
+              "kind": "thought",
+              "label": "Pensou",
+              "status": "done",
+              "startedAt": "2026-09-14T14:48:00.500Z",
+              "durationMs": 900,
+              "sections": [
+                {
+                  "title": "Raciocínio",
+                  "text": "Preciso ver a agenda."
+                }
+              ]
+            },
+            {
+              "id": "t2",
+              "kind": "tool",
+              "label": "Executou um comando",
+              "source": "terminal",
+              "summary": "ls /opt/data",
+              "status": "running",
+              "startedAt": "2026-09-14T14:48:01.500Z",
+              "sections": [
+                {
+                  "title": "Entrada",
+                  "text": "ls /opt/data",
+                  "code": true
+                }
+              ]
+            },
+            {
+              "id": "t3",
+              "kind": "tool",
+              "label": "Esperando",
+              "status": "pending"
+            }
+          ]
+        },
+        1789397290000
+      ],
+      "result": {
+        "totalMs": 10000,
+        "bars": [
+          {
+            "id": "t0",
+            "lane": "talk",
+            "left": 0,
+            "width": 0.002
+          },
+          {
+            "id": "t1",
+            "lane": "model",
+            "left": 0.05,
+            "width": 0.09
+          },
+          {
+            "id": "t2",
+            "lane": "tool",
+            "left": 0.15,
+            "width": 0.85
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        {
+          "route": "steps",
+          "status": "done",
+          "fields": [],
+          "entries": [
+            {
+              "id": "x",
+              "kind": "agent",
+              "label": "Agente",
+              "status": "done"
+            }
+          ]
+        },
+        1789397290000
+      ],
+      "result": {
+        "totalMs": 0,
+        "bars": []
+      }
+    },
+    {
+      "args": [
+        {
+          "route": "steps",
+          "status": "running",
+          "startedAt": "2026-09-14T14:48:00.000Z",
+          "fields": [],
+          "entries": [
+            {
+              "id": "r",
+              "kind": "routing",
+              "label": "Roteamento",
+              "status": "done",
+              "startedAt": "2026-09-14T14:48:01.000Z",
+              "durationMs": 2000
+            },
+            {
+              "id": "m",
+              "kind": "message",
+              "label": "Comentário",
+              "status": "running",
+              "startedAt": "2026-09-14T14:48:04.000Z"
+            },
+            {
+              "id": "q",
+              "kind": "request",
+              "label": "Pedido",
+              "status": "done",
+              "startedAt": "2026-09-14T14:47:50.000Z",
+              "durationMs": 100
+            },
+            {
+              "id": "n",
+              "kind": "agent",
+              "label": "Sem início",
+              "status": "pending"
+            }
+          ]
+        },
+        1789397290000
+      ],
+      "result": {
+        "totalMs": 10000,
+        "bars": [
+          {
+            "id": "r",
+            "lane": "model",
+            "left": 0.1,
+            "width": 0.2
+          },
+          {
+            "id": "m",
+            "lane": "model",
+            "left": 0.4,
+            "width": 0.6
+          },
+          {
+            "id": "q",
+            "lane": "talk",
+            "left": 0,
+            "width": 0.01
+          }
+        ]
+      }
+    }
+  ],
+  "polishParagraph": [
+    {
+      "args": [
+        "Os passos:",
+        true
+      ],
+      "result": {
+        "label": true,
+        "choices": [],
+        "children": [
+          {
+            "type": "text",
+            "value": "Os passos"
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "Uma decisão antes: me diga qual conta.",
+        false
+      ],
+      "result": {
+        "label": false,
+        "choices": [],
+        "children": [
+          {
+            "type": "strong",
+            "children": [
+              {
+                "type": "text",
+                "value": "Uma decisão antes:"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": " me diga qual conta."
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "Abri /opt/data/token.json e vi NOT_AUTHENTICATED lá.",
+        false
+      ],
+      "result": {
+        "label": false,
+        "choices": [],
+        "children": [
+          {
+            "type": "text",
+            "value": "Abri "
+          },
+          {
+            "type": "inlineCode",
+            "value": "/opt/data/token.json"
+          },
+          {
+            "type": "text",
+            "value": " e vi "
+          },
+          {
+            "type": "inlineCode",
+            "value": "NOT_AUTHENTICATED"
+          },
+          {
+            "type": "text",
+            "value": " lá."
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "Resultado: diga \"um\" ou \"dois\".",
+        false
+      ],
+      "result": {
+        "label": false,
+        "choices": [
+          "um",
+          "dois"
+        ],
+        "children": [
+          {
+            "type": "strong",
+            "children": [
+              {
+                "type": "text",
+                "value": "Resultado:"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": " diga \"um\" ou \"dois\"."
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "Muitas palavras antes de chegar aos dois pontos: não é rótulo.",
+        false
+      ],
+      "result": {
+        "label": false,
+        "choices": [],
+        "children": [
+          {
+            "type": "text",
+            "value": "Muitas palavras antes de chegar aos dois pontos: não é rótulo."
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "Texto simples sem nada.",
+        false
+      ],
+      "result": {
+        "label": false,
+        "choices": [],
+        "children": [
+          {
+            "type": "text",
+            "value": "Texto simples sem nada."
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "Rótulo longo demais para ser rótulo de uma lista qualquer aqui:",
+        true
+      ],
+      "result": {
+        "label": false,
+        "choices": [],
+        "children": [
+          {
+            "type": "text",
+            "value": "Rótulo longo demais para ser rótulo de uma lista qualquer aqui:"
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "Em http://x.com/a/b e CONSTANTE_AQUI.",
+        false
+      ],
+      "result": {
+        "label": false,
+        "choices": [],
+        "children": [
+          {
+            "type": "text",
+            "value": "Em http://x.com/a/b e "
+          },
+          {
+            "type": "inlineCode",
+            "value": "CONSTANTE_AQUI"
+          },
+          {
+            "type": "text",
+            "value": "."
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "Olá: tudo",
+        false
+      ],
+      "result": {
+        "label": false,
+        "choices": [],
+        "children": [
+          {
+            "type": "strong",
+            "children": [
+              {
+                "type": "text",
+                "value": "Olá:"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": " tudo"
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "A:b",
+        false
+      ],
+      "result": {
+        "label": false,
+        "choices": [],
+        "children": [
+          {
+            "type": "text",
+            "value": "A:b"
+          }
+        ]
+      }
+    }
+  ],
+  "requestWithWindow": [
+    {
+      "args": [
+        {
+          "dayKey": "2026-09-14",
+          "startMs": 1789392600000,
+          "endMs": 1789401600000,
+          "minutes": 150,
+          "endsAtMidnight": false
+        },
+        "  marcar um treino "
+      ],
+      "result": "Sobre a janela livre de seg, 14 de set, das 10:30 às 13:00 (2 h 30 min): marcar um treino"
+    },
+    {
+      "args": [
+        {
+          "dayKey": "2026-09-15",
+          "startMs": 1789477200000,
+          "endMs": 1789479900000,
+          "minutes": 45,
+          "endsAtMidnight": false
+        },
+        "ler"
+      ],
+      "result": "Sobre a janela livre de ter, 15 de set, das 10:00 às 10:45 (45 min): ler"
+    },
+    {
+      "args": [
+        {
+          "dayKey": "2026-09-16",
+          "startMs": 1789588800000,
+          "endMs": 1789614000000,
+          "minutes": 420,
+          "endsAtMidnight": true
+        },
+        "descansar"
+      ],
+      "result": "Sobre a janela livre de qua, 16 de set, das 17:00 às 24:00 (7 h): descansar"
+    },
+    {
+      "args": [
+        {
+          "dayKey": "2026-09-17",
+          "startMs": 1789646400000,
+          "endMs": 1789653600000,
+          "minutes": 120,
+          "endsAtMidnight": false
+        },
+        "estudar"
+      ],
+      "result": "Sobre a janela livre de qui, 17 de set, das 09:00 às 11:00 (2 h): estudar"
+    }
+  ],
+  "entityRows": [
+    {
+      "args": [
+        {
+          "kind": "task",
+          "id": "task-new",
+          "name": "Reunião de sexta",
+          "operation": "create",
+          "linkedTo": []
+        }
+      ],
+      "result": {
+        "kind": "task",
+        "id": "task-new",
+        "change": "created",
+        "label": "Reunião de sexta",
+        "text": "Tarefa criada"
+      }
+    },
+    {
+      "args": [
+        {
+          "kind": "artifact",
+          "id": "art-new",
+          "name": "Pauta da reunião",
+          "artifactType": "text",
+          "operation": "update",
+          "linkedTo": [
+            {
+              "kind": "task",
+              "id": "task-new"
+            }
+          ]
+        }
+      ],
+      "result": {
+        "kind": "note",
+        "id": "art-new",
+        "change": "updated",
+        "label": "Pauta da reunião",
+        "text": "Nota alterada"
+      }
+    },
+    {
+      "args": [
+        {
+          "kind": "task",
+          "id": "task-gone",
+          "name": "Reunião antiga",
+          "operation": "delete",
+          "linkedTo": []
+        }
+      ],
+      "result": {
+        "kind": "task",
+        "id": "task-gone",
+        "change": "deleted",
+        "label": "Reunião antiga",
+        "text": "Tarefa apagada"
+      }
+    }
+  ],
+  "resolveSelection": [
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        null
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        null
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "max"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "medium"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openai",
+            "model": "gpt-6.2-sol",
+            "effort": "low"
+          },
+          "models": {
+            "openai": "gpt-6.2-sol"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "openai": "gpt-6.2-sol",
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openai",
+            "model": "gpt-6.2-sol",
+            "effort": "low"
+          },
+          "models": {
+            "openai": "gpt-6.2-sol"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "openai": "gpt-6.2-sol",
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-velho",
+            "effort": "low"
+          },
+          "models": {
+            "anthropic": "claude-velho"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "low"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-velho",
+            "effort": "low"
+          },
+          "models": {
+            "anthropic": "claude-velho"
+          }
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "low"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "max"
+          },
+          "models": {}
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "max"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "max"
+          },
+          "models": {}
+        }
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "medium"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    }
+  ],
+  "withProvider": [
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "anthropic"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "anthropic"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "max"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "openrouter"
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5",
+          "openrouter": "meta/llama-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "openrouter"
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "max"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "openai"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "current": {
+            "provider": "openrouter",
+            "model": "meta/llama-5",
+            "effort": "max"
+          },
+          "models": {
+            "openrouter": "meta/llama-5",
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "openai"
+      ],
+      "result": {
+        "current": {
+          "provider": "openrouter",
+          "model": "meta/llama-5",
+          "effort": "max"
+        },
+        "models": {
+          "openrouter": "meta/llama-5",
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    }
+  ],
+  "withModel": [
+    {
+      "args": [
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "claude-sonnet-5-5"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "high"
+        },
+        "models": {
+          "anthropic": "claude-sonnet-5-5"
+        }
+      }
+    }
+  ],
+  "withEffort": [
+    {
+      "args": [
+        {
+          "current": {
+            "provider": "anthropic",
+            "model": "claude-opus-5-5",
+            "effort": "high"
+          },
+          "models": {
+            "anthropic": "claude-opus-5-5"
+          }
+        },
+        "low"
+      ],
+      "result": {
+        "current": {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "low"
+        },
+        "models": {
+          "anthropic": "claude-opus-5-5"
+        }
+      }
+    }
+  ],
+  "modelFooter": [
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        }
+      ],
+      "result": "sonnet 5.5 · médio · anthropic"
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-opus-5-5",
+          "effort": "high"
+        }
+      ],
+      "result": "opus 5.5 · alto · anthropic"
+    },
+    {
+      "args": [
+        null,
+        {
+          "provider": "openrouter",
+          "model": "google/gemini-4-neon",
+          "effort": "low"
+        }
+      ],
+      "result": "google/gemini-4-neon · baixo · openrouter"
+    }
+  ],
+  "modelName": [
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        }
+      ],
+      "result": "Sonnet 5.5"
+    },
+    {
+      "args": [
+        {
+          "providers": [
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "models": [
+                {
+                  "id": "claude-opus-5-5",
+                  "name": "Opus 5.5"
+                },
+                {
+                  "id": "claude-sonnet-5-5",
+                  "name": "Sonnet 5.5"
+                }
+              ],
+              "defaultModel": "claude-sonnet-5-5"
+            },
+            {
+              "id": "openrouter",
+              "name": "OpenRouter",
+              "models": [
+                {
+                  "id": "google/gemini-4-neon",
+                  "name": "Gemini 4 Neon"
+                },
+                {
+                  "id": "meta/llama-5",
+                  "name": "Llama 5"
+                }
+              ],
+              "defaultModel": "meta/llama-5"
+            }
+          ],
+          "efforts": [
+            "low",
+            "medium",
+            "high",
+            "max"
+          ],
+          "default": {
+            "provider": "anthropic",
+            "model": "claude-sonnet-5-5",
+            "effort": "medium"
+          }
+        },
+        {
+          "provider": "anthropic",
+          "model": "desconhecido"
+        }
+      ],
+      "result": "desconhecido"
+    },
+    {
+      "args": [
+        null,
+        {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "effort": "medium"
+        }
+      ],
+      "result": "claude-sonnet-5-5"
+    }
+  ],
+  "providerOffText": [
+    {
+      "args": [
+        "anthropic"
+      ],
+      "result": "A Anthropic não está ligada neste ambiente."
+    },
+    {
+      "args": [
+        "openai"
+      ],
+      "result": "A OpenAI não está ligada neste ambiente."
+    },
+    {
+      "args": [
+        "openrouter"
+      ],
+      "result": "O OpenRouter não está ligado neste ambiente."
+    }
+  ],
+  "failureText": [
+    {
+      "args": [
+        "invalid_input"
+      ],
+      "result": "Não consegui ler essa mensagem. Tente escrever de outro jeito."
+    },
+    {
+      "args": [
+        "forbidden"
+      ],
+      "result": "Você não tem permissão para acessar esses dados."
+    },
+    {
+      "args": [
+        "limit_reached"
+      ],
+      "result": "O pedido ficou grande demais e nada foi gravado. Tente dividir em partes menores."
+    },
+    {
+      "args": [
+        "conflict"
+      ],
+      "result": "Os dados mudaram enquanto eu preparava a resposta. Nada foi gravado; tente de novo."
+    },
+    {
+      "args": [
+        "unavailable"
+      ],
+      "result": "A IA está indisponível agora. Tente de novo em instantes."
+    },
+    {
+      "args": [
+        "cancelled"
+      ],
+      "result": "Pedido cancelado."
+    },
+    {
+      "args": [
+        "internal"
+      ],
+      "result": "Algo deu errado. Tente de novo."
+    },
+    {
+      "args": [
+        "connection_lost"
+      ],
+      "result": "A conexão caiu antes da resposta. Se o pedido gravava algo, confira a agenda antes de reenviar."
+    },
+    {
+      "args": [
+        "connection_failed"
+      ],
+      "result": "Não consegui conectar ao assistente. Tente de novo."
+    },
+    {
+      "args": [
+        "session_expired"
+      ],
+      "result": "Sua sessão acabou. Entre de novo para continuar."
+    }
+  ]
+}

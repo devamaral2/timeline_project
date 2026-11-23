@@ -4,6 +4,51 @@ O APK de release é assinado fora do repositório. O arquivo do keystore e suas
 senhas devem ficar no 1Password; o GitHub Actions recebe somente os valores
 necessários através de Secrets.
 
+## Gerar uma versão nova
+
+```bash
+pnpm release:mobile                # testes do mobile, build assinado e conferência
+pnpm release:mobile --skip-tests   # sem os testes
+pnpm release:mobile --install      # e instala no aparelho visível no `adb devices`
+pnpm release:mobile --bump patch   # sobe a versão base (patch, minor ou major)
+pnpm release:mobile --drive        # e envia o APK para o Google Drive
+```
+
+A skill `/publicar-mobile` roda `--bump patch --drive` (ou a parte que você passar).
+
+O script (`scripts/mobile/release.sh`) lê as seis variáveis do ambiente e completa
+o que faltar com `apps/mobile/.secrets/release.env` (fora do Git, uma linha
+`CHAVE=valor` por variável; outro arquivo com `BRAID_MOBILE_RELEASE_ENV`). Cada
+execução recebe um `versionCode` maior que o anterior (minutos desde
+2024-01-01 UTC), então o APK instala por cima da versão já instalada, e um
+`versionName` com a data (`0.1.0-20261117.2338`, a base vem de
+`apps/mobile/package.json`). Depois do build ele confere a assinatura contra o
+keystore, a versão e as URLs de produção dentro do APK (e que não sobrou
+`localhost`), e copia o resultado para `dist/mobile/braid-<versão>.apk` e
+`dist/mobile/braid-latest.apk`. Mudanças não commitadas em `apps/mobile` ou
+`packages` entram no APK; o script avisa quando há alguma.
+
+## Google Drive
+
+O `--drive` envia `braid-<versão>.apk` e `braid-latest.apk` para a pasta
+`Braid/APKs` (`BRAID_DRIVE_FOLDER`) do remote `gdrive` (`BRAID_DRIVE_REMOTE`)
+do rclone e mostra o link do arquivo. O remote é conferido antes do build. A
+versão nova só é gravada em `apps/mobile/package.json` depois que o APK passa
+na conferência, e fica sem commit.
+
+Configuração única por máquina:
+
+```bash
+sudo pacman -S rclone
+```
+
+```bash
+rclone config create gdrive drive scope=drive.file
+```
+
+O segundo comando abre o navegador para o login no Google. O escopo
+`drive.file` só dá ao rclone acesso aos arquivos que ele mesmo criou.
+
 ## Gerar o keystore uma única vez
 
 Defina senhas fortes e mantenha-as no item do 1Password antes de executar:

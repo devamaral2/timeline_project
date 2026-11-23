@@ -9,6 +9,7 @@ import {
   taskSchema,
   recurrenceSchema,
   requestSchema,
+  modelOptionsSchema,
   placeSuggestionSchema,
   tagSuggestionSchema,
   updateArtifactRequestSchema,
@@ -21,6 +22,7 @@ import { editRequestBody } from "../features/request-agent-file-edit/request-age
 import { restoreBody } from "../features/restore-agent-file/restore-agent-file.controller";
 import { startEditRequestBody } from "../features/start-edit-request/start-edit-request.controller";
 import { startHermesRequestBody } from "../features/start-hermes-request/start-hermes-request.controller";
+import { startModelRequestBody } from "../features/start-model-request/start-model-request.controller";
 import { startRequestBody } from "../features/start-request/start-request.controller";
 import { startVoiceRequestBody } from "../features/start-voice-request/start-voice-request.controller";
 
@@ -58,6 +60,8 @@ export const documentedSchemas = {
   StartRequestInput: startRequestBody,
   StartEditRequestInput: startEditRequestBody,
   StartHermesRequestInput: startHermesRequestBody,
+  StartModelRequestInput: startModelRequestBody,
+  ModelOptions: modelOptionsSchema,
   StartVoiceRequestInput: startVoiceRequestBody,
   StartedRequest: z.object({ requestId: z.string() }),
   AgentFileList: z.object({ files: z.array(agentFileSchema) }),
@@ -121,6 +125,7 @@ const stale = "`expectedRevision` não é mais a revisão atual: alguém editou 
 const idempotencyClash = "Outra requisição com a mesma `Idempotency-Key` ainda está em andamento.";
 const idempotencyReuse = "A `Idempotency-Key` já foi usada com um corpo diferente.";
 const hermesOff = "O Hermes está desligado neste servidor (`AI_AUTOMATION`).";
+const modelOff = "O modo modelo está desligado neste servidor (sem `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` nem `OPENROUTER_API_KEY`).";
 const ownerOnly = "Só o dono acessa (`AGENT_CONFIG_OWNER_USER_ID`); os demais recebem 403.";
 
 /** Uma entrada por rota, na forma `METODO /caminho` do documento OpenAPI. */
@@ -313,6 +318,21 @@ export const documentedOperations: Record<string, OperationDoc> = {
     body: "StartHermesRequestInput",
     success: { status: 202, description: "O pedido foi aceito.", schema: "Request" },
     errors: { 400: invalid, 404: `${hermesOff} Ou \`sessionId\` não é um pedido deste usuário.` },
+  },
+  "GET /api/requests/model/options": {
+    tag: "Pedidos ao agente",
+    summary: "Lista os provedores e modelos do modo modelo",
+    description: "Os provedores com chave neste servidor, os modelos que cada um oferece, os níveis de esforço e a escolha padrão (ADR 0019).",
+    success: { status: 200, description: "As opções do seletor.", schema: "ModelOptions" },
+    errors: { 404: modelOff },
+  },
+  "POST /api/requests/model": {
+    tag: "Pedidos ao agente",
+    summary: "Manda uma mensagem ao modelo escolhido",
+    description: "O modelo escolhido (provedor, modelo e esforço) conversa e usa a agenda pelo MCP (ADR 0019). Reenviar o mesmo `clientMessageId` devolve o pedido já aceito; `sessionId` continua a conversa, e as trocas anteriores da sessão vão junto. Com as ferramentas da agenda ligadas, só o dono do MCP (`MCP_OWNER_USER_ID`) usa o modo; os demais recebem 403.",
+    body: "StartModelRequestInput",
+    success: { status: 202, description: "O pedido foi aceito.", schema: "Request" },
+    errors: { 400: `${invalid} Ou o provedor não está ligado, ou o modelo não está na lista dele.`, 404: `${modelOff} Ou \`sessionId\` não é um pedido deste usuário.` },
   },
   "POST /api/requests/voice": {
     tag: "Pedidos ao agente",

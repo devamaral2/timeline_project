@@ -5,6 +5,10 @@ date: 2026-11-16
 
 # O Hermes é o fallback do pedido por passos
 
+> Parcialmente substituída pela [ADR 0020](./0020-jev-com-tres-perguntas-e-agente-unico-de-escrita.md): o JEV de
+> entrada passou a responder três perguntas de sim ou não, e o Hermes é também o destino de toda tarefa de agente, não
+> só o fallback.
+
 Substitui o "fallback que orquestra" da ADR 003 (`.agents/docs/ai-dialog/adr-003-rota-por-processo.md`) e muda o
 item 3 da ADR 004 (`.agents/docs/ai-dialog/adr-004-hermes-automacoes.md`): o Hermes deixa de receber só automações e
 passa a atender também todo pedido do chat que o roteador não encaminha a um agente da agenda.

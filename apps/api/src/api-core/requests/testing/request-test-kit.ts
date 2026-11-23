@@ -15,12 +15,12 @@ import { InMemoryRecurrenceRepository } from "../../recurrences/testing/in-memor
 import type { JevClient, JevResult } from "../jev.client";
 import { RequestAgentRunner } from "../request-agent-runner";
 import { uiConfig } from "../request-config";
-import { RequestCreateWorker } from "../request-create-worker";
 import { RequestEditTargetWorker } from "../request-edit-target-worker";
 import { RequestEditWorker } from "../request-edit-worker";
+import { RequestEntityWorker } from "../request-entity-worker";
 import { RequestFinalizer } from "../request-finalizer";
 import { RequestQueryWorker } from "../request-query-worker";
-import type { RequestAgent } from "../request-steps";
+import { DISPATCH_ROUTES, type DispatchRoute, type StepAgent } from "../request-steps";
 import type { NewStep } from "../request-store";
 import { RequestTargetEditWorker } from "../request-target-edit-worker";
 import { InMemoryRequestStore } from "./in-memory-request-store";
@@ -59,8 +59,23 @@ export function confident(choice: string, confidence = 0.99): { choice: string; 
   return { choice, confidence, probability: confidence };
 }
 
+/**
+ * O que o JEV de entrada responde: `yes` na pergunta do destino dado e `no` nas outras; sem destino, `no` nas tres
+ * (uma tarefa de agente). `overrides` troca respostas pelo nome da pergunta.
+ */
+export function dispatchAnswers(route?: DispatchRoute, overrides: Record<string, ReturnType<typeof confident>> = {}): JevResult {
+  const answers: Record<string, ReturnType<typeof confident>> = {};
+  for (const name of DISPATCH_ROUTES) answers[name] = confident(name === route ? "yes" : "no");
+  return result({ ...answers, ...overrides });
+}
+
 export function result(answers: JevResult["answers"]): JevResult {
   return { model: "jev-test", latencyMs: 5, answers };
+}
+
+/** O que o agente de escrita devolve quando nada foi combinado: todas as listas vazias, com o combinado por cima. */
+export function entityAnswer(over: Partial<Record<"tasks" | "artifacts" | "series" | "taskEdits" | "artifactEdits" | "seriesEdits", unknown[]>> & { query?: { sql: string } | null } = {}) {
+  return { tasks: [], artifacts: [], series: [], taskEdits: [], artifactEdits: [], seriesEdits: [], query: null, ...over };
 }
 
 /** A estimativa do alimento que o teste combina; a padrao e um alimento sem itens. */
@@ -124,21 +139,21 @@ export function setupRequest(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
   const deps = { store, runner, batchWriter: kit.batchWriter, repositories, createTask: kit.createTask, places };
   return {
     ...kit, recurrences, repositories, store, gateway, runner, request, sql, foodParsing, files, places,
-    worker: new RequestCreateWorker(deps),
-    editWorker: new RequestEditWorker({ ...deps, sql }),
+    worker: new RequestEntityWorker({ ...deps, sql }),
+    editWorker: new RequestEditWorker(deps),
     queryWorker: new RequestQueryWorker({ store, runner, sql }),
     targetEditWorker: new RequestTargetEditWorker({ ...deps, foodParsing, artifactBuilder: kit.artifactBuilder, files }),
     editTargetWorker: new RequestEditTargetWorker({
       store, repositories, files, failureText: (code) => uiConfig.targetFailed[code],
     }),
-    finalizer: (jev: JevClient) => new RequestFinalizer({ ...deps, jev }),
+    finalizer: () => new RequestFinalizer({ store, runner }),
   };
 }
 
 export async function addStep(
   ctx: ReturnType<typeof setupRequest>,
   id: string,
-  agent: RequestAgent,
+  agent: StepAgent,
   expected: "one" | "many" = "one",
   input?: NewStep["input"],
 ) {

@@ -16,8 +16,12 @@
 | Ocorrência destacada | Instância de recorrência revisada sem alterar a regra da série. |
 | Processo | Pedido tratado pela rota por processo (ADR 003): gravado antes de qualquer entidade e ligado a cada uma que seus passos criam ou editam. |
 | Passo | Trabalho de um processo entregue à fila de um agente (criar tarefas, criar artefatos...). Termina em verde (sucesso) ou vermelho (falha). |
-| Finalização | Fila com lock por processo em que cada entidade concluída é comparada, pelo JEV, com as já criadas para decidir vínculos. |
-| Fallback | Destino do pedido que não cai em nenhuma operação de entidade (ou que pede `fallback:`): é sempre o Hermes, que atende o pedido na sessão da conversa (ADR 0018). |
+| Finalização | Fila com lock por processo que marca como concluído o que cada passo gravou e fecha o pedido quando todos os passos terminaram. Não decide vínculos: quem liga um artefato a uma tarefa é o agente de escrita (ADR 0020). |
+| Fallback | Ida ao Hermes de um pedido cujo destino ficou em dúvida, que chegou com o roteador fora do ar ou que pede `fallback:`. Não é o mesmo que tarefa de agente, que vai ao Hermes por ser o destino dela (ADR 0018, ADR 0020). |
+| Destino | Para onde o roteador manda um pedido do chat: consulta, escrita, configuração ou, sem nenhum dos três, tarefa de agente (ADR 0020). |
+| Tarefa de agente | Pedido que não é só consulta, só escrita nem configuração: conversa, pesquisa, planejamento, automação. Quem atende é o Hermes. |
+| Agente de escrita | Agente único que recebe o pedido de escrita e decide tudo o que ele cria, o que ele altera no que já existe e a que tarefa cada artefato novo pertence. |
+| Candidato | Entidade que já existe e que um pedido de escrita pode estar alterando. O agente de escrita recebe a lista curta delas e escolhe. |
 | Hermes | Agente de terceiros (`nousresearch/hermes-agent`) que roda como container interno e executa as automações. Nunca é exposto: só a API fala com ele (ADR 004). |
 | Automação | Trabalho recorrente ou agendado ("todo dia às 7h...") que o Hermes guarda e dispara pelo cron dele, em vez de virar entidade da agenda. |
 | Rota de automação | Ramo do roteador por processo (ADR 003) que entrega ao Hermes o pedido classificado como automação e devolve a resposta ao mesmo chat. |

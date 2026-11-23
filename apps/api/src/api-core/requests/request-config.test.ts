@@ -2,9 +2,9 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import {
-  dispatchConfig, linkConfig, loadAgentDefinition, parseAgentMarkdown, renderAgentPrompt, stepLabel, uiConfig,
+  dispatchConfig, loadAgentDefinition, parseAgentMarkdown, renderAgentPrompt, stepLabel, uiConfig,
 } from "./request-config";
-import { DISPATCH_STEPS, STEP_AGENTS } from "./request-steps";
+import { DISPATCH_ROUTES, LEGACY_STEP_AGENTS, STEP_AGENTS } from "./request-steps";
 
 const valid = `---
 name: demo
@@ -36,13 +36,16 @@ describe("agentes em .md", () => {
     expect(files).not.toContain("fallback.md");
   });
 
-  test("os agentes de criacao nao consultam nem criam fora do seu papel", () => {
-    for (const agent of ["task-create", "artifact-create", "recurring-task-create"]) {
-      const text = loadAgentDefinition(agent).template;
-      expect(text).toMatch(/NUNCA faça perguntas/);
-      expect(text).not.toMatch(/query_data|SELECT /i);
+  test("o agente unico de escrita nunca pergunta, e os agentes de criacao e de series que ele substituiu sairam", () => {
+    const text = loadAgentDefinition("entity").template;
+    expect(text).toMatch(/NUNCA faça perguntas/);
+    for (const list of ["tasks", "artifacts", "series", "taskEdits", "artifactEdits", "seriesEdits", "query"]) {
+      expect(text).toContain(`"${list}"`);
     }
-    expect(loadAgentDefinition("task-create").template).toMatch(/não cria artefatos/);
+    const files = readdirSync(join(__dirname, "agents"));
+    for (const agent of ["task-create", "artifact-create", "recurring-task-create", "recurring-task-edit"]) {
+      expect(files).not.toContain(`${agent}.md`);
+    }
   });
 
   test("renderiza so com os placeholders declarados", () => {
@@ -64,22 +67,18 @@ describe("agentes em .md", () => {
 });
 
 describe("parametros do JEV e textos predefinidos em .json", () => {
-  test("cada pergunta de despacho tem criterios e todo passo roteavel tem a sua pergunta", () => {
+  test("o despacho tem so as tres perguntas de sim ou nao, uma por destino", () => {
+    expect(Object.keys(dispatchConfig.questions)).toEqual(["query", "write", "config"]);
+    expect(Object.keys(dispatchConfig.questions).sort()).toEqual([...DISPATCH_ROUTES].sort());
     for (const [name, question] of Object.entries(dispatchConfig.questions)) {
-      expect(Object.keys(question.criteria).length, name).toBeGreaterThanOrEqual(2);
+      expect(Object.keys(question.criteria), name).toEqual(["yes", "no"]);
     }
-    for (const question of Object.keys(DISPATCH_STEPS)) expect(dispatchConfig.questions[question]).toBeDefined();
-    expect(Object.keys(dispatchConfig.questions)).toEqual(expect.arrayContaining([
-      "task_create", "task_edit", "artifact_create", "artifact_edit", "recurring_task_create", "recurring_task_edit", "query",
-    ]));
-    expect(Object.keys(dispatchConfig.questions).sort()).toEqual(Object.keys(DISPATCH_STEPS).sort());
-    expect(dispatchConfig.minCertainty).toBe(0.92);
-    expect(linkConfig.minCertainty).toBe(0.92);
+    expect(dispatchConfig.minCertainty).toBe(0.7);
   });
 
-  test("todo agente tem rotulo predefinido (e o `fallback` antigo, para os pedidos que ainda o tem)", () => {
-    for (const agent of [...STEP_AGENTS, "fallback"]) expect(uiConfig.steps[agent]).toBeTruthy();
-    expect(stepLabel("task-create")).toBe("Criando tarefas");
-    expect(Object.keys(uiConfig.steps).sort()).toEqual([...STEP_AGENTS, "fallback"].sort());
+  test("todo agente tem rotulo predefinido, e os que sairam tambem, para os pedidos antigos", () => {
+    for (const agent of [...STEP_AGENTS, ...LEGACY_STEP_AGENTS]) expect(uiConfig.steps[agent]).toBeTruthy();
+    expect(stepLabel("entity")).toBe("Criando e atualizando registros");
+    expect(Object.keys(uiConfig.steps).sort()).toEqual([...STEP_AGENTS, ...LEGACY_STEP_AGENTS].sort());
   });
 });

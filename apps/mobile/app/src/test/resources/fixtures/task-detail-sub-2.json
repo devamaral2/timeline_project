@@ -1,0 +1,21 @@
+{
+  "id": "task-sub-2",
+  "actor": "agent",
+  "kind": "build_request",
+  "status": "queued",
+  "priority": "medium",
+  "name": "Reservar a sala",
+  "description": "",
+  "startedAt": "2026-09-14T14:57:00.000Z",
+  "longRunning": false,
+  "notifyOffsetsMinutes": [],
+  "tags": [],
+  "artifactTypes": [],
+  "parentTaskId": "task-1",
+  "revision": 1,
+  "createdAt": "2026-09-01T12:00:00.000Z",
+  "updatedAt": "2026-09-01T12:00:00.000Z",
+  "artifacts": [],
+  "subtaskIds": [],
+  "requests": []
+}

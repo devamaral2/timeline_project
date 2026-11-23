@@ -1,0 +1,20 @@
+{
+  "id": "req-ed",
+  "kind": "request",
+  "route": "steps",
+  "status": "done",
+  "title": "Editar a tarefa",
+  "createdAt": "2026-09-14T14:48:00.000Z",
+  "updatedAt": "2026-09-14T14:49:00.000Z",
+  "steps": [],
+  "entities": [
+    {
+      "kind": "task",
+      "id": "task-1",
+      "name": "Reunião de planejamento",
+      "operation": "update",
+      "linkedTo": []
+    }
+  ],
+  "message": "Pronto: movi a reunião para as 15h."
+}

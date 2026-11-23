@@ -1,12 +1,19 @@
 "use client";
 
-import type { AgentTaskStatus, AgentTraceDto, RequestDto, RequestScreenContext } from "@repo/contracts";
+import type { AgentTraceDto, ModelOptionsDto, ModelProvider, ModelSelection, RequestDto, RequestScreenContext } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
 import { ApiRequestError } from "@/lib/api/client-request";
-import { HermesOffError, cancelRequest, getRequest, listRequests, sendHermesMessage, startRequest } from "@/lib/api/requests";
-import { parseChatCommand } from "./chat-mode-command";
+import {
+  HermesOffError, ModelOffError, cancelRequest, getRequest, listRequests, sendHermesMessage, sendModelMessage, startRequest,
+} from "@/lib/api/requests";
+import { type ChatAgent, parseChatCommand } from "./chat-mode-command";
 import { type HermesStep, hermesStepsOf } from "./hermes-steps";
+import { modelName, providerName, providerOf, providerOffText } from "./model-selection";
+import {
+  chooseModelProvider, currentModelOptions, currentModelSelection, loadModelOptions, modelSelectionForRequest,
+  useModelSelection,
+} from "./model-selection-store";
 import { operationId } from "@/lib/api/operation-id";
 
 /** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (tarefa ou nota). */
@@ -17,12 +24,13 @@ export interface AgentChatEntityRef {
   label?: string;
 }
 
-/** O rastro sem o `route`: o da rota por passos e o do Hermes falam a mesma forma. */
+/** O rastro sem o `route`: o da rota por passos, o do Hermes e o do modelo falam a mesma forma. */
 export type AgentTraceView = Omit<AgentTraceDto, "route">;
 
 export type AgentChatMessage =
   | { id: string; role: "user"; text: string; failed?: boolean }
-  | { id: string; role: "assistant"; text: string; entities: AgentChatEntityRef[] }
+  /** `model` e a escolha que atendeu a resposta (modo modelo): a conversa a mostra no rodape da resposta. */
+  | { id: string; role: "assistant"; text: string; entities: AgentChatEntityRef[]; model?: ModelSelection }
   /**
    * `messageId` é o id da mensagem que falhou (o que a API guarda como `clientMessageId`). `reuseMessageId`
    * diz se "Tentar de novo" reenvia com o mesmo id (a API devolve o pedido que já aceitou) ou abre um novo.
@@ -30,7 +38,10 @@ export type AgentChatMessage =
   | { id: string; role: "error"; text: string; retryText: string; messageId: string; reuseMessageId: boolean }
   /** A caixa de processo (ADR 003): `null` ate o servidor responder o primeiro estado. Nao entra no historico. */
   | { id: string; role: "process"; request: RequestDto | null }
-  /** Os passos do Hermes (ferramentas e pensamentos), ao vivo e depois do fim do turno. Nao entra no historico. */
+  /**
+   * Os passos do Hermes ou do modelo (ferramentas e pensamentos), ao vivo e depois do fim do turno. Nao entra no
+   * historico.
+   */
   | { id: string; role: "hermes-steps"; steps: HermesStep[]; running: boolean };
 
 /**
@@ -41,7 +52,7 @@ export interface AgentChatTrace {
   /** O id da mensagem do usuario. */
   id: string;
   request: string;
-  route: "steps" | "hermes";
+  route: "steps" | ChatAgent;
   running: boolean;
   trace: AgentTraceView | null;
 }
@@ -80,10 +91,27 @@ interface UseAgentChatOptions {
 const PROCESS_TIMEOUT_MS = 180_000;
 /** Falhas seguidas ao consultar o processo antes de desistir de acompanhar. */
 const PROCESS_POLL_FAILURES = 5;
-const HERMES_DISABLED_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION).";
+const LEAVE_TEXT = "De volta ao assistente da agenda.";
+
+const HERMES_OFF_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION).";
 const HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda.";
-const HERMES_LEAVE_TEXT = "De volta ao assistente da agenda.";
-const HERMES_PENDING_LABEL = "Falando com o Hermes";
+const MODEL_OFF_TEXT = "O modo modelo está desligado neste ambiente.";
+
+/** "Falando com o Hermes" ou "Falando com Sonnet 5.5": o que o chat diz enquanto espera a resposta do agente. */
+function pendingLabelOf(agent: ChatAgent, selection: ModelSelection | undefined, options: ModelOptionsDto | null): string {
+  if (agent === "hermes") return "Falando com o Hermes";
+  return selection ? `Falando com ${modelName(options, selection)}` : "Falando com o modelo";
+}
+
+/** O que o modo modelo diz ao entrar: o nome do modelo e o do provedor, e como voltar. */
+function modelEnterText(options: ModelOptionsDto, selection: ModelSelection): string {
+  return `Agora você está falando com ${modelName(options, selection)} (${providerName(options, selection.provider)}). Escreva /app para voltar ao assistente da agenda.`;
+}
+
+/** A rota do pedido e a de um agente de modo: o pedido nao tem passos gravados e a resposta vem inteira. */
+function agentOf(route: RequestDto["route"]): ChatAgent | null {
+  return route === "hermes" || route === "model" ? route : null;
+}
 
 const ERROR_TEXTS: Record<ChatFailureCode, string> = {
   invalid_input: "Não consegui ler essa mensagem. Tente escrever de outro jeito.",
@@ -115,11 +143,11 @@ export function isRequestOpen(request: Pick<RequestDto, "status">): boolean {
   return request.status === "queued" || request.status === "running" || request.status === "waiting";
 }
 
-/** Um pedido aberto que o chat mostra: a rota por passos ou a do Hermes. */
-type ChatRouteRequest = RequestDto & { route: "steps" | "hermes" };
+/** Um pedido aberto que o chat mostra: a rota por passos, a do Hermes ou a do modelo. */
+type ChatRouteRequest = RequestDto & { route: "steps" | ChatAgent };
 
 function isOpenChatRequest(request: RequestDto): request is ChatRouteRequest {
-  return (request.route === "steps" || request.route === "hermes") && isRequestOpen(request);
+  return (request.route === "steps" || agentOf(request.route) !== null) && isRequestOpen(request);
 }
 
 /** Por que o envio do pedido falhou, do ponto de vista do chat. */
@@ -135,8 +163,11 @@ export function startFailureCode(error: unknown): ChatFailureCode {
 }
 
 /**
- * A conversa da agenda. Cada mensagem vira um pedido na API (rota por passos) ou, com `/hermes`, vai ao Hermes
- * (ADR 004). O historico e so do que esta na tela: nada e recarregado do servidor.
+ * A conversa da agenda. Cada mensagem vira um pedido na API (rota por passos) ou, com `/hermes` ou um comando de modelo
+ * (`/modelo`, `/claude`, `/openai`, `/openrouter`), vai ao Hermes (ADR 004) ou ao modelo escolhido (ADR 0019). O historico e so do que esta na tela: nada e recarregado do servidor.
+ *
+ * A escolha de provedor, modelo e esforco e a da pagina (`model-selection-store`): o campo a mostra sempre e ela vai
+ * em todo pedido que usa modelo, o da rota por passos e o do modo modelo. So o Hermes responde com o modelo dele.
  */
 export function useAgentChat({
   userId,
@@ -145,13 +176,15 @@ export function useAgentChat({
   processPollMs = 1000,
 }: UseAgentChatOptions) {
   const disposedRef = useRef(false);
-  /** `/hermes` liga o modo: as mensagens seguintes vao ao Hermes ate `/app`, ou ate comecar de novo. */
-  const hermesModeRef = useRef(false);
-  const [hermesMode, setHermesMode] = useState(false);
-  const commitHermesMode = useCallback((next: boolean) => {
-    hermesModeRef.current = next;
-    setHermesMode(next);
+  /** `/hermes` ou um comando de modelo liga o modo: as mensagens seguintes vao ao agente ate `/app`, ou ate comecar de novo. */
+  const agentModeRef = useRef<ChatAgent | null>(null);
+  const [agentMode, setAgentMode] = useState<ChatAgent | null>(null);
+  const commitAgentMode = useCallback((next: ChatAgent | null) => {
+    agentModeRef.current = next;
+    setAgentMode(next);
   }, []);
+  /** O que o servidor oferece e a escolha atual: os mesmos em todo campo da pagina, guardados no aparelho. */
+  const model = useModelSelection();
   /** O primeiro pedido da conversa: toda mensagem seguinte o manda como `sessionId`. */
   const sessionRef = useRef<string | undefined>(undefined);
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
@@ -202,18 +235,20 @@ export function useAgentChat({
   /** Comecar de novo e estado local: limpa a tela, a sessao e volta ao assistente da agenda. */
   const startNewConversation = useCallback(() => {
     if (pendingRef.current) return;
-    commitHermesMode(false);
+    commitAgentMode(null);
     commitPending(null);
+    // O seletor continua no campo; as opcoes sao lidas de novo, por tras, para a conversa nova.
+    void loadModelOptions(true).catch(() => undefined);
     followingRef.current.clear();
     sessionRef.current = undefined;
     messagesRef.current = [];
     setMessages([]);
     tracesRef.current = [];
     setTraces([]);
-  }, [commitHermesMode, commitPending]);
+  }, [commitAgentMode, commitPending]);
 
   const fail = useCallback(
-    /** `text` troca o texto do codigo pelo que o servidor escreveu (o aviso do Hermes desligado). */
+    /** `text` troca o texto do codigo pelo que o servidor escreveu (o aviso do agente desligado). */
     (id: string, code: ChatFailureCode, text?: string) => {
       if (!followingRef.current.has(id)) return;
       followingRef.current.delete(id);
@@ -251,25 +286,26 @@ export function useAgentChat({
   /**
    * Mostra o estado do pedido na caixa de processo e no rastro da aba "Processo". O pedido por passos que o
    * roteador nao reconhece vai ao Hermes (o fallback e sempre ele): a caixa de processo sai e a conversa segue
-   * como no `/hermes`, com os passos do rastro e a resposta.
+   * como no `/hermes`, com os passos do rastro e a resposta. O modo modelo segue do mesmo jeito.
    */
   const applyView = useCallback(
     (id: string, view: RequestDto) => {
       const processId = `${id}-process`;
+      const agent = agentOf(view.route);
       commitMessages((current) =>
-        view.route === "hermes"
+        agent
           ? current.filter((message) => message.id !== processId)
           : current.map((message) => (message.id === processId ? { id: processId, role: "process", request: view } : message)));
-      const route = view.route === "hermes" ? "hermes" : "steps";
+      const route = agent ?? "steps";
       commitTraces((current) =>
         current.map((entry) =>
           entry.id === id ? { ...entry, route, running: isRequestOpen(view), trace: view.trace ?? null } : entry));
-      if (view.route === "hermes" && isRequestOpen(view) && pendingRef.current?.id === id
-        && pendingRef.current.label !== HERMES_PENDING_LABEL) {
-        commitPending({ ...pendingRef.current, label: HERMES_PENDING_LABEL });
+      const label = agent ? pendingLabelOf(agent, view.model ?? currentModelSelection(), currentModelOptions()) : undefined;
+      if (label && isRequestOpen(view) && pendingRef.current?.id === id && pendingRef.current.label !== label) {
+        commitPending({ ...pendingRef.current, label });
       }
-      // O Hermes não grava passos: os pensamentos e as ferramentas vêm do rastro, ao vivo e depois do fim.
-      if (view.route === "hermes") {
+      // O Hermes e o modelo não gravam passos: os pensamentos e as ferramentas vêm do rastro, ao vivo e depois do fim.
+      if (agent) {
         const steps = hermesStepsOf(view.trace?.entries);
         if (steps.length > 0) {
           const stepsId = `${id}-steps`;
@@ -291,9 +327,12 @@ export function useAgentChat({
       if (view.status === "done") {
         followingRef.current.delete(id);
         if (pendingRef.current?.id === id) commitPending(null);
-        if (view.route === "hermes") {
-          // A resposta do Hermes entra na conversa; ele pode ter mexido em qualquer registro, então a agenda atualiza.
-          commitMessages((current) => [...current, { id: `${id}-answer`, role: "assistant", text: view.message ?? "", entities: [] }]);
+        if (agentOf(view.route)) {
+          // A resposta do agente entra na conversa; ele pode ter mexido em qualquer registro, então a agenda atualiza.
+          commitMessages((current) => [
+            ...current,
+            { id: `${id}-answer`, role: "assistant", text: view.message ?? "", entities: [], ...(view.model ? { model: view.model } : {}) },
+          ]);
           onEntitiesChangedRef.current?.();
           return;
         }
@@ -303,8 +342,8 @@ export function useAgentChat({
       }
       // Um pedido que falhou ou foi cancelado pode ter gravado algo antes de parar.
       if (view.entities.length > 0) onEntitiesChangedRef.current?.();
-      // O Hermes desligado: o servidor escreve o aviso, que diz mais que o texto do codigo.
-      const notice = view.route === "hermes" && view.errorCode === "unavailable" ? view.message : undefined;
+      // O agente desligado: o servidor escreve o aviso, que diz mais que o texto do codigo.
+      const notice = agentOf(view.route) && view.errorCode === "unavailable" ? view.message : undefined;
       fail(id, view.status === "cancel" ? "cancelled" : (view.errorCode ?? "internal"), notice);
     },
     [applyView, commitMessages, commitPending, fail],
@@ -351,19 +390,22 @@ export function useAgentChat({
 
   /**
    * Abre o pedido na API (com o id da mensagem como `clientMessageId` e, depois da primeira, o da primeira
-   * mensagem como `sessionId`) e o acompanha ate o fim.
+   * mensagem como `sessionId`) e o acompanha ate o fim. O pedido leva a escolha de modelo que o campo mostra: os
+   * agentes dos passos rodam com ela. Sem o modo modelo neste ambiente, vai sem escolha.
    */
   const runRequest = useCallback(
     async (id: string, text: string): Promise<void> => {
       if (!userId) return;
       let requestId: string;
       try {
+        const selection = await modelSelectionForRequest();
         requestId = await startRequest({
           userId,
           text,
           ...(context ? { context } : {}),
           ...(sessionRef.current ? { sessionId: sessionRef.current } : {}),
           clientMessageId: id,
+          ...(selection ? { model: selection } : {}),
         });
       } catch (error) {
         fail(id, startFailureCode(error));
@@ -385,27 +427,37 @@ export function useAgentChat({
   );
 
   /**
-   * `/hermes <mensagem>`: a mensagem vira um pedido na rota do Hermes, com o id da mensagem (reenviar não abre
-   * outro) e a sessão. O pedido é acompanhado como os demais: os passos vêm do rastro e a resposta, em
-   * `message`. Com o Hermes desligado a API responde não encontrado: o chat avisa e sai do modo.
+   * A mensagem a um agente de modo: vira um pedido na rota do agente, com o id da mensagem (reenviar não abre
+   * outro) e a sessão; no modo modelo, com a escolha atual de provedor, modelo e esforço. O pedido é acompanhado
+   * como os demais: os passos vêm do rastro e a resposta, em `message`. Com o agente desligado a API responde não
+   * encontrado: o chat avisa e sai do modo.
    */
-  const runHermes = useCallback(
-    async (id: string, text: string): Promise<void> => {
+  const runAgent = useCallback(
+    async (agent: ChatAgent, id: string, text: string): Promise<void> => {
       if (!userId) return;
       let request: RequestDto;
       try {
-        request = await sendHermesMessage({
+        const body = {
           userId,
           text,
           clientMessageId: id,
           ...(sessionRef.current ? { sessionId: sessionRef.current } : {}),
-        });
+        };
+        if (agent === "model") {
+          await loadModelOptions();
+          const selection = currentModelSelection();
+          if (!selection) throw new ModelOffError();
+          request = await sendModelMessage({ ...body, model: selection });
+        } else {
+          request = await sendHermesMessage(body);
+        }
       } catch (error) {
-        if (error instanceof HermesOffError) {
-          commitHermesMode(false);
+        if (error instanceof (agent === "model" ? ModelOffError : HermesOffError)) {
+          commitAgentMode(null);
           followingRef.current.delete(id);
           commitPending(null);
-          commitMessages((current) => [...current, { id: `${id}-hermes`, role: "assistant", text: HERMES_DISABLED_TEXT, entities: [] }]);
+          const disabledText = agent === "model" ? MODEL_OFF_TEXT : HERMES_OFF_TEXT;
+          commitMessages((current) => [...current, { id: `${id}-${agent}`, role: "assistant", text: disabledText, entities: [] }]);
           return;
         }
         fail(id, startFailureCode(error));
@@ -414,11 +466,57 @@ export function useAgentChat({
       sessionRef.current ??= request.id;
       knownRequestsRef.current.add(request.id);
 
-      showTrace({ id, request: text, route: "hermes", running: true, trace: null });
-      commitPending({ id, label: HERMES_PENDING_LABEL, requestId: request.id });
+      showTrace({ id, request: text, route: agent, running: true, trace: null });
+      const label = pendingLabelOf(agent, request.model ?? currentModelSelection(), currentModelOptions());
+      commitPending({ id, label, requestId: request.id });
       await followRequest(id, request.id);
     },
-    [commitHermesMode, commitMessages, commitPending, fail, followRequest, showTrace, userId],
+    [commitAgentMode, commitMessages, commitPending, fail, followRequest, showTrace, userId],
+  );
+
+  /**
+   * `/modelo`, `/claude`, `/openai` ou `/openrouter`: le as opcoes do servidor, escolhe o provedor do comando (se ele
+   * tem chave aqui), liga o modo e, havendo mensagem depois do comando, a envia. Sem provedor com chave o chat avisa
+   * e fica fora do modo; com o provedor do comando desligado, avisa e deixa o modo como estava.
+   */
+  const enterModelMode = useCallback(
+    async (id: string, provider: ModelProvider | null, text: string | null): Promise<void> => {
+      let options: ModelOptionsDto;
+      try {
+        // Quem pede o modo quer saber agora se ele existe: sem opcoes lidas, pergunta de novo ao servidor.
+        options = await loadModelOptions(currentModelOptions() === null);
+      } catch (error) {
+        if (error instanceof ModelOffError) {
+          commitAgentMode(null);
+          followingRef.current.delete(id);
+          commitPending(null);
+          commitMessages((current) => [...current, { id: `${id}-notice`, role: "assistant", text: MODEL_OFF_TEXT, entities: [] }]);
+          return;
+        }
+        fail(id, startFailureCode(error));
+        return;
+      }
+      if (disposedRef.current || !followingRef.current.has(id)) return;
+      if (provider && !providerOf(options, provider)) {
+        followingRef.current.delete(id);
+        commitPending(null);
+        commitMessages((current) => [...current, { id: `${id}-notice`, role: "assistant", text: providerOffText(provider), entities: [] }]);
+        return;
+      }
+      const chosen = provider ? chooseModelProvider(provider) : currentModelSelection();
+      commitAgentMode("model");
+      if (text === null) {
+        followingRef.current.delete(id);
+        commitPending(null);
+        commitMessages((current) => [
+          ...current,
+          { id: `${id}-notice`, role: "assistant", text: chosen ? modelEnterText(options, chosen) : MODEL_OFF_TEXT, entities: [] },
+        ]);
+        return;
+      }
+      await runAgent("model", id, text);
+    },
+    [commitAgentMode, commitMessages, commitPending, fail, runAgent],
   );
 
   /** Envia uma mensagem com o id dado (o da mensagem nova, ou o de uma mensagem que falhou ao ser reenviada). */
@@ -431,31 +529,33 @@ export function useAgentChat({
       const notice = (text: string) => ({ id: `${id}-notice`, role: "assistant" as const, text, entities: [] });
 
       // `/hermes` sozinho so liga o modo; `/app` o desliga. Nenhum dos dois vai ao servidor.
-      if (command?.kind === "leave" && hermesModeRef.current) {
-        commitHermesMode(false);
-        commitMessages((current) => [...current, { id, role: "user", text: trimmed }, notice(HERMES_LEAVE_TEXT)]);
+      if (command?.kind === "leave" && agentModeRef.current) {
+        commitAgentMode(null);
+        commitMessages((current) => [...current, { id, role: "user", text: trimmed }, notice(LEAVE_TEXT)]);
         return true;
       }
-      if (command?.kind === "hermes" && command.text === null) {
-        commitHermesMode(true);
+      if (command?.kind === "agent" && command.agent === "hermes" && command.text === null) {
+        commitAgentMode("hermes");
         commitMessages((current) => [...current, { id, role: "user", text: trimmed }, notice(HERMES_ENTER_TEXT)]);
         return true;
       }
-      if (command?.kind === "hermes") commitHermesMode(true);
+      if (command?.kind === "agent" && command.agent === "hermes") commitAgentMode("hermes");
 
       commitMessages((current) => [...current, { id, role: "user", text: trimmed }]);
       followingRef.current.add(id);
       commitPending({ id });
-      const hermesText = command?.kind === "hermes" ? command.text : hermesModeRef.current ? trimmed : null;
+      const agent = agentModeRef.current;
       const run = () => {
-        if (hermesText !== null) void runHermes(id, hermesText);
+        if (command?.kind === "agent" && command.agent === "model") void enterModelMode(id, command.provider, command.text);
+        else if (command?.kind === "agent") void runAgent("hermes", id, command.text ?? trimmed);
+        else if (agent) void runAgent(agent, id, trimmed);
         else void runRequest(id, trimmed);
       };
       if (recoveringRef.current) deferredRef.current.push(run);
       else run();
       return true;
     },
-    [commitHermesMode, commitMessages, commitPending, runHermes, runRequest, userId],
+    [commitAgentMode, commitMessages, commitPending, enterModelMode, runAgent, runRequest, userId],
   );
 
   const send = useCallback((text: string) => dispatch(text, operationId()), [dispatch]);
@@ -493,7 +593,7 @@ export function useAgentChat({
 
   /**
    * Ao abrir o chat: lê a lista de pedidos e volta a acompanhar os que ainda estão na fila, executando ou
-   * aguardando (rota por passos ou Hermes), como um pedido recém-enviado. Não repete o que a conversa já mostra
+   * aguardando (rota por passos, Hermes ou modelo), como um pedido recém-enviado. Não repete o que a conversa já mostra
    * ou enviou, nem o que já terminou. Um envio feito enquanto a lista é lida espera o fim dela: assim o pedido
    * enviado não aparece na lista sem o id que a tela já conhece. Sem lista (rede), a conversa segue.
    */
@@ -531,7 +631,8 @@ export function useAgentChat({
       ]);
       const newest = open[open.length - 1];
       if (newest && !pendingRef.current) {
-        const label = newest.route === "hermes" ? "Falando com o Hermes" : "Realizando processos";
+        const agent = agentOf(newest.route);
+        const label = agent ? pendingLabelOf(agent, newest.model ?? currentModelSelection(), currentModelOptions()) : "Realizando processos";
         commitPending({ id: newest.id, label, requestId: newest.id });
       }
       for (const request of open) void followRequest(request.id, request.id);
@@ -547,8 +648,13 @@ export function useAgentChat({
     traces,
     ready: Boolean(userId),
     recover,
-    /** `true` enquanto as mensagens vao ao Hermes (`/hermes`); `/app` volta ao assistente da agenda. */
-    hermesMode,
+    /** O agente que recebe as mensagens (`/hermes`, ou o modelo com `/modelo`, `/claude`...), ou `null` no assistente da agenda (`/app`). */
+    agentMode,
+    /**
+     * A escolha de modelo do campo: o que o servidor oferece, a escolha atual e como trocá-la (cada troca vale já,
+     * fica no aparelho e vai no próximo pedido, no assistente da agenda e no modo modelo).
+     */
+    model,
     send,
     retry,
     cancel,

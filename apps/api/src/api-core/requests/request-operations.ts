@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, type OnModuleInit } from "@nestjs/common";
 import type {
-  RequestDto, StartEditRequestInput, StartHermesRequestInput, StartRequestInput, StartVoiceRequestInput,
+  RequestDto, StartModelRequestInput, StartEditRequestInput, StartHermesRequestInput, StartRequestInput,
+  StartVoiceRequestInput,
 } from "@repo/contracts";
 import type { FoodGenerationPayload } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
@@ -8,18 +9,19 @@ import { jobErrorCode, type JobFailureHandler, type JobsService } from "../../in
 import { FOOD_GENERATION_JOB } from "../../infrastructure/persistence/artifacts/repositories/food-generation";
 import { assertConfigOwner } from "../agent/config/agent-config-access";
 import type { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
+import type { ModelTurnWorker } from "./model-turn-worker";
 import type { HermesTurnWorker } from "./hermes-turn-worker";
 import { loadAgentDefinition, uiConfig } from "./request-config";
-import type { RequestCreateWorker } from "./request-create-worker";
 import type { RequestDispatcher } from "./request-dispatcher";
 import type { RequestEditTargetWorker } from "./request-edit-target-worker";
 import type { RequestEditWorker } from "./request-edit-worker";
+import type { RequestEntityWorker } from "./request-entity-worker";
 import { requestErrorCode } from "./request-errors";
 import type { RequestFinalizer } from "./request-finalizer";
 import type { RequestQueryWorker } from "./request-query-worker";
 import type { StepPayload } from "./request-step-common";
 import {
-  CREATE_AGENTS, EDIT_AGENTS, isAgent, parseFallbackCommand, REQUEST_JOBS, STEP_AGENTS, TARGET_EDIT_AGENTS,
+  ENTITY_AGENT, ENTITY_EDIT_AGENTS, isAgent, parseFallbackCommand, REQUEST_JOBS, STEP_AGENTS, TARGET_EDIT_AGENTS,
 } from "./request-steps";
 import type { RequestRecord, RequestStore } from "./request-store";
 import type { RequestTargetEditWorker } from "./request-target-edit-worker";
@@ -31,13 +33,16 @@ export const MAX_REQUEST_LIST_LIMIT = 50;
 
 export interface RequestWorkers {
   dispatcher: RequestDispatcher;
-  create: RequestCreateWorker;
+  /** O agente unico de escrita do chat. */
+  entity: RequestEntityWorker;
+  /** A edicao de uma tarefa ou de um artefato de texto aberto na tela de detalhe. */
   edit: RequestEditWorker;
   query: RequestQueryWorker;
   finalizer: RequestFinalizer;
   editTarget: RequestEditTargetWorker;
   targetEdit: RequestTargetEditWorker;
   hermes: HermesTurnWorker;
+  model: ModelTurnWorker;
   voice: VoiceTaskWorker;
   food: GenerateFoodUseCase;
 }
@@ -73,6 +78,11 @@ export class RequestOperations implements OnModuleInit {
         signal: context.signal, progress: (value) => context.progress(value),
       });
     }, { onFailure: this.failRequest() });
+    this.jobs.register(REQUEST_JOBS.model, async (raw, context) => {
+      await workers.model.run((raw as { requestId: string }).requestId, {
+        signal: context.signal, progress: (value) => context.progress(value),
+      });
+    }, { onFailure: this.failRequest() });
     this.jobs.register(REQUEST_JOBS.voice, async (raw) => {
       await workers.voice.run((raw as { requestId: string }).requestId);
     }, { onFailure: this.failRequest() });
@@ -91,8 +101,8 @@ export class RequestOperations implements OnModuleInit {
     const step = (await this.store.steps(payload.requestId)).find((candidate) => candidate.id === payload.stepId);
     if (!step) return;
     const { agent } = step;
-    if (isAgent(CREATE_AGENTS, agent)) return this.workers.create.run(agent, payload, signal);
-    if (isAgent(EDIT_AGENTS, agent)) return this.workers.edit.run(agent, payload, signal);
+    if (agent === ENTITY_AGENT) return this.workers.entity.run(payload, signal);
+    if (isAgent(ENTITY_EDIT_AGENTS, agent)) return this.workers.edit.run(agent, payload, signal);
     if (isAgent(TARGET_EDIT_AGENTS, agent)) return this.workers.targetEdit.run(agent, payload, signal);
     if (agent === "query") return this.workers.query.run(payload, signal);
     throw new Error(`Step agent without a worker: ${agent}`);
@@ -113,7 +123,10 @@ export class RequestOperations implements OnModuleInit {
     };
   }
 
-  /** `POST /api/requests`: o pedido se desdobra em passos (ADR 003). */
+  /**
+   * `POST /api/requests`: o JEV de entrada decide o destino do pedido (consulta, escrita, modo modelo ou Hermes).
+   * Quem confere se o provedor e o modelo escolhidos valem neste ambiente e a rota, antes daqui.
+   */
   async start(input: StartRequestInput, actor: AuthenticatedUser): Promise<string> {
     this.assertSelf(input.userId, actor);
     await this.assertSession(input.sessionId, actor);
@@ -123,6 +136,8 @@ export class RequestOperations implements OnModuleInit {
       userId: input.userId, route: "steps", text: forced ?? input.text, context: input.context,
       sessionId: input.sessionId, clientMessageId: input.clientMessageId, job: REQUEST_JOBS.dispatch,
       ...(forced ? { forceFallback: true } : {}),
+      // A escolha do usuario fica no pedido: os agentes dos passos rodam com ela.
+      ...(input.model ? { model: input.model } : {}),
     });
     return requestId;
   }
@@ -140,6 +155,7 @@ export class RequestOperations implements OnModuleInit {
       context: { screen: "detail", entityId: input.entityId },
       target: { entityType: input.entityType, entityId: input.entityId },
       job: REQUEST_JOBS.editTarget,
+      ...(input.model ? { model: input.model } : {}),
     });
     return requestId;
   }
@@ -151,6 +167,21 @@ export class RequestOperations implements OnModuleInit {
     const { requestId } = await this.store.start({
       userId: input.userId, route: "hermes", text: input.text, sessionId: input.sessionId,
       clientMessageId: input.clientMessageId, job: REQUEST_JOBS.hermes,
+    });
+    return this.view(requestId, actor);
+  }
+
+  /**
+   * `POST /api/requests/model`: a mensagem vai para o modelo escolhido (ADR 0019). Com as ferramentas da agenda
+   * ligadas, o modelo age como o dono do MCP, entao so esse dono (`owner`) fala com ele; sem elas, cada um fala com o
+   * proprio. Quem confere se o provedor e o modelo valem neste ambiente e a rota, antes daqui.
+   */
+  async startModel(input: StartModelRequestInput, actor: AuthenticatedUser, owner?: string): Promise<RequestDto> {
+    if (input.userId !== actor.userId || (owner !== undefined && actor.userId !== owner)) throw new ForbiddenException();
+    await this.assertSession(input.sessionId, actor);
+    const { requestId } = await this.store.start({
+      userId: input.userId, route: "model", text: input.text, sessionId: input.sessionId,
+      clientMessageId: input.clientMessageId, model: input.model, job: REQUEST_JOBS.model,
     });
     return this.view(requestId, actor);
   }
@@ -187,7 +218,8 @@ export class RequestOperations implements OnModuleInit {
   }
 
   private async toDto(request: RequestRecord, detailed: boolean): Promise<RequestDto> {
-    const live = detailed && request.route === "hermes" && (request.status === "queued" || request.status === "running");
+    const live = detailed && (request.route === "hermes" || request.route === "model")
+      && (request.status === "queued" || request.status === "running");
     const [steps, entities, progress] = await Promise.all([
       this.store.steps(request.id),
       this.store.entities(request.id),

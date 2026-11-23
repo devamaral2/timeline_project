@@ -1,0 +1,40 @@
+[
+  {
+    "id": "food-global",
+    "name": "Maçã",
+    "schemaVersion": 1,
+    "global": true,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "food",
+    "data": {
+      "description": "Maçã",
+      "items": [
+        {
+          "id": "food-global-item",
+          "name": "Maçã",
+          "portion": "1 porção",
+          "approximateWeightGrams": 100,
+          "caloriesKcal": 52,
+          "macronutrients": {
+            "carbohydratesGrams": 20,
+            "proteinsGrams": 10,
+            "totalFatGrams": 5,
+            "fiberGrams": 2
+          }
+        }
+      ],
+      "totals": {
+        "totalCaloriesKcal": 52,
+        "totalProteinGrams": 10,
+        "totalCarbohydrateGrams": 20,
+        "totalFatGrams": 5,
+        "totalFiberGrams": 2
+      },
+      "nutritionSource": "model-estimate"
+    }
+  }
+]

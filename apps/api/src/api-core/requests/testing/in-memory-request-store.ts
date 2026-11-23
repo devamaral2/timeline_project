@@ -1,5 +1,5 @@
 import type { TokenUsage } from "../../agent/gateways/structured-completion.gateway";
-import type { RequestQueryResult } from "@repo/contracts";
+import type { ModelSelection, RequestQueryResult } from "@repo/contracts";
 import type { Artifact, Task } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
 import { requestTitleOf } from "../../../infrastructure/persistence/requests/postgres-request.store";
@@ -45,6 +45,7 @@ export class InMemoryRequestStore implements RequestStore {
       ...(input.target ? { target: input.target } : {}),
       ...(input.forceFallback ? { forceFallback: true } : {}),
       ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+      ...(input.model ? { model: { ...input.model } } : {}),
       createdAt: this.clock(), updatedAt: this.clock(), failedSteps: [],
     });
     this.jobs.push({ kind: input.job, requestId: id });
@@ -77,6 +78,13 @@ export class InMemoryRequestStore implements RequestStore {
       .filter((request) => request.userId === userId)
       .sort((left, right) => right.id.localeCompare(left.id))
       .slice(0, limit);
+  }
+
+  async sessionTurns(userId: string, sessionId: string, limit: number): Promise<RequestRecord[]> {
+    return [...this.requests.values()]
+      .filter((request) => request.userId === userId && (request.id === sessionId || request.sessionId === sessionId))
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .slice(-limit);
   }
 
   async steps(requestId: string): Promise<StepRecord[]> {
@@ -140,6 +148,15 @@ export class InMemoryRequestStore implements RequestStore {
     request.route = "hermes";
     request.dispatch = dispatch;
     this.jobs.push({ kind: REQUEST_JOBS.hermes, requestId });
+  }
+
+  async handToModel(requestId: string, dispatch: DispatchRecord, model: ModelSelection): Promise<void> {
+    const request = this.requests.get(requestId);
+    if (!request || !OPEN.has(request.status)) return;
+    request.route = "model";
+    request.model = model;
+    request.dispatch = dispatch;
+    this.jobs.push({ kind: REQUEST_JOBS.model, requestId });
   }
 
   private insertSteps(requestId: string, steps: readonly NewStep[]): void {

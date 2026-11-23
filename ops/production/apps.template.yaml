@@ -15,6 +15,9 @@ spec:
         - name: api
           image: braid-api:REPLACE_SHA
           imagePullPolicy: Never
+          env:
+            # Modo Claude do chat (ADR 0019): as ferramentas da agenda passam pelo MCP interno.
+            - {name: MCP_URL, value: http://mcp.braid.svc.cluster.local:3003/mcp}
           envFrom:
             - secretRef: {name: onepassword-loader}
           ports:
@@ -141,8 +144,9 @@ spec:
   ports:
     - {port: 3002, targetPort: 3002}
 ---
-# Servidor MCP do Hermes (ADR 004): so cria e le entidades do dono. Alcancavel
-# apenas pelo pod do Hermes (NetworkPolicy abaixo); sem Ingress.
+# Servidor MCP da agenda (ADR 004): cria, le e edita entidades do dono, sem apagar.
+# Alcancavel apenas pelos pods do Hermes e da API, que o usa no modo Claude do chat
+# (ADR 0019; NetworkPolicy abaixo); sem Ingress.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -198,9 +202,12 @@ spec:
   podSelector:
     matchLabels: {app: mcp}
   policyTypes: [Ingress]
+  # O nome ficou do tempo em que so o Hermes chegava aqui; renomear deixaria a politica antiga no cluster.
   ingress:
     - from:
         - podSelector:
             matchLabels: {app: hermes}
+        - podSelector:
+            matchLabels: {app: api}
       ports:
         - {protocol: TCP, port: 3003}

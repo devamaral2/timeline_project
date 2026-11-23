@@ -1,0 +1,14 @@
+{
+  "id": "R00000000000000000000000A1",
+  "kind": "request",
+  "route": "hermes",
+  "status": "failed",
+  "title": "Oi",
+  "createdAt": "2026-09-14T14:48:00.000Z",
+  "updatedAt": "2026-09-14T14:48:00.000Z",
+  "text": "Oi",
+  "steps": [],
+  "entities": [],
+  "message": "O Hermes não respondeu a tempo.",
+  "errorCode": "unavailable"
+}

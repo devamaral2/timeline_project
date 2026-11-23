@@ -27,6 +27,17 @@ const dispatch: DispatchRecord = {
   uncertain: [], unsupported: [],
 };
 
+/** O despacho de hoje: tres perguntas de sim ou nao e o destino que o unico `yes` escolheu. */
+const routed: DispatchRecord = {
+  model: "jev-latest", latencyMs: 180,
+  answers: {
+    query: { choice: "no", confidence: 0.96, probability: 0.98 },
+    write: { choice: "yes", confidence: 0.9, probability: 0.95 },
+    config: { choice: "no", confidence: 1, probability: 1 },
+  },
+  uncertain: [], route: "write", candidates: { shortlisted: 12, selected: 12 },
+};
+
 const steps: StepRecord[] = [
   step({
     id: "s1", agent: "task-create", expected: "one", status: "done",
@@ -144,6 +155,46 @@ describe("toRequestTrace", () => {
       { label: "Tokens de saída", value: "500" },
       { label: "Tokens no total", value: "2.500" },
     ]));
+  });
+
+  test("the routing shows the three answers, the destination they chose and how many candidates the write agent got", () => {
+    const write = toRequestTrace(
+      request({ dispatch: routed }), [step({ id: "s1", agent: "entity", expected: "many", status: "running" })], [],
+    );
+    expect(write.entries[1]).toMatchObject({ kind: "routing", summary: "Aciona: Criando e atualizando registros" });
+    expect(write.entries[1]?.fields).toEqual(expect.arrayContaining([
+      { label: "Destino", value: "criar ou atualizar registros" }, { label: "Candidatos de edição", value: "12" },
+    ]));
+    expect(write.entries[1]?.sections?.[0]?.text.split("\n")).toEqual([
+      "query: no · confiança 96% · probabilidade 98% · ignorada",
+      "write: yes · confiança 90% · probabilidade 95% · define o destino",
+      "config: no · confiança 100% · probabilidade 100% · ignorada",
+    ]);
+    // O agente de escrita nao recebe dica de quantidade: o campo so existe nos agentes antigos e na consulta.
+    expect(write.entries[2]?.fields?.map((field) => field.label)).not.toContain("Quantidade esperada");
+
+    const no = { choice: "no", confidence: 1, probability: 1 };
+    const agent = toRequestTrace(request({
+      route: "hermes", dispatch: { answers: { query: no, write: no, config: no }, uncertain: [] },
+    }), [], []).entries[1];
+    expect(agent).toMatchObject({ kind: "routing", summary: "Destino: tarefa de agente (Hermes)" });
+    expect(agent?.fields?.map((field) => field.label)).not.toContain("Motivo do fallback");
+
+    const config = toRequestTrace(request({
+      route: "model", dispatch: { answers: { query: no, write: no, config: { choice: "yes", confidence: 0.9, probability: 0.95 } }, uncertain: [], route: "config" },
+    }), [], []).entries[1];
+    expect(config).toMatchObject({ summary: "Destino: configuração do app (modo modelo)" });
+
+    const unsure = toRequestTrace(request({
+      route: "hermes",
+      dispatch: {
+        answers: { query: no, write: { choice: "yes", confidence: 0.4, probability: 0.7 }, config: no },
+        uncertain: ["write"], fallbackReason: "uncertain",
+      },
+    }), [], []).entries[1];
+    expect(unsure).toMatchObject({ summary: "Fallback: o roteador não teve certeza" });
+    expect(unsure?.fields?.map((field) => field.label)).not.toContain("Destino");
+    expect(unsure?.sections?.[0]?.text).toContain("write: yes · confiança 40% · probabilidade 70% · incerta");
   });
 
   test("a fallback routing explains why; an edit request without dispatch has no routing entry", () => {

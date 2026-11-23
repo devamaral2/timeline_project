@@ -1,0 +1,18 @@
+[
+  {
+    "id": "task-parent-2",
+    "actor": "human",
+    "kind": "common",
+    "status": "toDefine",
+    "priority": "medium",
+    "name": "Projeto do trimestre",
+    "description": "",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  }
+]

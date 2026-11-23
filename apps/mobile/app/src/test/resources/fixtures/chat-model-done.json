@@ -1,0 +1,64 @@
+{
+  "id": "R00000000000000000000000A1",
+  "kind": "request",
+  "route": "model",
+  "status": "done",
+  "title": "O que tenho amanhã?",
+  "createdAt": "2026-09-14T14:48:00.000Z",
+  "updatedAt": "2026-09-14T14:48:00.000Z",
+  "text": "O que tenho amanhã?",
+  "steps": [],
+  "entities": [],
+  "message": "Amanhã você tem dentista às 9h.",
+  "trace": {
+    "route": "model",
+    "status": "done",
+    "startedAt": "2026-09-14T14:48:00.000Z",
+    "durationMs": 3100,
+    "fields": [
+      {
+        "label": "Modelo",
+        "value": "claude-sonnet-5-5"
+      },
+      {
+        "label": "Provedor",
+        "value": "Anthropic"
+      }
+    ],
+    "entries": [
+      {
+        "id": "request",
+        "kind": "request",
+        "label": "Pedido",
+        "status": "done",
+        "startedAt": "2026-09-14T14:48:00.000Z"
+      },
+      {
+        "id": "thought-1",
+        "kind": "thought",
+        "label": "Pensou",
+        "status": "done",
+        "startedAt": "2026-09-14T14:48:00.400Z",
+        "sections": [
+          {
+            "title": "Raciocínio",
+            "text": "Ver a agenda de amanhã."
+          }
+        ]
+      },
+      {
+        "id": "toolu_1",
+        "kind": "tool",
+        "label": "Listou a agenda",
+        "source": "list_agenda_tasks",
+        "status": "done",
+        "startedAt": "2026-09-14T14:48:01.000Z"
+      }
+    ]
+  },
+  "model": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-5-5",
+    "effort": "medium"
+  }
+}

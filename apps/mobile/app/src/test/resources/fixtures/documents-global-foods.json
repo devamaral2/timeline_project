@@ -1,0 +1,26 @@
+[
+  {
+    "id": "doc-global-food",
+    "name": "Banana",
+    "schemaVersion": 1,
+    "global": true,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "food",
+    "data": {
+      "description": "Banana",
+      "items": [],
+      "totals": {
+        "totalCaloriesKcal": 612.5,
+        "totalProteinGrams": 38.2,
+        "totalCarbohydrateGrams": 64.05,
+        "totalFatGrams": 21.15,
+        "totalFiberGrams": 9
+      },
+      "nutritionSource": "model-estimate"
+    }
+  }
+]

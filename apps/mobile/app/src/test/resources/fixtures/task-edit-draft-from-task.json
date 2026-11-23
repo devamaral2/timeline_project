@@ -1,0 +1,282 @@
+[
+  {
+    "name": "full",
+    "task": {
+      "id": "task-1",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "high",
+      "name": "Reunião de planejamento",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [
+        1440,
+        30
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "artifactTypes": [],
+      "revision": 4,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Reunião de planejamento",
+      "status": "todo",
+      "priority": "high",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "2026-09-14",
+      "endTime": "19:20",
+      "description": "Pauta do trimestre.",
+      "location": "Rua Augusta, 100 - São Paulo",
+      "reminders": [
+        30,
+        1440
+      ],
+      "tags": [
+        "trabalho",
+        "saúde"
+      ],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  },
+  {
+    "name": "reference",
+    "task": {
+      "id": "task-9",
+      "actor": "human",
+      "kind": "common",
+      "priority": "medium",
+      "name": "Pagar o condomínio",
+      "description": "",
+      "startedAt": "2026-09-14T03:00:00.000Z",
+      "estimatedFinishAt": "2026-09-14T03:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 4,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Pagar o condomínio",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-14",
+      "startTime": "",
+      "endDate": "2026-09-14",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  },
+  {
+    "name": "long",
+    "task": {
+      "id": "task-7",
+      "actor": "human",
+      "kind": "common",
+      "status": "doing",
+      "priority": "medium",
+      "name": "Projeto longo",
+      "description": "",
+      "startedAt": "2026-09-01T12:00:00.000Z",
+      "estimatedFinishAt": "2026-11-30T12:00:00.000Z",
+      "longRunning": true,
+      "notifyOffsetsMinutes": [],
+      "tags": [
+        "trabalho"
+      ],
+      "artifactTypes": [],
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Projeto longo",
+      "status": "doing",
+      "priority": "medium",
+      "startDate": "2026-09-01",
+      "startTime": "09:00",
+      "endDate": "2026-11-30",
+      "endTime": "09:00",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [
+        "trabalho"
+      ],
+      "longRunning": true,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  },
+  {
+    "name": "done",
+    "task": {
+      "id": "task-4",
+      "actor": "human",
+      "kind": "common",
+      "status": "done",
+      "priority": "medium",
+      "name": "Enviar o relatório",
+      "description": "",
+      "startedAt": "2026-09-13T15:00:00.000Z",
+      "finishedAt": "2026-09-13T20:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Enviar o relatório",
+      "status": "done",
+      "priority": "medium",
+      "startDate": "2026-09-13",
+      "startTime": "12:00",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  },
+  {
+    "name": "bare",
+    "task": {
+      "id": "task-5",
+      "actor": "human",
+      "kind": "common",
+      "status": "toDefine",
+      "priority": "medium",
+      "name": "Ideia sem data",
+      "description": "",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Ideia sem data",
+      "status": "toDefine",
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  },
+  {
+    "name": "occurrence",
+    "task": {
+      "id": "task-occ",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Treino",
+      "description": "",
+      "startedAt": "2026-09-23T13:30:00.000Z",
+      "estimatedFinishAt": "2026-09-23T14:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "rec-1",
+        "occurrenceOn": "2026-09-23",
+        "detached": false,
+        "rule": {
+          "frequency": "weekly",
+          "interval": 1,
+          "byWeekday": 42,
+          "timeOfDay": "10:30",
+          "durationMinutes": 60,
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-21"
+        }
+      },
+      "revision": 6,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Treino",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-23",
+      "startTime": "10:30",
+      "endDate": "2026-09-23",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": []
+    }
+  }
+]

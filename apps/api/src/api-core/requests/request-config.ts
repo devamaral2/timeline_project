@@ -2,12 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import dispatchJson from "./jev/dispatch.json";
-import candidatesJson from "./jev/candidates.json";
-import linkJson from "./jev/link.json";
 import uiJson from "./ui.json";
+import { DISPATCH_ROUTES } from "./request-steps";
 
 /**
- * Ponto unico de leitura da configuracao da rota por passos. Os JSONs (parametros do JEV e textos)
+ * Ponto unico de leitura da configuracao dos pedidos do chat. Os JSONs (parametros do JEV e textos)
  * e os `.md` (um por agente) sao validados na carga: arquivo quebrado derruba o servidor ao subir,
  * e nao no meio do pedido de um usuario.
  */
@@ -26,21 +25,17 @@ const jevBase = {
   minCertainty: z.number().min(0).max(1),
 };
 
+const sameKeys = (record: Record<string, unknown>, keys: readonly string[]) =>
+  Object.keys(record).sort().join() === [...keys].sort().join();
+
 const dispatchSchema = z.object({
   ...jevBase,
-  uncertainPolicy: z.enum(["fallback", "ignore"]),
-  questions: z.record(z.string(), choiceQuestion),
-});
-
-const linkSchema = z.object({
-  ...jevBase,
-  maxCandidates: z.number().int().positive(),
-  question: z.object({ instructions: z.string().min(1), none: z.string().min(1) }),
-});
-
-const candidatesSchema = z.object({
-  ...jevBase,
-  question: z.object({ instructions: z.string().min(1), criteria: z.record(z.string(), z.string()) }),
+  /** Uma pergunta de sim ou nao por destino (`DISPATCH_ROUTES`). */
+  questions: z.record(z.string(), choiceQuestion.refine((question) => sameKeys(question.criteria, ["yes", "no"]), {
+    message: "toda pergunta de despacho responde yes ou no",
+  })).refine((questions) => sameKeys(questions, DISPATCH_ROUTES), {
+    message: `as perguntas de despacho devem ser ${DISPATCH_ROUTES.join(", ")}`,
+  }),
 });
 
 const uiSchema = z.object({
@@ -54,8 +49,6 @@ const uiSchema = z.object({
 });
 
 export const dispatchConfig = dispatchSchema.parse(dispatchJson);
-export const linkConfig = linkSchema.parse(linkJson);
-export const candidatesConfig = candidatesSchema.parse(candidatesJson);
 export const uiConfig = uiSchema.parse(uiJson);
 
 /** Valores que o servidor sabe preencher nos `.md`. */
