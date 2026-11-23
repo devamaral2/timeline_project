@@ -5,7 +5,7 @@ import { toolCallOf, type ModelConversation, type ModelConversationInput, type M
 const MAX_OUTPUT_TOKENS = 16_000;
 
 /** Os niveis do seletor na escala da OpenAI: Maximo e o `max` dos modelos GPT-6. */
-const EFFORTS: Record<ModelEffort, "low" | "medium" | "high" | "max"> = { low: "low", medium: "medium", high: "high", max: "max" };
+export const EFFORTS: Record<ModelEffort, "low" | "medium" | "high" | "max"> = { low: "low", medium: "medium", high: "high", max: "max" };
 
 type ResponsesClient = Pick<OpenAI, "responses">;
 
@@ -99,7 +99,7 @@ export class OpenAIProvider implements ModelProviderClient {
 }
 
 /** 400 por causa do resumo do raciocinio (organizacao nao verificada, ou modelo que nao resume). */
-function isSummaryRefusal(error: unknown): boolean {
+export function isSummaryRefusal(error: unknown): boolean {
   if (!(error instanceof OpenAI.APIError) || error.status !== 400) return false;
   const message = error.message.toLowerCase();
   return message.includes("summary") || message.includes("verif");

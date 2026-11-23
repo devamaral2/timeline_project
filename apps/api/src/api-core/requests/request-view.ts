@@ -76,6 +76,7 @@ export function toRequestDto(
     ...(request.errorCode ? { errorCode: request.errorCode } : {}),
     ...(current ? { progress: current } : {}),
     ...(trace && options.withTrace !== false ? { trace } : {}),
-    ...(request.model ? { model: { ...request.model } } : {}),
+    // O Hermes responde com o modelo dele: a escolha que o pedido trouxe nao vale ali e nao aparece.
+    ...(request.model && request.route !== "hermes" ? { model: { ...request.model } } : {}),
   };
 }

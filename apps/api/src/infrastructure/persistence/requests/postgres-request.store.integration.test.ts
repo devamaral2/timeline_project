@@ -369,6 +369,24 @@ describe("PostgresRequestStore", () => {
     expect(await jobs()).toHaveLength(2);
   });
 
+  test("configuracao: o pedido muda para a rota do modelo, guarda o despacho e a escolha, e o turno do modelo entra na fila", async () => {
+    const { requestId } = await start("qual modelo você está usando?");
+    const dispatch = { model: "jev-test", latencyMs: 7, answers: {}, uncertain: [], route: "config" as const };
+    const model = { provider: "anthropic", model: "claude-opus-5-5", effort: "medium" } as const;
+    await store.handToModel(requestId, dispatch, model);
+
+    expect(await store.find(requestId)).toMatchObject({ route: "model", status: "queued", model, dispatch });
+    expect(await store.steps(requestId)).toEqual([]);
+    expect((await jobs()).slice(1)).toMatchObject([
+      { kind: "model-turn", task_id: requestId, payload: { requestId } },
+    ]);
+
+    // Pedido que ja terminou nao volta a andar.
+    await store.finish(requestId, "done", { message: "Opus 5.5." });
+    await store.handToModel(requestId, dispatch, model);
+    expect(await jobs()).toHaveLength(2);
+  });
+
   test("a voz: o pedido gera a tarefa de pessoa e termina na transacao dela", async () => {
     const { requestId } = await start("comecei a estudar", { route: "voice", job: "voice-task" });
     const task = Task.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });

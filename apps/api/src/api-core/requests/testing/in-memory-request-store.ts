@@ -1,5 +1,5 @@
 import type { TokenUsage } from "../../agent/gateways/structured-completion.gateway";
-import type { RequestQueryResult } from "@repo/contracts";
+import type { ModelSelection, RequestQueryResult } from "@repo/contracts";
 import type { Artifact, Task } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
 import { requestTitleOf } from "../../../infrastructure/persistence/requests/postgres-request.store";
@@ -148,6 +148,15 @@ export class InMemoryRequestStore implements RequestStore {
     request.route = "hermes";
     request.dispatch = dispatch;
     this.jobs.push({ kind: REQUEST_JOBS.hermes, requestId });
+  }
+
+  async handToModel(requestId: string, dispatch: DispatchRecord, model: ModelSelection): Promise<void> {
+    const request = this.requests.get(requestId);
+    if (!request || !OPEN.has(request.status)) return;
+    request.route = "model";
+    request.model = model;
+    request.dispatch = dispatch;
+    this.jobs.push({ kind: REQUEST_JOBS.model, requestId });
   }
 
   private insertSteps(requestId: string, steps: readonly NewStep[]): void {

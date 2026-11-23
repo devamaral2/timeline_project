@@ -1,24 +1,28 @@
 import type { RequestEditEntityType } from "@repo/contracts";
 
-/** Os agentes que a fila de passos executa. O fallback nao e um passo: e o Hermes (`RequestStore.handToHermes`). */
-export const ENTITY_CREATE_AGENTS = ["task-create", "artifact-create"] as const;
-export const SERIES_CREATE_AGENTS = ["recurring-task-create"] as const;
-export const CREATE_AGENTS = [...ENTITY_CREATE_AGENTS, ...SERIES_CREATE_AGENTS] as const;
+/**
+ * Os agentes que a fila de passos executa. O Hermes e o modo modelo nao sao passos: o pedido muda de rota
+ * (`RequestStore.handToHermes`, `RequestStore.handToModel`).
+ */
+/** O agente unico de escrita do chat: cria e atualiza tarefas, artefatos de texto e series num lote so. */
+export const ENTITY_AGENT = "entity" as const;
+/** Edicao de uma tarefa ou de um artefato de texto aberto na tela de detalhe (ADR 006): so o alvo. */
 export const ENTITY_EDIT_AGENTS = ["task-edit", "artifact-edit"] as const;
-export const SERIES_EDIT_AGENTS = ["recurring-task-edit"] as const;
-export const EDIT_AGENTS = [...ENTITY_EDIT_AGENTS, ...SERIES_EDIT_AGENTS] as const;
 /** Edicao de um alvo ja conhecido (a tela de detalhe): sem JEV, sem candidatos, so o alvo (ADR 006). */
 export const TARGET_EDIT_AGENTS = ["food-edit", "sleep-edit", "training-edit", "agent-file-edit"] as const;
-export const STEP_AGENTS = [...CREATE_AGENTS, ...EDIT_AGENTS, ...TARGET_EDIT_AGENTS, "query"] as const;
+export const STEP_AGENTS = [ENTITY_AGENT, ...ENTITY_EDIT_AGENTS, ...TARGET_EDIT_AGENTS, "query"] as const;
 export type StepAgent = (typeof STEP_AGENTS)[number];
 /**
- * O agente de um passo gravado. Pedidos antigos ainda tem passos `fallback` (o agente que existia antes do Hermes
- * ser o fallback): so a leitura os encontra, e o rotulo deles continua em `ui.json`.
+ * Os agentes que existiam antes do agente unico de escrita e do Hermes como fallback. Nenhum passo novo nasce
+ * com eles: so a leitura de pedidos antigos os encontra, e o rotulo deles continua em `ui.json`.
  */
-export type RequestAgent = StepAgent;
+export const LEGACY_STEP_AGENTS = [
+  "task-create", "artifact-create", "recurring-task-create", "recurring-task-edit", "fallback",
+] as const;
+/** O agente de um passo gravado: os de hoje ou, em pedidos antigos, um dos que sairam. */
+export type RequestAgent = StepAgent | (typeof LEGACY_STEP_AGENTS)[number];
 
-export type CreateAgent = (typeof CREATE_AGENTS)[number];
-export type EditAgent = (typeof EDIT_AGENTS)[number];
+export type EntityEditAgent = (typeof ENTITY_EDIT_AGENTS)[number];
 export type TargetEditAgent = (typeof TARGET_EDIT_AGENTS)[number];
 
 /** Os tipos de job da IA (ADR 0013). Todo job aponta para o pedido ou para o passo que executa. */
@@ -50,26 +54,17 @@ export function parseFallbackCommand(text: string): string | null {
 export type EntityKind = "task" | "artifact";
 export type Expected = "one" | "many";
 
-/** Qual pergunta do JEV de entrada aciona qual agente. */
-export const DISPATCH_STEPS: Readonly<Record<string, StepAgent>> = {
-  task_create: "task-create",
-  artifact_create: "artifact-create",
-  task_edit: "task-edit",
-  artifact_edit: "artifact-edit",
-  recurring_task_create: "recurring-task-create",
-  recurring_task_edit: "recurring-task-edit",
-  query: "query",
-};
+/**
+ * As perguntas de sim ou nao do JEV de entrada, uma por destino: `query` e a consulta ao banco, `write` a criacao
+ * e a atualizacao de entidades e `config` a configuracao do app, que vai ao modo modelo. Sem nenhum `yes`, o
+ * pedido e uma tarefa de agente e vai ao Hermes.
+ */
+export const DISPATCH_ROUTES = ["query", "write", "config"] as const;
+export type DispatchRoute = (typeof DISPATCH_ROUTES)[number];
 
-/** O que o JEV escolhe como candidato de edicao: as entidades de sempre ou uma serie (recorrencia). */
+/** O que o agente de escrita pode alterar: as entidades de sempre ou uma serie (recorrencia). */
 export type CandidateKind = EntityKind | "recurrence";
-
-/** O que cada agente de edicao altera: define quais candidatos o JEV escolhe para ele. */
-export const EDIT_SELECTOR: Readonly<Record<EditAgent, CandidateKind>> = {
-  "task-edit": "task",
-  "artifact-edit": "artifact",
-  "recurring-task-edit": "recurrence",
-};
+export const CANDIDATE_KINDS: readonly CandidateKind[] = ["task", "artifact", "recurrence"];
 
 /** O agente de cada tipo de entidade da tela de detalhe: a escolha e esta tabela, nao um modelo. */
 export const EDIT_TARGET_AGENTS: Readonly<Record<RequestEditEntityType, StepAgent>> = {

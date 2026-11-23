@@ -265,16 +265,33 @@ export class PostgresRequestStore implements RequestStore {
     });
   }
 
+  async handToModel(requestId: string, dispatch: DispatchRecord, model: ModelSelection): Promise<void> {
+    await this.inTransaction(undefined, async (tx) => {
+      const userId = await this.lockOpenRequest(tx, requestId);
+      if (!userId) return;
+      // Continua `queued`: quem o passa a `running` e o job do modelo, como num pedido que nasce na rota dele.
+      await this.recordDispatch(tx, requestId, { route: "model", model }, dispatch, 0);
+      await enqueueJobInTransaction(tx, {
+        kind: REQUEST_JOBS.model, userId, actorId: userId, taskId: requestId,
+        payload: { requestId }, dedupeKey: `model:${requestId}`,
+      });
+    });
+  }
+
   /** As escolhas do despacho ficam no pedido (com `patch`); as medidas (modelo, latencia), numa entrada de trace. */
   private async recordDispatch(
     tx: Tx,
     requestId: string,
-    patch: { status?: "running"; route?: "hermes" },
+    patch: { status?: "running"; route?: "hermes" | "model"; model?: ModelSelection },
     dispatch: DispatchRecord | undefined,
     steps: number,
   ): Promise<void> {
     const { model, latencyMs, ...choices } = dispatch ?? {};
-    const data = { ...(patch.route ? { route: patch.route } : {}), ...(dispatch ? { dispatch: choices } : {}) };
+    const data = {
+      ...(patch.route ? { route: patch.route } : {}),
+      ...(patch.model ? { model: patch.model } : {}),
+      ...(dispatch ? { dispatch: choices } : {}),
+    };
     await tx.execute(sql`
       UPDATE tasks SET status = ${patch.status ?? sql`status`}, updated_at = now(), data = data || ${json(data)}::jsonb
       WHERE id = ${requestId}`);

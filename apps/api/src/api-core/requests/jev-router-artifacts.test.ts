@@ -13,12 +13,12 @@ function setup(owner: string | null = "owner", specs = jevRouterArtifacts) {
 }
 
 describe("jevRouterArtifacts", () => {
-  it("writes one artifact per JEV with its parameters and questions", () => {
+  it("writes the one JEV artifact with its parameters and the three questions", () => {
     const specs = jevRouterArtifacts();
-    expect(specs.map((spec) => spec.name)).toEqual(["JEV · Despacho", "JEV · Vínculo", "JEV · Candidatas de edição"]);
-    expect(specs[0]?.body).toContain("Certeza mínima: 0.92");
-    expect(specs[0]?.body).toContain("### `task_create`");
-    expect(specs[1]?.body).toContain("Máximo de candidatas");
+    expect(specs.map((spec) => spec.name)).toEqual(["JEV · Despacho"]);
+    expect(specs[0]?.body).toContain("Certeza mínima: 0.7");
+    for (const question of ["query", "write", "config"]) expect(specs[0]?.body).toContain(`### \`${question}\``);
+    expect(specs[0]?.body).toContain("- **yes**:");
   });
 });
 
@@ -27,7 +27,7 @@ describe("RouterArtifactsReconciler", () => {
     const { reconciler, stored } = setup();
     await reconciler.sync();
     await reconciler.sync();
-    expect(stored.map((artifact) => [artifact.type, artifact.userId])).toEqual([["router", "owner"], ["router", "owner"], ["router", "owner"]]);
+    expect(stored.map((artifact) => [artifact.type, artifact.userId])).toEqual([["router", "owner"]]);
     expect(stored[0]?.tags).toEqual(["router", "jev", "despacho"]);
   });
 

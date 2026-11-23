@@ -1,4 +1,4 @@
-import type { RequestQueryResult, RequestScreenContext } from "@repo/contracts";
+import type { ModelEffort, ModelSelection, RequestQueryResult, RequestScreenContext } from "@repo/contracts";
 import type { z } from "zod";
 import { FastStageError } from "../agent/errors/agent.errors";
 import {
@@ -14,6 +14,13 @@ import type { EditTarget, RequestStore } from "./request-store";
 const MAX_THOUGHT_CHARS = 12_000;
 /** Pensando, a chamada leva 1-3 s a mais: o orcamento do agente, medido sem raciocinio, dobra. */
 const REASONING_BUDGET = 2;
+/**
+ * Com o modelo que o usuario escolheu, a chamada pensa no esforco dele e o modelo pode ser bem mais lento que o do
+ * servidor: o orcamento do agente, medido num modelo rapido e sem raciocinio, cresce com o esforco.
+ */
+const SELECTED_BUDGET: Record<ModelEffort, number> = { low: 3, medium: 4, high: 6, max: 9 };
+/** Teto de uma chamada no modelo escolhido: um passo faz ate duas, e o cliente desiste do pedido aos 180 s. */
+const SELECTED_MAX_MS = 75_000;
 
 export interface AgentRunInput<T> {
   /** Nome do `.md` do agente. */
@@ -27,6 +34,11 @@ export interface AgentRunInput<T> {
   stepId?: string;
   /** A chamada pensa antes de responder, no esforco do runner. Sem isto, nao pensa. */
   think?: boolean;
+  /**
+   * O provedor, o modelo e o esforco que o usuario escolheu para o pedido. Com ela, a chamada vai a esse modelo e
+   * pensa no esforco dela, com ou sem `think`; sem ela, vai ao modelo do servidor.
+   */
+  model?: ModelSelection;
 }
 
 export interface RequestAgentRunnerOptions {
@@ -44,6 +56,9 @@ export interface RequestAgentRunnerOptions {
  * A chamada que pede `think`, com `reasoning` configurado, pensa antes de responder e o que o modelo pensou vai
  * para o passo assim que a chamada volta, antes de a saida ser validada: o raciocinio de uma resposta recusada e
  * o que mais interessa conferir. As outras nao pensam: sao extracoes curtas, e pensar custa 1-3 s por chamada.
+ *
+ * Com o modelo escolhido pelo usuario (`model`), quem decide o esforco e ele: toda chamada do pedido vai a esse
+ * modelo, numa tentativa so e com o orcamento esticado pelo esforco.
  */
 export class RequestAgentRunner {
   constructor(
@@ -53,8 +68,11 @@ export class RequestAgentRunner {
 
   async run<T>(input: AgentRunInput<T>): Promise<{ value: T; modelName: string; reasoning?: string }> {
     const definition = loadAgentDefinition(input.agent);
-    const effort = input.think ? this.options.reasoning : undefined;
-    const budget = effort ? REASONING_BUDGET : 1;
+    const selection = input.model;
+    const effort = !selection && input.think ? this.options.reasoning : undefined;
+    const timeoutMs = selection
+      ? Math.min(definition.timeoutMs * SELECTED_BUDGET[selection.effort], SELECTED_MAX_MS)
+      : definition.timeoutMs * (effort ? REASONING_BUDGET : 1);
     const { value, modelName, reasoning, usage } = await this.gateway.complete({
       system: renderAgentPrompt(definition, {
         now: formatNow(input.now),
@@ -64,9 +82,11 @@ export class RequestAgentRunner {
       user: input.user,
       schemaName: definition.name.replace(/-/g, "_"),
       schema: jsonSchemaOf(input.schema),
-      timeoutMs: definition.timeoutMs * budget,
-      attemptMs: definition.attemptMs * budget,
+      timeoutMs,
+      // No modelo escolhido a chamada lenta e a regra, nao a cauda: cortar no meio para tentar de novo so perde tempo.
+      attemptMs: selection ? timeoutMs : definition.attemptMs * (effort ? REASONING_BUDGET : 1),
       ...(effort ? { reasoning: effort } : {}),
+      ...(selection ? { model: selection } : {}),
       signal: input.signal,
     });
     if (usage && input.stepId) await this.keepUsage(input.stepId, usage);
@@ -98,7 +118,7 @@ export class RequestAgentRunner {
   }
 }
 
-/** A parte variavel que todos os agentes de criacao recebem. */
+/** O pedido e a tela de onde ele veio: a parte variavel da entrada de todo agente do chat. */
 export function describeRequest(
   prompt: string,
   expected: string | undefined,
@@ -115,19 +135,30 @@ export function describeRequest(
 const LOOKUP_ROWS = 50;
 const LOOKUP_CHARS = 8000;
 
-/** Os candidatos de edicao (e, na segunda rodada, o resultado da consulta que o agente pediu). */
-export function describeEditRequest(
+/**
+ * O que o agente de escrita recebe: o pedido, a tela e a lista curta do que ja existe, por tipo (e, na segunda
+ * rodada, o resultado da consulta que ele pediu). Quem escolhe o que alterar dentro da lista e ele.
+ */
+export function describeEntityRequest(
   prompt: string,
-  expected: string,
   context: RequestScreenContext | undefined,
   candidates: readonly EditCandidate[],
   lookup?: Pick<RequestQueryResult, "columns" | "rows">,
 ): string {
+  // Os horarios vao no fuso do usuario, como o agente os devolve: em UTC ele erra a conta de "as 21h".
+  const local = (instant: string) => isoNow(new Date(instant));
+  const of = (kind: EditCandidate["kind"]) => candidates
+    .filter((candidate) => candidate.kind === kind)
+    .map(({ kind: _kind, startedAt, estimatedFinishAt, ...rest }) => ({
+      ...rest,
+      ...(startedAt ? { startedAt: local(startedAt) } : {}),
+      ...(estimatedFinishAt ? { estimatedFinishAt: local(estimatedFinishAt) } : {}),
+    }));
   return [
-    describeRequest(prompt, expected, context),
+    describeRequest(prompt, undefined, context),
     "",
     "Candidatos (JSON):",
-    JSON.stringify(candidates.map(({ kind: _kind, ...rest }) => rest)),
+    JSON.stringify({ tasks: of("task"), artifacts: of("artifact"), series: of("recurrence") }),
     ...(lookup
       ? ["", "Resultado da consulta (JSON):", JSON.stringify({
         columns: lookup.columns, rows: lookup.rows.slice(0, LOOKUP_ROWS),

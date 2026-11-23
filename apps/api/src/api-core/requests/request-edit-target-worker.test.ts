@@ -122,8 +122,7 @@ describe("fluxo da edicao pela tela de detalhe, ponta a ponta (em memoria)", () 
     ctx.gateway.outputs.set("sleep_edit", { edits: [{ id: artifact.id, name: null, trackedSleepTime: 480, score: null, tags: null }] });
     await ctx.targetEditWorker.run("sleep-edit", { requestId: "r1", stepId: step?.id as string });
 
-    const jev = { ask: async () => { throw new Error("o JEV nao participa da edicao com alvo"); } };
-    await ctx.finalizer(jev as never).run({ requestId: "r1", stepId: step?.id as string });
+    await ctx.finalizer().run({ requestId: "r1", stepId: step?.id as string });
 
     expect(ctx.store.require("r1")).toMatchObject({ status: "done", failedSteps: [] });
     expect((await ctx.artifactRepository.findById(artifact.id))?.data).toEqual({ trackedSleepTime: 480, score: 70 });

@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { isRetryableJobError } from "../../../infrastructure/jobs/jobs.service";
 import { AgentRunCancelledError, FastStageError, LlmUnavailableError } from "../errors/agent.errors";
-import { OpenRouterStructuredCompletionGateway, type StructuredCompletionInput } from "./structured-completion.gateway";
+import {
+  jsonReply, OpenRouterStructuredCompletionGateway, SelectedModelCompletionGateway, withSchemaInstruction,
+  type StructuredCompletionGateway, type StructuredCompletionInput,
+} from "./structured-completion.gateway";
 
 const input: StructuredCompletionInput = {
   system: "sys", user: "usr", schemaName: "plan", schema: { type: "object" }, timeoutMs: 1000,
@@ -145,5 +148,68 @@ describe("OpenRouterStructuredCompletionGateway", () => {
 
     await expect(new OpenRouterStructuredCompletionGateway("k", "m", request as unknown as typeof fetch)
       .complete({ ...input, signal: controller.signal })).rejects.toBeInstanceOf(AgentRunCancelledError);
+  });
+});
+
+describe("o modelo que o usuario escolheu para o pedido", () => {
+  const chosen = { provider: "openrouter", model: "google/gemini-4-neon", effort: "max" } as const;
+
+  it("no OpenRouter, a chamada vai ao modelo escolhido, no esforco dele, e devolve o que ele pensou", async () => {
+    const request = vi.fn(async () => reply({
+      choices: [{ message: { content: JSON.stringify({ ok: true }), reasoning: "Pensei bastante." } }],
+    }));
+
+    const result = await new OpenRouterStructuredCompletionGateway("k", "modelo-fixo", request as unknown as typeof fetch)
+      .complete({ ...input, model: chosen });
+
+    expect(result).toEqual({ value: { ok: true }, modelName: "google/gemini-4-neon", reasoning: "Pensei bastante." });
+    const [, init] = request.mock.calls[0] as unknown as [string, RequestInit];
+    // Maximo e o `xhigh`, o mais alto que o OpenRouter traduz para todo modelo.
+    expect(JSON.parse(String(init.body))).toMatchObject({ model: "google/gemini-4-neon", reasoning: { effort: "xhigh" } });
+  });
+
+  it("no OpenRouter, o modelo escolhido recebe o formato tambem por escrito e a resposta cercada de crases e lida", async () => {
+    const request = vi.fn(async () => reply({ choices: [{ message: { content: "```json\n{\"ok\":true}\n```" } }] }));
+
+    const result = await new OpenRouterStructuredCompletionGateway("k", "modelo-fixo", request as unknown as typeof fetch)
+      .complete({ ...input, model: chosen });
+
+    expect(result.value).toEqual({ ok: true });
+    const [, init] = request.mock.calls[0] as unknown as [string, RequestInit];
+    const body = JSON.parse(String(init.body));
+    expect(body.messages[0].content).toBe(withSchemaInstruction("sys", { type: "object" }));
+    expect(body.response_format).toMatchObject({ type: "json_schema" });
+  });
+
+  it("a escolha no OpenRouter dispensa o modelo fixo do servidor", async () => {
+    const request = vi.fn(async () => content({ ok: true }));
+    const gateway = new OpenRouterStructuredCompletionGateway("k", undefined, request as unknown as typeof fetch);
+    await expect(gateway.complete({ ...input, model: chosen })).resolves.toMatchObject({ modelName: "google/gemini-4-neon" });
+    await expect(gateway.complete(input)).rejects.toBeInstanceOf(LlmUnavailableError);
+  });
+
+  it("sem escolha vale o modelo fixo; com ela, o gateway do provedor; provedor sem chave falha em vez de trocar de modelo", async () => {
+    const stub = (name: string): StructuredCompletionGateway & { complete: ReturnType<typeof vi.fn> } =>
+      ({ complete: vi.fn(async () => ({ value: {}, modelName: name })) });
+    const fixed = stub("fixo");
+    const anthropic = stub("anthropic");
+    const gateway = new SelectedModelCompletionGateway(fixed, { anthropic });
+
+    await expect(gateway.complete(input)).resolves.toMatchObject({ modelName: "fixo" });
+    const selected = { ...input, model: { provider: "anthropic", model: "claude-haiku-5-5", effort: "low" } as const };
+    await expect(gateway.complete(selected)).resolves.toMatchObject({ modelName: "anthropic" });
+    expect(anthropic.complete).toHaveBeenCalledWith(selected);
+    expect(() => gateway.complete({ ...input, model: chosen })).toThrow(LlmUnavailableError);
+    expect(fixed.complete).toHaveBeenCalledTimes(1);
+  });
+
+  it("le o JSON de uma resposta em texto, com ou sem cerca, e o formato pedido por escrito leva o schema", () => {
+    expect(jsonReply("{\"a\":1}")).toEqual({ a: 1 });
+    expect(jsonReply("Segue:\n```json\n{\"a\":{\"b\":[1,2]}}\n```\n")).toEqual({ a: { b: [1, 2] } });
+    expect(() => jsonReply("sem objeto")).toThrow();
+    expect(() => jsonReply("{\"a\":")).toThrow();
+    expect(withSchemaInstruction("# Papel\nConsulta.", { type: "object" })).toBe(
+      "# Papel\nConsulta.\n\n# Formato da resposta\nResponda só com um objeto JSON, sem texto antes ou depois e sem cercas de código, que siga este JSON Schema:\n{\"type\":\"object\"}",
+    );
   });
 });

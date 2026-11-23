@@ -21,7 +21,7 @@ export class RequestQueryWorker {
     await runStep(store, payload, signal, async ({ request, step, timings }) => {
       const started = performance.now();
       const { value } = await runner.run({
-        agent: "query", now: request.createdAt, schema: queryOutput, signal, stepId: step.id,
+        agent: "query", now: request.createdAt, schema: queryOutput, signal, stepId: step.id, model: request.model,
         user: [describeRequest(request.prompt, undefined, request.context), "", "Esquema:", sql.describeSchema()].join("\n"),
       });
       const outcome = await sql.run({ userId: request.userId, sql: value.sql });

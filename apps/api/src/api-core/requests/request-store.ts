@@ -9,21 +9,21 @@ import type {
   RequestScreenContext,
 } from "@repo/contracts";
 import type { EditCandidate } from "./request-candidates";
-import type { EntityKind, Expected, RequestAgent, RequestJobKind } from "./request-steps";
+import type { DispatchRoute, EntityKind, Expected, RequestAgent, RequestJobKind } from "./request-steps";
 
 export type RequestStatus = "queued" | "running" | "waiting" | "done" | "failed" | "cancel";
 export type StepStatus = Exclude<RequestStatus, "waiting">;
 
-/** O que a finalizacao mostra ao JEV sobre uma entidade, lido da propria entidade: nunca o texto bruto do pedido. */
+/** O que o pedido mostra de cada entidade que gravou, lido da propria entidade: nunca o texto bruto do pedido. */
 export interface EntitySummary {
   name: string;
   taskKind?: string;
   artifactType?: string;
   startedAt?: string;
   estimatedFinishAt?: string;
-  /** Inicio do texto do artefato, para o JEV casar alimentos e assunto. */
+  /** Inicio do texto do artefato. */
   text?: string;
-  /** Ocorrencia de uma serie, ainda ligada a ela: nao entra nas ligacoes, que valem para a serie e nao para um dia. */
+  /** Ocorrencia de uma serie, ainda ligada a ela. */
   series?: boolean;
 }
 
@@ -47,12 +47,18 @@ export interface FailedStep {
 export interface DispatchRecord {
   model?: string;
   latencyMs?: number;
+  /** A resposta de cada pergunta de sim ou nao (`query`, `write`, `config`). */
   answers: Record<string, { choice: string; confidence: number; probability: number }>;
+  /** As perguntas que deixaram o destino em duvida: um `yes` abaixo da certeza minima, ou mais de um `yes`. */
   uncertain: string[];
-  unsupported: string[];
+  /** O destino que o JEV escolheu. Ausente quando o pedido foi ao Hermes. */
+  route?: DispatchRoute;
+  /** Por que o pedido foi ao Hermes sem ser uma tarefa de agente: duvida, JEV fora do ar, prefixo `fallback:`. */
   fallbackReason?: string;
-  /** Quantos candidatos de edicao o servidor listou e quantos o JEV escolheu. */
+  /** Quantas entidades o servidor entregou ao agente de escrita como candidatas a alteracao. */
   candidates?: { shortlisted: number; selected: number };
+  /** So em pedidos antigos: perguntas reconhecidas que nao tinham agente. */
+  unsupported?: string[];
 }
 
 /** A entidade aberta na tela de detalhe quando o pedido de edicao foi feito. */
@@ -89,7 +95,10 @@ export interface RequestRecord {
   forceFallback?: boolean;
   /** O primeiro pedido da sessao; ausente quando este e o primeiro. */
   sessionId?: string;
-  /** O provedor, o modelo e o esforco escolhidos; so na rota `model`. */
+  /**
+   * O provedor, o modelo e o esforco que o usuario escolheu: quem responde na rota `model` e quem roda os agentes
+   * dos passos na rota `steps`. Ausente quando o pedido nao levou escolha (vale o modelo do servidor).
+   */
   model?: ModelSelection;
   createdAt: Date;
   updatedAt: Date;
@@ -187,7 +196,7 @@ export interface NewRequest {
   sessionId?: string;
   /** Estavel por mensagem: reenviar o mesmo id devolve o pedido ja aceito. */
   clientMessageId?: string;
-  /** O provedor, o modelo e o esforco escolhidos; so na rota `model`. */
+  /** O provedor, o modelo e o esforco que o usuario escolheu para o pedido, em qualquer rota que use modelo. */
   model?: ModelSelection;
   /** O job que comeca a executar o pedido. */
   job: RequestJobKind;
@@ -240,10 +249,15 @@ export interface RequestStore {
   /** Encerra o pedido se ele ainda esta aberto. */
   finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void>;
   /**
-   * O fallback do pedido por passos e o Hermes: o pedido passa para a rota do Hermes, guarda o que o despacho
+   * O pedido e uma tarefa de agente, ou caiu no fallback: passa para a rota do Hermes, guarda o que o despacho
    * escolheu e o job do Hermes entra na fila, na mesma transacao. Nada acontece se o pedido ja terminou.
    */
   handToHermes(requestId: string, dispatch: DispatchRecord): Promise<void>;
+  /**
+   * O pedido e de configuracao e passa para a rota do modo modelo: guarda o que o JEV escolheu e o modelo que
+   * vai responder, e o turno do modelo entra na fila, na mesma transacao. Nada acontece se o pedido ja terminou.
+   */
+  handToModel(requestId: string, dispatch: DispatchRecord, model: ModelSelection): Promise<void>;
   /** A fala virou uma tarefa de pessoa: a relacao do pedido com ela e o pedido concluido, na transacao da tarefa. */
   completeVoice(tx: unknown, input: { requestId: string; taskId: string }): Promise<void>;
   /**

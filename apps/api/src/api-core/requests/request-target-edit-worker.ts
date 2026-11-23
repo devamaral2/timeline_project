@@ -15,7 +15,7 @@ import {
   type AgentFileEditOutput, type FoodEditOutput, type SleepEditOutput, type TrainingEditOutput,
 } from "./request-agent-schemas";
 import type { RequestAgentRunner } from "./request-agent-runner";
-import type { StepRepositories } from "./request-create-worker";
+import type { StepRepositories } from "./request-entity-worker";
 import { runStep, StepFailure, type StepPayload } from "./request-step-common";
 import type { TargetEditAgent } from "./request-steps";
 import type { EditTarget, NewEntity, RequestStore } from "./request-store";

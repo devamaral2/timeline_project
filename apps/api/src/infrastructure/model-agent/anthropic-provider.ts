@@ -4,13 +4,13 @@ import type { ModelConversation, ModelConversationInput, ModelProviderClient, Mo
 
 const MAX_TOKENS = 16_000;
 /** Na recusa por politica, a API refaz a chamada noutro modelo dentro da mesma chamada. */
-const FALLBACK_BETA = "server-side-fallback-2026-07-01";
+export const FALLBACK_BETA = "server-side-fallback-2026-07-01";
 
 /** Os niveis do seletor na escala da Anthropic: Maximo e o `max` da API. */
-const EFFORTS: Record<ModelEffort, "low" | "medium" | "high" | "max"> = { low: "low", medium: "medium", high: "high", max: "max" };
+export const EFFORTS: Record<ModelEffort, "low" | "medium" | "high" | "max"> = { low: "low", medium: "medium", high: "high", max: "max" };
 
 /** O Haiku nao tem fallback do servidor: com ele, a recusa volta como veio. */
-function hasServerFallback(model: string): boolean {
+export function hasServerFallback(model: string): boolean {
   return !model.startsWith("claude-haiku");
 }
 

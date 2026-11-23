@@ -84,7 +84,10 @@ export interface RequestDto {
   progress?: string;
   /** O rastro do pedido, para a aba "Processo". */
   trace?: AgentTraceDto;
-  /** O provedor, o modelo e o esforco escolhidos; so na rota `model`. */
+  /**
+   * O provedor, o modelo e o esforco que o usuario escolheu para o pedido: quem responde na rota `model` e quem
+   * roda os agentes da rota `steps` (consulta, escrita e edicao). Ausente quando o pedido nao levou escolha.
+   */
   model?: ModelSelection;
 }
 
@@ -97,6 +100,11 @@ export interface StartRequestInput {
   sessionId?: string;
   /** Estavel por mensagem: reenviar o mesmo id devolve o pedido ja aceito. */
   clientMessageId?: string;
+  /**
+   * O provedor, o modelo e o esforco que o campo do chat mostra: os agentes do pedido rodam com ele. Sem escolha,
+   * vale o modelo do servidor. Um provedor sem chave ou um modelo fora da lista responde 400.
+   */
+  model?: ModelSelection;
 }
 
 /**
@@ -120,6 +128,8 @@ export interface StartEditRequestInput {
   text: string;
   entityType: RequestEditEntityType;
   entityId: string;
+  /** O provedor, o modelo e o esforco que o campo do detalhe mostra; as mesmas regras de `StartRequestInput.model`. */
+  model?: ModelSelection;
 }
 
 /** `POST /api/requests/hermes`. Responde `202` com o pedido. So existe quando o servidor liga o Hermes. */

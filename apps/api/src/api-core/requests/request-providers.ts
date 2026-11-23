@@ -11,8 +11,10 @@ import type {
 import { AgentFilesBootstrap } from "../../infrastructure/agent-files/agent-files.bootstrap";
 import { McpAgendaTools } from "../../infrastructure/model-agent/agenda-tools";
 import { AnthropicProvider } from "../../infrastructure/model-agent/anthropic-provider";
+import { AnthropicStructuredCompletionGateway } from "../../infrastructure/model-agent/anthropic-structured.gateway";
 import { ModelAgent, type ModelProviderClient } from "../../infrastructure/model-agent/model-agent";
 import { OpenAIProvider } from "../../infrastructure/model-agent/openai-provider";
+import { OpenAIStructuredCompletionGateway } from "../../infrastructure/model-agent/openai-structured.gateway";
 import { OpenRouterProvider } from "../../infrastructure/model-agent/openrouter-provider";
 import { HermesClient } from "../../infrastructure/hermes/hermes.client";
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
@@ -29,7 +31,9 @@ import { PostgresCandidateQuery } from "../../infrastructure/persistence/request
 import { PostgresRequestStore } from "../../infrastructure/persistence/requests/postgres-request.store";
 import { AgentFileArtifactsReconciler } from "../agent/config/agent-file-artifacts.reconciler";
 import { AgentFilesService } from "../agent/config/agent-files.service";
-import { OpenRouterStructuredCompletionGateway } from "../agent/gateways/structured-completion.gateway";
+import {
+  OpenRouterStructuredCompletionGateway, SelectedModelCompletionGateway, type StructuredCompletionGateway,
+} from "../agent/gateways/structured-completion.gateway";
 import { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
 import { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
 import { CreateTaskUseCase } from "../tasks/create-task.usecase";
@@ -38,7 +42,7 @@ import { OpenRouterFoodParsingGateway } from "../tasks/gateways/openrouter-food-
 import { PlaceResolver } from "../tasks/services/place-resolver.service";
 import { PhotonPlaceSearchGateway } from "../../infrastructure/places/photon-place-search.gateway";
 import { providerKeys } from "./model-catalog";
-import { modelAgendaOwner } from "./model-config";
+import { configModelFor, modelAgendaOwner } from "./model-config";
 import { modelSystemPrompt } from "./model-prompt";
 import { ModelTurnWorker } from "./model-turn-worker";
 import { HermesTurnWorker } from "./hermes-turn-worker";
@@ -46,10 +50,10 @@ import { JevClient } from "./jev.client";
 import { RouterArtifactsReconciler } from "./jev-router-artifacts";
 import { RequestAgentRunner } from "./request-agent-runner";
 import { uiConfig } from "./request-config";
-import { RequestCreateWorker } from "./request-create-worker";
 import { RequestDispatcher } from "./request-dispatcher";
 import { RequestEditTargetWorker } from "./request-edit-target-worker";
 import { RequestEditWorker } from "./request-edit-worker";
+import { RequestEntityWorker } from "./request-entity-worker";
 import { RequestFinalizer } from "./request-finalizer";
 import { RequestOperations } from "./request-operations";
 import { RequestQueryWorker } from "./request-query-worker";
@@ -105,21 +109,19 @@ export const REQUEST_PROVIDERS: Provider[] = [
     ) => {
       const env = getServerEnv();
       const reasoning = env.OPENROUTER_PROCESS_REASONING === "off" ? undefined : env.OPENROUTER_PROCESS_REASONING;
-      const runner = new RequestAgentRunner(
-        new OpenRouterStructuredCompletionGateway(env.OPENROUTER_API_KEY, env.OPENROUTER_PROCESS_MODEL ?? env.OPENROUTER_MODEL),
-        { thoughts: store, ...(reasoning ? { reasoning } : {}) },
-      );
-      const jev = new JevClient();
+      const runner = new RequestAgentRunner(stepGateway(), { thoughts: store, ...(reasoning ? { reasoning } : {}) });
       const repositories = { tasks, artifacts, recurrences };
       // O lugar que a IA tira do pedido passa pela mesma busca de mapas do formulario.
       const places = new PlaceResolver(new PhotonPlaceSearchGateway());
       const deps = { store, runner, batchWriter, repositories, createTask, places };
       return new RequestOperations(jobs, store, {
-        dispatcher: new RequestDispatcher(store, jev, new PostgresCandidateQuery(database)),
-        create: new RequestCreateWorker(deps),
-        edit: new RequestEditWorker({ ...deps, sql }),
+        dispatcher: new RequestDispatcher(store, new JevClient(), {
+          candidates: new PostgresCandidateQuery(database), model: configModelFor,
+        }),
+        entity: new RequestEntityWorker({ ...deps, sql }),
+        edit: new RequestEditWorker(deps),
         query: new RequestQueryWorker({ store, runner, sql }),
-        finalizer: new RequestFinalizer({ ...deps, jev }),
+        finalizer: new RequestFinalizer({ store, runner }),
         editTarget: new RequestEditTargetWorker({
           store, repositories, files, failureText: (code) => uiConfig.targetFailed[code],
         }),
@@ -136,6 +138,22 @@ export const REQUEST_PROVIDERS: Provider[] = [
     },
   },
 ];
+
+/**
+ * Quem atende as chamadas estruturadas dos agentes dos passos: o modelo fixo do servidor, pelo OpenRouter, ou o
+ * provedor e o modelo que o usuario escolheu para o pedido, entre os que tem chave neste ambiente.
+ */
+function stepGateway(): StructuredCompletionGateway {
+  const env = getServerEnv();
+  const keys = providerKeys(env);
+  const fixed = new OpenRouterStructuredCompletionGateway(env.OPENROUTER_API_KEY, env.OPENROUTER_PROCESS_MODEL ?? env.OPENROUTER_MODEL);
+  return new SelectedModelCompletionGateway(fixed, {
+    ...(keys.anthropic ? { anthropic: new AnthropicStructuredCompletionGateway(keys.anthropic) } : {}),
+    ...(keys.openai ? { openai: new OpenAIStructuredCompletionGateway(keys.openai) } : {}),
+    // O mesmo gateway do modelo fixo: com a escolha do usuario, ele chama o modelo dela.
+    ...(keys.openrouter ? { openrouter: fixed } : {}),
+  });
+}
 
 /**
  * O agente do modo modelo (ADR 0019), com um cliente por provedor que tem chave. Com o token do MCP e o dono

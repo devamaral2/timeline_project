@@ -17,9 +17,10 @@ const iso = (value: unknown): string | undefined =>
   value === null || value === undefined ? undefined : new Date(value as string | Date).toISOString();
 
 /**
- * A lista curta do que um pedido de edicao pode estar alterando: tarefas de pessoa de ontem, hoje e amanha, os
- * acompanhados em aberto mais recentes, os artefatos mais recentes e as series. O JEV escolhe dentro dela; o que
- * ficar de fora o agente de edicao ainda pode buscar por uma consulta. Pedidos e passos do agente nunca entram.
+ * A lista curta do que um pedido de escrita pode estar alterando: tarefas de pessoa de ontem, hoje e amanha, os
+ * acompanhados em aberto mais recentes, os artefatos mais recentes e as series. O agente de escrita a recebe inteira
+ * e escolhe dentro dela; o que ficar de fora ele ainda pode buscar por uma consulta. Pedidos e passos do agente
+ * nunca entram.
  */
 export class PostgresCandidateQuery implements CandidateQuery {
   constructor(private readonly database: PostgresDatabase) {}

@@ -3,7 +3,7 @@ import type { CreateRecurrenceInput, RecurrenceFrequency, RecurrenceRule, Recurr
 import type { Recurrence } from "../../domain";
 import { storedTemplateOf } from "../recurrences/recurrence-templates";
 import type { RecurrenceRevision } from "../recurrences/revise-recurrence";
-import type { RecurringTaskCreateOutput, RecurringTaskEditOutput } from "./request-agent-schemas";
+import type { NewSeries, SeriesEdit } from "./request-agent-schemas";
 
 /**
  * Do que o agente de recorrencia escreveu para a regra do dominio. Os padroes sao do servidor: o usuario
@@ -92,7 +92,7 @@ function cadenceOf(series: SeriesFields): Cadence {
  * endereco achado no mapa (ou o lugar como foi dito), e cada ocorrencia o copia.
  */
 export function seriesInput(
-  series: RecurringTaskCreateOutput["series"][number], today: string, timeZone: string,
+  series: NewSeries, today: string, timeZone: string,
 ): CreateRecurrenceInput {
   const template: RecurrenceTemplate = {
     kind: series.kind, name: series.name,
@@ -114,7 +114,6 @@ function baseOf(rule: Readonly<RecurrenceRule>): Cadence {
   };
 }
 
-type SeriesEdit = RecurringTaskEditOutput["edits"][number];
 
 /** O que a edicao muda, ou nada: edicao sem campo novo nao e um pedido. */
 export function changesNothing(edit: SeriesEdit): boolean {

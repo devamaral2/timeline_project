@@ -1,4 +1,4 @@
-import type { AgentTraceDto } from "@repo/contracts";
+import type { AgentTraceDto, ModelSelection } from "@repo/contracts";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
 import { getJobsEnv } from "../../config/env";
 import { Artifact, type FoodData } from "../../domain";
@@ -24,16 +24,19 @@ import type { ParsedTaskCommand } from "../tasks/gateways/task-command-parsing.g
 import { HermesTurnWorker } from "./hermes-turn-worker";
 import { ModelTurnWorker } from "./model-turn-worker";
 import { RequestAgentRunner } from "./request-agent-runner";
-import { dispatchConfig, uiConfig } from "./request-config";
-import { RequestCreateWorker } from "./request-create-worker";
+import { uiConfig } from "./request-config";
+import type { DispatchRoute } from "./request-steps";
 import { RequestDispatcher } from "./request-dispatcher";
 import { RequestEditTargetWorker } from "./request-edit-target-worker";
 import { RequestEditWorker } from "./request-edit-worker";
+import { RequestEntityWorker } from "./request-entity-worker";
 import { RequestFinalizer } from "./request-finalizer";
 import { RequestOperations } from "./request-operations";
 import { RequestQueryWorker } from "./request-query-worker";
 import { RequestTargetEditWorker } from "./request-target-edit-worker";
-import { confident, FakeAgentFiles, result, ScriptedFoodParsing, scriptedJev, ScriptedStructuredGateway } from "./testing/request-test-kit";
+import {
+  dispatchAnswers, entityAnswer, FakeAgentFiles, ScriptedFoodParsing, scriptedJev, ScriptedStructuredGateway,
+} from "./testing/request-test-kit";
 import { VoiceTaskWorker } from "./voice-task-worker";
 
 /**
@@ -46,7 +49,10 @@ let jobs: JobsService;
 let operations: RequestOperations;
 let tasks: PostgresTaskRepository;
 let artifacts: PostgresArtifactRepository;
-let dispatch: Record<string, ReturnType<typeof confident>> = {};
+/** A pergunta a que o JEV de entrada responde `yes` no proximo pedido; sem nenhuma, o pedido e uma tarefa de agente. */
+let route: DispatchRoute | undefined = "write";
+/** O modelo que atende um pedido de configuracao; sem ele, o modo modelo nao vale para o usuario. */
+let configModel: ModelSelection | undefined;
 let hermesReply: (input: HermesChatInput) => Promise<{ text: string; trace: AgentTraceDto }>;
 let modelReply: (input: ModelChatInput) => Promise<{ text: string; trace: AgentTraceDto }>;
 let command: ParsedTaskCommand;
@@ -81,35 +87,18 @@ beforeAll(async () => {
   const sql = new PostgresScopedSqlQuery(ctx.pool);
   const runner = new RequestAgentRunner(gateway, { thoughts: store, reasoning: "low" });
 
-  // O JEV de entrada responde o que o teste combinou; o de ligacao escolhe a refeicao; o de candidatos, a reuniao.
-  const jev = scriptedJev((questions, state) => {
-    if ("link" in questions) {
-      // So o alimento e a refeicao pertencem um ao outro; as outras tarefas ficam soltas.
-      const criteria = Object.entries((questions.link as { criteria: Record<string, string> }).criteria);
-      const entity = String(state.entity);
-      const owner = entity.startsWith("artefato") ? criteria.find(([, text]) => text.includes("Refeição"))
-        : entity.includes("Refeição") ? criteria.find(([, text]) => text.startsWith("artefato")) : undefined;
-      return result({ link: confident(owner?.[0] ?? "none") });
-    }
-    if ("c1" in questions) {
-      const picked: Record<string, ReturnType<typeof confident>> = {};
-      for (const [name, question] of Object.entries(questions as Record<string, { instructions: string }>)) {
-        picked[name] = confident(/Reunião|Corrida/.test(question.instructions) ? "edit" : "keep");
-      }
-      return result(picked);
-    }
-    const answers: Record<string, ReturnType<typeof confident>> = {};
-    for (const name of Object.keys(dispatchConfig.questions)) answers[name] = confident(name === "query" ? "no" : "none");
-    return result({ ...answers, ...dispatch });
-  });
+  // O JEV so responde as tres perguntas do destino; o resto e do agente de escrita.
+  const jev = scriptedJev(() => dispatchAnswers(route));
 
   const deps = { store, runner, batchWriter, repositories, createTask };
   operations = new RequestOperations(jobs, store, {
-    dispatcher: new RequestDispatcher(store, jev.client, new PostgresCandidateQuery(database)),
-    create: new RequestCreateWorker(deps),
-    edit: new RequestEditWorker({ ...deps, sql }),
+    dispatcher: new RequestDispatcher(store, jev.client, {
+      candidates: new PostgresCandidateQuery(database), model: async () => configModel,
+    }),
+    entity: new RequestEntityWorker({ ...deps, sql }),
+    edit: new RequestEditWorker(deps),
     query: new RequestQueryWorker({ store, runner, sql }),
-    finalizer: new RequestFinalizer({ ...deps, jev: jev.client }),
+    finalizer: new RequestFinalizer({ store, runner }),
     editTarget: new RequestEditTargetWorker({
       store, repositories, files: new FakeAgentFiles(), failureText: (code) => uiConfig.targetFailed[code],
     }),
@@ -130,7 +119,8 @@ beforeEach(async () => {
   gateway.reasonings.clear();
   gateway.calls.length = 0;
   gateway.failure = undefined;
-  dispatch = {};
+  route = "write";
+  configModel = undefined;
   foodParsing.texts.length = 0;
   foodParsing.response = {
     items: [{ food: "Arroz", portion: "300 g", approximateWeightGrams: 300, caloriesKcal: 390, macronutrients: { carbohydratesGrams: 84, proteinsGrams: 8, totalFatGrams: 1, fiberGrams: 1 } }],
@@ -161,19 +151,17 @@ async function drain(): Promise<string[]> {
 const jobStatuses = async () =>
   (await ctx.pool.query<{ kind: string; status: string }>("SELECT kind, status FROM jobs ORDER BY created_at, id")).rows;
 
-test("o exemplo-guia: a refeicao nasce com o alimento ligado, o passo de artefatos o deixa para ela, nutrientes calculados depois", async () => {
-  dispatch = { task_create: confident("many"), artifact_create: confident("one") };
-  gateway.outputs.set("task_create", { tasks: [
-    task("Refeição", "meal", 12, { foods: "300g de arroz" }), task("Nadar na praia", "training", 13),
-  ] });
-  gateway.outputs.set("artifact_create", { artifacts: [{ type: "food", name: "Arroz", content: "300g de arroz", startedAt: null }] });
+test("o exemplo-guia: um passo so grava tudo, a refeicao nasce com o alimento ligado e os nutrientes sao calculados depois", async () => {
+  gateway.outputs.set("entity", entityAnswer({ tasks: [
+    task("Refeição", "meal", 12, { foods: "300g de arroz", foodName: "Arroz" }), task("Nadar na praia", "training", 13),
+  ] }));
 
   const requestId = await operations.start({ userId: "user-1", text: "comendo 300g de arroz, depois vou nadar", context: { screen: "agenda" } }, actor);
   expect(await operations.view(requestId, actor)).toMatchObject({ status: "queued", steps: [], route: "steps" });
 
   const ran = await drain();
   expect(ran.filter((kind) => kind.startsWith("request-")).sort()).toEqual([
-    "request-dispatch", "request-finalize", "request-finalize", "request-step", "request-step",
+    "request-dispatch", "request-finalize", "request-step",
   ]);
   expect(ran).toContain("food-generation");
   expect((await jobStatuses()).every((job) => job.status === "succeeded")).toBe(true);
@@ -181,9 +169,8 @@ test("o exemplo-guia: a refeicao nasce com o alimento ligado, o passo de artefat
   const view = await operations.view(requestId, actor);
   expect(view).toMatchObject({ status: "done", title: "comendo 300g de arroz, depois vou nadar", text: "comendo 300g de arroz, depois vou nadar" });
   expect(view.message).toBeUndefined();
-  // O passo de artefatos termina sem criar nada: o alimento da refeicao e do passo de tarefas.
   expect(view.steps.map((step) => [step.agent, step.label, step.status])).toEqual([
-    ["task-create", "Criando tarefas", "done"], ["artifact-create", "Criando artefatos", "done"],
+    ["entity", "Criando e atualizando registros", "done"],
   ]);
   const meal = view.entities.find((entity) => entity.kind === "task" && entity.name === "Refeição");
   const swim = view.entities.find((entity) => entity.name === "Nadar na praia");
@@ -218,57 +205,59 @@ test("o exemplo-guia: a refeicao nasce com o alimento ligado, o passo de artefat
   expect(humans.rows.map((row) => row.name)).toEqual(["Nadar na praia", "Refeição"]);
 });
 
-test("so o passo de artefatos recebeu a refeicao: ele cria a tarefa e o alimento, ja ligados", async () => {
-  dispatch = { artifact_create: confident("one") };
-  gateway.outputs.set("artifact_create", { artifacts: [{ type: "food", name: "Arroz", content: "200g de arroz", startedAt: iso(12) }] });
+test("a nota que o agente liga a tarefa nova nasce ligada, no mesmo lote, sem outro modelo", async () => {
+  gateway.outputs.set("entity", entityAnswer({
+    tasks: [task("Reunião com a Ana", "common", 15)],
+    artifacts: [{ name: "Pauta da reunião", content: "orçamento e contratação", taskIndex: 0, taskId: null }],
+  }));
 
-  const requestId = await operations.start({ userId: "user-1", text: "vou comer 200g de arroz daqui 3 min" }, actor);
+  const requestId = await operations.start({ userId: "user-1", text: "reunião com a Ana às 15h, pauta: orçamento e contratação" }, actor);
   await drain();
 
   const view = await operations.view(requestId, actor);
   expect(view.status).toBe("done");
-  const meal = view.entities.find((entity) => entity.kind === "task");
-  const food = view.entities.find((entity) => entity.kind === "artifact");
-  expect(meal).toMatchObject({ name: "Almoço", linkedTo: [{ kind: "artifact", id: food?.id }] });
-  expect(food).toMatchObject({ artifactType: "food", name: "Arroz", linkedTo: [{ kind: "task", id: meal?.id }] });
-  expect(await tasks.findById(meal?.id as string)).toMatchObject({
-    kind: "meal", artifactLinks: [{ artifactId: food?.id, relation: "creates", fromRecurrence: false }],
+  const meeting = view.entities.find((entity) => entity.kind === "task");
+  const agenda = view.entities.find((entity) => entity.kind === "artifact");
+  expect(meeting).toMatchObject({ name: "Reunião com a Ana", linkedTo: [{ kind: "artifact", id: agenda?.id }] });
+  expect(agenda).toMatchObject({ artifactType: "text", name: "Pauta da reunião", linkedTo: [{ kind: "task", id: meeting?.id }] });
+  expect(await tasks.findById(meeting?.id as string)).toMatchObject({
+    artifactLinks: [{ artifactId: agenda?.id, relation: "creates", fromRecurrence: false }],
   });
+  // Uma chamada ao modelo, e so ela: a do agente de escrita.
+  expect(gateway.calls.map((call) => call.schemaName)).toEqual(["entity"]);
 });
 
-test("edicao: o JEV escolhe o candidato, o agente muda so ele; uma continuacao aponta para o primeiro pedido", async () => {
-  dispatch = { task_create: confident("one") };
-  gateway.outputs.set("task_create", { tasks: [task("Reunião", "common", 12)] });
+test("edicao: o agente de escrita recebe os candidatos do servidor e muda so o que o pedido cita; uma continuacao aponta para o primeiro pedido", async () => {
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Reunião", "common", 12)] }));
   const first = await operations.start({ userId: "user-1", text: "reunião ao meio-dia" }, actor);
   await drain();
   const [meeting] = (await operations.view(first, actor)).entities;
 
-  dispatch = { task_edit: confident("one") };
-  gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: meeting?.id, estimatedFinishAt: iso(14) }], query: null });
+  gateway.outputs.set("entity", entityAnswer({ taskEdits: [{ ...noTask, id: meeting?.id, estimatedFinishAt: iso(14) }] }));
   const second = await operations.start({ userId: "user-1", text: "terminei a reunião às 14h", sessionId: first }, actor);
   await drain();
 
   const view = await operations.view(second, actor);
   expect(view).toMatchObject({
     status: "done", sessionId: first,
-    steps: [{ agent: "task-edit", status: "done" }],
+    steps: [{ agent: "entity", status: "done" }],
     entities: [{ kind: "task", id: meeting?.id, name: "Reunião", operation: "update" }],
   });
   expect((await operations.view(first, actor)).sessionId).toBeUndefined();
   expect(await tasks.findById(meeting?.id as string)).toMatchObject({ estimatedFinishAt: new Date(iso(14)), revision: 2 });
-  // O agente de edicao recebeu o candidato que o JEV escolheu.
+  // O agente recebeu a reuniao entre os candidatos que o servidor listou; o JEV nao escolheu nenhum.
   expect(gateway.calls.at(-1)?.user).toContain(meeting?.id as string);
   const routing = view.trace?.entries.find((entry) => entry.kind === "routing");
-  expect(routing?.fields).toContainEqual({ label: "Candidatos de edição", value: "1 de 1" });
+  expect(routing?.fields).toContainEqual({ label: "Candidatos de edição", value: "1" });
+  expect(routing?.fields).toContainEqual({ label: "Destino", value: "criar ou atualizar registros" });
 });
 
 test("consulta: as linhas ficam no passo e so enxergam as tarefas de pessoa do usuario", async () => {
-  dispatch = { task_create: confident("one") };
-  gateway.outputs.set("task_create", { tasks: [task("Reunião", "common", 12)] });
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Reunião", "common", 12)] }));
   await operations.start({ userId: "user-1", text: "reunião ao meio-dia" }, actor);
   await drain();
 
-  dispatch = { query: confident("yes") };
+  route = "query";
   gateway.outputs.set("query", { sql: "SELECT name FROM tasks ORDER BY name" });
   const requestId = await operations.start({ userId: "user-1", text: "o que tenho hoje?" }, actor);
   await drain();
@@ -302,7 +291,36 @@ test("o modelo recebe a escolha e as trocas anteriores da sessao, lidas do Postg
   });
 });
 
-test("o fallback e sempre o Hermes: pedido sem passo e `fallback:` vao a ele, na sessao da conversa", async () => {
+test("configuracao do app vai ao modo modelo, com o modelo padrao do ambiente; sem o modo, vai ao Hermes", async () => {
+  const trace: AgentTraceDto = { route: "model", status: "done", fields: [], entries: [] };
+  const selections: ModelChatInput["selection"][] = [];
+  modelReply = async (input) => {
+    selections.push(input.selection);
+    return { text: `Modelo: ${input.text}`, trace };
+  };
+  hermesReply = async (input) => ({ text: `Hermes: ${input.text}`, trace: { ...trace, route: "hermes" } });
+
+  route = "config";
+  configModel = { provider: "anthropic", model: "claude-opus-5-5", effort: "medium" };
+  const first = await operations.start({ userId: "user-1", text: "qual modelo você está usando?" }, actor);
+  await drain();
+
+  // O pedido nasceu na rota do chat e o despacho o passou a rota do modelo, com a escolha gravada nele.
+  const view = await operations.view(first, actor);
+  expect(view).toMatchObject({
+    route: "model", status: "done", message: "Modelo: qual modelo você está usando?", steps: [], model: configModel,
+  });
+  expect(selections).toEqual([configModel]);
+  expect(gateway.calls).toEqual([]);
+
+  // Sem o modo modelo para este usuario, quem atende e o Hermes.
+  configModel = undefined;
+  const second = await operations.start({ userId: "user-1", text: "troca para o Claude" }, actor);
+  await drain();
+  expect(await operations.view(second, actor)).toMatchObject({ route: "hermes", status: "done", message: "Hermes: troca para o Claude" });
+});
+
+test("tarefa de agente e `fallback:` vao ao Hermes, na sessao da conversa", async () => {
   const trace: AgentTraceDto = { route: "hermes", status: "done", fields: [], entries: [] };
   const seen: Array<{ text: string; sessionId: string }> = [];
   hermesReply = async (input) => {
@@ -310,7 +328,8 @@ test("o fallback e sempre o Hermes: pedido sem passo e `fallback:` vao a ele, na
     return { text: `Hermes: ${input.text}`, trace };
   };
 
-  // O JEV nao reconhece nenhum passo: o pedido muda para a rota do Hermes, sem passo de fallback.
+  // O JEV responde nao as tres perguntas: e uma tarefa de agente, e o pedido muda para a rota do Hermes, sem passo.
+  route = undefined;
   const first = await operations.start({ userId: "user-1", text: "me conta uma piada" }, actor);
   await drain();
   const view = await operations.view(first, actor);
@@ -327,25 +346,20 @@ test("o fallback e sempre o Hermes: pedido sem passo e `fallback:` vao a ele, na
   ]);
 });
 
-test("um passo que falha nao trava o pedido: ele fecha com a explicacao, e o outro passo fica gravado", async () => {
-  dispatch = { task_create: confident("one"), artifact_create: confident("one") };
-  gateway.outputs.set("task_create", { tasks: [task("Refeição", "meal", 12)] });
-  gateway.outputs.set("failure_explainer", { message: "Criei a refeição, mas não consegui criar a nota." });
+test("o passo de escrita que falha fecha o pedido com a explicacao, sem gravar nada", async () => {
+  // Sem saida combinada para o agente de escrita, o passo dele falha.
+  gateway.outputs.set("failure_explainer", { message: "Não consegui registrar o almoço." });
 
   const requestId = await operations.start({ userId: "user-1", text: "almocei arroz" }, actor);
   await drain();
 
   const view = await operations.view(requestId, actor);
-  expect(view).toMatchObject({ status: "done", message: "Criei a refeição, mas não consegui criar a nota." });
-  expect(view.steps.map((step) => [step.agent, step.status, step.errorCode])).toEqual([
-    ["task-create", "done", undefined], ["artifact-create", "failed", "internal"],
-  ]);
-  // A refeicao e o alimento dela vem do passo que deu certo.
-  expect(view.entities.map((entity) => [entity.kind, entity.name]).sort()).toEqual([["artifact", "Refeição"], ["task", "Refeição"]]);
+  expect(view).toMatchObject({ status: "failed", message: "Não consegui registrar o almoço.", entities: [] });
+  expect(view.steps.map((step) => [step.agent, step.status, step.errorCode])).toEqual([["entity", "failed", "internal"]]);
+  expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(0);
 });
 
 test("o job de um passo que morre nunca deixa o pedido aberto", async () => {
-  dispatch = { task_create: confident("one") };
   const requestId = await operations.start({ userId: "user-1", text: "almocei" }, actor);
   await jobs.tick();
   await jobs.idle();
@@ -354,8 +368,8 @@ test("o job de um passo que morre nunca deixa o pedido aberto", async () => {
   await drain();
 
   const view = await operations.view(requestId, actor);
-  expect(view.steps).toMatchObject([{ agent: "task-create", status: "failed", errorCode: "unavailable" }]);
-  expect(view).toMatchObject({ status: "failed", message: "Não consegui concluir: criando tarefas." });
+  expect(view.steps).toMatchObject([{ agent: "entity", status: "failed", errorCode: "unavailable" }]);
+  expect(view).toMatchObject({ status: "failed", message: "Não consegui concluir: criando e atualizando registros." });
   expect((await jobStatuses()).find((job) => job.kind === "request-step")?.status).toBe("failed");
 });
 
@@ -445,25 +459,23 @@ test("Hermes: o rastro vem do progresso enquanto roda e das entradas depois que 
 });
 
 test("cancelar: os jobs vivos param, o pedido e os passos abertos ficam cancelados e nada mais e gravado", async () => {
-  dispatch = { task_create: confident("one"), query: confident("yes") };
-  gateway.outputs.set("task_create", { tasks: [task("Almoço", "meal", 12)] });
-  const requestId = await operations.start({ userId: "user-1", text: "almocei; o que tenho hoje?" }, actor);
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Almoço", "meal", 12)] }));
+  const requestId = await operations.start({ userId: "user-1", text: "almocei" }, actor);
   await jobs.tick();
   await jobs.idle();
 
   const cancelled = await operations.cancel(requestId, actor);
   expect(cancelled).toMatchObject({ status: "cancel", errorCode: "cancelled" });
-  expect(cancelled.steps.map((step) => step.status)).toEqual(["cancel", "cancel"]);
+  expect(cancelled.steps.map((step) => step.status)).toEqual(["cancel"]);
   await drain();
 
-  expect((await jobStatuses()).filter((job) => job.kind === "request-step").map((job) => job.status)).toEqual(["cancelled", "cancelled"]);
+  expect((await jobStatuses()).filter((job) => job.kind === "request-step").map((job) => job.status)).toEqual(["cancelled"]);
   expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(0);
   expect(gateway.calls).toHaveLength(0);
   expect(await operations.view(requestId, actor)).toMatchObject({ status: "cancel", entities: [] });
 });
 
 test("o modelo fora do ar vira passo vermelho com codigo, e o texto do usuario so aparece em mensagens, pensamentos e insumos", async () => {
-  dispatch = { task_create: confident("one") };
   gateway.failure = new FastStageError("timeout");
   const text = "almocei com a Dona Zuleide";
   const requestId = await operations.start({ userId: "user-1", text }, actor);

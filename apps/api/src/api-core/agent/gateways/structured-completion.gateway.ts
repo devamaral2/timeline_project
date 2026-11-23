@@ -1,3 +1,4 @@
+import type { ModelEffort, ModelProvider, ModelSelection } from "@repo/contracts";
 import { z } from "zod";
 import { getServerEnv } from "../../../config/env";
 import { AgentRunCancelledError, FastStageError, LlmUnavailableError } from "../errors/agent.errors";
@@ -17,6 +18,11 @@ export interface StructuredCompletionInput {
    * Com valor, o texto do raciocinio volta em `reasoning` quando o modelo o entrega.
    */
   reasoning?: ReasoningEffort;
+  /**
+   * O provedor, o modelo e o esforco que o usuario escolheu para o pedido. Com ela, a chamada vai a esse modelo, no
+   * esforco dela (o `reasoning` nao vale); sem ela, ao modelo fixo do servidor.
+   */
+  model?: ModelSelection;
   signal?: AbortSignal;
 }
 
@@ -46,6 +52,31 @@ export interface StructuredCompletionGateway {
 export function jsonSchemaOf(schema: z.ZodType): Record<string, unknown> {
   const { $schema: _ignored, ...rest } = z.toJSONSchema(schema) as Record<string, unknown>;
   return rest;
+}
+
+/**
+ * O JSON de uma resposta em texto: o objeto inteiro, mesmo quando o modelo o cerca de crases ou de uma frase.
+ * Lanca quando nao ha objeto ou ele nao fecha.
+ */
+export function jsonReply(text: string): unknown {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end < start) throw new Error("no JSON object in the reply");
+  return JSON.parse(text.slice(start, end + 1));
+}
+
+/**
+ * O formato pedido por escrito, para o provedor em que a saida presa ao schema nao cabe: o schema vai no fim do
+ * prompt de sistema e quem chama valida a resposta.
+ */
+export function withSchemaInstruction(system: string, schema: Record<string, unknown>): string {
+  return [
+    system,
+    "",
+    "# Formato da resposta",
+    "Responda só com um objeto JSON, sem texto antes ou depois e sem cercas de código, que siga este JSON Schema:",
+    JSON.stringify(schema),
+  ].join("\n");
 }
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
@@ -83,6 +114,29 @@ function reasoningOf(message: CompletionMessage | undefined): string | undefined
   return parts.length > 0 ? parts.join("\n\n") : undefined;
 }
 
+/** Os niveis do seletor na escala do OpenRouter: Maximo e o `xhigh`, o mais alto que ele traduz para todo modelo. */
+const SELECTED_EFFORTS: Record<ModelEffort, "low" | "medium" | "high" | "xhigh"> = {
+  low: "low", medium: "medium", high: "high", max: "xhigh",
+};
+
+/**
+ * Quem atende a chamada: sem escolha no pedido, o modelo fixo do servidor (`fixed`); com ela, o gateway do provedor
+ * escolhido. Um provedor sem chave neste ambiente nao tem gateway: a chamada falha em vez de trocar de modelo calada.
+ */
+export class SelectedModelCompletionGateway implements StructuredCompletionGateway {
+  constructor(
+    private readonly fixed: StructuredCompletionGateway,
+    private readonly providers: Partial<Record<ModelProvider, StructuredCompletionGateway>>,
+  ) {}
+
+  complete(input: StructuredCompletionInput): Promise<StructuredCompletionResult> {
+    if (!input.model) return this.fixed.complete(input);
+    const provider = this.providers[input.model.provider];
+    if (!provider) throw new LlmUnavailableError(`O provedor ${input.model.provider} não está ligado neste ambiente.`);
+    return provider.complete(input);
+  }
+}
+
 export class OpenRouterStructuredCompletionGateway implements StructuredCompletionGateway {
   constructor(
     private readonly apiKey: string | undefined = getServerEnv().OPENROUTER_API_KEY,
@@ -91,9 +145,14 @@ export class OpenRouterStructuredCompletionGateway implements StructuredCompleti
     private readonly minRetryMs = MIN_RETRY_MS,
   ) {}
 
+  /** O modelo da chamada: o que o usuario escolheu no OpenRouter ou, sem escolha, o fixo do servidor. */
+  private modelOf(input: StructuredCompletionInput): string | undefined {
+    return input.model?.provider === "openrouter" ? input.model.model : this.modelName;
+  }
+
   async complete(input: StructuredCompletionInput): Promise<StructuredCompletionResult> {
     if (!this.apiKey) throw new LlmUnavailableError("Missing OPENROUTER_API_KEY");
-    if (!this.modelName) throw new LlmUnavailableError("Missing OPENROUTER_MODEL");
+    if (!this.modelOf(input)) throw new LlmUnavailableError("Missing OPENROUTER_MODEL");
 
     // Uma chamada que trava (cauda do provedor, medida em ~3% das chamadas) custa o orcamento
     // inteiro. Uma segunda tentativa com o que sobrou resolve quase sempre, porque a chamada
@@ -112,7 +171,8 @@ export class OpenRouterStructuredCompletionGateway implements StructuredCompleti
     | { ok: true; result: StructuredCompletionResult }
     | { ok: false; reason: "timeout" | "provider" | "invalid"; error: FastStageError }
   > {
-    const modelName = this.modelName as string;
+    const modelName = this.modelOf(input) as string;
+    const selected = input.model?.provider === "openrouter" ? input.model : undefined;
     const timeout = AbortSignal.timeout(timeoutMs);
     const signal = input.signal ? AbortSignal.any([input.signal, timeout]) : timeout;
     const failure = (reason: "timeout" | "provider" | "invalid", status?: number) =>
@@ -127,12 +187,15 @@ export class OpenRouterStructuredCompletionGateway implements StructuredCompleti
           model: modelName,
           temperature: 0,
           // Extracao curta: o raciocinio do modelo custa 1-3 s por chamada e nao melhora o resultado. So liga
-          // quando quem chama o pede, para conferir o que o modelo pensou.
-          reasoning: input.reasoning ? { effort: input.reasoning } : { enabled: false },
+          // quando quem chama o pede, para conferir o que o modelo pensou, ou no esforco que o usuario escolheu.
+          reasoning: selected ? { effort: SELECTED_EFFORTS[selected.effort] }
+            : input.reasoning ? { effort: input.reasoning } : { enabled: false },
           // A cauda de latencia do provedor pesa mais que o preco numa chamada de ~1 s.
           provider: { sort: "latency" },
           messages: [
-            { role: "system", content: input.system },
+            // O modelo escolhido pelo usuario pode nao ter saida estruturada (o OpenRouter ignora o parametro que o
+            // modelo nao aceita): o formato vai tambem por escrito.
+            { role: "system", content: selected ? withSchemaInstruction(input.system, input.schema) : input.system },
             { role: "user", content: input.user },
           ],
           response_format: {
@@ -154,11 +217,14 @@ export class OpenRouterStructuredCompletionGateway implements StructuredCompleti
       const payload = (await response.json()) as CompletionPayload;
       const message = payload.choices?.[0]?.message;
       if (!message?.content) throw new Error("empty content");
-      const reasoning = input.reasoning ? reasoningOf(message) : undefined;
+      const reasoning = input.reasoning || selected ? reasoningOf(message) : undefined;
       const usage = usageOf(payload);
       return {
         ok: true,
-        result: { value: JSON.parse(message.content), modelName, ...(reasoning ? { reasoning } : {}), ...(usage ? { usage } : {}) },
+        result: {
+          value: selected ? jsonReply(message.content) : JSON.parse(message.content),
+          modelName, ...(reasoning ? { reasoning } : {}), ...(usage ? { usage } : {}),
+        },
       };
     } catch {
       if (input.signal?.aborted) throw new AgentRunCancelledError();

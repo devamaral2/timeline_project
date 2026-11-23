@@ -1,9 +1,11 @@
 import { Body, Controller, HttpCode, HttpStatus, Inject, Module, Post, UseGuards } from "@nestjs/common";
 import type { StartRequestResponse } from "@repo/contracts";
+import { modelSelectionSchema } from "@repo/contracts/schemas";
 import { z } from "zod";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
 import { agentTextSchema } from "../../api-core/agent/agent-input.schemas";
 import { ApiCoreModule } from "../../api-core/api-core.module";
+import { selectionProblem } from "../../api-core/requests/model-catalog";
 import { RequestOperations } from "../../api-core/requests/request-operations";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
@@ -16,11 +18,14 @@ export const startEditRequestBody = z.object({
     "task", "artifact", "food_artifact", "sleep_artifact", "training_artifact", "skill_artifact", "agent_artifact",
   ]),
   entityId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+  /** O provedor, o modelo e o esforco que o campo do detalhe mostra: o agente de edicao roda com ele. */
+  model: modelSelectionSchema.optional(),
 });
 
 /**
  * `POST /api/requests/edit`: o pedido de edicao da entidade aberta na tela de detalhe (ADR 006). Responde com o
- * `requestId`, que se acompanha em `GET /api/requests/:requestId`, como qualquer pedido.
+ * `requestId`, que se acompanha em `GET /api/requests/:requestId`, como qualquer pedido. Com `model`, o provedor
+ * precisa estar ligado e o modelo na lista dele.
  */
 @Controller("api/requests")
 export class StartEditRequestController {
@@ -32,6 +37,8 @@ export class StartEditRequestController {
   async start(@Body() body: unknown, @CurrentUser() actor: AuthenticatedUser): Promise<StartRequestResponse> {
     const parsed = startEditRequestBody.safeParse(body);
     if (!parsed.success) throw new InvalidInputError(z.prettifyError(parsed.error));
+    const problem = parsed.data.model && await selectionProblem(parsed.data.model);
+    if (problem) throw new InvalidInputError(problem);
     return { requestId: await this.requests.startEdit(parsed.data, actor) };
   }
 }
