@@ -1,0 +1,143 @@
+# ai-memory em producao (memoria de longo prazo dos agentes de IA do operador).
+# Aplicado a mao, nao pelo braid-deploy: a imagem e publica
+# (akitaonrails/ai-memory) e nao depende do codigo do Braid.
+# Roteiro: docs/runbook/ai-memory-vps.md.
+#
+# - Namespace proprio: o ai-memory nao e parte do produto e nao deve enxergar
+#   nem ser enxergado pelos pods de braid alem do necessario.
+# - Um unico pod: dois servidores no mesmo data dir corrompem o wiki em git,
+#   por isso a estrategia e Recreate (nunca RollingUpdate).
+# - Entrada so pelo Traefik (Ingress memory.braidapp.site, via Cloudflare
+#   Tunnel). O Service e ClusterIP; nada escuta no host.
+# - Versao fixa: troque a tag a mao, depois de um backup (secao "Atualizar").
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-memory
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ai-memory-data
+  namespace: ai-memory
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests: {storage: 10Gi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-memory
+  namespace: ai-memory
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: ai-memory}
+  template:
+    metadata:
+      labels: {app: ai-memory}
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: ai-memory
+          image: docker.io/akitaonrails/ai-memory:3.5.1
+          imagePullPolicy: IfNotPresent
+          # O CMD da imagem ja e: serve --transport http --bind 0.0.0.0:49374 --enable-web
+          env:
+            # Comparado com o header Host de cada pedido. Sem o hostname publico,
+            # todo pedido vindo do Traefik recebe 403 "forbidden host".
+            - {name: AI_MEMORY_ALLOWED_HOSTS, value: "memory.braidapp.site,localhost,127.0.0.1"}
+            # O /web e servido em HTTPS pela Cloudflare.
+            - {name: AI_MEMORY_AUTH__SECURE_COOKIE, value: "true"}
+            # Varias sessoes do Claude Code em paralelo, em projetos diferentes.
+            - {name: AI_MEMORY_AUTO_SCOPE__MODE, value: "per_session"}
+          envFrom:
+            # AI_MEMORY_AUTH_TOKEN (e, se ligar um provedor, as chaves dele).
+            - secretRef: {name: ai-memory-env}
+          ports:
+            - {name: http, containerPort: 49374}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+          # As sondas mandam Host: localhost, senao o filtro de hosts recusa o IP do pod.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              httpHeaders: [{name: Host, value: localhost}]
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              httpHeaders: [{name: Host, value: localhost}]
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              httpHeaders: [{name: Host, value: localhost}]
+            periodSeconds: 20
+            failureThreshold: 6
+          resources:
+            requests: {cpu: 100m, memory: 384Mi}
+            limits: {cpu: "1", memory: 1Gi}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: ai-memory-data}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-memory
+  namespace: ai-memory
+spec:
+  type: ClusterIP
+  selector: {app: ai-memory}
+  ports:
+    - {name: http, port: 49374, targetPort: http}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: memory
+  namespace: ai-memory
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: memory.braidapp.site
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ai-memory
+                port:
+                  number: 49374
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ai-memory-from-traefik-only
+  namespace: ai-memory
+spec:
+  podSelector:
+    matchLabels: {app: ai-memory}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {app.kubernetes.io/name: traefik}
+      ports:
+        - {protocol: TCP, port: 49374}
