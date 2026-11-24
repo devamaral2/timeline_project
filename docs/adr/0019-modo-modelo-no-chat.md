@@ -27,7 +27,8 @@ canvas "Provedor, modelo e esforço".
    (Baixo, Médio, Alto, Máximo) e "Selecionar". Sem títulos nem explicações. A escolha fica no aparelho e vai em cada
    pedido; cada resposta mostra embaixo o modelo, o esforço e o provedor que a deram.
 3. **Uma rota e um job.** `GET /api/requests/model/options` diz os provedores com chave neste ambiente, os modelos de
-   cada um e a escolha padrão. `POST /api/requests/model` (o corpo do Hermes mais `model: {provider, model, effort}`)
+   cada um e a escolha padrão (na Anthropic, o Haiku: quem instala o app de novo e ainda não escolheu modelo começa
+   nele). `POST /api/requests/model` (o corpo do Hermes mais `model: {provider, model, effort}`)
    abre um pedido de rota `model`, guarda a escolha em `tasks.data.model` e põe o turno na fila (`model-turn`, ADR
    0013). O cliente acompanha em `GET /api/requests/:id`; pensamentos e ferramentas vêm do rastro, e a resposta em
    `message`. Sem nenhuma chave, as duas rotas respondem 404 e o chat avisa que o modo está desligado.
