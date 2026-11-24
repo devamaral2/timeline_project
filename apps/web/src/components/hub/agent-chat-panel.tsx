@@ -28,7 +28,6 @@ import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-
 import type { ModelOptionsDto, RequestScreenContext } from "@repo/contracts";
 import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { useSessionState } from "@/lib/session/use-session";
-import { speechErrorMessage } from "@/lib/speech/speech-error-messages";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
 import type { FreeWindow } from "./hub-open";
@@ -181,18 +180,6 @@ export function AgentChatPanel({
     autoStart: listensOnOpen,
   });
   const sendSpokenRef = useRef<(transcript: string) => void>(() => {});
-  // Pedido feito por voz: depois da resposta o chat volta a escutar, ate a pessoa pedir
-  // para parar, tocar na onda, digitar ou enviar pelo teclado.
-  const [voiceLoop, setVoiceLoop] = useState(false);
-  useEffect(() => {
-    if (!voiceLoop || listening || chat.pending || !chat.ready) return;
-    // Silencio nao encerra o ciclo; qualquer outro erro (permissao, microfone, rede) sim.
-    if (voiceError && voiceError !== speechErrorMessage("no-speech")) {
-      setVoiceLoop(false);
-      return;
-    }
-    start();
-  }, [voiceLoop, listening, chat.pending, chat.ready, voiceError, start]);
   // O microfone que abriu sozinho nao reclama: silencio ou permissao negada so
   // viram aviso quando foi a pessoa quem tocou na onda.
   const [quietVoice, setQuietVoice] = useState(listensOnOpen);
@@ -269,35 +256,29 @@ export function AgentChatPanel({
     // `/model` abre a folha da escolha do modelo (o campo não mostra o modelo); não vira mensagem.
     if (picker.choice && isModelCommand(draft)) {
       if (listening) cancel();
-      setVoiceLoop(false);
       updatePrompt("");
       picker.show();
       return;
     }
-    // Enviar pelo teclado ou pelo botao e pedido de texto: o ciclo de voz acaba.
     if (chat.send(freeWindow ? requestWithWindow(freeWindow, draft) : draft)) {
       // Enviar o que foi dito fecha o microfone: o pedido ja foi.
       if (listening) cancel();
-      setVoiceLoop(false);
       updatePrompt("");
       onClearFreeWindow?.();
     }
   }
 
   // Sem texto que vire comando e sem a IA ocupada, a fala vai direto; senao, cai no campo.
+  // Depois da resposta o microfone fica desligado: quem quer falar de novo toca na onda.
   sendSpokenRef.current = (transcript) => {
-    if (isStopSpeech(transcript)) {
-      setVoiceLoop(false);
-      return;
-    }
+    // "para", "chega": a fala que manda parar nao vira pedido.
+    if (isStopSpeech(transcript)) return;
     const text = (prompt ? `${prompt} ${transcript}` : transcript).slice(0, 4000);
     if (!parseCommand(text) && chat.send(freeWindow ? requestWithWindow(freeWindow, text) : text)) {
-      setVoiceLoop(true);
       updatePrompt("");
       onClearFreeWindow?.();
       return;
     }
-    setVoiceLoop(false);
     updatePrompt(text);
   };
 
@@ -308,7 +289,6 @@ export function AgentChatPanel({
     if (listening) {
       updatePrompt((heard ? `${prompt ? `${prompt} ` : ""}${heard}` : prompt).slice(0, 4000));
       cancel();
-      setVoiceLoop(false);
     }
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
@@ -328,7 +308,7 @@ export function AgentChatPanel({
         <button
           type="button"
           className={field.voice}
-          onClick={listening ? () => { setVoiceLoop(false); stop(); } : () => { setQuietVoice(false); start(); }}
+          onClick={listening ? stop : () => { setQuietVoice(false); start(); }}
           disabled={!chat.ready || Boolean(chat.pending)}
           aria-pressed={listening}
           aria-label={listening ? "Parar de transcrever" : "Transcrever o que eu disser"}
@@ -462,7 +442,7 @@ export function AgentChatPanel({
       </div>
 
       <div className={styles.chatField}>
-        {voiceError && !quietVoice && !voiceLoop && <p className={styles.hubComposerHint}>{voiceError}</p>}
+        {voiceError && !quietVoice && <p className={styles.hubComposerHint}>{voiceError}</p>}
         <p className={field.status} data-state={state} role="status" aria-live="polite">
           <HermesMark state={state} plain />
           <span className={chat.pending && !listening ? styles.chatStep : undefined}>{statusText}</span>
@@ -499,7 +479,6 @@ export function AgentChatPanel({
               // e o que ja estava escrito (ouvido ou nao) fica como texto.
               userTypedRef.current = true;
               if (listening) cancel();
-              setVoiceLoop(false);
               updatePrompt(event.target.value.slice(0, 4000));
             }}
             onKeyDown={onKeyDown}

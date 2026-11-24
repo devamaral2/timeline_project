@@ -471,62 +471,39 @@ async function speakAndWaitForReply(text: string, count: number) {
   await waitFor(() => expect(screen.getByRole("status")).not.toHaveTextContent("…"));
 }
 
-test("after the answer to a spoken request, the chat listens again, over and over", async () => {
+test("after the answer to a spoken request, the microphone stays off until the person taps the wave", async () => {
   withMicrophone();
   render(<Harness listenOnOpen />);
 
   await speakAndWaitForReply("o que tenho hoje?", 1);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  expect(FakeSpeechRecognition.instances).toHaveLength(1);
+  expect(screen.getByRole("status")).not.toHaveTextContent("Ouvindo…");
+  expect(screen.getByRole("button", { name: "Transcrever o que eu disser" })).toHaveAttribute("aria-pressed", "false");
+
+  fireEvent.click(screen.getByRole("button", { name: "Transcrever o que eu disser" }));
+
   await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
   expect(screen.getByRole("status")).toHaveTextContent("Ouvindo…");
-
-  await speakAndWaitForReply("e amanhã?", 2);
-  await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(3));
-  expect(requestPosts()).toHaveLength(2);
 });
 
-test("saying stop ends the cycle without sending the word", async () => {
+test("saying stop sends nothing and the microphone stays off", async () => {
   withMicrophone();
   render(<Harness listenOnOpen />);
-  await speakAndWaitForReply("o que tenho hoje?", 1);
-  await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
 
   vi.useFakeTimers();
   try {
-    act(() => FakeSpeechRecognition.instances[1].hear("Pode parar."));
+    act(() => FakeSpeechRecognition.instances[0].hear("Pode parar."));
     act(() => { vi.advanceTimersByTime(2000); });
   } finally {
     vi.useRealTimers();
   }
 
   await new Promise((resolve) => setTimeout(resolve, 50));
-  expect(requestPosts()).toHaveLength(1);
+  expect(requestPosts()).toHaveLength(0);
   expect(screen.getByRole("button", { name: "Transcrever o que eu disser" })).toHaveAttribute("aria-pressed", "false");
-  expect(FakeSpeechRecognition.instances).toHaveLength(2);
-});
-
-test("tapping the wave while it listens ends the cycle", async () => {
-  withMicrophone();
-  render(<Harness listenOnOpen />);
-  await speakAndWaitForReply("o que tenho hoje?", 1);
-  await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
-
-  fireEvent.click(screen.getByRole("button", { name: "Parar de transcrever" }));
-
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  expect(FakeSpeechRecognition.instances).toHaveLength(2);
-  expect(screen.getByRole("button", { name: "Transcrever o que eu disser" })).toHaveAttribute("aria-pressed", "false");
-});
-
-test("typing ends the cycle too", async () => {
-  withMicrophone();
-  render(<Harness listenOnOpen />);
-  await speakAndWaitForReply("o que tenho hoje?", 1);
-  await waitFor(() => expect(FakeSpeechRecognition.instances).toHaveLength(2));
-
-  fireEvent.change(screen.getByRole("textbox", { name: "Mensagem para a IA" }), { target: { value: "a" } });
-
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  expect(FakeSpeechRecognition.instances).toHaveLength(2);
+  expect(FakeSpeechRecognition.instances).toHaveLength(1);
 });
 
 /** Um id de pedido no formato da API (ULID de 26 caracteres de Crockford). */

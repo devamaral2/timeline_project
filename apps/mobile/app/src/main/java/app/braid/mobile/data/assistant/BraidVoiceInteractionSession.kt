@@ -29,13 +29,14 @@ import app.braid.mobile.MainActivity
 import app.braid.mobile.core.designsystem.BraidTheme
 import app.braid.mobile.domain.settings.isDark
 import app.braid.mobile.ui.assistant.AssistantPanel
+import app.braid.mobile.ui.assistant.AssistantRecordsViewModel
 import app.braid.mobile.ui.chat.ChatViewModel
 import dagger.hilt.android.EntryPointAccessors
 
 /**
  * Uma chamada do assistente (o gesto do sistema). Não abre o app: desenha o painel [AssistantPanel] numa janela da
  * própria sessão, sobre o que estiver na tela (e sobre o bloqueio), ouve, manda o pedido ao agente e mostra a resposta ali
- * mesmo. Cada chamada começa uma conversa nova, com o microfone já aberto.
+ * mesmo, com um cartão por registro criado. Cada chamada começa uma conversa nova, com o microfone já aberto.
  *
  * Uma janela de sessão não é uma `Activity`: a sessão faz as vezes de dono do ciclo de vida, do estado salvo e do
  * armazém de `ViewModel`s que o Compose procura na árvore de views.
@@ -62,23 +63,29 @@ class BraidVoiceInteractionSession(
 
     override fun onCreateContentView(): View {
         val entry = EntryPointAccessors.fromApplication(context.applicationContext, AssistantEntryPoint::class.java)
-        val model =
+        val provider =
             ViewModelProvider(
                 this,
                 object : ViewModelProvider.Factory {
                     @Suppress("UNCHECKED_CAST")
                     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                        ChatViewModel(
-                            repository = entry.chatRepository(),
-                            session = entry.session(),
-                            clock = entry.clock(),
-                            polling = entry.polling(),
-                            models = entry.models(),
-                            speech = entry.speech(),
-                            microphone = entry.microphone(),
-                        ) as T
+                        if (modelClass == AssistantRecordsViewModel::class.java) {
+                            AssistantRecordsViewModel(entry.taskDetails()) as T
+                        } else {
+                            ChatViewModel(
+                                repository = entry.chatRepository(),
+                                session = entry.session(),
+                                clock = entry.clock(),
+                                polling = entry.polling(),
+                                models = entry.models(),
+                                speech = entry.speech(),
+                                microphone = entry.microphone(),
+                            ) as T
+                        }
                 },
-            )[ChatViewModel::class.java]
+            )
+        val model = provider[ChatViewModel::class.java]
+        val records = provider[AssistantRecordsViewModel::class.java]
         chat = model
 
         window?.window?.apply {
@@ -102,9 +109,15 @@ class BraidVoiceInteractionSession(
                 BraidTheme(darkTheme = choice.isDark(isSystemInDarkTheme())) {
                     AssistantPanel(
                         chat = model,
+                        records = records,
                         onClose = ::finish,
                         onOpenApp = {
                             startAssistantActivity(Intent(context, MainActivity::class.java))
+                            finish()
+                        },
+                        // O cartão da tarefa criada abre o detalhe dela no app, pelo mesmo extra da notificação do lembrete.
+                        onOpenTask = { taskId ->
+                            startAssistantActivity(Intent(context, MainActivity::class.java).putExtra(MainActivity.EXTRA_TASK_ID, taskId))
                             finish()
                         },
                     )

@@ -56,6 +56,7 @@ import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.chat.chatEntityText
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.EntityKind
+import app.braid.mobile.domain.request.QueryTable
 import app.braid.mobile.domain.request.RequestEntity
 import app.braid.mobile.domain.request.RequestOperation
 import app.braid.mobile.domain.request.TraceStatus
@@ -296,7 +297,7 @@ internal fun EntityRows(
 }
 
 /** A resposta escrita de um pedido por passos: só quando ele termina bem. */
-private fun processText(request: AgentRequest): String? = request.message?.takeIf { request.status == TaskStatus.Done && it.isNotEmpty() }
+internal fun processText(request: AgentRequest): String? = request.message?.takeIf { request.status == TaskStatus.Done && it.isNotEmpty() }
 
 /**
  * Se um pedido por passos deixa algo na conversa. Enquanto roda, nada: o passo atual vai na linha de status do campo e os
@@ -364,33 +365,37 @@ internal fun ProcessAnswer(
         if (text != null || query != null) {
             ChatReply(name) {
                 if (text != null) Text(text = text, fontSize = 15.sp, lineHeight = 24.sp, color = scheme.onBackground)
-                if (query != null) {
-                    Column(
-                        Modifier
-                            .padding(top = if (text != null) 8.dp else 0.dp)
-                            .semantics { contentDescription = "Resultado da consulta" },
-                    ) {
-                        if (query.rows.isEmpty()) {
-                            Text(text = "Nenhum resultado.", color = scheme.onSurfaceVariant, fontSize = 12.sp)
-                        } else {
-                            Column(Modifier.horizontalScroll(rememberScrollState())) {
-                                Row { for (column in query.columns) QueryCell(column, header = true) }
-                                for (row in query.rows) Row { for (cell in row) QueryCell(cell, header = false) }
-                            }
-                        }
-                        if (query.truncated) {
-                            Text(
-                                text = "Mostrando só as primeiras linhas.",
-                                color = scheme.onSurfaceVariant,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(top = 6.dp),
-                            )
-                        }
-                    }
-                }
+                if (query != null) QueryRows(query, Modifier.padding(top = if (text != null) 8.dp else 0.dp))
             }
         }
         EntityRows(request.entities, links, onOpenEntity)
+    }
+}
+
+/** As linhas que uma consulta devolveu, numa tabela que rola de lado (o chat e o painel do assistente a mostram). */
+@Composable
+internal fun QueryRows(
+    query: QueryTable,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Column(modifier.semantics { contentDescription = "Resultado da consulta" }) {
+        if (query.rows.isEmpty()) {
+            Text(text = "Nenhum resultado.", color = scheme.onSurfaceVariant, fontSize = 12.sp)
+        } else {
+            Column(Modifier.horizontalScroll(rememberScrollState())) {
+                Row { for (column in query.columns) QueryCell(column, header = true) }
+                for (row in query.rows) Row { for (cell in row) QueryCell(cell, header = false) }
+            }
+        }
+        if (query.truncated) {
+            Text(
+                text = "Mostrando só as primeiras linhas.",
+                color = scheme.onSurfaceVariant,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
     }
 }
 
