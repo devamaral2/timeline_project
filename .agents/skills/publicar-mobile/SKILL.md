@@ -1,6 +1,6 @@
 ---
 name: publicar-mobile
-description: Sobe a versão do app Android, gera o APK de release assinado e envia para o Google Drive.
+description: Sobe a versão do app Android, gera o APK de release assinado, envia para o Google Drive e apaga de lá as versões antigas.
 disable-model-invocation: true
 ---
 
@@ -18,7 +18,14 @@ opções, roda e relata. `--help` do script lista as opções.
 3. **Rodar** em segundo plano (testes + Gradle passam de 2 minutos):
    `pnpm release:mobile --bump <parte> --drive`. Concluído quando a saída termina em
    `✓ No Drive: …` ou num `✗`.
-4. **Relatar**: versão antiga → nova, `versionCode`, caminho em `dist/mobile/`, o link do Drive, e
+   O `✓ No Drive` só sai depois que o tamanho no Drive bate com o do APK local. O envio é do rclone
+   porque o conector do Google Drive só aceita o arquivo inteiro em base64 na chamada, e o APK passa
+   de 16 MB.
+   Com o tamanho conferido, o script manda para a lixeira do Drive os `braid-*.apk` anteriores da
+   pasta; ficam o novo e o `braid-latest.apk`. A limpeza sai como `✓ Versões antigas na lixeira do
+   Drive: …` ou, se falhar, como um `!` que não invalida a publicação.
+4. **Relatar**: versão antiga → nova, `versionCode`, caminho em `dist/mobile/`, o link do Drive, as
+   versões antigas que foram para a lixeira (ou o `!` da limpeza, com os nomes que ficaram), e
    se o script avisou de mudanças não commitadas em `apps/mobile`/`packages` (elas entraram no APK).
    O bump de `apps/mobile/package.json` fica sem commit; ofereça o commit
    `chore(mobile): release <versão>`.

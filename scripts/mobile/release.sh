@@ -9,6 +9,7 @@
 #
 # O --drive usa o remote BRAID_DRIVE_REMOTE (padrão gdrive) e a pasta BRAID_DRIVE_FOLDER
 # (padrão Braid/APKs); a configuração única do rclone está em docs/mobile-release.md.
+# Com o APK novo conferido lá, os braid-*.apk anteriores da pasta vão para a lixeira do Drive.
 #
 # A assinatura e as URLs de produção vêm do ambiente ou, para o que faltar, de
 # apps/mobile/.secrets/release.env (fora do Git; outro arquivo com BRAID_MOBILE_RELEASE_ENV):
@@ -36,7 +37,7 @@ while [ $# -gt 0 ]; do
       ;;
     --bump=*) bump="${1#--bump=}" ;;
     -h | --help)
-      sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+      sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *)
@@ -172,7 +173,29 @@ if [ "$drive" -eq 1 ]; then
   rclone copyto "$out" "${drive_remote}:${drive_folder}/braid-latest.apk" ||
     fail "O envio de braid-latest.apk falhou; ${name} já está no Drive."
   listing="$(rclone lsjson "${drive_remote}:${drive_folder}/${name}")"
-  file_id="$(grep -oE '"ID":"[^"]+"' <<<"$listing" | head -1 | cut -d'"' -f4)"
+  # `|| true`: sem o campo na listagem, o `pipefail` encerraria o script antes da mensagem certa.
+  file_id="$(grep -oE '"ID":"[^"]+"' <<<"$listing" | head -1 | cut -d'"' -f4 || true)"
+  remote_size="$(grep -oE '"Size":[0-9]+' <<<"$listing" | head -1 | cut -d: -f2 || true)"
+  local_size="$(stat -c %s "$out")"
+  [ "$remote_size" = "$local_size" ] ||
+    fail "No Drive, ${name} tem ${remote_size:-?} bytes; o APK local tem ${local_size}."
+
+  # Versões antigas: só saem depois que a nova foi conferida, e vão para a lixeira do Drive
+  # (recuperáveis por 30 dias). Falha aqui só avisa: o APK novo já está publicado.
+  if old="$(rclone lsf --files-only --include "/braid-*.apk" "${drive_remote}:${drive_folder}")"; then
+    old="$(grep -vxF -e "$name" -e "braid-latest.apk" <<<"$old" || true)"
+    if [ -n "$old" ]; then
+      old_names="$(paste -sd' ' <<<"$old")"
+      if rclone delete --drive-use-trash=true --files-from-raw - "${drive_remote}:${drive_folder}" <<<"$old"; then
+        echo "✓ Versões antigas na lixeira do Drive: ${old_names}"
+      else
+        echo "! Não consegui apagar do Drive as versões antigas: ${old_names}"
+      fi
+    fi
+  else
+    echo "! Não consegui listar ${drive_remote}:${drive_folder} para apagar as versões antigas."
+  fi
+
   if [ -n "$file_id" ]; then
     echo "✓ No Drive: ${drive_folder}/${name} — https://drive.google.com/file/d/${file_id}/view"
   else
