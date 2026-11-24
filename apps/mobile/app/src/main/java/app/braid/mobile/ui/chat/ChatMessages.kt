@@ -13,10 +13,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -25,40 +27,41 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
-import app.braid.mobile.domain.chat.HermesStep
 import app.braid.mobile.domain.chat.chatEntityText
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.EntityKind
 import app.braid.mobile.domain.request.RequestEntity
 import app.braid.mobile.domain.request.RequestOperation
-import app.braid.mobile.domain.request.TraceKind
 import app.braid.mobile.domain.request.TraceStatus
 import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.task.TaskStatus
+import kotlinx.coroutines.delay
 
 /** Para onde leva cada registro que a resposta tocou; `null` quando a tela de destino ainda não existe, e a linha é só texto. */
 class ChatEntityLinks(
@@ -88,7 +91,7 @@ internal fun Spinner(
     SvgIcon(BraidIcons.spinner, size = size, color = color, strokeWidth = 2.2f, modifier = modifier.rotate(angle))
 }
 
-/** A mensagem de quem escreve: um cartão com fio. */
+/** A mensagem de quem escreve: a faixa reta do Hermes, de largura inteira, um cartão com fio (o balão da opção B não ficou). */
 @Composable
 internal fun UserBubble(message: ChatMessage.User) {
     Box(
@@ -103,6 +106,30 @@ internal fun UserBubble(message: ChatMessage.User) {
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp, lineHeight = 22.sp),
             color = MaterialTheme.colorScheme.onBackground,
         )
+    }
+}
+
+/**
+ * A fala do assistente: texto solto, sem caixa, sob o robô cinza e o [name] de quem responde ("Assistente", "Hermes",
+ * "Modelo": o mesmo do topo do chat).
+ */
+@Composable
+internal fun ChatReply(
+    name: String,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Column(modifier.fillMaxWidth()) {
+        Row(
+            Modifier.padding(bottom = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            HermesBot(BotState.Idle, 18.dp, Modifier.clearAndSetSemantics {}, plain = true)
+            Text(text = name, color = scheme.onSurfaceVariant, fontSize = 12.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold)
+        }
+        content()
     }
 }
 
@@ -141,16 +168,80 @@ internal fun ErrorBubble(
     }
 }
 
+/** Quanto tempo o ✓ de "copiada" fica no lugar do ícone de copiar. */
+private const val COPIED_MS = 1600L
+
+/**
+ * O que dá para fazer com a última resposta, encostado nela: copiar o [text] e abrir os passos do pedido na aba
+ * "Processo" (sem passos, o atalho não aparece). Refazer o pedido ficou de fora de propósito: repetir um pedido que criou
+ * registros os duplicaria.
+ */
+@Composable
+internal fun ChatActions(
+    text: String,
+    steps: Int,
+    onOpenProcess: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val faint = braidTokens().faint
+    val clipboard = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(COPIED_MS)
+            copied = false
+        }
+    }
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier
+                .offset(x = (-14).dp)
+                .size(44.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(role = Role.Button) {
+                    clipboard.setText(AnnotatedString(text))
+                    copied = true
+                }.semantics { contentDescription = if (copied) "Resposta copiada" else "Copiar a resposta" },
+            contentAlignment = Alignment.Center,
+        ) {
+            SvgIcon(if (copied) BraidIcons.check else ChatIcons.copy, size = 16.dp, color = faint, strokeWidth = 1.75f)
+        }
+        Box(Modifier.weight(1f))
+        if (steps > 0) {
+            Row(
+                Modifier
+                    .heightIn(min = 44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(role = Role.Button, onClick = onOpenProcess)
+                    .padding(start = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = if (steps == 1) "1 passo" else "$steps passos",
+                    color = faint,
+                    fontFamily = BraidMonoFont,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                )
+                SvgIcon(BraidIcons.chevronRight, size = 12.dp, color = faint, strokeWidth = 2f, modifier = Modifier.clearAndSetSemantics {})
+            }
+        }
+    }
+}
+
 /** A prévia de cada registro que um pedido criou, alterou ou apagou: o ícone do tipo, o que aconteceu e o nome. */
 @Composable
 internal fun EntityRows(
     entities: List<RequestEntity>,
     links: ChatEntityLinks,
     onOpened: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     if (entities.isEmpty()) return
     val scheme = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxWidth().padding(top = 12.dp).semantics { contentDescription = "Registros desta resposta" }) {
+    Column(modifier.fillMaxWidth().padding(top = 12.dp).semantics { contentDescription = "Registros desta resposta" }) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(scheme.outline))
         for (entity in entities) {
             val open = links.opener(entity)
@@ -204,87 +295,102 @@ internal fun EntityRows(
     }
 }
 
-/** Como a caixa mostra cada passo: a marca e o texto que o leitor de tela ouve. */
-private fun stepText(status: TaskStatus): String =
-    when (status) {
-        TaskStatus.Queued, TaskStatus.Waiting -> "aguardando"
-        TaskStatus.Running -> "em andamento"
-        TaskStatus.Done -> "concluído"
-        TaskStatus.Failed -> "falhou"
-        TaskStatus.Cancel -> "cancelado"
-        else -> "aguardando"
-    }
+/** A resposta escrita de um pedido por passos: só quando ele termina bem. */
+private fun processText(request: AgentRequest): String? = request.message?.takeIf { request.status == TaskStatus.Done && it.isNotEmpty() }
 
 /**
- * A caixa de processo: o título e a lista de passos, com marca ao concluir e ao falhar e, abaixo, a prévia de cada registro
- * criado ou alterado. Todo texto vem predefinido do servidor; só a resposta (quando o pedido termina) é livre. Enquanto o
- * pedido está aberto, um botão cancela.
+ * Se um pedido por passos deixa algo na conversa. Enquanto roda, nada: o passo atual vai na linha de status do campo e os
+ * demais ficam na aba "Processo". Terminado, vale o que há para ler: a resposta, as linhas de uma consulta ou os registros
+ * que ele gravou (um pedido que falhou ou foi cancelado pode ter gravado algo antes de parar).
+ */
+internal fun processAnswerShows(request: AgentRequest?): Boolean {
+    if (request == null || isOpenRequest(request.status)) return false
+    return processText(request) != null || request.steps.any { it.result != null } || request.entities.isNotEmpty()
+}
+
+/** O que entra na conversa: os passos do Hermes e do modelo e o pedido por passos sem nada para ler ficam na aba "Processo". */
+internal fun ChatMessage.inConversation(): Boolean =
+    when (this) {
+        is ChatMessage.HermesSteps -> false
+        is ChatMessage.Process -> processAnswerShows(request)
+        else -> true
+    }
+
+/** O que a linha de status diz de um pedido por passos antes de o servidor desdobrá-lo. */
+private const val UNDERSTANDING = "Entendendo o pedido"
+
+/**
+ * O passo em que o pedido em andamento está, para a linha de status do campo (`pendingStepLabel` do web). No pedido por
+ * passos é o passo que roda, senão o próximo da fila, senão o último. No Hermes e no modelo é a ferramenta ou o pensamento
+ * em curso, senão o último. Sem passo nenhum, o rótulo do pedido ("Realizando processos", o nome do modelo) ou "Pensando".
+ */
+internal fun pendingStepLabel(
+    messages: List<ChatMessage>,
+    pending: ChatPending,
+): String {
+    for (message in messages) {
+        if (message is ChatMessage.Process && message.id == "${pending.id}-process") {
+            val steps = message.request?.steps.orEmpty()
+            val current =
+                steps.firstOrNull { it.status == TaskStatus.Running }
+                    ?: steps.firstOrNull { it.status == TaskStatus.Queued || it.status == TaskStatus.Waiting }
+                    ?: steps.lastOrNull()
+            return current?.label ?: UNDERSTANDING
+        }
+        if (message is ChatMessage.HermesSteps && message.id == "${pending.id}-steps") {
+            val current = message.steps.lastOrNull { it.status == TraceStatus.Running } ?: message.steps.lastOrNull()
+            if (current != null) return current.label
+        }
+    }
+    return pending.label ?: "Pensando"
+}
+
+/**
+ * O que um pedido por passos terminado deixa na conversa (canvas "Chat com o Hermes — conversa limpa", opção B): a resposta
+ * em texto solto sob o nome de quem responde, com as linhas da consulta quando houve uma, e a prévia de cada registro criado
+ * ou alterado. Sem título, sem lista de passos e sem cancelar: o cancelar é o quadrado no lugar da seta do campo.
  */
 @Composable
-internal fun ProcessBox(
-    request: AgentRequest?,
+internal fun ProcessAnswer(
+    request: AgentRequest,
+    name: String,
     links: ChatEntityLinks,
     onOpenEntity: () -> Unit,
-    onCancel: (() -> Unit)?,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val steps = request?.steps.orEmpty()
-    val query = steps.firstOrNull { it.result != null }?.result
-    val open = request == null || isOpenRequest(request.status)
-    Column(Modifier.fillMaxWidth().semantics { contentDescription = "Processo" }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "REALIZANDO PROCESSOS:",
-            color = scheme.onSurfaceVariant,
-            fontFamily = BraidMonoFont,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 0.1.em,
-        )
-        if (steps.isEmpty() && open) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Spinner(14.dp, scheme.onSurfaceVariant)
-                Text(text = "Entendendo o pedido…", color = scheme.onSurfaceVariant, fontSize = 12.sp)
-            }
-        }
-        Column(Modifier.semantics { contentDescription = "Passos do processo" }, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (step in steps) StepRow(step.label, step.status)
-        }
-        if (query != null) {
-            Column(Modifier.semantics { contentDescription = "Resultado da consulta" }) {
-                if (query.rows.isEmpty()) {
-                    Text(text = "Nenhum resultado.", color = scheme.onSurfaceVariant, fontSize = 12.sp)
-                } else {
-                    Column(Modifier.horizontalScroll(rememberScrollState())) {
-                        Row { for (column in query.columns) QueryCell(column, header = true) }
-                        for (row in query.rows) Row { for (cell in row) QueryCell(cell, header = false) }
+    val query = request.steps.firstOrNull { it.result != null }?.result
+    val text = processText(request)
+    Column(Modifier.fillMaxWidth()) {
+        if (text != null || query != null) {
+            ChatReply(name) {
+                if (text != null) Text(text = text, fontSize = 15.sp, lineHeight = 24.sp, color = scheme.onBackground)
+                if (query != null) {
+                    Column(
+                        Modifier
+                            .padding(top = if (text != null) 8.dp else 0.dp)
+                            .semantics { contentDescription = "Resultado da consulta" },
+                    ) {
+                        if (query.rows.isEmpty()) {
+                            Text(text = "Nenhum resultado.", color = scheme.onSurfaceVariant, fontSize = 12.sp)
+                        } else {
+                            Column(Modifier.horizontalScroll(rememberScrollState())) {
+                                Row { for (column in query.columns) QueryCell(column, header = true) }
+                                for (row in query.rows) Row { for (cell in row) QueryCell(cell, header = false) }
+                            }
+                        }
+                        if (query.truncated) {
+                            Text(
+                                text = "Mostrando só as primeiras linhas.",
+                                color = scheme.onSurfaceVariant,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(top = 6.dp),
+                            )
+                        }
                     }
                 }
-                if (query.truncated) {
-                    Text(
-                        text = "Mostrando só as primeiras linhas.",
-                        color = scheme.onSurfaceVariant,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
             }
         }
-        EntityRows(request?.entities.orEmpty(), links, onOpenEntity)
-        val message = request?.message
-        if (request?.status == TaskStatus.Done && !message.isNullOrEmpty()) {
-            Text(text = message, fontSize = 15.sp, lineHeight = 24.sp, color = scheme.onBackground)
-        }
-        if (onCancel != null && request != null && isOpenRequest(request.status)) {
-            Box(
-                Modifier
-                    .heightIn(min = 44.dp)
-                    .clickable(role = Role.Button, onClick = onCancel),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Text(text = "Cancelar pedido", color = scheme.onBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
+        EntityRows(request.entities, links, onOpenEntity)
     }
 }
 
@@ -302,140 +408,4 @@ private fun QueryCell(
         fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal,
         maxLines = 1,
     )
-}
-
-@Composable
-private fun StepRow(
-    label: String,
-    status: TaskStatus,
-) {
-    val scheme = MaterialTheme.colorScheme
-    val tokens = braidTokens()
-    val tint =
-        when (status) {
-            TaskStatus.Done -> tokens.brand
-            TaskStatus.Failed -> scheme.error
-            TaskStatus.Running -> scheme.tertiary
-            else -> scheme.onSurfaceVariant
-        }
-    Row(
-        Modifier.semantics(mergeDescendants = true) { stateDescription = stepText(status) },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(14.dp), contentAlignment = Alignment.Center) {
-            when (status) {
-                TaskStatus.Done -> SvgIcon(BraidIcons.check, size = 14.dp, color = tint, strokeWidth = 2.2f)
-                TaskStatus.Failed -> SvgIcon(BraidIcons.close, size = 14.dp, color = tint, strokeWidth = 2.2f)
-                TaskStatus.Running -> Spinner(14.dp, tint)
-                else -> SvgIcon(BraidIcons.circle, size = 14.dp, color = tint, strokeWidth = 2.2f)
-            }
-        }
-        Text(text = label, color = scheme.onSurfaceVariant, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 18.sp)
-    }
-}
-
-/**
- * Os passos do Hermes, como o agente os dá: cada ferramenta numa linha, com o que ele mostrou (comando, arquivo, busca), e
- * cada pensamento recolhido, que se abre para ler. Ao vivo enquanto ele trabalha e, depois, o registro do que foi feito.
- */
-@Composable
-internal fun HermesSteps(
-    steps: List<HermesStep>,
-    running: Boolean,
-) {
-    val scheme = MaterialTheme.colorScheme
-    val tokens = braidTokens()
-    Column(Modifier.fillMaxWidth().semantics { contentDescription = "Passos do Hermes" }) {
-        for (step in steps) {
-            if (step.kind == TraceKind.Thought) {
-                var expanded by rememberSaveable(step.id) { mutableStateOf(false) }
-                Column(Modifier.fillMaxWidth().heightIn(min = 30.dp)) {
-                    Row(
-                        Modifier
-                            .heightIn(min = 30.dp)
-                            .clickable(role = Role.Button) { expanded = !expanded }
-                            .semantics { stateDescription = if (expanded) "aberto" else "fechado" },
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        SvgIcon(
-                            BraidIcons.chevronRight,
-                            size = 14.dp,
-                            color = scheme.onSurfaceVariant,
-                            strokeWidth = 2f,
-                            modifier = Modifier.rotate(if (expanded) 90f else 0f),
-                        )
-                        Text(
-                            text = step.label,
-                            color = scheme.onSurfaceVariant,
-                            fontFamily = BraidMonoFont,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp,
-                        )
-                    }
-                    if (expanded && step.detail != null) {
-                        Text(
-                            text = step.detail,
-                            modifier = Modifier.padding(start = 18.dp, bottom = 6.dp),
-                            color = scheme.onSurfaceVariant,
-                            fontFamily = BraidMonoFont,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp,
-                        )
-                    }
-                }
-            } else {
-                val tint =
-                    when (step.status) {
-                        TraceStatus.Done -> tokens.brand
-                        TraceStatus.Failed -> scheme.error
-                        else -> scheme.tertiary
-                    }
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(
-                            min = 30.dp,
-                        ).semantics(mergeDescendants = true) { stateDescription = step.status.text },
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.size(14.dp), contentAlignment = Alignment.Center) {
-                        when (step.status) {
-                            TraceStatus.Done -> SvgIcon(BraidIcons.check, size = 14.dp, color = tint, strokeWidth = 2.2f)
-                            TraceStatus.Failed -> SvgIcon(BraidIcons.close, size = 14.dp, color = tint, strokeWidth = 2.2f)
-                            else -> Spinner(14.dp, tint)
-                        }
-                    }
-                    Text(
-                        text = step.label,
-                        color = scheme.onSurfaceVariant,
-                        fontFamily = BraidMonoFont,
-                        fontSize = 12.sp,
-                        lineHeight = 18.sp,
-                    )
-                    if (step.detail != null) {
-                        Text(
-                            text = step.detail,
-                            modifier =
-                                Modifier
-                                    .weight(
-                                        1f,
-                                        fill = false,
-                                    ).background(scheme.secondary, RoundedCornerShape(4.dp))
-                                    .padding(horizontal = 6.dp, vertical = 1.dp),
-                            color = scheme.onSurfaceVariant,
-                            fontFamily = BraidMonoFont,
-                            fontSize = 12.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-        }
-        // `running` só existe para o leitor de tela: o último passo girando já diz que o agente trabalha.
-        if (running && steps.isEmpty()) Spinner(14.dp, scheme.tertiary)
-    }
 }

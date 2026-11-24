@@ -271,12 +271,14 @@ test("an unknown slash command is just a message", async () => {
   await waitFor(() => expect(requestPosts()[0]?.body).toMatchObject({ text: "/xyz o que é isso?" }));
 });
 
-test("cancelling a request from the process box cancels it in the API", async () => {
+test("while a request runs the send button becomes the one that cancels it in the API", async () => {
   render(<Harness />);
   ask("crie uma nota");
   await waitFor(() => expect(requestPosts()).toHaveLength(1));
 
   fireEvent.click(await screen.findByRole("button", { name: "Cancelar pedido" }));
+  // A conversa não mostra a caixa de processo: o andamento vai na linha de status do campo.
+  expect(screen.queryByText("Realizando processos:")).not.toBeInTheDocument();
 
   await waitFor(() => expect(screen.getByText("Pedido cancelado.")).toBeInTheDocument());
   expect([...requests().values()][0]).toMatchObject({ status: "cancel" });
@@ -290,7 +292,7 @@ function serveHermes(hermes: "on" | "off") {
 }
 const hermesPosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests/hermes");
 
-test("com o Hermes ligado, /hermes manda a mensagem a ele: os passos aparecem, a resposta fecha e o rastro vai para Processo", async () => {
+test("com o Hermes ligado, /hermes manda a mensagem a ele: a linha de status diz o passo, a conversa só mostra a resposta e os passos vão para Processo", async () => {
   serveHermes("on");
   render(<Harness />);
   ask("/hermes que horas são?");
@@ -305,14 +307,22 @@ test("com o Hermes ligado, /hermes manda a mensagem a ele: os passos aparecem, a
       entries: [{ id: "c1", kind: "tool", label: "Executou um comando", summary: "date", status: "running" }],
     },
   });
-  const steps = await screen.findByRole("region", { name: "Passos do Hermes" });
-  expect(within(steps).getByText("Executou um comando")).toBeInTheDocument();
+  // Os passos não entram na conversa: enquanto o Hermes trabalha, o passo atual vai na linha de status do campo.
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Executou um comando…"));
+  const log = screen.getByRole("log");
+  expect(within(log).queryByText("Executou um comando")).not.toBeInTheDocument();
+  expect(within(log).getAllByRole("listitem")).toHaveLength(1);
+  expect(screen.queryByRole("button", { name: "Copiar a resposta" })).not.toBeInTheDocument();
 
   advanceRequest(api, id, { status: "done", message: "São 18h." });
-  await waitFor(() => expect(within(screen.getByRole("log")).getByText("São 18h.")).toBeInTheDocument());
+  await waitFor(() => expect(within(log).getByText("São 18h.")).toBeInTheDocument());
+  expect(screen.getByRole("status")).toHaveTextContent("Esperando o seu pedido");
   expect(screen.getByText("Hermes", { selector: "span" })).toBeInTheDocument();
+  // A fala leva o nome de quem responde, e a última resposta ganha copiar e o atalho para os passos.
+  expect(within(log).getByText("Hermes")).toBeInTheDocument();
+  expect(within(log).getByRole("button", { name: "Copiar a resposta" })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: /Processo/ }));
+  fireEvent.click(within(log).getByRole("button", { name: "1 passo" }));
   const trace = within(screen.getByRole("region", { name: "Processo da IA" }));
   expect(trace.getByRole("button", { name: /Executou um comando/ })).toBeInTheDocument();
 });
@@ -325,7 +335,9 @@ test("com o Hermes desligado, /hermes avisa e o chat volta ao assistente da agen
   await waitFor(() => expect(screen.getByText(/O Hermes está desligado/)).toBeInTheDocument());
   expect(hermesPosts()).toHaveLength(1);
   expect(requestPosts()).toHaveLength(0);
-  expect(screen.getByText("Assistente")).toBeInTheDocument();
+  // O topo do chat e o nome sobre o aviso voltam a dizer "Assistente".
+  expect(screen.getByText("Assistente", { selector: "span" })).toBeInTheDocument();
+  expect(within(screen.getByRole("log")).getByText("Assistente")).toBeInTheDocument();
   expect(screen.queryByText("Hermes", { selector: "span" })).not.toBeInTheDocument();
 });
 

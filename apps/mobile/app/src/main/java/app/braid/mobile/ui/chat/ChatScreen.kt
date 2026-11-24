@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -75,6 +76,7 @@ import app.braid.mobile.domain.chat.start
 import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isModelCommand
+import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.timeline.briefDate
 import app.braid.mobile.ui.agenda.freeDurationLabel
 import kotlinx.coroutines.flow.Flow
@@ -232,7 +234,7 @@ fun ChatScreen(
                             prompt = ""
                         }
                     state.pane == ChatPane.Process -> AgentTraceView(state.turns, Modifier.padding(top = 20.dp))
-                    else -> Conversation(state, links, onChoose, onRetry, onCancel, onClose)
+                    else -> Conversation(state, links, onChoose, onRetry, onClose, onOpenProcess = { onPane(ChatPane.Process) })
                 }
             }
             ChatField(
@@ -244,6 +246,7 @@ fun ChatScreen(
                 },
                 canSend = state.ready && state.pending == null && (shown.isNotBlank() || matches.isNotEmpty()),
                 onSubmit = ::submit,
+                onCancel = onCancel,
                 onClearWindow = onClearWindow,
                 composerActions = composerActions,
             )
@@ -450,21 +453,49 @@ private fun CommandList(
     }
 }
 
+/**
+ * A conversa (canvas "Chat com o Hermes — conversa limpa", opção B): o pedido num balão à direita e a fala do assistente em
+ * texto solto, sob o robô cinza e o nome. Enquanto um pedido roda ela não ganha nada: o passo atual vai na linha de status
+ * do campo, e a caixa de processo e os passos do Hermes ficam na aba "Processo".
+ */
 @Composable
 private fun Conversation(
     state: ChatUiState,
     links: ChatEntityLinks,
     onChoose: (String) -> Unit,
     onRetry: (String) -> Unit,
-    onCancel: () -> Unit,
     onClose: () -> Unit,
+    onOpenProcess: () -> Unit,
 ) {
     val listState = rememberLazyListState()
-    val lastId = state.messages.lastOrNull()?.id
-    val label = state.pending?.label
-    // Rola até o fim a cada mensagem nova ou passo de progresso.
-    LaunchedEffect(lastId, label) {
-        if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
+    val last = state.messages.lastOrNull()
+    val lastId = last?.id
+    val free = state.pending == null
+    val shown = remember(state.messages) { state.messages.filter { it.inConversation() } }
+    // O nome sobre cada fala é o de quem responde agora, o mesmo do topo do chat.
+    val name = state.agentMode?.title ?: "Assistente"
+    // A última fala do assistente, quando é ela que fecha a conversa: é dela que se copia o texto.
+    val lastAnswer =
+        when (last) {
+            is ChatMessage.Assistant -> last.text
+            is ChatMessage.Process ->
+                last.request
+                    ?.takeIf { it.status == TaskStatus.Done }
+                    ?.message
+                    .orEmpty()
+            else -> ""
+        }
+    val actions = free && lastAnswer.isNotBlank()
+    val steps =
+        state.turns
+            .lastOrNull()
+            ?.trace
+            ?.entries
+            ?.size ?: 0
+    val count = shown.size + if (actions) 1 else 0
+    // Rola até o fim a cada mensagem nova e quando as ações da última resposta entram.
+    LaunchedEffect(lastId, count) {
+        if (count > 0) listState.animateScrollToItem(count - 1)
     }
     LazyColumn(
         modifier =
@@ -476,47 +507,27 @@ private fun Conversation(
         contentPadding =
             androidx.compose.foundation.layout
                 .PaddingValues(top = 20.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        itemsIndexed(state.messages, key = { _, message -> message.id }) { _, message ->
+        itemsIndexed(shown, key = { _, message -> message.id }) { _, message ->
             when (message) {
                 is ChatMessage.User -> UserBubble(message)
                 is ChatMessage.Assistant ->
                     Column {
-                        // Os botões de escolha só valem na última mensagem, com o chat livre.
-                        ChatAnswer(
-                            message.text,
-                            onChoose =
-                                if (message.id == lastId &&
-                                    state.ready &&
-                                    state.pending == null
-                                ) {
-                                    onChoose
-                                } else {
-                                    null
-                                },
-                        )
+                        ChatReply(name) {
+                            // Os botões de escolha só valem na última mensagem, com o chat livre.
+                            ChatAnswer(message.text, onChoose = if (message.id == lastId && state.ready && free) onChoose else null)
+                        }
                         EntityRows(message.entities, links, onClose)
                         message.model?.let { ModelFooter(state.model.options, it) }
                     }
-                is ChatMessage.Process ->
-                    ProcessBox(
-                        message.request,
-                        links,
-                        onClose,
-                        onCancel =
-                            if (state.pending !=
-                                null
-                            ) {
-                                onCancel
-                            } else {
-                                null
-                            },
-                    )
-                is ChatMessage.HermesSteps -> HermesSteps(message.steps, message.running)
-                is ChatMessage.Error -> ErrorBubble(message, onRetry = if (state.pending == null) ({ onRetry(message.id) }) else null)
+                is ChatMessage.Process -> message.request?.let { ProcessAnswer(it, name, links, onClose) }
+                is ChatMessage.HermesSteps -> Unit
+                is ChatMessage.Error -> ErrorBubble(message, onRetry = if (free) ({ onRetry(message.id) }) else null)
             }
         }
+        // As ações encostam na resposta: sobem por cima do respiro entre os itens da lista.
+        if (actions) item(key = "actions") { ChatActions(lastAnswer, steps, onOpenProcess, Modifier.offset(y = (-14).dp)) }
     }
 }
 
@@ -527,6 +538,7 @@ private fun ChatField(
     onPrompt: (String) -> Unit,
     canSend: Boolean,
     onSubmit: () -> Unit,
+    onCancel: () -> Unit,
     onClearWindow: () -> Unit,
     composerActions: @Composable RowScope.() -> Unit,
 ) {
@@ -547,7 +559,8 @@ private fun ChatField(
     val status =
         when {
             listening -> "Ouvindo…"
-            state.pending != null -> "${state.pending.label ?: "Pensando"}…"
+            // Enquanto o pedido roda, a linha diz o passo em que o agente está (a conversa não mostra o andamento).
+            state.pending != null -> "${pendingStepLabel(state.messages, state.pending)}…"
             lastIsError -> "Não deu certo"
             else -> "Esperando o seu pedido"
         }
@@ -583,11 +596,16 @@ private fun ChatField(
                     modifier = Modifier.focusRequester(focus),
                 ),
             send =
-                HermesSend(
-                    enabled = canSend,
-                    label = if (state.pending != null) "Aguardando a resposta" else "Enviar mensagem",
-                    onSend = onSubmit,
-                ),
+                if (state.pending?.requestId != null) {
+                    // Com o pedido aceito pela API, a seta vira o quadrado que o cancela: a conversa não tem mais a caixa de processo.
+                    HermesSend(enabled = true, label = "Cancelar pedido", onSend = onCancel, stop = true)
+                } else {
+                    HermesSend(
+                        enabled = canSend,
+                        label = if (state.pending != null) "Aguardando a resposta" else "Enviar mensagem",
+                        onSend = onSubmit,
+                    )
+                },
             role = MarkRole.Chat,
             context = if (window != null) ({ WindowChip(window, state.todayKey, onClearWindow) }) else null,
             actions = composerActions,

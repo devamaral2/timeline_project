@@ -203,11 +203,15 @@ class HermesDraft(
     val modifier: Modifier = Modifier,
 )
 
-/** A seta de enviar: cheia quando há o que mandar, contornada enquanto não há. */
+/**
+ * A seta de enviar: cheia quando há o que mandar, contornada enquanto não há. Com [stop] ela vira o quadrado que cancela o
+ * pedido em andamento (o chat): [onSend] é o cancelar, e o Enter do teclado não o dispara.
+ */
 class HermesSend(
     val enabled: Boolean,
     val label: String,
     val onSend: () -> Unit,
+    val stop: Boolean = false,
 )
 
 /**
@@ -256,7 +260,7 @@ fun HermesComposer(
                 textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp, lineHeight = 22.sp, color = scheme.onBackground),
                 cursorBrush = SolidColor(tokens.brand),
                 keyboardOptions = KeyboardOptions(imeAction = if (draft.sendOnEnter) ImeAction.Send else ImeAction.Default),
-                keyboardActions = KeyboardActions(onSend = { if (send.enabled) send.onSend() }),
+                keyboardActions = KeyboardActions(onSend = { if (send.enabled && !send.stop) send.onSend() }),
                 modifier =
                     draft.modifier
                         .weight(1f)
@@ -287,13 +291,17 @@ private fun SendButton(send: HermesSend) {
             .semantics { contentDescription = send.label },
         contentAlignment = Alignment.Center,
     ) {
-        SvgIcon(
-            BraidIcons.arrowUp,
-            size = 20.dp,
-            color = if (send.enabled) scheme.onPrimary else scheme.outlineVariant,
-            strokeWidth = 2f,
-            modifier = Modifier.clearAndSetSemantics {},
-        )
+        if (send.stop) {
+            Box(Modifier.size(12.dp).background(scheme.onPrimary, RoundedCornerShape(2.dp)))
+        } else {
+            SvgIcon(
+                BraidIcons.arrowUp,
+                size = 20.dp,
+                color = if (send.enabled) scheme.onPrimary else scheme.outlineVariant,
+                strokeWidth = 2f,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
+        }
     }
 }
 
