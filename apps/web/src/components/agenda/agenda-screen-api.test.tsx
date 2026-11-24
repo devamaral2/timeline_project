@@ -49,6 +49,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  window.localStorage.clear();
   vi.useRealTimers();
 });
 
@@ -106,6 +107,7 @@ test("long-running tasks and steps do not show in the agenda", async () => {
 });
 
 test("the free windows between tasks stay, computed on the new data", async () => {
+  window.localStorage.setItem("braid-agenda-free-time", "on");
   installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
@@ -148,6 +150,7 @@ test("a failed load shows the error alert", async () => {
 });
 
 test("free time counts only person tasks: an agent task inside a free window does not split it", async () => {
+  window.localStorage.setItem("braid-agenda-free-time", "on");
   installApi([
     taskFixture({ id: "ev-a", name: "Revisar proposta", kind: "common", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" }),
     taskFixture({ id: "ev-g", name: "Agente compila o briefing", actor: "agent", kind: "request", status: "running", startedAt: "2026-09-14T11:00:00-03:00", estimatedFinishAt: "2026-09-14T11:30:00-03:00" }),

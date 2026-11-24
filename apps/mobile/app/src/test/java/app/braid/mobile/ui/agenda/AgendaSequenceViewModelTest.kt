@@ -299,22 +299,22 @@ class AgendaSequenceViewModelTest {
         }
 
     @Test
-    fun `free time is on until the person turns it off, and the choice survives closing the app`() =
+    fun `free time is off until the person turns it on, and the choice survives closing the app`() =
         runTest {
             serveWindows()
             val viewModel = newViewModel()
             viewModel.settled()
-            assertTrue(viewModel.state.value.showFreeTime)
-
-            viewModel.setFreeTime(false)
             assertFalse(viewModel.state.value.showFreeTime)
 
-            assertFalse(viewModes.freeTime.enabled.awaitStored { !it })
+            viewModel.setFreeTime(true)
+            assertTrue(viewModel.state.value.showFreeTime)
+
+            assertTrue(viewModes.freeTime.enabled.awaitStored { it })
             val reopened = newViewModel()
             // Tempo real, não o virtual do `runTest`: a tela reaberta lê o DataStore do disco, e o relógio virtual
             // esgota os 5 s na hora, antes de a leitura chegar.
-            val restored = withContext(Dispatchers.Default) { withTimeout(30_000) { reopened.state.first { !it.showFreeTime } } }
-            assertFalse(restored.showFreeTime)
+            val restored = withContext(Dispatchers.Default) { withTimeout(30_000) { reopened.state.first { it.showFreeTime } } }
+            assertTrue(restored.showFreeTime)
         }
 
     private fun serveFreeDay() {
@@ -353,6 +353,7 @@ class AgendaSequenceViewModelTest {
             serveFreeDay()
             val viewModel = newViewModel(Instant.parse("2026-09-16T12:00:00.000Z"))
             viewModel.selectDay(freeDay())
+            viewModel.setFreeTime(true)
             val state = viewModel.settled()
 
             assertEquals(expectedRows("rowsWithFreeTime"), rowsAsFixture(state.rowsOn(freeDay())!!))
@@ -384,6 +385,7 @@ class AgendaSequenceViewModelTest {
             serveFreeDay()
             val viewModel = newViewModel(Instant.parse("2026-09-16T12:00:00.000Z"))
             viewModel.selectDay(freeDay())
+            viewModel.setFreeTime(true)
             val state = viewModel.settled()
 
             val free = state.rowsOn(freeDay())!!.filterIsInstance<AgendaRow.Free>().first()

@@ -31,7 +31,7 @@ class DataStoreFreeTimeRepository
         override val enabled: Flow<Boolean> =
             store
                 .safeData()
-                .map { it[FREE_TIME] ?: true }
+                .map { it[FREE_TIME] ?: false }
                 .distinctUntilChanged()
 
         override suspend fun select(enabled: Boolean) {

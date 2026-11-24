@@ -101,7 +101,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   const [statusAnchor, setStatusAnchor] = useState<HTMLElement | null>(null);
   const [statusNote, setStatusNote] = useState<string | null>(null);
   const [mode, setMode] = useState<ViewMode>("day");
-  const [showFreeTime, setShowFreeTime] = useState(true);
+  const [showFreeTime, setShowFreeTime] = useState(false);
   // A busca do menu da barra inferior: filtra pelo nome as tarefas já carregadas (a rota da agenda não tem texto).
   const [search, setSearch] = useState("");
   const [selectedDay, setSelectedDay] = useState(todayKey);
@@ -129,7 +129,7 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
   // A chave do tempo livre é uma preferência do navegador; lê-se depois de montar.
   useEffect(() => {
     try {
-      if (window.localStorage.getItem(FREE_TIME_STORAGE_KEY) === "off") setShowFreeTime(false);
+      if (window.localStorage.getItem(FREE_TIME_STORAGE_KEY) === "on") setShowFreeTime(true);
     } catch {}
   }, []);
 
