@@ -28,6 +28,8 @@ import javax.inject.Singleton
 
 private const val CHANNEL_ID = "reminders_chime"
 private const val LEGACY_CHANNEL_ID = "reminders"
+private const val WAKE_TAG = "braid:reminder"
+private const val WAKE_MILLIS = 10_000L
 
 /**
  * A notificação de um lembrete: título é o nome da tarefa, texto "Tarefa · 30 minutos antes", como no web; tocar abre
@@ -61,10 +63,13 @@ class AndroidReminderNotifier
                     .setAutoCancel(true)
                     .setContentIntent(open)
             val alertIntent = ReminderAlertActivity.intentFor(context, reminder)
-            // Em uso e podendo abrir por conta própria, o app abre a tela cheia direto; nos outros casos quem a abre
-            // é o sistema, pelo `fullScreenIntent` (com o aparelho apagado ou bloqueado ele acende a tela).
-            val opensDirectly = !screenIsAway() && canOpenOverOtherApps()
-            if (!opensDirectly) {
+            // Dois caminhos até a tela cheia. O do sistema é o `fullScreenIntent`: com o aparelho apagado ou bloqueado
+            // ele acende a tela e abre a tela cheia. O do app é abrir por conta própria, que o Android só deixa a quem
+            // está à vista ou pode aparecer sobre outros apps. Apagado ou bloqueado vão os dois: há aparelho que não
+            // segue o do sistema (permissão negada, Não Perturbe, regra do fabricante), e a tela cheia é uma só.
+            val away = screenIsAway()
+            val opensDirectly = canOpenOverOtherApps()
+            if (away || !opensDirectly) {
                 val alert =
                     PendingIntent.getActivity(
                         context,
@@ -75,6 +80,7 @@ class AndroidReminderNotifier
                 builder.setFullScreenIntent(alert, true)
             }
             val notification = builder.build()
+            if (!isInteractive()) wakeScreen()
             // A chave é a etiqueta: o mesmo lembrete nunca vira duas notificações.
             try {
                 manager.notify(reminder.key, 0, notification)
@@ -84,10 +90,25 @@ class AndroidReminderNotifier
             if (opensDirectly) runCatching { context.startActivity(alertIntent) }
         }
 
+        private fun isInteractive(): Boolean = context.getSystemService(PowerManager::class.java)?.isInteractive ?: true
+
+        /**
+         * Acende a tela por conta do app, por alguns segundos: mesmo que nada abra a tela cheia, o lembrete aparece
+         * com a tela acesa. Onde o sistema não deixa, a chamada não tem efeito.
+         */
+        private fun wakeScreen() {
+            val power = context.getSystemService(PowerManager::class.java) ?: return
+            runCatching {
+                @Suppress("DEPRECATION")
+                power
+                    .newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP, WAKE_TAG)
+                    .acquire(WAKE_MILLIS)
+            }
+        }
+
         private fun screenIsAway(): Boolean {
-            val interactive = context.getSystemService(PowerManager::class.java)?.isInteractive ?: true
             val locked = context.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked ?: false
-            return !interactive || locked
+            return !isInteractive() || locked
         }
 
         /**

@@ -1,6 +1,7 @@
 package app.braid.mobile.ui.reminders
 
 import android.Manifest
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -111,6 +112,36 @@ fun ExactAlarmPrompt(
     }
 }
 
+/** O que a faixa diz quando o sistema não deixa o app abrir notificações em tela cheia. */
+const val FULL_SCREEN_EXPLANATION =
+    "Para o lembrete acender a tela com o celular apagado, permita as notificações em tela cheia do Braid."
+
+/**
+ * Convida a dar a permissão de notificação em tela cheia (Android 14+, onde ela pode vir negada ou ser retirada):
+ * sem ela o sistema troca a tela cheia do lembrete por um aviso comum e não acende a tela.
+ */
+@Composable
+fun FullScreenIntentPrompt(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var allowed by remember { mutableStateOf(canUseFullScreenIntent(context)) }
+    var dismissed by rememberSaveable { mutableStateOf(false) }
+
+    // Voltar das configurações com a permissão dada some com a faixa.
+    LifecycleResumeEffect(Unit) {
+        allowed = canUseFullScreenIntent(context)
+        onPauseOrDispose { }
+    }
+    if (!allowed && !dismissed && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        PromptBanner(
+            text = FULL_SCREEN_EXPLANATION,
+            actionLabel = "Permitir",
+            onAction = { context.startActivity(fullScreenIntentSettingsIntent(context)) },
+            onDismiss = { dismissed = true },
+            modifier = modifier,
+        )
+    }
+}
+
 /** O que a faixa diz a quem ainda não deixou o app aparecer sobre outros apps. */
 const val OVERLAY_EXPLANATION =
     "Para o lembrete abrir em tela cheia também com o celular em uso, permita ao Braid aparecer sobre outros apps."
@@ -147,6 +178,7 @@ fun ReminderPrompts(modifier: Modifier = Modifier) {
     Column(modifier) {
         ReminderPermissionPrompt()
         ExactAlarmPrompt()
+        FullScreenIntentPrompt()
         OverlayPrompt()
     }
 }
@@ -189,4 +221,13 @@ private fun exactAlarmSettingsIntent(context: Context): Intent =
 
 private fun overlaySettingsIntent(context: Context): Intent =
     Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+private fun canUseFullScreenIntent(context: Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
+        context.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+private fun fullScreenIntentSettingsIntent(context: Context): Intent =
+    Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}"))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

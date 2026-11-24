@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- O lembrete acende a tela e abre a tela cheia (ReminderAlertActivity) com o aparelho apagado ou bloqueado. -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!--
+        Reserva para o aparelho que não abre a tela cheia pelo sistema (permissão negada, Não Perturbe, regra do
+        fabricante): o próprio app acende a tela na hora do lembrete.
+    -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission
+        android:name="android.permission.TURN_SCREEN_ON"
+        tools:ignore="ProtectedPermissions" />
     <!--
         O lembrete é a função do app, então ele usa USE_EXACT_ALARM (Android 13+), que já vem concedida. Só com
         SCHEDULE_EXACT_ALARM o Android 14+ nega por padrão, o alarme vira inexato e chega minutos depois, quando a
