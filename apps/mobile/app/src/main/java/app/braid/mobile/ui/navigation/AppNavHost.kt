@@ -189,6 +189,8 @@ fun AppNavHost(
         if (!openChat) return@LaunchedEffect
         when (session) {
             is SessionState.SignedIn -> {
+                // O gesto do assistente sempre começa uma conversa nova, mesmo com o chat já aberto.
+                chat.startNewConversation()
                 if (!chatState.open) chat.open()
                 onOpenChatHandled()
             }

@@ -3,4 +3,4 @@
     android:sessionService="app.braid.mobile.data.assistant.BraidVoiceInteractionSessionService"
     android:recognitionService="app.braid.mobile.data.assistant.BraidRecognitionService"
     android:supportsAssist="true"
-    android:supportsLaunchVoiceAssistFromKeyguard="false" />
+    android:supportsLaunchVoiceAssistFromKeyguard="true" />
