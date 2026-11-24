@@ -1,11 +1,14 @@
 package app.braid.mobile.data.speech
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.speech.RecognitionListener
+import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import app.braid.mobile.domain.speech.SpeechError
 import app.braid.mobile.domain.speech.SpeechListener
@@ -17,6 +20,7 @@ import android.speech.SpeechRecognizer as PlatformRecognizer
 
 private const val SILENCE_HINT_MS = 1_800L
 private const val REOPEN_DELAY_MS = 120L
+private const val GOOGLE_PACKAGE = "com.google.android.googlequicksearchbox"
 
 /**
  * O `SpeechRecognizer` do Android em pt-BR por trás de [SpeechRecognizer]. O do sistema encerra a sessão na primeira pausa,
@@ -41,7 +45,7 @@ class AndroidSpeechRecognizer
         private var stopping = false
         private var running = false
 
-        override val available: Boolean get() = PlatformRecognizer.isRecognitionAvailable(context)
+        override val available: Boolean get() = recognizerService() != null
 
         override fun start(listener: SpeechListener) {
             check(available) { "O aparelho não tem reconhecimento de voz" }
@@ -65,10 +69,32 @@ class AndroidSpeechRecognizer
         }
 
         private fun open() {
-            val recognizer = platform ?: PlatformRecognizer.createSpeechRecognizer(context).also { platform = it }
+            val service = checkNotNull(recognizerService()) { "O aparelho não tem reconhecimento de voz" }
+            val recognizer = platform ?: PlatformRecognizer.createSpeechRecognizer(context, service).also { platform = it }
             recognizer.setRecognitionListener(Callbacks())
             running = true
             recognizer.startListening(intent())
+        }
+
+        /**
+         * O reconhecedor do aparelho que ouve o ditado: o padrão do sistema, ou o do Google, ou o primeiro que houver. Nunca o
+         * do próprio app, que existe só para o Braid poder ser o assistente digital e recusa todo pedido.
+         */
+        private fun recognizerService(): ComponentName? {
+            val others =
+                context.packageManager
+                    .queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE), 0)
+                    .map { ComponentName(it.serviceInfo.packageName, it.serviceInfo.name) }
+                    .filter { it.packageName != context.packageName }
+            val default =
+                Settings.Secure
+                    .getString(
+                        context.contentResolver,
+                        "voice_recognition_service",
+                    )?.let(ComponentName::unflattenFromString)
+            return others.firstOrNull { it == default }
+                ?: others.firstOrNull { it.packageName == GOOGLE_PACKAGE }
+                ?: others.firstOrNull()
         }
 
         private fun intent() =
