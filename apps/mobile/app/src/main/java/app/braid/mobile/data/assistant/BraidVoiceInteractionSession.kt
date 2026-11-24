@@ -119,6 +119,8 @@ class BraidVoiceInteractionSession(
     ) {
         super.onShow(args, showFlags)
         registry.currentState = Lifecycle.State.RESUMED
+        // A tela não apaga enquanto o painel está à vista (o tempo de ouvir e de esperar a resposta).
+        setKeepAwake(true)
         // Cada chamada é uma conversa nova, e `open()` já liga o microfone.
         chat?.apply {
             startNewConversation()
@@ -126,7 +128,14 @@ class BraidVoiceInteractionSession(
         }
     }
 
+    /**
+     * O sistema avisa quando o bloqueio aparece, e o padrão é esconder a sessão. Com a tela apagada o gesto acende o aparelho
+     * já com o bloqueio, e esse aviso fechava o painel (e o microfone) logo depois de abrir. O painel fica sobre o bloqueio.
+     */
+    override fun onLockscreenShown() = Unit
+
     override fun onHide() {
+        setKeepAwake(false)
         chat?.close()
         registry.currentState = Lifecycle.State.CREATED
         super.onHide()
