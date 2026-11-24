@@ -8,6 +8,7 @@ import app.braid.mobile.support.Fixtures
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.TestViewModes
+import app.braid.mobile.support.awaitStored
 import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -308,9 +309,12 @@ class AgendaSequenceViewModelTest {
             viewModel.setFreeTime(false)
             assertFalse(viewModel.state.value.showFreeTime)
 
-            assertFalse(withContext(Dispatchers.Default) { withTimeout(5_000) { viewModes.freeTime.enabled.first { !it } } })
+            assertFalse(viewModes.freeTime.enabled.awaitStored { !it })
             val reopened = newViewModel()
-            assertFalse(withTimeout(5_000) { reopened.state.first { !it.showFreeTime } }.showFreeTime)
+            // Tempo real, não o virtual do `runTest`: a tela reaberta lê o DataStore do disco, e o relógio virtual
+            // esgota os 5 s na hora, antes de a leitura chegar.
+            val restored = withContext(Dispatchers.Default) { withTimeout(30_000) { reopened.state.first { !it.showFreeTime } } }
+            assertFalse(restored.showFreeTime)
         }
 
     private fun serveFreeDay() {

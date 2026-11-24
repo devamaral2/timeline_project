@@ -4,11 +4,11 @@ import app.braid.mobile.domain.reminder.Reminder
 import app.braid.mobile.domain.reminder.ReminderKind
 import app.braid.mobile.support.FakeReminderAlarms
 import app.braid.mobile.support.TestReminderStores
+import app.braid.mobile.support.awaitStored
 import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -128,7 +128,7 @@ class ExactAlarmViewModelTest {
             viewModel.dismiss()
             viewModel.settled(false)
             // O DataStore é gravado fora da tela: espera a gravação chegar antes de "fechar o app".
-            withContext(Dispatchers.Default) { withTimeout(30_000) { stores.exactAlarmPrompt.dismissed.first { it } } }
+            stores.exactAlarmPrompt.dismissed.awaitStored { it }
 
             val reopened = newViewModel()
             delay(100)
