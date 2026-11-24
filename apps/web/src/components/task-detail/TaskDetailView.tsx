@@ -7,11 +7,10 @@ import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { BackLink, DetailFrame, DetailMenu, DetailMessage, MenuItem, detailIcon } from "@/components/detail/detail-parts";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
 import { DeleteTaskDialog } from "@/components/tasks/DeleteTaskDialog";
-import { visualForItemType } from "@/components/tasks/task-visuals";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { type EditTaskInput, updateTask } from "@/lib/api/tasks";
-import { momentLabel, priorityPatch, statusPatch } from "@/lib/tasks/task-read-model";
+import { priorityPatch, statusPatch } from "@/lib/tasks/task-read-model";
 import { TaskArtifactsSection } from "./TaskArtifactsSection";
 import { addDraftArtifact, addFoodCopy, artifactLinkInputs, draftArtifactsFromTask } from "./task-artifact-draft";
 import { TaskDetailHeader } from "./TaskDetailHeader";
@@ -43,8 +42,6 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const editHref = `/${userId}/tarefas/${task.id}/editar`;
-  const visual = visualForItemType(task.kind);
-  const TypeIcon = visual.Icon;
 
   /** Manda a troca com a revisão lida. Revisão velha: relê a tarefa e avisa, sem gravar nada. */
   async function change(patch: EditTaskInput, failure: string) {
@@ -113,11 +110,6 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
         onEdited={() => {
           window.dispatchEvent(new Event(agendaRefreshEvent));
           void onChanged();
-        }}
-        context={{
-          icon: <TypeIcon aria-hidden />,
-          meta: task.startedAt ? `Tarefa · ${momentLabel(task.startedAt)}` : "Tarefa",
-          title: task.name,
         }}
       />
       {confirmingDelete ? (

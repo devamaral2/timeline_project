@@ -123,4 +123,61 @@ class ModelSelectorTest {
             assertEquals(sonnet, state().picker?.selection)
             assertEquals(2, reads())
         }
+
+    @Test
+    fun `a row of another provider changes provider and model together, and keeps what each provider remembered`() =
+        runBlocking {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            selector.load()
+
+            selector.chooseModel("google/gemini-4-neon", ModelProvider.OpenRouter)
+            assertEquals(ModelSelection(ModelProvider.OpenRouter, "google/gemini-4-neon", ModelEffort.Medium), state().picker?.selection)
+
+            // O modelo da Anthropic que a linha traz vale; o do OpenRouter fica guardado para quando ele voltar.
+            selector.chooseModel("claude-opus-5-5", ModelProvider.Anthropic)
+            assertEquals(ModelSelection(ModelProvider.Anthropic, "claude-opus-5-5", ModelEffort.Medium), state().picker?.selection)
+            assertEquals("google/gemini-4-neon", store.stored?.models?.get(ModelProvider.OpenRouter))
+            selector.chooseProvider(ModelProvider.OpenRouter)
+            assertEquals("google/gemini-4-neon", state().picker?.selection?.model)
+
+            // Um modelo que o provedor pedido não oferece, ou um provedor que o servidor não oferece, não muda nada.
+            val before = state().picker?.selection
+            selector.chooseModel("claude-opus-5-5", ModelProvider.OpenRouter)
+            selector.chooseModel("gpt-6.2-sol", ModelProvider.OpenAi)
+            assertEquals(before, state().picker?.selection)
+        }
+
+    @Test
+    fun `the star saves a favorite without choosing it, and the list is kept in the order saved`() =
+        runBlocking {
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+            selector.load()
+            val gemini = ModelFavorite(ModelProvider.OpenRouter, "google/gemini-4-neon")
+            val opus = ModelFavorite(ModelProvider.Anthropic, "claude-opus-5-5")
+
+            selector.toggleFavorite(gemini.provider, gemini.model)
+            selector.toggleFavorite(opus.provider, opus.model)
+
+            assertEquals(listOf(gemini, opus), state().picker?.favorites)
+            assertEquals(listOf(gemini, opus), store.favorites)
+            assertEquals(sonnet, state().picker?.selection)
+
+            // Ler as opções de novo não desfaz o que a pessoa acabou de marcar.
+            selector.load()
+            assertEquals(listOf(gemini, opus), state().picker?.favorites)
+
+            selector.toggleFavorite(gemini.provider, gemini.model)
+            assertEquals(listOf(opus), store.favorites)
+        }
+
+    @Test
+    fun `the favorites stored on the device come with the first read`() =
+        runBlocking {
+            val kept = listOf(ModelFavorite(ModelProvider.OpenAi, "gpt-6.2-sol"), ModelFavorite(ModelProvider.Anthropic, "claude-opus-5-5"))
+            store.favorites = kept
+            backend.route("GET", optionsPath, fixture("chat-model-options"))
+
+            // A lista guarda também o que o servidor já não oferece (a OpenAI); quem a mostra é que filtra.
+            assertEquals(kept, selector.picker().favorites)
+        }
 }

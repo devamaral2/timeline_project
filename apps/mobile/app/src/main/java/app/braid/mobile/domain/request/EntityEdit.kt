@@ -48,6 +48,15 @@ fun editSectionLabel(type: EditEntityType): String = "Editar ${type.target} com 
 
 fun editFieldLabel(type: EditEntityType): String = "Pedir à IA para editar ${type.target}"
 
+private val ModelCommand = Regex("^/model$", RegexOption.IGNORE_CASE)
+
+/**
+ * O comando que abre a escolha do modelo nos campos do Hermes (o detalhe e o chat), que não mostram o modelo
+ * (`isModelCommand` do web): `/model` sozinho no campo, sem diferença de caixa. Ele não vira pedido. `/modelo` é outro
+ * comando, o do modo modelo do chat.
+ */
+fun isModelCommand(text: String): Boolean = ModelCommand.matches(text.trim())
+
 /** Uma refeição ainda em cálculo não se edita. */
 const val PENDING_MEAL_EDIT_TEXT = "Aguarde a geração da refeição para editar a nota."
 

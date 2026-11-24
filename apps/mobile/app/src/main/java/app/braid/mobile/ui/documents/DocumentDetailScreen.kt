@@ -61,7 +61,6 @@ import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.artifact.whenLabel
 import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.request.PENDING_MEAL_EDIT_TEXT
-import app.braid.mobile.ui.aiedit.AiEditContext
 import app.braid.mobile.ui.aiedit.EntityEditBar
 import app.braid.mobile.ui.taskdetail.DetailIcons
 import java.time.Instant
@@ -109,12 +108,6 @@ private fun EditFooter(
     EntityEditBar(
         entityType = type,
         entityId = artifact.id,
-        context =
-            AiEditContext(
-                icon = DocumentIcons.glyph(artifact.type),
-                meta = "${artifactTypeLabel(artifact.type)} · ${whenLabel(artifact.updatedAt, ready.now)}",
-                title = artifact.name,
-            ),
         onEdited = onEdited,
         disabledReason = if (ready.pendingMeal) PENDING_MEAL_EDIT_TEXT else null,
     )

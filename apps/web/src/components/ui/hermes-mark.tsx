@@ -9,12 +9,13 @@ export type HermesState = HermesBotState;
 
 /**
  * O robô do Hermes num dos cinco estados, no tamanho da linha de status
- * (28 px). É só um sinal: quem fala do estado é o texto ao lado.
+ * (28 px). É só um sinal: quem fala do estado é o texto ao lado. `plain` o
+ * desenha sem o disco e sem cor (o campo do detalhe).
  */
-export function HermesMark({ state = "idle", className }: { state?: HermesState; className?: string }) {
+export function HermesMark({ state = "idle", className, plain = false }: { state?: HermesState; className?: string; plain?: boolean }) {
   return (
     <span className={`${styles.mark} ${className ?? ""}`} data-hermes-mark="" aria-hidden>
-      <HermesBot state={state} />
+      <HermesBot state={state} plain={plain} />
     </span>
   );
 }

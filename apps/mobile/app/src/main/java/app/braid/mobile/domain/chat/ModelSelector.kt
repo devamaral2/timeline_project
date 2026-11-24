@@ -17,10 +17,11 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** O que o seletor mostra: o que o servidor oferece e a escolha atual. */
+/** O que o seletor mostra: o que o servidor oferece, a escolha atual e os modelos favoritos (na ordem em que foram guardados). */
 data class ModelPicker(
     val options: ModelOptions,
     val selection: ModelSelection,
+    val favorites: List<ModelFavorite> = emptyList(),
 )
 
 /** O que o app sabe da escolha de modelo agora. */
@@ -29,6 +30,8 @@ data class ModelSelectorState(
     val options: ModelOptions? = null,
     /** A escolha conferida contra as opções e o último modelo de cada provedor; existe depois da primeira leitura. */
     val stored: StoredModelSelection? = null,
+    /** Os modelos favoritos da folha, lidos do aparelho junto com as opções. */
+    val favorites: List<ModelFavorite> = emptyList(),
 ) {
     val selection: ModelSelection? get() = stored?.current
 
@@ -36,7 +39,7 @@ data class ModelSelectorState(
     val picker: ModelPicker?
         get() {
             val current = selection
-            return if (options != null && current != null) ModelPicker(options, current) else null
+            return if (options != null && current != null) ModelPicker(options, current, favorites) else null
         }
 }
 
@@ -132,11 +135,17 @@ class ModelSelector
                     throw failed
                 }
             val saved = mutableState.value.stored ?: store.read()
-            val next = mutableState.updateAndGet { ModelSelectorState(options, resolveSelection(options, it.stored ?: saved)) }
+            // Já lida uma vez, a lista da memória vale: uma gravação em curso ainda não chegou ao aparelho.
+            val favorites = if (mutableState.value.stored != null) mutableState.value.favorites else store.readFavorites()
+            val next =
+                mutableState.updateAndGet {
+                    val kept = if (it.stored != null) it.favorites else favorites
+                    ModelSelectorState(options, resolveSelection(options, it.stored ?: saved), kept)
+                }
             val resolved = checkNotNull(next.stored)
             if (resolved != saved) persist(resolved)
             finish(null)
-            return ModelPicker(options, resolved.current)
+            return ModelPicker(options, resolved.current, next.favorites)
         }
 
         private fun finish(result: Exception?) {
@@ -147,16 +156,33 @@ class ModelSelector
         /** Troca o provedor: o modelo é o que ele tinha na última vez, ou o padrão dele. */
         suspend fun chooseProvider(provider: ModelProvider) = change { options, stored -> stored.withProvider(options, provider) }
 
-        /** Um modelo que o provedor atual não tem não vale. */
-        suspend fun chooseModel(model: String) =
-            change { options, stored ->
-                val offered =
-                    options
-                        .providerOf(stored.current.provider)
-                        ?.models
-                        ?.any { it.id == model } == true
-                if (offered) stored.withModel(model) else stored
+        /**
+         * Troca o modelo. Com [provider], troca os dois de uma vez (a escolha feita na aba dos favoritos ou de outro
+         * provedor): o provedor novo retoma o modelo que tinha e logo o escolhido o substitui. Um modelo que o provedor não
+         * oferece não muda nada.
+         */
+        suspend fun chooseModel(
+            model: String,
+            provider: ModelProvider? = null,
+        ) = change { options, stored ->
+            val target = provider ?: stored.current.provider
+            val offered = options.providerOf(target)?.models?.any { it.id == model } == true
+            when {
+                !offered -> stored
+                target == stored.current.provider -> stored.withModel(model)
+                else -> stored.withProvider(options, target).withModel(model)
             }
+        }
+
+        /** Guarda ou tira um modelo dos favoritos da folha; a lista fica no aparelho, na ordem em que foi guardada. */
+        suspend fun toggleFavorite(
+            provider: ModelProvider,
+            model: String,
+        ) {
+            mutableState.update { it.copy(favorites = toggleFavorite(it.favorites, provider, model)) }
+            // Sair da tela no meio da gravação não a interrompe; grava a lista de agora, não a desta chamada.
+            withContext(NonCancellable) { store.writeFavorites(mutableState.value.favorites) }
+        }
 
         suspend fun chooseEffort(effort: ModelEffort) = change { _, stored -> stored.withEffort(effort) }
 

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { EDIT_TARGET_LABELS, editEntityTypeOfArtifact } from "./entity-edit-target";
+import { EDIT_TARGET_LABELS, editEntityTypeOfArtifact, isModelCommand } from "./entity-edit-target";
 
 test.each([
   ["text", "artifact"],
@@ -32,4 +32,9 @@ test("cada tipo que a API aceita tem o texto que o campo mostra", () => {
     skill_artifact: "esta skill",
     agent_artifact: "este agente",
   });
+});
+
+test("so /model sozinho no campo abre a escolha do modelo; /modelo e o modo modelo do chat", () => {
+  const cases = ["/model", "/MODEL", "  /Model  ", "/modelo", "/models", "/model haiku", "model", "/", "mude o /model", ""];
+  expect(cases.filter(isModelCommand)).toEqual(["/model", "/MODEL", "  /Model  "]);
 });

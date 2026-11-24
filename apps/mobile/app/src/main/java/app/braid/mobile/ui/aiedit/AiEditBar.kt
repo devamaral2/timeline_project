@@ -25,21 +25,17 @@ import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
-import app.braid.mobile.domain.chat.ModelPicker
 import app.braid.mobile.domain.request.RequestStep
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.ui.chat.BotState
 import app.braid.mobile.ui.chat.HermesComposer
 import app.braid.mobile.ui.chat.HermesContextCard
 import app.braid.mobile.ui.chat.HermesDraft
+import app.braid.mobile.ui.chat.HermesFieldLayout
 import app.braid.mobile.ui.chat.HermesSend
 import app.braid.mobile.ui.chat.HermesStatusLine
-import app.braid.mobile.ui.chat.ModelActions
-import app.braid.mobile.ui.chat.ModelPanel
-import app.braid.mobile.ui.chat.ModelPickerButton
 import app.braid.mobile.ui.chat.VoiceButton
 import app.braid.mobile.ui.chat.VoiceUiState
-import app.braid.mobile.ui.chat.rememberPickerProgress
 
 /** O registro que o pedido edita, mostrado acima do campo: o ícone, "Tarefa · sex., 18 set., 09:00" e o nome. */
 data class AiEditContext(
@@ -57,7 +53,8 @@ data class AiEditBarModel(
     val placeholder: String,
     val fieldLabel: String,
     val statusText: String,
-    val context: AiEditContext,
+    /** O registro dentro do campo (o arquivo do Hermes); `null` na pílula do detalhe, que não o repete. */
+    val context: AiEditContext?,
     /** A caixa e o microfone ficam desligados: pedido em andamento ou refeição em cálculo. */
     val locked: Boolean,
     val canSend: Boolean,
@@ -86,32 +83,21 @@ class AiEditBarActions(
 )
 
 /**
- * O seletor de modelo no pé do campo (ADR 0019), o mesmo do chat: o que ele mostra, se o painel está aberto e as trocas.
- * Segue tocável com a barra travada ou um pedido em andamento: a troca vale para o próximo pedido.
- */
-class AiEditBarPicker(
-    val picker: ModelPicker,
-    val open: Boolean,
-    val onToggle: () -> Unit,
-    val onDone: () -> Unit,
-    val actions: ModelActions,
-)
-
-/**
  * O campo de conversa com a IA no pé dos detalhes: o resultado, o status, o registro aberto e a caixa com microfone e envio.
- * Com [picker], o campo ganha o seletor de modelo no pé e o painel que cresce dele; sem, é o campo simples (o arquivo do
- * Hermes, ou a entidade quando o servidor não oferece modelos).
+ * A escolha do modelo não mora aqui: quem monta o campo (a barra de uma entidade) abre a folha da escolha por cima da tela.
+ *
+ * [layout] [HermesFieldLayout.Pill] é o detalhe de uma entidade (canvas "Input do detalhe da entidade"): o robô da linha de
+ * status sem disco nem cor e a pílula de uma linha com a onda num quadrado e a seta, sem nada do modelo à vista.
  */
 @Composable
 fun AiEditBar(
     model: AiEditBarModel,
     actions: AiEditBarActions,
     modifier: Modifier = Modifier,
-    picker: AiEditBarPicker? = null,
+    layout: HermesFieldLayout = HermesFieldLayout.Card,
 ) {
+    val pill = layout == HermesFieldLayout.Pill
     val scheme = MaterialTheme.colorScheme
-    // Aberto o painel, a borda e a sombra do campo ficam mais fortes.
-    val emphasis = rememberPickerProgress(picker?.open == true)
     Column(
         modifier.semantics { model.sectionLabel?.let { contentDescription = it } },
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -127,7 +113,7 @@ fun AiEditBar(
             )
         }
         model.reason?.let { Text(it, color = scheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 20.sp) }
-        HermesStatusLine(botState(model), model.statusText) {
+        HermesStatusLine(botState(model), model.statusText, plain = pill) {
             if (model.canDismiss) DismissButton(actions.onDismiss)
         }
         HermesComposer(
@@ -145,22 +131,13 @@ fun AiEditBar(
                     label = if (model.busy) "Aguardando a resposta" else "Enviar pedido",
                     onSend = actions.onSend,
                 ),
-            context = { HermesContextCard(model.context.icon, model.context.meta, model.context.title) },
+            context = model.context?.let { shown -> { HermesContextCard(shown.icon, shown.meta, shown.title) } },
             actions = {
                 if (model.voice?.available == true) {
-                    VoiceButton(listening = model.voice.listening, enabled = !model.locked, onClick = actions.onToggleVoice)
+                    VoiceButton(listening = model.voice.listening, enabled = !model.locked, onClick = actions.onToggleVoice, square = pill)
                 }
             },
-            // Com o seletor, o painel cresce do topo do campo e o seletor, a voz e o envio descem para a linha de baixo, como no chat.
-            panel =
-                picker?.let { shown ->
-                    { ModelPanel(shown.picker, shown.open, shown.actions, shown.onDone, Modifier.weight(1f, fill = false)) }
-                },
-            footer =
-                picker?.let { shown ->
-                    { ModelPickerButton(shown.picker, shown.open, shown.onToggle, Modifier.weight(1f, fill = false)) }
-                },
-            emphasis = emphasis,
+            layout = layout,
         )
         model.voice?.notice?.let {
             Text(

@@ -51,4 +51,14 @@ class EntityEditModelTest {
             PENDING_MEAL_EDIT_TEXT,
         )
     }
+
+    @Test
+    fun `only model alone in the field opens the model choice, as the web decides`() {
+        val cases = (model.getValue("modelCommands") as JsonArray).map { it.jsonObject }
+        assertEquals(10, cases.size)
+        for (case in cases) {
+            val text = case.getValue("text").jsonPrimitive.content
+            assertEquals("\"$text\"", case.getValue("command").jsonPrimitive.boolean, isModelCommand(text))
+        }
+    }
 }

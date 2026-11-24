@@ -11,7 +11,7 @@ import { visualForItemType } from "@/components/tasks/task-visuals";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { getArtifact } from "@/lib/api/artifacts";
 import { ApiRequestError } from "@/lib/api/client-request";
-import { artifactTypeLabel, artifactVisualType } from "@/lib/artifacts/artifact-model";
+import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
 import { editEntityTypeOfArtifact } from "@/lib/entity-edit/entity-edit-target";
 import { useNow } from "@/lib/tasks/use-now";
 import { pendingMealEditMessage } from "@/lib/notes/meal-generation";
@@ -19,7 +19,6 @@ import { whenLabel } from "@/lib/notes/notes-model";
 import { usePendingMealRefresh } from "@/lib/notes/use-pending-meal-refresh";
 import { ArtifactContent } from "./ArtifactContent";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
-import { noteTypeIcon } from "./NoteSheet";
 
 type LoadState = "loading" | "ready" | "missing" | "error";
 
@@ -79,7 +78,6 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   const ownsText = artifact.type === "text" && !artifact.global;
   // Skill e agente têm o próprio campo, o pedido de edição do arquivo (`AgentFileEditBar`, dentro do conteúdo).
   const editType = artifact.type === "skill" || artifact.type === "agent" ? null : editEntityTypeOfArtifact(artifact);
-  const TypeIcon = noteTypeIcon(artifactVisualType(artifact.type));
 
   const actions = ownsText ? (
     <DetailActions>
@@ -160,11 +158,6 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
           entityId={artifact.id}
           disabledReason={pendingMeal ? pendingMealEditMessage : undefined}
           onEdited={() => { void getArtifact(noteId).then(setArtifact, () => undefined); }}
-          context={{
-            icon: <TypeIcon aria-hidden />,
-            meta: now ? `${artifactTypeLabel(artifact.type)} · ${whenLabel(artifact.updatedAt, now)}` : artifactTypeLabel(artifact.type),
-            title: artifact.name,
-          }}
         />
       ) : null}
 

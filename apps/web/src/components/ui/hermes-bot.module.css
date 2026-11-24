@@ -36,6 +36,10 @@
 /* Erro: o disco muda de cor. */
 .bot[data-state="error"] { background: var(--destructive); color: var(--destructive-foreground); }
 
+/* Sem o disco: o desenho solto, maior (24 de 28 px), na cor do texto de apoio em todos os estados, sem halo nem vermelho. */
+.bot[data-plain], .bot[data-plain][data-state="error"] { background: transparent; color: var(--muted-foreground); box-shadow: none; }
+.bot[data-plain] svg { width: 86%; height: 86%; }
+
 /* Concluiu: o ✓ se desenha e o círculo dá um pulo. */
 .bot [data-p="check"] { stroke-dasharray: 24; stroke-dashoffset: 24; opacity: 0; transition: stroke-dashoffset 150ms linear, opacity 150ms linear; }
 .bot[data-state="done"] [data-p="check"] { stroke-dashoffset: 0; opacity: 1; transition: stroke-dashoffset 300ms var(--ease-out) 110ms, opacity 60ms linear 110ms; }

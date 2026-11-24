@@ -30,8 +30,6 @@ beforeEach(() => {
   serve("off");
 });
 
-const picker = () => screen.getByRole("button", { name: /^Modelo .*\. Trocar$/ });
-
 function setup(props: Partial<React.ComponentProps<typeof EntityAiEditBar>> = {}) {
   const onEdited = vi.fn();
   render(<EntityAiEditBar userId="user-1" entityType="task" entityId="e1" onEdited={onEdited} pollMs={1} {...props} />);
@@ -98,6 +96,24 @@ test("enviar fica desligado sem texto", () => {
   expect(screen.getByRole("button", { name: "Enviar pedido" })).toBeDisabled();
 });
 
+test("o robo da linha de status vem solto, sem o disco nem a cor do estado, e o campo nao repete o registro", async () => {
+  setup();
+  expect(screen.getByRole("status")).toHaveTextContent("Esperando o seu pedido");
+  const bot = screen.getByRole("status").querySelector("[data-hermes-mark] [data-state]");
+  expect(bot).toHaveAttribute("data-state", "idle");
+  expect(bot).toHaveAttribute("data-plain", "true");
+
+  fireEvent.change(screen.getByRole("textbox"), { target: { value: "pedido" } });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
+  await waitFor(() => openedRequest());
+  advanceRequest(api, openedRequest(), { status: "failed", errorCode: "unavailable" });
+  expect(await screen.findByText("Não deu certo")).toBeInTheDocument();
+  expect(bot).toHaveAttribute("data-state", "error");
+  expect(bot).toHaveAttribute("data-plain", "true");
+
+  expect(screen.getByRole("textbox").closest("form")?.children).toHaveLength(1);
+});
+
 test("com motivo para desligar, o campo fica desabilitado e mostra o motivo", () => {
   setup({ entityType: "food_artifact", disabledReason: "Aguarde a geração da refeição para editar a nota." });
   expect(screen.getByRole("textbox")).toBeDisabled();
@@ -131,75 +147,91 @@ test("pedido recusado devolve o texto ao campo para tentar de novo, e Fechar lim
   expect(screen.queryByText("Não deu certo")).not.toBeInTheDocument();
 });
 
-test("o campo mostra sempre o modelo, o esforco e o provedor, e o pedido de edicao vai com a escolha", async () => {
+/** O campo ja tem a escolha do modelo (as opcoes do servidor chegaram), mesmo sem mostra-la. */
+async function optionsRead() {
+  await waitFor(() => expect(screen.getByRole("textbox").closest("form")).toHaveAttribute("data-model", "true"));
+}
+
+/** Escreve o comando no campo e envia. */
+function command(text: string, how: "click" | "enter" = "click") {
+  const input = screen.getByRole("textbox");
+  fireEvent.change(input, { target: { value: text } });
+  if (how === "enter") fireEvent.keyDown(input, { key: "Enter" });
+  else fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
+}
+
+test("o campo nao mostra o modelo; /model abre a folha da escolha sem virar pedido", async () => {
   serve("on");
   setup();
+  await optionsRead();
+  const form = screen.getByRole("textbox").closest("form");
+  expect(form).toHaveAttribute("data-layout", "pill");
+  expect(screen.queryByRole("button", { name: /Trocar$/ })).toBeNull();
+  // A folha fechada nao esta na tela: nada do modelo esta a vista.
+  expect(screen.queryByRole("dialog", { name: "Escolha do modelo" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Sonnet 5.5" })).toBeNull();
+  expect(screen.getByRole("textbox").parentElement).toContainElement(screen.getByRole("button", { name: "Enviar pedido" }));
 
-  await waitFor(() => expect(picker()).toBeInTheDocument());
-  expect(picker()).toHaveAccessibleName("Modelo Sonnet 5.5, esforço médio, via Anthropic. Trocar");
-  expect(picker()).toHaveTextContent("Sonnet 5.5 · Médio");
-  expect(picker()).toHaveTextContent("via anthropic");
-  // Com o seletor no pe, a onda e a seta descem para a linha dele.
-  expect(picker().parentElement).toContainElement(screen.getByRole("button", { name: "Enviar pedido" }));
+  command("/model");
+  expect(form).toHaveAttribute("data-model-open", "true");
+  expect(screen.getByRole("dialog", { name: "Escolha do modelo" })).toBeInTheDocument();
+  expect(screen.getByRole("textbox")).toHaveValue("");
+  expect(editCall()).toBeUndefined();
 
-  fireEvent.change(screen.getByRole("textbox"), { target: { value: "mude para 19h" } });
-  fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
+  fireEvent.click(screen.getByRole("button", { name: "Fechar" }));
+  expect(form).toHaveAttribute("data-model-open", "false");
+  expect(screen.getByRole("textbox")).toHaveFocus();
+});
 
+test("o pedido de edicao vai com a escolha, e a troca feita pelo /model vale no proximo pedido e fica no aparelho", async () => {
+  serve("on");
+  setup();
+  await optionsRead();
+  command("mude para 19h");
   await waitFor(() => expect(editCall()).toBeDefined());
   expect(editCall()?.body).toEqual({
     userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "e1",
     model: { provider: "anthropic", model: "claude-sonnet-5-5", effort: "medium" },
   });
-});
+  advanceRequest(api, openedRequest(), { status: "done", message: "Feito." });
+  expect(await screen.findByText("Pronto")).toBeInTheDocument();
+  api.calls.length = 0;
 
-test("tocar no modelo abre o painel no proprio campo; a troca vale no proximo pedido e fica no aparelho", async () => {
-  serve("on");
-  setup();
-  await waitFor(() => expect(picker()).toBeInTheDocument());
   const form = screen.getByRole("textbox").closest("form");
-  expect(form).toHaveAttribute("data-model-open", "false");
-
-  fireEvent.click(picker());
+  command("/MODEL", "enter");
   expect(form).toHaveAttribute("data-model-open", "true");
+  // A aba do provedor so mostra a lista: a escolha troca ao tocar no modelo.
   fireEvent.click(screen.getByRole("button", { name: "OpenAI" }));
+  fireEvent.click(screen.getByRole("button", { name: "GPT 6.2 Sol" }));
   fireEvent.click(screen.getByRole("button", { name: "Máximo" }));
-  fireEvent.click(screen.getByRole("button", { name: "Selecionar" }));
-
+  fireEvent.click(screen.getByRole("button", { name: "Fechar" }));
   expect(form).toHaveAttribute("data-model-open", "false");
-  expect(picker()).toHaveTextContent("GPT 6.2 Sol · Máximo");
-  expect(picker()).toHaveTextContent("via openai");
   expect(JSON.parse(window.localStorage.getItem(MODEL_SELECTION_KEY) ?? "null").current)
     .toEqual({ provider: "openai", model: "gpt-6.2-sol", effort: "max" });
 
-  fireEvent.change(screen.getByRole("textbox"), { target: { value: "resuma" } });
-  fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
+  command("resuma");
   await waitFor(() => expect(editCall()).toBeDefined());
-  expect(editCall()?.body).toMatchObject({ model: { provider: "openai", model: "gpt-6.2-sol", effort: "max" } });
+  expect(editCall()?.body).toMatchObject({ text: "resuma", model: { provider: "openai", model: "gpt-6.2-sol", effort: "max" } });
 });
 
-test("o fundo e o Escape fecham o painel; com um pedido em andamento ainda da para trocar o modelo", async () => {
+test("o toque fora e o Escape fecham a folha e devolvem o foco ao texto", async () => {
   serve("on");
   setup();
-  await waitFor(() => expect(picker()).toBeInTheDocument());
+  await optionsRead();
   const form = screen.getByRole("textbox").closest("form");
-  const scrim = document.querySelector<HTMLElement>("button[tabindex='-1'][aria-hidden='true']");
+  const overlay = () => document.querySelector<HTMLElement>("[data-model-sheet]");
 
-  fireEvent.click(picker());
-  expect(scrim).toHaveAttribute("data-open", "true");
-  fireEvent.click(scrim as HTMLElement);
+  command("/model");
+  expect(overlay()).toHaveAttribute("data-open", "true");
+  fireEvent.pointerDown(overlay() as HTMLElement);
   expect(form).toHaveAttribute("data-model-open", "false");
+  expect(screen.getByRole("textbox")).toHaveFocus();
 
-  fireEvent.click(picker());
+  command("/model");
+  expect(form).toHaveAttribute("data-model-open", "true");
   fireEvent.keyDown(window, { key: "Escape" });
   expect(form).toHaveAttribute("data-model-open", "false");
-  expect(picker()).toHaveFocus();
-
-  fireEvent.change(screen.getByRole("textbox"), { target: { value: "mude para 19h" } });
-  fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
-  await waitFor(() => expect(screen.getByRole("textbox")).toBeDisabled());
-  expect(picker()).toBeEnabled();
-  fireEvent.click(picker());
-  expect(form).toHaveAttribute("data-model-open", "true");
+  expect(screen.getByRole("textbox")).toHaveFocus();
 });
 
 test("sem nenhum provedor neste ambiente o campo fica sem o seletor e o pedido vai sem escolha", async () => {

@@ -140,12 +140,19 @@ class EntityEditViewModel
         }
 
         /** As trocas do seletor: valem já, em todas as telas, ficam no aparelho e vão no próximo pedido (mesmo com um em andamento). */
-        fun chooseProvider(provider: ModelProvider) {
-            viewModelScope.launch { models.chooseProvider(provider) }
+        fun chooseModel(
+            model: String,
+            provider: ModelProvider? = null,
+        ) {
+            viewModelScope.launch { models.chooseModel(model, provider) }
         }
 
-        fun chooseModel(model: String) {
-            viewModelScope.launch { models.chooseModel(model) }
+        /** A estrela de uma linha da folha: guarda o modelo nos favoritos ou o tira de lá, sem escolhê-lo. */
+        fun toggleFavorite(
+            provider: ModelProvider,
+            model: String,
+        ) {
+            viewModelScope.launch { models.toggleFavorite(provider, model) }
         }
 
         fun chooseEffort(effort: ModelEffort) {
