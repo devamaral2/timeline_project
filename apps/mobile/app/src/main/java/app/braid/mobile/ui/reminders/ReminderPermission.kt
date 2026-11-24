@@ -1,11 +1,14 @@
 package app.braid.mobile.ui.reminders
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationManager
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -142,6 +145,36 @@ fun FullScreenIntentPrompt(modifier: Modifier = Modifier) {
     }
 }
 
+/** O que a faixa diz enquanto o app não está isento da otimização de bateria. */
+const val BATTERY_EXPLANATION =
+    "Para os lembretes chegarem com o app fechado, deixe o Braid funcionar sem restrição de bateria."
+
+/**
+ * Convida a isentar o app da otimização de bateria. Sem a isenção, o Android (e a economia de bateria de vários
+ * fabricantes) pode segurar o alarme do lembrete até o app ser aberto de novo: o aviso só chega com o app rodando.
+ */
+@Composable
+fun BatteryPrompt(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var exempt by remember { mutableStateOf(ignoresBatteryOptimizations(context)) }
+    var dismissed by rememberSaveable { mutableStateOf(false) }
+
+    // Voltar do pedido do sistema com a isenção dada some com a faixa.
+    LifecycleResumeEffect(Unit) {
+        exempt = ignoresBatteryOptimizations(context)
+        onPauseOrDispose { }
+    }
+    if (!exempt && !dismissed) {
+        PromptBanner(
+            text = BATTERY_EXPLANATION,
+            actionLabel = "Permitir",
+            onAction = { openBatteryExemption(context) },
+            onDismiss = { dismissed = true },
+            modifier = modifier,
+        )
+    }
+}
+
 /** O que a faixa diz a quem ainda não deixou o app aparecer sobre outros apps. */
 const val OVERLAY_EXPLANATION =
     "Para o lembrete abrir em tela cheia também com o celular em uso, permita ao Braid aparecer sobre outros apps."
@@ -172,12 +205,13 @@ fun OverlayPrompt(modifier: Modifier = Modifier) {
     }
 }
 
-/** As faixas de permissão dos lembretes, uma sobre a outra no topo. */
+/** As faixas de permissão dos lembretes, uma sobre a outra no topo, abaixo da barra de status. */
 @Composable
 fun ReminderPrompts(modifier: Modifier = Modifier) {
-    Column(modifier) {
+    Column(modifier.statusBarsPadding()) {
         ReminderPermissionPrompt()
         ExactAlarmPrompt()
+        BatteryPrompt()
         FullScreenIntentPrompt()
         OverlayPrompt()
     }
@@ -192,7 +226,7 @@ private fun PromptBanner(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceVariant,
         tonalElevation = 2.dp,
@@ -231,3 +265,25 @@ private fun canUseFullScreenIntent(context: Context): Boolean =
 private fun fullScreenIntentSettingsIntent(context: Context): Intent =
     Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, Uri.parse("package:${context.packageName}"))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+private fun ignoresBatteryOptimizations(context: Context): Boolean =
+    context.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(context.packageName) ?: true
+
+/**
+ * O pedido direto do sistema ("Permitir que o app sempre funcione em segundo plano?"). A Play Store restringe esse
+ * pedido a apps cuja função depende dele; aqui o lembrete na hora é a função, e o APK sai fora da loja. Onde o
+ * aparelho não tem essa tela, abre a lista de otimização de bateria.
+ */
+@SuppressLint("BatteryLife")
+private fun openBatteryExemption(context: Context) {
+    val request =
+        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${context.packageName}"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(request)
+    } catch (_: ActivityNotFoundException) {
+        runCatching {
+            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+}

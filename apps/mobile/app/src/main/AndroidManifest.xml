@@ -25,6 +25,11 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <!-- Com o aparelho em uso, só quem pode aparecer sobre outros apps abre a tela cheia do lembrete direto. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!--
+        Com o uso em segundo plano restrito (a bateria do app em "Restrito", ou a economia de alguns fabricantes), o
+        Android segura o alarme do lembrete até o app ser aberto. Só a isenção de otimização de bateria o libera.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- O Android 11+ só deixa o app ver os serviços de reconhecimento de voz se ele declarar que os procura. -->
