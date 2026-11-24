@@ -3,6 +3,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- O lembrete acende a tela e abre a tela cheia (ReminderAlertActivity) com o aparelho apagado ou bloqueado. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -58,6 +60,14 @@
                 <action android:name="android.speech.RecognitionService" />
             </intent-filter>
         </service>
+
+        <!-- A tela cheia do lembrete: fica sobre o bloqueio, fora dos recentes e numa tarefa só dela. -->
+        <activity
+            android:name=".ReminderAlertActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:taskAffinity="" />
 
         <receiver
             android:name=".data.reminder.ReminderAlarmReceiver"

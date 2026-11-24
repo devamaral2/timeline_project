@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.reminder
 
 import app.braid.mobile.domain.task.TaskCard
+import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.timeline.toIsoMillis
 import java.time.Duration
@@ -38,6 +39,10 @@ data class Reminder(
     val triggerAt: Instant,
     /** O início da tarefa, ou o prazo na tarefa longa. */
     val anchor: Instant,
+    /** O tipo da tarefa: dá a cor e o rótulo da tela cheia do lembrete. */
+    val taskKind: TaskKind = TaskKind.Common,
+    /** Verdadeiro na tarefa longa, em que a [anchor] é o prazo e não o início. */
+    val deadline: Boolean = false,
 )
 
 /** O que já cruzou o horário: [due] se mostra, [settled] nunca mais se reavalia (mostrado ou não). */
@@ -88,6 +93,8 @@ fun remindersOf(cards: Collection<TaskCard>): List<Reminder> =
                 offsetMinutes = offset,
                 triggerAt = anchor.minusSeconds(offset * SECONDS_PER_MINUTE),
                 anchor = anchor,
+                taskKind = card.kind,
+                deadline = card.longRunning,
             )
         }
     }

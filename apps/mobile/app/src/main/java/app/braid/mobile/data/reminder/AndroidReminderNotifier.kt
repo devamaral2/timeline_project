@@ -1,18 +1,19 @@
 package app.braid.mobile.data.reminder
 
 import android.Manifest
+import android.app.KeyguardManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import app.braid.mobile.MainActivity
 import app.braid.mobile.R
+import app.braid.mobile.ReminderAlertActivity
 import app.braid.mobile.domain.reminder.Reminder
 import app.braid.mobile.domain.reminder.ReminderNotifier
 import app.braid.mobile.domain.reminder.offsetLabel
@@ -22,7 +23,10 @@ import javax.inject.Singleton
 
 private const val CHANNEL_ID = "reminders"
 
-/** A notificação de um lembrete: título é o nome da tarefa, texto "Tarefa · 30 minutos antes", como no web; tocar abre o detalhe da tarefa. */
+/**
+ * A notificação de um lembrete: título é o nome da tarefa, texto "Tarefa · 30 minutos antes", como no web; tocar abre
+ * o detalhe da tarefa. Com o aparelho apagado ou bloqueado ela leva também a tela cheia ([ReminderAlertActivity]).
+ */
 @Singleton
 class AndroidReminderNotifier
     @Inject
@@ -37,13 +41,10 @@ class AndroidReminderNotifier
                 PendingIntent.getActivity(
                     context,
                     reminder.key.hashCode(),
-                    Intent(context, MainActivity::class.java)
-                        .setData(reminderUri(reminder.key))
-                        .putExtra(MainActivity.EXTRA_TASK_ID, reminder.taskId)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                    taskDetailIntent(context, reminder),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                 )
-            val notification =
+            val builder =
                 NotificationCompat
                     .Builder(context, CHANNEL_ID)
                     .setSmallIcon(R.drawable.ic_stat_reminder)
@@ -53,13 +54,33 @@ class AndroidReminderNotifier
                     .setWhen(reminder.triggerAt.toEpochMilli())
                     .setAutoCancel(true)
                     .setContentIntent(open)
-                    .build()
+            if (screenIsAway()) {
+                val alert =
+                    PendingIntent.getActivity(
+                        context,
+                        reminder.key.hashCode(),
+                        ReminderAlertActivity.intentFor(context, reminder),
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                    )
+                builder.setFullScreenIntent(alert, true)
+            }
+            val notification = builder.build()
             // A chave é a etiqueta: o mesmo lembrete nunca vira duas notificações.
             try {
                 manager.notify(reminder.key, 0, notification)
             } catch (_: SecurityException) {
                 // A permissão foi retirada entre a verificação e o envio: sem notificação, sem falha.
             }
+        }
+
+        /**
+         * Apagado ou bloqueado, o aparelho abre a tela cheia do lembrete no lugar do aviso. Em uso, não: o sistema
+         * manteria o aviso preso no topo da tela, e o aviso comum já basta para quem está olhando.
+         */
+        private fun screenIsAway(): Boolean {
+            val interactive = context.getSystemService(PowerManager::class.java)?.isInteractive ?: true
+            val locked = context.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked ?: false
+            return !interactive || locked
         }
 
         private fun canPost(): Boolean =
