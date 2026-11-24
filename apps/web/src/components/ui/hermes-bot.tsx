@@ -33,9 +33,13 @@ export function useHermesBotState({ pending, failed }: { pending: boolean; faile
   return state;
 }
 
-export function HermesBot({ state = "idle", className }: { state?: HermesBotState; className?: string }) {
+/**
+ * `plain` tira o disco: o desenho fica solto, na cor do texto ao lado, sem o verde, o halo nem o vermelho do erro (a linha
+ * de status do detalhe, canvas "Input do detalhe da entidade"). Os movimentos dos estados são os mesmos.
+ */
+export function HermesBot({ state = "idle", className, plain = false }: { state?: HermesBotState; className?: string; plain?: boolean }) {
   return (
-    <span className={`${styles.bot} ${className ?? ""}`} data-state={state} aria-hidden>
+    <span className={`${styles.bot} ${className ?? ""}`} data-state={state} data-plain={plain || undefined} aria-hidden>
       <svg viewBox="0 0 32 32" aria-hidden>
         <g data-p="all">
           <g data-p="ant">

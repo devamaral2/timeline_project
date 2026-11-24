@@ -3,6 +3,7 @@
 import type { ModelEffort, ModelOptionsDto, ModelProvider, ModelSelection } from "@repo/contracts";
 import { useCallback, useSyncExternalStore } from "react";
 import { ModelOffError, getModelOptions } from "@/lib/api/requests";
+import { type ModelFavorite, readStoredFavorites, toggleFavorite, writeStoredFavorites } from "./model-favorites";
 import {
   type StoredModelSelection, providerOf, readStoredSelection, resolveSelection, withEffort, withModel, withProvider,
   writeStoredSelection,
@@ -11,16 +12,18 @@ import {
 /**
  * A escolha de provedor, modelo e esforco, uma so para a pagina: o campo do chat e o campo de edicao do detalhe
  * mostram a mesma e a mandam em todo pedido. O que o servidor oferece (`options`) e lido uma vez e guardado ate
- * alguem pedir de novo; a escolha (`state`) fica no aparelho a cada troca.
+ * alguem pedir de novo; a escolha (`state`) fica no aparelho a cada troca, e os favoritos da folha tambem.
  */
 interface Snapshot {
   /** O que o servidor oferece; `null` antes da leitura e quando o modo modelo nao existe neste ambiente. */
   options: ModelOptionsDto | null;
   /** A escolha atual e o ultimo modelo de cada provedor, ja conferidos contra `options`. */
   state: StoredModelSelection | null;
+  /** Os modelos favoritos, na ordem em que foram guardados; lidos do aparelho junto com as opcoes. */
+  favorites: readonly ModelFavorite[];
 }
 
-const EMPTY: Snapshot = { options: null, state: null };
+const EMPTY: Snapshot = { options: null, state: null, favorites: [] };
 
 let snapshot: Snapshot = EMPTY;
 /** A leitura em curso: quem pede as opcoes enquanto ela anda espera a mesma. */
@@ -60,7 +63,7 @@ export function loadModelOptions(fresh = false): Promise<ModelOptionsDto> {
       loading = null;
       off = null;
       const state = resolveSelection(options, snapshot.state ?? readStoredSelection());
-      publish({ options, state });
+      publish({ options, state, favorites: readStoredFavorites() });
       writeStoredSelection(state);
       return options;
     },
@@ -108,11 +111,23 @@ export function chooseModelProvider(provider: ModelProvider): ModelSelection | u
   return next.current;
 }
 
-export function chooseModel(model: string): void {
+/**
+ * Troca o modelo. Com `provider`, troca os dois de uma vez: a aba de favoritos e a de outro provedor escolhem um
+ * modelo que nao e do provedor atual. Um modelo que o provedor nao oferece nao muda nada.
+ */
+export function chooseModel(model: string, provider?: ModelProvider): void {
   const { options, state } = snapshot;
-  if (state && options && providerOf(options, state.current.provider)?.models.some((entry) => entry.id === model)) {
-    commit(withModel(state, model));
-  }
+  if (!state || !options) return;
+  const target = provider ?? state.current.provider;
+  if (!providerOf(options, target)?.models.some((entry) => entry.id === model)) return;
+  commit(withModel(target === state.current.provider ? state : withProvider(options, state, target), model));
+}
+
+/** Guarda ou tira um modelo dos favoritos da folha; a lista fica no aparelho. */
+export function toggleModelFavorite(provider: ModelProvider, model: string): void {
+  const favorites = toggleFavorite(snapshot.favorites, provider, model);
+  publish({ ...snapshot, favorites });
+  writeStoredFavorites(favorites);
 }
 
 export function chooseModelEffort(effort: ModelEffort): void {
@@ -131,9 +146,13 @@ export function resetModelSelectionStore(): void {
 export interface ModelSelectionControls {
   options: ModelOptionsDto | null;
   selection: ModelSelection | null;
+  /** Os modelos favoritos da folha da escolha, na ordem em que foram guardados. */
+  favorites: readonly ModelFavorite[];
   chooseProvider: (provider: ModelProvider) => void;
-  chooseModel: (model: string) => void;
+  /** Troca o modelo; com `provider`, o provedor junto (a escolha feita na aba de favoritos ou de outro provedor). */
+  chooseModel: (model: string, provider?: ModelProvider) => void;
   chooseEffort: (effort: ModelEffort) => void;
+  toggleFavorite: (provider: ModelProvider, model: string) => void;
   /**
    * Le as opcoes do servidor de novo, por tras: o campo que aparece mostra o que o servidor oferece agora, e ate a
    * resposta chegar vale o que ja foi lido. Nunca rejeita: sem o modo modelo o campo so fica sem o seletor.
@@ -146,7 +165,7 @@ const getServerSnapshot = () => EMPTY;
 
 /** A escolha de modelo para um campo: acompanha as trocas feitas em qualquer outro campo da pagina. */
 export function useModelSelection(): ModelSelectionControls {
-  const { options, state } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const { options, state, favorites } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const chooseProvider = useCallback((provider: ModelProvider) => {
     chooseModelProvider(provider);
   }, []);
@@ -154,9 +173,11 @@ export function useModelSelection(): ModelSelectionControls {
   return {
     options,
     selection: options ? (state?.current ?? null) : null,
+    favorites,
     chooseProvider,
     chooseModel,
     chooseEffort: chooseModelEffort,
+    toggleFavorite: toggleModelFavorite,
     load,
   };
 }

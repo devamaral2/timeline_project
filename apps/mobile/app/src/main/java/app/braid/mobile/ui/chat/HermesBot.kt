@@ -435,12 +435,16 @@ private fun DrawScope.drawPiece(
 /**
  * O robô no disco verde-água (`.bot` do web), no tamanho de quem usa: 28 dp na linha de status, 52 dp na barra inferior e
  * no voo entre elas. O desenho ocupa 58% do disco; ouvindo, um halo sai dele; no erro o disco fica vermelho.
+ *
+ * [plain] tira o disco (`data-plain` do web, canvas "Input do detalhe da entidade"): o desenho fica solto, maior (86% da
+ * caixa), na cor do texto de apoio em todos os estados, sem halo nem vermelho. Os movimentos dos estados são os mesmos.
  */
 @Composable
 fun HermesBot(
     state: BotState,
     size: Dp,
     modifier: Modifier = Modifier,
+    plain: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
     val brand = braidTokens().brand
@@ -451,12 +455,16 @@ fun HermesBot(
         label = "disc",
     )
     val glyph by animateColorAsState(
-        if (state == BotState.Error) scheme.onError else scheme.background,
+        when {
+            plain -> scheme.onSurfaceVariant
+            state == BotState.Error -> scheme.onError
+            else -> scheme.background
+        },
         tween(REDUCED_MS, easing = LinearEasing),
         label = "glyph",
     )
     val halo by animateFloatAsState(
-        if (state == BotState.Listening) 1f else 0f,
+        if (state == BotState.Listening && !plain) 1f else 0f,
         tween(if (reduced) REDUCED_MS else SLOW_MS, easing = EaseOut),
         label = "halo",
     )
@@ -464,6 +472,7 @@ fun HermesBot(
         modifier
             .size(size)
             .drawBehind {
+                if (plain) return@drawBehind
                 if (halo > 0f) {
                     drawCircle(brand.copy(alpha = HALO_ALPHA * halo), radius = this.size.minDimension / 2 * (1 + HALO_SPREAD * 2 * halo))
                 }
@@ -471,11 +480,12 @@ fun HermesBot(
             }.clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {
-        HermesBotIcon(state, size = size * GLYPH_RATIO, color = glyph)
+        HermesBotIcon(state, size = size * if (plain) PLAIN_GLYPH_RATIO else GLYPH_RATIO, color = glyph)
     }
 }
 
 private const val GLYPH_RATIO = 0.58f
+private const val PLAIN_GLYPH_RATIO = 0.86f
 private const val HALO_ALPHA = 0.3f
 
 /** O halo do web: `0 0 0 .17em`, a 17% do tamanho do disco além da borda. */

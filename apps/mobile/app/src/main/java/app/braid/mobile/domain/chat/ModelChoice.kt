@@ -14,12 +14,20 @@ data class StoredModelSelection(
     val models: Map<ModelProvider, String> = emptyMap(),
 )
 
-/** Onde o aparelho guarda a escolha do modo modelo (`braid.model-selection` no web). */
+/**
+ * Onde o aparelho guarda a escolha do modo modelo (`braid.model-selection` no web) e, ao lado dela, os modelos favoritos da
+ * folha (`braid.model-favorites`).
+ */
 interface ModelSelectionStore {
     /** A escolha guardada; ausente ou ilegível vale `null`. */
     suspend fun read(): StoredModelSelection?
 
     suspend fun write(state: StoredModelSelection)
+
+    /** Os favoritos guardados, na ordem em que foram guardados; ausentes ou ilegíveis valem lista vazia. */
+    suspend fun readFavorites(): List<ModelFavorite>
+
+    suspend fun writeFavorites(favorites: List<ModelFavorite>)
 }
 
 /** "A OpenAI não está ligada neste ambiente.": o aviso de um comando de provedor sem chave. */
@@ -111,9 +119,6 @@ fun StoredModelSelection.withModel(model: String): StoredModelSelection =
 
 fun StoredModelSelection.withEffort(effort: ModelEffort): StoredModelSelection = copy(current = current.copy(effort = effort))
 
-/** Com mais modelos que isto, a lista do seletor ganha a busca (como no web). */
-const val MODEL_SEARCH_FROM = 6
-
 /**
  * Os modelos que a busca acha: cada palavra precisa aparecer no nome ou no id, sem acento e sem caixa ("gemini" acha
  * "Google: Gemini 4 Neon"; "x-ai" acha `x-ai/grok-4.7`). Busca vazia devolve a lista inteira.
@@ -122,12 +127,21 @@ fun filterModels(
     models: List<ModelOption>,
     query: String,
 ): List<ModelOption> {
-    val words = searchKey(query).split(Regex("\\s+")).filter { it.isNotEmpty() }
-    if (words.isEmpty()) return models
-    return models.filter { model ->
-        val haystack = searchKey("${model.name} ${model.id}")
-        words.all { haystack.contains(it) }
-    }
+    val words = searchWords(query)
+    return if (words.isEmpty()) models else models.filter { matchesWords(words, it.name, it.id) }
+}
+
+private fun searchWords(query: String): List<String> = searchKey(query).split(Regex("\\s+")).filter { it.isNotEmpty() }
+
+/** Toda palavra da busca precisa aparecer no nome ou no id; sem palavras, tudo vale. */
+private fun matchesWords(
+    words: List<String>,
+    name: String,
+    id: String,
+): Boolean {
+    if (words.isEmpty()) return true
+    val haystack = searchKey("$name $id")
+    return words.all { haystack.contains(it) }
 }
 
 private fun searchKey(text: String): String =
@@ -135,3 +149,85 @@ private fun searchKey(text: String): String =
         .normalize(text, java.text.Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"), "")
         .lowercase(Locale.ROOT)
+
+/** Um modelo favorito: o id dele e o provedor que o atende (o mesmo modelo pode existir em dois provedores). */
+data class ModelFavorite(
+    val provider: ModelProvider,
+    val model: String,
+)
+
+/** A aba aberta na folha da escolha: os favoritos ou os modelos de um provedor. Trocar de aba não troca a escolha. */
+sealed interface ModelTab {
+    data object Favorites : ModelTab
+
+    data class OfProvider(
+        val id: ModelProvider,
+    ) : ModelTab
+}
+
+/** Uma linha da lista de modelos da folha. */
+data class ModelRow(
+    val provider: ModelProvider,
+    val id: String,
+    val name: String,
+    val favorite: Boolean,
+    /** É a escolha atual: o mesmo provedor e o mesmo modelo. */
+    val selected: Boolean,
+)
+
+fun isFavorite(
+    favorites: List<ModelFavorite>,
+    provider: ModelProvider,
+    model: String,
+): Boolean = favorites.any { it.provider == provider && it.model == model }
+
+/** Guarda ou tira o favorito. O novo vai para o fim: a aba mostra na ordem em que foram guardados. */
+fun toggleFavorite(
+    favorites: List<ModelFavorite>,
+    provider: ModelProvider,
+    model: String,
+): List<ModelFavorite> =
+    if (isFavorite(favorites, provider, model)) {
+        favorites.filterNot { it.provider == provider && it.model == model }
+    } else {
+        favorites + ModelFavorite(provider, model)
+    }
+
+/**
+ * As linhas da aba. Nos favoritos, os guardados que o servidor ainda oferece, na ordem em que foram guardados; num provedor, os
+ * modelos dele na ordem do servidor. A busca vale dentro da aba.
+ */
+fun modelRows(
+    options: ModelOptions,
+    favorites: List<ModelFavorite>,
+    selection: ModelSelection,
+    tab: ModelTab,
+    query: String,
+): List<ModelRow> {
+    val offered: List<Triple<ModelProvider, String, String>> =
+        when (tab) {
+            ModelTab.Favorites ->
+                favorites.mapNotNull { entry ->
+                    options.providerOf(entry.provider)?.models?.firstOrNull { it.id == entry.model }?.let {
+                        Triple(entry.provider, it.id, it.name)
+                    }
+                }
+            is ModelTab.OfProvider ->
+                options
+                    .providerOf(tab.id)
+                    ?.models
+                    .orEmpty()
+                    .map { Triple(tab.id, it.id, it.name) }
+        }
+    val words = searchWords(query)
+    val kept = offered.filter { (_, id, name) -> matchesWords(words, name, id) }
+    return kept.map { (provider, id, name) ->
+        ModelRow(
+            provider = provider,
+            id = id,
+            name = name,
+            favorite = isFavorite(favorites, provider, id),
+            selected = provider == selection.provider && id == selection.model,
+        )
+    }
+}

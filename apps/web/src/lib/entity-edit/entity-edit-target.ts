@@ -15,6 +15,14 @@ export const EDIT_TARGET_LABELS: Record<RequestEditEntityType, string> = {
 };
 
 /**
+ * O comando que abre a escolha do modelo nos campos do Hermes (o detalhe e o chat), que não mostram o modelo: `/model`
+ * sozinho no campo, sem diferença de caixa. Ele não vira pedido. `/modelo` é outro comando, o do modo modelo do chat.
+ */
+export function isModelCommand(text: string): boolean {
+  return /^\/model$/i.test(text.trim());
+}
+
+/**
  * O tipo que a barra envia para um artefato aberto. `null` quando a barra não se mostra: artefato global (catálogo,
  * sem edição pelo app), roteador (o JEV o gerencia) e exercício (só existe no catálogo global).
  */

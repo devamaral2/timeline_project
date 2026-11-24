@@ -430,8 +430,7 @@ class EntityEditViewModelTest {
             // A escolha padrão do servidor, na forma do contrato (`modelSelectionSchema`).
             assertEquals(Fixtures.json("chat-model-options").jsonObject.getValue("default"), edits().single().getValue("model"))
 
-            viewModel.chooseProvider(ModelProvider.OpenRouter)
-            viewModel.chooseModel("google/gemini-4-neon")
+            viewModel.chooseModel("google/gemini-4-neon", ModelProvider.OpenRouter)
             viewModel.chooseEffort(ModelEffort.Max)
             // Um modelo que o provedor não tem não vale.
             viewModel.chooseModel("claude-opus-5-5")

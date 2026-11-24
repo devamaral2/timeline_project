@@ -4,6 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "strict": true,
+    "jsx": "react-jsx",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "baseUrl": ".",
@@ -13,5 +14,6 @@
       "@repo/timeline": ["../../packages/timeline/src/index.ts"],
       "@/*": ["../../apps/web/src/*"]
     }
-  }
+  },
+  "include": ["**/*", "../../apps/web/src/**/*", "../../packages/*/src/**/*"]
 }

@@ -19,6 +19,7 @@ import field from "@/components/detail/entity-ai-edit-bar.module.css";
 import { HermesComposer } from "@/components/ui/hermes-composer";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
+import { isModelCommand } from "@/lib/entity-edit/entity-edit-target";
 import { briefDate } from "@/lib/dates/day-labels";
 import { modelFooter } from "@/lib/agent-chat/model-selection";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
@@ -31,7 +32,7 @@ import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
 import type { FreeWindow } from "./hub-open";
 import { AgentTrace } from "./agent-trace";
 import { ChatAnswer } from "./chat-answer";
-import { ModelFooter, ModelPickerScrim, useModelPicker } from "./model-picker";
+import { ModelFooter, useModelPicker } from "./model-picker";
 import { HermesSteps } from "./hermes-steps";
 import { CHANGE_LABELS, EntityRows } from "./entity-rows";
 import { ProcessBox } from "./process-box";
@@ -159,9 +160,9 @@ export function AgentChatPanel({
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   // O seletor de modelo fica sempre no pé do campo: no assistente da agenda e no modo modelo o pedido roda com a
-  // escolha. Só o Hermes responde com o modelo dele, então no modo dele o seletor sai. Aberto, o painel cresce do
-  // campo e a conversa escurece.
-  const picker = useModelPicker(chat.model, { hidden: chat.agentMode === "hermes" });
+  // escolha. Só o Hermes responde com o modelo dele, então no modo dele o seletor sai. A folha da escolha abre por
+  // cima da tela.
+  const picker = useModelPicker(chat.model, { hidden: chat.agentMode === "hermes", returnFocus: inputRef });
   // Ao abrir o chat, volta a acompanhar os pedidos que ainda rodam (o hook não repete o que já mostra).
   useEffect(() => {
     void chat.recover();
@@ -255,6 +256,14 @@ export function AgentChatPanel({
       return;
     }
     if (!hasText) return;
+    // `/model` abre a folha da escolha do modelo (o campo não mostra o modelo); não vira mensagem.
+    if (picker.choice && isModelCommand(draft)) {
+      if (listening) cancel();
+      setVoiceLoop(false);
+      updatePrompt("");
+      picker.show();
+      return;
+    }
     // Enviar pelo teclado ou pelo botao e pedido de texto: o ciclo de voz acaba.
     if (chat.send(freeWindow ? requestWithWindow(freeWindow, draft) : draft)) {
       // Enviar o que foi dito fecha o microfone: o pedido ja foi.
@@ -325,7 +334,6 @@ export function AgentChatPanel({
 
   return (
     <div className={styles.assistantPanel} data-chat-view={view}>
-      <ModelPickerScrim picker={picker} />
       <div className={styles.chatHeader}>
         <button
           type="button"
@@ -436,7 +444,7 @@ export function AgentChatPanel({
       <div className={styles.chatField}>
         {voiceError && !quietVoice && !voiceLoop && <p className={styles.hubComposerHint}>{voiceError}</p>}
         <p className={field.status} data-state={state} role="status" aria-live="polite">
-          <HermesMark state={state} />
+          <HermesMark state={state} plain />
           <span>{statusText}</span>
         </p>
         <HermesComposer

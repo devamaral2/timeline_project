@@ -111,5 +111,47 @@
       "entityType": null
     }
   ],
-  "pendingMealMessage": "Aguarde a geração da refeição para editar a nota."
+  "pendingMealMessage": "Aguarde a geração da refeição para editar a nota.",
+  "modelCommands": [
+    {
+      "text": "/model",
+      "command": true
+    },
+    {
+      "text": "/MODEL",
+      "command": true
+    },
+    {
+      "text": "  /Model  ",
+      "command": true
+    },
+    {
+      "text": "/modelo",
+      "command": false
+    },
+    {
+      "text": "/models",
+      "command": false
+    },
+    {
+      "text": "/model haiku",
+      "command": false
+    },
+    {
+      "text": "model",
+      "command": false
+    },
+    {
+      "text": "/",
+      "command": false
+    },
+    {
+      "text": "mude o /model",
+      "command": false
+    },
+    {
+      "text": "",
+      "command": false
+    }
+  ]
 }

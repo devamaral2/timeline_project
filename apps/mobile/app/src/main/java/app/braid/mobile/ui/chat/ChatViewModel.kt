@@ -441,13 +441,23 @@ class ChatViewModel
             }
         }
 
-        /** Troca o provedor no seletor: o modelo é o que ele tinha na última vez, ou o padrão dele. Vale já e fica no aparelho. */
-        fun chooseProvider(provider: ModelProvider) {
-            viewModelScope.launch { models.chooseProvider(provider) }
+        /**
+         * Troca o modelo no seletor; com [provider], o provedor junto (a linha escolhida na aba dos favoritos ou de outro
+         * provedor). Vale já e fica no aparelho.
+         */
+        fun chooseModel(
+            model: String,
+            provider: ModelProvider? = null,
+        ) {
+            viewModelScope.launch { models.chooseModel(model, provider) }
         }
 
-        fun chooseModel(model: String) {
-            viewModelScope.launch { models.chooseModel(model) }
+        /** A estrela de uma linha da folha: guarda o modelo nos favoritos ou o tira de lá, sem escolhê-lo. */
+        fun toggleFavorite(
+            provider: ModelProvider,
+            model: String,
+        ) {
+            viewModelScope.launch { models.toggleFavorite(provider, model) }
         }
 
         fun chooseEffort(effort: ModelEffort) {

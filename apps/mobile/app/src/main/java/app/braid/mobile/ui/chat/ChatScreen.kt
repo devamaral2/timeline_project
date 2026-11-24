@@ -1,7 +1,6 @@
 package app.braid.mobile.ui.chat
 
 import android.Manifest
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -47,7 +46,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -71,12 +69,12 @@ import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.domain.agenda.FreeWindow
 import app.braid.mobile.domain.chat.ChatCommand
-import app.braid.mobile.domain.chat.ModelPicker
 import app.braid.mobile.domain.chat.end
 import app.braid.mobile.domain.chat.parseCommand
 import app.braid.mobile.domain.chat.start
 import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.appendTranscript
+import app.braid.mobile.domain.request.isModelCommand
 import app.braid.mobile.domain.timeline.briefDate
 import app.braid.mobile.ui.agenda.freeDurationLabel
 import kotlinx.coroutines.flow.Flow
@@ -126,13 +124,14 @@ fun ChatOverlay(
         promptEdits = chat.promptEdits,
         onTyped = chat::typed,
         onDraft = chat::syncDraft,
-        model = ModelActions(chat::chooseProvider, chat::chooseModel, chat::chooseEffort),
+        model = ModelActions({ provider, model -> chat.chooseModel(model, provider) }, chat::chooseEffort, chat::toggleFavorite),
         composerActions = {
             if (state.voice.available) {
                 VoiceButton(
                     listening = state.voice.listening,
                     enabled = state.ready && state.pending == null,
                     onClick = chat::toggleVoice,
+                    square = true,
                 )
             }
             composerActions()
@@ -180,21 +179,27 @@ fun ChatScreen(
     val reserved = with(density) { DockReserve.toPx() } + WindowInsets.navigationBars.getBottom(density)
     val bottom = with(density) { maxOf(aboveKeyboard, reserved).toDp() }
 
-    // O seletor de modelo: aberto, o painel cresce do campo e a conversa escurece. Some no modo Hermes ou sem as opções.
+    // O seletor de modelo: aberta, a folha sobe por cima da tela inteira. Some no modo Hermes ou sem as opções.
     val picker = state.picker
     var pickerOpen by rememberSaveable { mutableStateOf(false) }
     val showPicker = picker != null
     LaunchedEffect(showPicker) { if (!showPicker) pickerOpen = false }
-    BackHandler(enabled = pickerOpen) { pickerOpen = false }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    var fieldHeight by remember { mutableStateOf(0.dp) }
 
     fun submit() {
         val first = matches.firstOrNull()
         if (first != null) {
             commands.run(first, query?.argument.orEmpty())
             prompt = ""
+            return
+        }
+        // `/model` abre a folha da escolha do modelo, que o campo não mostra; não vira mensagem.
+        if (showPicker && isModelCommand(shown)) {
+            prompt = ""
+            pickerOpen = true
+            focusManager.clearFocus()
+            keyboardController?.hide()
             return
         }
         if (shown.isNotBlank() && onSend(shown)) prompt = ""
@@ -240,23 +245,10 @@ fun ChatScreen(
                 canSend = state.ready && state.pending == null && (shown.isNotBlank() || matches.isNotEmpty()),
                 onSubmit = ::submit,
                 onClearWindow = onClearWindow,
-                picker = picker,
-                pickerOpen = pickerOpen,
-                onPickerToggle = {
-                    pickerOpen = !pickerOpen
-                    if (pickerOpen) {
-                        focusManager.clearFocus()
-                        keyboardController?.hide()
-                    }
-                },
-                onPickerDone = { pickerOpen = false },
-                model = model,
-                onHeight = { fieldHeight = with(density) { it.toDp() } },
                 composerActions = composerActions,
             )
         }
-        // O fundo cobre tudo acima do campo (cabeçalho e conversa); o campo fica por cima, como no web.
-        if (showPicker) ModelScrim(pickerOpen, { pickerOpen = false }, Modifier.fillMaxSize().padding(bottom = bottom + fieldHeight))
+        if (picker != null) ModelSheet(picker, pickerOpen, model, onClose = { pickerOpen = false })
     }
 }
 
@@ -536,12 +528,6 @@ private fun ChatField(
     canSend: Boolean,
     onSubmit: () -> Unit,
     onClearWindow: () -> Unit,
-    picker: ModelPicker?,
-    pickerOpen: Boolean,
-    onPickerToggle: () -> Unit,
-    onPickerDone: () -> Unit,
-    model: ModelActions,
-    onHeight: (Int) -> Unit,
     composerActions: @Composable RowScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -570,10 +556,8 @@ private fun ChatField(
     LaunchedEffect(state.ready) {
         if (state.ready) runCatching { focus.requestFocus() }
     }
-    // Aberto o painel, a borda e a sombra do campo ficam mais fortes.
-    val emphasis = rememberPickerProgress(pickerOpen)
     Column(
-        Modifier.fillMaxWidth().onSizeChanged { onHeight(it.height) }.padding(top = 12.dp),
+        Modifier.fillMaxWidth().padding(top = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         val notice = state.voice.notice
@@ -586,7 +570,7 @@ private fun ChatField(
                 lineHeight = 20.sp,
             )
         }
-        HermesStatusLine(mark, status, role = MarkRole.Chat)
+        HermesStatusLine(mark, status, role = MarkRole.Chat, plain = true)
         HermesComposer(
             draft =
                 HermesDraft(
@@ -607,22 +591,8 @@ private fun ChatField(
             role = MarkRole.Chat,
             context = if (window != null) ({ WindowChip(window, state.todayKey, onClearWindow) }) else null,
             actions = composerActions,
-            // Com o seletor, o painel cresce do topo do campo e o seletor, a voz e o envio descem para a linha de baixo.
-            panel =
-                if (picker != null) {
-                    ({ ModelPanel(picker, pickerOpen, model, onPickerDone, Modifier.weight(1f, fill = false)) })
-                } else {
-                    null
-                },
-            footer =
-                if (picker !=
-                    null
-                ) {
-                    ({ ModelPickerButton(picker, pickerOpen, onPickerToggle, Modifier.weight(1f, fill = false)) })
-                } else {
-                    null
-                },
-            emphasis = emphasis,
+            // A pílula não mostra o modelo: a folha da escolha sobe quando se envia `/model`.
+            layout = HermesFieldLayout.Pill,
         )
     }
 }

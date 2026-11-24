@@ -1,88 +1,126 @@
-/* O seletor de modelo dos campos do Hermes (canvas "Provedor, modelo e esforço", opção B · Gaveta). Os nomes de cor sao os do shell
-   (--ink, --muted, --line); o verde e o da marca. O painel abre do proprio campo: a linha da grade vai de 0fr a 1fr. */
+/* A folha da escolha do modelo dos campos do Hermes (canvas "Modal de provedor, modelo e esforço", opção A · Folha),
+   aberta pelo `/model`. É montada no <body>, por cima de tudo, então traz os próprios apelidos de token e o próprio
+   anel de foco: sobe do pé no celular e é um diálogo centrado no desktop. O provedor e o esforço nunca rolam nem
+   são cortados; quem cede altura é a lista de modelos. Cor só por token. */
 
-/* O botao no pe do campo: as quatro barras do esforco e, ao lado, o modelo e o provedor. */
-.picker { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: var(--control-md); padding: 0 12px 0 10px; border-radius: 14px; color: var(--ink); text-align: left; cursor: pointer; transition: background var(--duration-fast); }
-.picker:hover, .picker[data-open="true"] { background: color-mix(in oklab, var(--brand) 14%, transparent); }
-.picker:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-.bars { flex: none; display: flex; align-items: flex-end; gap: 2px; height: 19px; }
-.bars span { width: 3px; border-radius: 1px; background: var(--hairline); }
-.bars span[data-on="true"] { background: var(--brand); }
-.bars span:nth-child(1) { height: 7px; }
-.bars span:nth-child(2) { height: 11px; }
-.bars span:nth-child(3) { height: 15px; }
-.bars span:nth-child(4) { height: 19px; }
-.pickerText { min-width: 0; display: flex; flex-direction: column; }
-.pickerModel { overflow: hidden; font-size: 13px; font-weight: 600; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
-.pickerVia { overflow: hidden; font-family: var(--font-mono); font-size: 12px; line-height: 16px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.overlay {
+  --ink: var(--foreground);
+  --muted: var(--muted-foreground);
+  --line: var(--border);
+  position: fixed; inset: 0; z-index: var(--z-dialog); display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+/* O fundo que apaga a tela de trás é um pseudo-elemento: a opacidade dele anima sem levar a folha junto. */
+.overlay::before { content: ""; position: absolute; inset: 0; background: color-mix(in oklab, var(--background) 74%, transparent); animation: scrimIn 380ms linear both; }
+.overlay[data-open="false"] { pointer-events: none; }
+.overlay[data-open="false"]::before { animation: scrimOut 220ms linear both; }
+.overlay :focus-visible:not(input, textarea, select) { outline: 2px solid var(--ring); outline-offset: 2px; }
 
-/* A linha do pe do campo: o botao do seletor, a voz e o envio. */
-.footer { display: flex; align-items: center; gap: 2px; padding: 0 0 0 4px; }
+.sheet {
+  position: relative; box-sizing: border-box; display: flex; flex-direction: column; width: 100%; max-width: 420px; max-height: calc(100dvh - 48px); padding: 8px 20px 18px;
+  overflow: hidden auto; overscroll-behavior: contain;
+  border: 1px solid var(--line); border-radius: 24px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-float);
+  font-size: 15px; line-height: 20px;
+  animation: riseIn 380ms var(--ease-out) both;
+}
+.overlay[data-open="false"] .sheet { animation: riseOut 220ms cubic-bezier(.4, 0, .2, 1) both; }
+.handle { display: none; }
 
-/* O painel: fechado, nao ocupa altura nem recebe foco (`visibility` espera a saida acabar). */
-.panel { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows 280ms cubic-bezier(.4, 0, .2, 1), visibility 0s linear 280ms; }
-.panel[data-open="true"] { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows 460ms cubic-bezier(.2, .8, .2, 1), visibility 0s; }
-/* Aberto, o painel divide a altura do chat com a conversa: a conversa encolhe ate sumir e, se ainda faltar espaco, a
-   lista de modelos rola por dentro. O campo nunca passa por baixo da barra de baixo. */
-.panel { flex: 0 1 auto; min-height: 0; }
-.clip { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
-.body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 20px; padding: 16px 12px 12px; overflow: hidden; }
-.body > .block { flex: none; }
-.body > .block:nth-child(2) { flex: 1 1 auto; min-height: 120px; display: flex; flex-direction: column; }
+/* Os três blocos sobem 18px e aparecem em fila depois que a folha saiu; ao fechar, vão embora com ela. */
+.block { flex: none; min-width: 0; margin: 0; padding: 0; border: 0; animation: blockIn 380ms var(--ease-out) both; }
+.block + .block { margin-top: 18px; }
+.block[data-block="provider"] { animation-delay: 100ms; }
+.block[data-block="models"] { animation-delay: 160ms; }
+.block[data-block="effort"] { animation-delay: 220ms; }
+.overlay[data-open="false"] .block { animation: none; }
+/* O bloco dos modelos é o que cede altura numa tela curta, e a lista encolhe dentro dele. */
+.block[data-block="models"] { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
 
-/* Os quatro blocos sobem 12px e aparecem em fila; ao fechar saem juntos, sem espera. */
-.block { min-width: 0; margin: 0; padding: 0; border: 0; opacity: 0; transform: translateY(12px); transition: opacity 120ms linear, transform 120ms linear; }
-.panel[data-open="true"] .block { opacity: 1; transform: none; transition: opacity 360ms cubic-bezier(.2, .8, .2, 1) var(--delay, 0ms), transform 360ms cubic-bezier(.2, .8, .2, 1) var(--delay, 0ms); }
-.block:nth-child(1) { --delay: 90ms; }
-.block:nth-child(2) { --delay: 140ms; }
-.block:nth-child(3) { --delay: 190ms; }
-.block:nth-child(4) { --delay: 240ms; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.headText { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.title { flex: none; margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.tabName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; line-height: 20px; }
+.close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-right: -10px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; transition: background-color var(--duration-fast), transform 90ms; }
+.close:hover { background: var(--accent); }
+.close:active { transform: scale(.94); }
+.close svg { width: 22px; height: 22px; stroke-width: 1.8; }
 
-.title { flex: none; margin: 0 0 10px; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+/* Os quadrados: os favoritos (a estrela) e um por provedor, com a marca dele na cor do texto. */
+.tiles { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.tile { flex: none; display: grid; place-items: center; width: 52px; height: 52px; padding: 0; border: 1px solid var(--line); border-radius: 14px; background: transparent; color: var(--muted); cursor: pointer; transition: border-color var(--duration-fast), background-color var(--duration-fast), color var(--duration-fast), transform 90ms; }
+.tile:hover { border-color: var(--input); color: var(--ink); }
+.tile[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--ink); }
+.tile[aria-pressed="true"]:hover { border-color: var(--brand-accent); }
+.tile:active { transform: scale(.95); }
+.tile .tileStar { width: 24px; height: 24px; stroke-width: 1.6; color: var(--warning); fill: var(--warning); }
 
-.name { min-width: 0; overflow-wrap: anywhere; font-size: 15px; font-weight: 600; line-height: 20px; text-align: left; }
-.radio { flex: none; position: relative; width: 18px; height: 18px; border: 2px solid var(--input); border-radius: 50%; transition: border-color var(--duration-fast); }
-.radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand); transform: scale(0); transition: transform var(--duration-fast) var(--ease-out); }
-[aria-pressed="true"] > .radio { border-color: var(--brand); }
-[aria-pressed="true"] > .radio::after { transform: scale(1); }
+/* A busca: só a linha de baixo, que fica verde-água com o foco (o mesmo destaque dos outros campos). */
+.search { flex: none; display: flex; align-items: center; gap: 10px; height: 44px; margin-bottom: 4px; border-bottom: 1.5px solid var(--input); color: var(--muted); transition: border-color var(--duration-fast), color var(--duration-fast); }
+.search:focus-within { border-bottom-color: var(--brand); color: var(--brand-accent); }
+.search > svg { flex: none; width: 18px; height: 18px; stroke-width: 1.8; }
+.search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--ink); font: inherit; font-size: 16px; caret-color: var(--brand-accent); }
+.search input:focus, .search input:focus-visible { outline: 0; }
+.search input::placeholder { color: var(--muted); opacity: 1; }
+.search input::-webkit-search-cancel-button { display: none; }
+.clear { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-right: -13px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.clear:hover { color: var(--ink); }
+.clear svg { width: 16px; height: 16px; stroke-width: 2; }
 
-.providers { display: grid; gap: 8px; }
-.tile { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); cursor: pointer; transition: border-color var(--duration-fast), background var(--duration-fast); }
-.tile[aria-pressed="true"] { border-color: var(--brand); background: color-mix(in oklab, var(--brand) 14%, transparent); }
-
-.models { flex: 1 1 auto; min-height: 0; max-height: 288px; display: grid; align-content: start; border: 1px solid var(--line); border-radius: 12px; overflow: hidden auto; overscroll-behavior: contain; }
-.search { flex: none; box-sizing: border-box; width: 100%; min-height: 44px; margin: 0 0 8px; padding: 0 14px; border: 1px solid var(--line); border-radius: 12px; background: transparent; color: var(--ink); font: inherit; font-size: 15px; }
-.search::placeholder { color: var(--muted); }
-.empty { margin: 0; padding: 14px; font-size: 14px; color: var(--muted); }
-.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 14px; color: var(--ink); cursor: pointer; transition: background var(--duration-fast); }
-.row + .row { border-top: 1px solid var(--line); }
-.row[aria-pressed="true"] { background: color-mix(in oklab, var(--brand) 14%, transparent); }
+/* A lista: a única parte que rola. Quatro linhas e meia, para a meia linha avisar que há mais. */
+.models { flex: 0 1 216px; min-height: 96px; overflow: hidden auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.row { display: flex; align-items: center; min-height: 48px; border-bottom: 1px solid var(--hairline); }
+.pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 6px 0 2px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.pick:focus-visible { outline-offset: -2px; }
+.radio { flex: none; position: relative; box-sizing: border-box; width: 18px; height: 18px; border: 2px solid var(--input); border-radius: 50%; transition: border-color var(--duration-fast); }
+.radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand); transform: scale(0); transition: transform 200ms var(--ease-out); }
+.pick[aria-pressed="true"] > .radio { border-color: var(--brand); }
+.pick[aria-pressed="true"] > .radio::after { transform: scale(1); }
+.name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 500; line-height: 20px; transition: color var(--duration-fast); }
+.pick[aria-pressed="true"] > .name { font-weight: 600; }
+.pick:hover > .name { color: var(--brand-accent); }
+.via { flex: none; margin-left: auto; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--muted); }
+.star { flex: none; display: grid; place-items: center; width: 44px; height: 48px; margin-right: -10px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--input); cursor: pointer; }
+.star:focus-visible { outline-offset: -2px; }
+.star svg { width: 20px; height: 20px; stroke-width: 1.6; transform: scale(.88); transition: transform 200ms var(--ease-out), fill var(--duration-fast); }
+.star:hover svg { transform: scale(1); }
+.star[aria-pressed="true"] { color: var(--warning); }
+.star[aria-pressed="true"] svg { fill: var(--warning); transform: scale(1); }
+.empty { margin: 0; padding: 14px 2px; font-size: 14px; line-height: 20px; color: var(--muted); }
 
 /* O esforco: quatro paradas numa trilha; o verde vai da primeira ate a escolhida, que e a maior. */
-.effort { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.effort { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 6px; }
 .track { position: absolute; top: 13px; left: calc(var(--step) / 2); right: calc(var(--step) / 2); height: 2px; background: var(--hairline); pointer-events: none; }
 .fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--level) / var(--last) * 100%); background: var(--brand); transition: width var(--duration-slow) var(--ease-out); }
-.stop { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: var(--control-md); padding: 0; color: var(--ink); cursor: pointer; }
+.stop { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: var(--control-md); padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
 .dot { box-sizing: border-box; display: block; width: 10px; height: 10px; margin: 8px 0; border: 2px solid var(--hairline); border-radius: 50%; background: var(--card); transition: all var(--duration-fast) var(--ease-out); }
 .stop[data-passed="true"] .dot { border-color: var(--brand); background: var(--brand); }
 .stop[aria-pressed="true"] .dot { width: 18px; height: 18px; margin: 4px 0; border: 5px solid var(--brand); background: var(--card); }
 .stopLabel { font-size: 13px; font-weight: 600; line-height: 18px; }
 .stop:not([aria-pressed="true"]) .stopLabel { color: var(--muted); }
 
-.done { display: grid; place-items: center; width: 100%; min-height: 48px; border-radius: var(--radius-sm); background: var(--primary); color: var(--primary-foreground); font-size: 15px; font-weight: 600; cursor: pointer; }
-
-.tile:focus-visible, .row:focus-visible, .stop:focus-visible, .done:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-
-/* O fundo que escurece a conversa enquanto o painel esta aberto; tocar nele fecha. */
-.scrim { position: absolute; inset: 0; z-index: 1; border: 0; background: color-mix(in oklab, var(--background) 62%, transparent); opacity: 0; pointer-events: none; transition: opacity 280ms cubic-bezier(.4, 0, .2, 1); }
-/* No detalhe o campo nao mora num painel: o fundo cobre a tela inteira, por tras do campo (que e o contexto de
-   empilhamento), e apaga mais: aberto, o campo sobe por cima do texto da pagina, que nao pode disputar com ele. */
-.scrim[data-fixed="true"] { position: fixed; z-index: -1; background: color-mix(in oklab, var(--background) 90%, transparent); }
-.scrim[data-open="true"] { opacity: 1; pointer-events: auto; transition-duration: 460ms; transition-timing-function: cubic-bezier(.2, .8, .2, 1); }
-
 /* O rodape da resposta: quem respondeu, em mono. */
 .answerModel { margin: 10px 0 0; font-family: var(--font-mono); font-size: 12px; line-height: 16px; color: var(--muted); }
 
+@keyframes scrimIn { from { opacity: 0; } }
+@keyframes scrimOut { to { opacity: 0; } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(16px); } }
+@keyframes riseOut { to { opacity: 0; transform: translateY(16px); } }
+@keyframes sheetIn { from { transform: translateY(100%); } }
+@keyframes sheetOut { to { transform: translateY(100%); } }
+@keyframes blockIn { from { opacity: 0; transform: translateY(18px); } }
+
+@media (max-width: 720px) {
+  /* No celular a folha encosta no pé e ocupa a largura. Com o teclado aberto (a busca), a folha fica na parte
+     visível da tela, acima dele, e o esforço sai para os resultados da busca aparecerem. */
+  .overlay { align-items: flex-end; padding: 0; }
+  .overlay[data-keyboard] { inset: var(--vv-top, 0px) 0 var(--vv-bottom, 0px); }
+  .overlay[data-keyboard] .block[data-block="effort"] { display: none; }
+  .sheet { max-width: none; max-height: calc(100% - 28px - env(safe-area-inset-top)); padding-bottom: calc(18px + env(safe-area-inset-bottom)); border-width: 1px 0 0; border-radius: 24px 24px 0 0; animation: sheetIn 480ms var(--ease-out) both; }
+  .overlay[data-keyboard] .sheet { padding-bottom: 18px; }
+  .overlay[data-open="false"] .sheet { animation: sheetOut 300ms cubic-bezier(.4, 0, .2, 1) both; }
+  .handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; margin-bottom: 4px; border-radius: 2px; background: var(--input); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .panel, .panel[data-open="true"], .block, .panel[data-open="true"] .block, .scrim, .scrim[data-open="true"], .fill, .dot, .radio, .radio::after, .picker { transition: none; }
+  .overlay::before, .overlay[data-open="false"]::before, .sheet, .overlay[data-open="false"] .sheet, .block { animation: none; }
+  .fill, .dot, .radio, .radio::after, .star svg, .tile, .close { transition: none; }
 }

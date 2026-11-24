@@ -82,7 +82,6 @@ import app.braid.mobile.domain.task.mapsGeoUri
 import app.braid.mobile.domain.task.mapsUrl
 import app.braid.mobile.domain.task.momentLabel
 import app.braid.mobile.domain.task.taskInfo
-import app.braid.mobile.ui.aiedit.AiEditContext
 import app.braid.mobile.ui.aiedit.EntityEditBar
 import app.braid.mobile.ui.taskartifacts.ArtifactPickerSheet
 import app.braid.mobile.ui.taskartifacts.TaskArtifactsSection
@@ -136,14 +135,6 @@ fun TaskDetailPage(
                     EntityEditBar(
                         entityType = EditEntityType.Task,
                         entityId = content.task.id,
-                        context =
-                            AiEditContext(
-                                icon = BraidIcons.taskKind(content.task.card.kind.code),
-                                meta =
-                                    content.task.card.startedAt
-                                        ?.let { "Tarefa · ${momentLabel(it)}" } ?: "Tarefa",
-                                title = content.task.card.name,
-                            ),
                         onEdited = viewModel::reload,
                     )
                 }

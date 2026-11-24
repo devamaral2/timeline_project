@@ -2,8 +2,8 @@
 
 import type { RequestEditEntityType } from "@repo/contracts";
 import { ArrowUp, Check, Circle, LoaderCircle, X } from "lucide-react";
-import { type KeyboardEvent, type ReactNode, useCallback, useRef, useState } from "react";
-import { ModelPickerScrim, useModelPicker } from "@/components/hub/model-picker";
+import { type KeyboardEvent, useCallback, useRef, useState } from "react";
+import { useModelPicker } from "@/components/hub/model-picker";
 import { HermesComposer } from "@/components/ui/hermes-composer";
 import { useModelSelection } from "@/lib/agent-chat/model-selection-store";
 import { armChangeFlash } from "@/lib/motion/change-flash";
@@ -11,17 +11,10 @@ import { useHermesDock } from "@/components/ui/hermes-flight";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import { runningStepLabel } from "@/lib/tasks/agent-request-model";
-import { EDIT_TARGET_LABELS } from "@/lib/entity-edit/entity-edit-target";
+import { EDIT_TARGET_LABELS, isModelCommand } from "@/lib/entity-edit/entity-edit-target";
 import { useEntityAiEdit } from "@/lib/entity-edit/use-entity-ai-edit";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import styles from "./entity-ai-edit-bar.module.css";
-
-/** O registro aberto, como o campo o mostra: o ícone do tipo, "Tarefa · sex., 18 set., 09:00" e o nome. */
-export interface EntityAiEditContext {
-  icon: ReactNode;
-  meta: string;
-  title: string;
-}
 
 interface EntityAiEditBarProps {
   userId: string;
@@ -31,8 +24,6 @@ interface EntityAiEditBarProps {
   onEdited: () => void;
   /** Desliga o campo com o motivo (por exemplo, a refeicao ainda esta sendo gerada). */
   disabledReason?: string;
-  /** O registro que o pedido edita, mostrado dentro do campo. */
-  context?: EntityAiEditContext;
   pollMs?: number;
 }
 
@@ -40,18 +31,21 @@ interface EntityAiEditBarProps {
  * O campo de conversa com a IA no pe das telas de detalhe (ADR 0006): o que se escreve edita a entidade aberta.
  * O pedido de edicao leva o tipo e o id da entidade; o servidor escolhe o agente e confere o tipo.
  *
- * O pe do campo mostra sempre o modelo, o esforco e o provedor que vao atender o pedido, e tocar nele abre o painel
- * da escolha, mesmo com um pedido em andamento (a troca vale para o proximo). A escolha e a mesma do chat.
+ * O desenho e o do canvas "Input do detalhe da entidade": a linha de status com o robo solto, sem disco nem cor, e a
+ * pilula de uma linha (o texto, a onda e a seta), sem nada do modelo a vista. Escrever `/model` e enviar abre a
+ * folha da escolha por cima da tela, em vez de virar pedido. A escolha e a mesma do chat e vai em todo
+ * pedido. O campo nao repete o registro aberto: a tela ja o mostra.
  */
-export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabledReason, context, pollMs }: EntityAiEditBarProps) {
+export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabledReason, pollMs }: EntityAiEditBarProps) {
   const [text, setText] = useState("");
   // No celular, o botão do Hermes da barra inferior pousa no status deste campo.
   const barRef = useRef<HTMLElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   useHermesDock(barRef);
   // O que mudar na recarga depois da edição se anuncia na tela (`useChangeFlash`).
   const edited = useCallback(() => { armChangeFlash(); onEdited?.(); }, [onEdited]);
   const { phase, request, error, submit, dismiss, busy } = useEntityAiEdit({ userId, entityType, entityId, onEdited: edited, pollMs });
-  const picker = useModelPicker(useModelSelection());
+  const picker = useModelPicker(useModelSelection(), { returnFocus: inputRef });
   const speech = useSpeechRecognition({
     onFinalTranscript: (transcript) => setText((current) => (current ? `${current} ${transcript}` : transcript).slice(0, 4000)),
   });
@@ -60,6 +54,12 @@ export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabl
 
   async function send() {
     if (disabled || !text.trim()) return;
+    // `/model` abre a folha da escolha do modelo, em vez de virar pedido.
+    if (picker.choice && isModelCommand(text)) {
+      setText("");
+      picker.show();
+      return;
+    }
     const request = text;
     setText("");
     const accepted = await submit(request);
@@ -82,8 +82,7 @@ export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabl
     : phase === "sending" || phase === "running" ? (request?.progress ?? (request ? runningStepLabel(request) : undefined) ?? "Entendendo o pedido…")
     : "Esperando o seu pedido";
   return (
-    <section ref={barRef} className={styles.bar} data-entity-ai-bar data-model-lifted={picker.lifted || undefined} aria-label={`Editar ${target} com IA`}>
-      <ModelPickerScrim picker={picker} fixed />
+    <section ref={barRef} className={styles.bar} data-entity-ai-bar aria-label={`Editar ${target} com IA`}>
       {steps.length > 0 || message ? (
         <div className={styles.result} data-phase={phase}>
           {steps.length > 0 ? (
@@ -106,7 +105,7 @@ export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabl
       ) : null}
       {disabledReason ? <p className={styles.reason}>{disabledReason}</p> : null}
       <p className={styles.status} data-state={state} role="status" aria-live="polite">
-        <HermesMark state={state} />
+        <HermesMark state={state} plain />
         <span>{statusText}</span>
         {phase === "done" || phase === "failed" ? (
           <button type="button" className={styles.dismiss} onClick={dismiss} aria-label="Fechar resultado"><X aria-hidden /></button>
@@ -115,12 +114,6 @@ export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabl
       <HermesComposer
         model={picker}
         onSubmit={() => void send()}
-        context={context ? (
-          <div className={styles.context}>
-            <span className={styles.contextIcon} aria-hidden>{context.icon}</span>
-            <span className={styles.contextText}><span>{context.meta}</span><span>{context.title}</span></span>
-          </div>
-        ) : null}
         controls={(
           <>
             {speech.supported ? (
@@ -142,6 +135,7 @@ export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabl
         )}
       >
         <textarea
+          ref={inputRef}
           className={styles.input}
           rows={1}
           value={text}

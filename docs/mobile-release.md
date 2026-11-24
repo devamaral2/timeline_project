@@ -36,6 +36,12 @@ do rclone e mostra o link do arquivo. O remote é conferido antes do build. A
 versão nova só é gravada em `apps/mobile/package.json` depois que o APK passa
 na conferência, e fica sem commit.
 
+Depois que o tamanho do APK novo no Drive bate com o local, os `braid-*.apk`
+anteriores da pasta vão para a lixeira do Drive: ficam só o novo e o
+`braid-latest.apk`. A lixeira guarda cada um por 30 dias, e as cópias de
+`dist/mobile/` não são tocadas. Se a limpeza falhar, o script avisa com um `!`
+e a publicação continua válida.
+
 Configuração única por máquina:
 
 ```bash

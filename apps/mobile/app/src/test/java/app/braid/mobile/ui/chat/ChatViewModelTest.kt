@@ -612,8 +612,7 @@ class ChatViewModelTest {
             chat.send("/modelo")
             chat.until { it.agentMode == ChatAgent.Model && it.pending == null && it.messages.size == 2 }
 
-            chat.chooseProvider(ModelProvider.OpenRouter)
-            chat.chooseModel("google/gemini-4-neon")
+            chat.chooseModel("google/gemini-4-neon", ModelProvider.OpenRouter)
             chat.chooseEffort(ModelEffort.Max)
             // Um modelo que o provedor não tem não vale.
             chat.chooseModel("claude-opus-5-5")
@@ -664,8 +663,8 @@ class ChatViewModelTest {
 
             // O padrão do provedor entrou no guardado; trocar de provedor e voltar retoma o modelo de cada um.
             other.chooseModel("claude-opus-5-5")
-            other.chooseProvider(ModelProvider.OpenRouter)
-            other.chooseProvider(ModelProvider.Anthropic)
+            other.chooseModel("meta/llama-5", ModelProvider.OpenRouter)
+            other.chooseModel("claude-opus-5-5", ModelProvider.Anthropic)
             assertEquals(
                 "claude-opus-5-5",
                 other.state.value.picker
@@ -761,8 +760,7 @@ class ChatViewModelTest {
             assertEquals(default, bodyOf(backend.requestsTo("POST", requestsPath).single()).getValue("model"))
 
             // A troca no seletor vale para o próximo pedido e fica no aparelho.
-            chat.chooseProvider(ModelProvider.OpenRouter)
-            chat.chooseModel("google/gemini-4-neon")
+            chat.chooseModel("google/gemini-4-neon", ModelProvider.OpenRouter)
             chat.chooseEffort(ModelEffort.Max)
             val picked = ModelSelection(ModelProvider.OpenRouter, "google/gemini-4-neon", ModelEffort.Max)
             assertEquals(

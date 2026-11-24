@@ -31,12 +31,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -58,32 +55,43 @@ import app.braid.mobile.core.designsystem.braidTokens
 /*
  * O campo do Hermes, um só desenho para o chat, a edição por IA dos detalhes, o pedido da tarefa de agente e o arquivo do
  * Hermes (`entity-ai-edit-bar.module.css` e `hermes-mark` no web): a linha de status com o robô no círculo verde-água, e o
- * cartão arredondado com o registro aberto, o texto, a onda que liga a transcrição e a seta de enviar.
+ * cartão arredondado com o registro aberto, o texto, a onda que liga a transcrição e a seta de enviar. O chat e o
+ * detalhe de uma entidade usam a pílula ([HermesFieldLayout.Pill]): o robô solto, sem disco nem cor, e nada do modelo à
+ * vista.
  */
 
+/**
+ * [Card]: o cartão (o pedido da tarefa de agente, o arquivo do Hermes), com o registro dentro e a onda num círculo.
+ * [Pill]: a pílula de uma linha do chat e do detalhe (canvas "Input do detalhe da entidade"), só com o texto, a onda num
+ * quadrado e a seta, sem nada do modelo à vista; o painel abre pelo `/model` escrito no campo (`data-layout="pill"` no web).
+ */
+enum class HermesFieldLayout { Card, Pill }
+
 private const val VOICE_PRESSED_ALPHA = 0.16f
+private const val VOICE_SQUARE_PRESSED_ALPHA = 0.18f
 private const val DISABLED_ALPHA = 0.55f
 private const val INPUT_DISABLED_ALPHA = 0.6f
 private const val MAX_DRAFT_LINES = 5
-private const val EMPHASIS_ALPHA = 0.45f
-private const val SHADOW_ALPHA = 0.18f
 private val MarkSize = 28.dp
 private val ControlSize = 44.dp
 private val FieldShape = RoundedCornerShape(28.dp)
 
-/** O campo com o seletor de modelo no pe: um raio menor, como no canvas. */
-private val ModelFieldShape = RoundedCornerShape(22.dp)
 private val ContextShape = RoundedCornerShape(22.dp)
+
+/** A onda da pílula: um quadrado contornado de 36 dp dentro dos 44 dp de toque. */
+private val VoiceSquareSize = 36.dp
+private val VoiceSquareShape = RoundedCornerShape(11.dp)
 
 /**
  * O robô do Hermes no disco da linha de status (28 dp), animado como no web. Avisa ao voo onde está ([role]: o do chat
- * ou o de um detalhe) e some enquanto o disco que voa da barra pousa nele.
+ * ou o de um detalhe) e some enquanto o disco que voa da barra pousa nele. [plain] o desenha sem o disco e sem cor.
  */
 @Composable
 fun HermesMark(
     state: BotState,
     modifier: Modifier = Modifier,
     role: MarkRole = MarkRole.Dock,
+    plain: Boolean = false,
 ) {
     val flight = LocalHermesFlight.current
     if (flight != null) {
@@ -95,6 +103,7 @@ fun HermesMark(
     HermesBot(
         state,
         size = MarkSize,
+        plain = plain,
         modifier =
             modifier
                 .onGloballyPositioned { flight?.markMoved(role, it.boundsInRoot()) }
@@ -102,13 +111,17 @@ fun HermesMark(
     )
 }
 
-/** A linha acima do campo: o robô no estado do pedido, o texto que o leitor de tela anuncia e, à direita, uma ação (fechar, cancelar). */
+/**
+ * A linha acima do campo: o robô no estado do pedido, o texto que o leitor de tela anuncia e, à direita, uma ação (fechar,
+ * cancelar). [plain] tira o disco do robô (o detalhe de uma entidade).
+ */
 @Composable
 fun HermesStatusLine(
     state: BotState,
     text: String,
     modifier: Modifier = Modifier,
     role: MarkRole = MarkRole.Dock,
+    plain: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -118,7 +131,7 @@ fun HermesStatusLine(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        HermesMark(state, role = role)
+        HermesMark(state, role = role, plain = plain)
         Row(
             Modifier.weight(1f).hermesRise(rise, role),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -209,41 +222,30 @@ fun HermesComposer(
     role: MarkRole = MarkRole.Dock,
     context: (@Composable ColumnScope.() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
-    /** O painel do seletor de modelo (ADR 0019), que cresce do topo do proprio campo; vai com `weight(1f, fill = false)`. */
-    panel: (@Composable ColumnScope.() -> Unit)? = null,
-    /** O seletor de modelo: com ele, [actions] e a seta descem para uma linha embaixo do texto. */
-    footer: (@Composable RowScope.() -> Unit)? = null,
-    /** 0 a 1: com o painel aberto, a borda e a sombra do campo ficam mais fortes. */
-    emphasis: Float = 0f,
+    layout: HermesFieldLayout = HermesFieldLayout.Card,
 ) {
     val scheme = MaterialTheme.colorScheme
     val tokens = braidTokens()
     val rise = rememberHermesRise(role)
+    val pill = layout == HermesFieldLayout.Pill
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val shape = if (footer != null) ModelFieldShape else FieldShape
-    val strong = lerp(scheme.outline, scheme.onBackground.copy(alpha = EMPHASIS_ALPHA).compositeOver(scheme.outline), emphasis)
+    val shape = FieldShape
     Column(
         modifier
             .hermesRise(rise, role)
             .fillMaxWidth()
-            .shadow(
-                12.dp * emphasis,
-                shape,
-                ambientColor = scheme.onBackground.copy(alpha = SHADOW_ALPHA),
-                spotColor = scheme.onBackground.copy(alpha = SHADOW_ALPHA),
-            ).background(scheme.surface, shape)
-            .border(1.dp, if (focused) tokens.brand else strong, shape)
+            .background(scheme.surface, shape)
+            .border(1.dp, if (focused) tokens.brand else scheme.outline, shape)
             .clip(shape)
-            .padding(6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(if (pill) 5.dp else 6.dp),
+        verticalArrangement = Arrangement.spacedBy(if (pill) 0.dp else 4.dp),
     ) {
-        panel?.invoke(this)
         context?.invoke(this)
         Row(
-            Modifier.padding(start = 12.dp),
+            Modifier.padding(start = if (pill) 15.dp else 12.dp),
             verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (pill) 4.dp else 2.dp),
         ) {
             BasicTextField(
                 value = draft.text,
@@ -267,22 +269,8 @@ fun HermesComposer(
                     }
                 },
             )
-            if (footer == null) {
-                actions()
-                SendButton(send)
-            }
-        }
-        if (footer != null) {
-            Row(
-                Modifier.padding(start = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                footer()
-                Box(Modifier.weight(1f))
-                actions()
-                SendButton(send)
-            }
+            actions()
+            SendButton(send)
         }
     }
 }
@@ -309,25 +297,47 @@ private fun SendButton(send: HermesSend) {
     }
 }
 
-/** O botão que liga e desliga a transcrição: a onda do Hermes, num círculo verde-água claro enquanto o microfone está aberto. */
+/**
+ * O botão que liga e desliga a transcrição: a onda do Hermes, num círculo verde-água claro enquanto o microfone está aberto.
+ * [square] (a pílula do detalhe) a põe num quadrado contornado de 36 dp, que fica verde-água claro e sem contorno ouvindo.
+ */
 @Composable
 internal fun VoiceButton(
     listening: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
+    square: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
     val tokens = braidTokens()
+    val glyph = if (listening) tokens.brandAccent else scheme.onSurfaceVariant
     Box(
         Modifier
             .size(ControlSize)
-            .clip(CircleShape)
-            .background(if (listening) tokens.brand.copy(alpha = VOICE_PRESSED_ALPHA) else Color.Transparent)
+            .clip(if (square) VoiceSquareShape else CircleShape)
+            .background(if (listening && !square) tokens.brand.copy(alpha = VOICE_PRESSED_ALPHA) else Color.Transparent)
             .alpha(if (enabled || listening) 1f else DISABLED_ALPHA)
             .toggleable(value = listening, enabled = enabled || listening, role = Role.Switch, onValueChange = { onClick() })
             .semantics { contentDescription = if (listening) "Parar de transcrever" else "Transcrever o que eu disser" },
         contentAlignment = Alignment.Center,
     ) {
-        HermesBotIcon(BotState.Listening, size = 22.dp, color = if (listening) tokens.brandAccent else scheme.onSurfaceVariant)
+        if (!square) {
+            HermesBotIcon(BotState.Listening, size = 22.dp, color = glyph)
+            return@Box
+        }
+        Box(
+            Modifier
+                .size(VoiceSquareSize)
+                .then(
+                    if (listening) {
+                        Modifier.background(tokens.brand.copy(alpha = VOICE_SQUARE_PRESSED_ALPHA), VoiceSquareShape)
+                    } else {
+                        Modifier.border(1.dp, scheme.outline, VoiceSquareShape)
+                    },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            HermesBotIcon(BotState.Listening, size = 18.dp, color = glyph)
+        }
     }
 }
