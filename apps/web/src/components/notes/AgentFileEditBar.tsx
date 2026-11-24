@@ -168,7 +168,7 @@ export function AgentFileEditBar({ path, onDone, pollMs = AGENT_REQUEST_POLL_MS 
         </div>
       ) : null}
       <p className={styles.status} data-state={state} role="status" aria-live="polite">
-        <HermesMark state={state} />
+        <HermesMark state={state} plain />
         <span>{statusText}</span>
         {canDismiss ? (
           <button type="button" className={styles.dismiss} onClick={dismiss} aria-label="Fechar resultado"><X aria-hidden /></button>

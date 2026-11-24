@@ -425,6 +425,9 @@
   /* O círculo de 46 px do robô vem do componente, pelo `font-size`
      (`hermes-bot.tsx`). */
   .commandBot { font-size: 46px; }
+  /* O robo do botao e so o desenho, na cor dos outros icones da barra, dentro do aro neutro, sobre o fundo da dock: sem o disco cheio. O erro segue vermelho. */
+  .commandButton .commandBot, .hermesFlyer .flyerBot { background: transparent; color: var(--muted-foreground); }
+  .commandButton .commandBot[data-state="error"], .hermesFlyer .flyerBot[data-state="error"] { background: var(--destructive); color: var(--destructive-foreground); }
   /* A cor do modo de visualização pinta a pílula da aba atual, nas três telas
      (`data-list-mode` vem do `useViewMode`). As cores e as
      tintas do texto são tokens do web (`globals.css`). */

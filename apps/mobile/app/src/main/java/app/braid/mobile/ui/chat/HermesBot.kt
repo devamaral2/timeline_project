@@ -438,6 +438,9 @@ private fun DrawScope.drawPiece(
  *
  * [plain] tira o disco (`data-plain` do web, canvas "Input do detalhe da entidade"): o desenho fica solto, maior (86% da
  * caixa), na cor do texto de apoio em todos os estados, sem halo nem vermelho. Os movimentos dos estados são os mesmos.
+ *
+ * [outlined] é o robô do botão da barra (`.commandBot` do web): sem o disco cheio, só o desenho na cor dos outros ícones sobre o fundo de
+ * quem o abriga; o erro segue com o disco vermelho.
  */
 @Composable
 fun HermesBot(
@@ -445,6 +448,7 @@ fun HermesBot(
     size: Dp,
     modifier: Modifier = Modifier,
     plain: Boolean = false,
+    outlined: Boolean = false,
 ) {
     val scheme = MaterialTheme.colorScheme
     val brand = braidTokens().brand
@@ -458,6 +462,7 @@ fun HermesBot(
         when {
             plain -> scheme.onSurfaceVariant
             state == BotState.Error -> scheme.onError
+            outlined -> scheme.onSurfaceVariant
             else -> scheme.background
         },
         tween(REDUCED_MS, easing = LinearEasing),
@@ -476,7 +481,7 @@ fun HermesBot(
                 if (halo > 0f) {
                     drawCircle(brand.copy(alpha = HALO_ALPHA * halo), radius = this.size.minDimension / 2 * (1 + HALO_SPREAD * 2 * halo))
                 }
-                drawCircle(disc)
+                if (!outlined || state == BotState.Error) drawCircle(disc)
             }.clearAndSetSemantics {},
         contentAlignment = Alignment.Center,
     ) {

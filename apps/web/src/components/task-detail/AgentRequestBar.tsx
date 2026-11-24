@@ -137,7 +137,7 @@ export function AgentRequestBar({ userId, request, onRequestChange }: AgentReque
       {error ? <p className={styles.message} data-failed="true" role="alert">{error}</p> : null}
       {failureReason ? <p className={styles.message} data-failed="true">{failureReason}</p> : null}
       <p className={styles.status} data-state={state} role="status" aria-live="polite">
-        <HermesMark state={state} />
+        <HermesMark state={state} plain />
         <span>{statusText}</span>
         {open ? (
           <button type="button" className={agentStyles.cancel} onClick={() => void cancel()} disabled={cancelling}>

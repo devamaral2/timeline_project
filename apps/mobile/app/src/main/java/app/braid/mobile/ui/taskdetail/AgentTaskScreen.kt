@@ -472,7 +472,11 @@ private fun RequestBar(
         composer.error?.let { Alert(it) }
         content.followFailure?.let { Alert(it) }
         voice.notice?.let { Alert(it) }
-        HermesStatusLine(requestBotState(content, voice.listening), if (voice.listening) EDIT_LISTENING_TEXT else content.statusLine) {
+        HermesStatusLine(
+            requestBotState(content, voice.listening),
+            if (voice.listening) EDIT_LISTENING_TEXT else content.statusLine,
+            plain = true,
+        ) {
             if (content.canCancel) {
                 Box(
                     Modifier
