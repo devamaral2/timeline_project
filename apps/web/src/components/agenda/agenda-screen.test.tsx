@@ -58,20 +58,20 @@ test("the sequence mode hides the week and extends at the edge", () => {
   expect(dayCount()).toBe(initialCount);
 });
 
-test("the view options switch turns the free windows off and remembers it", () => {
+test("the view options switch turns the free windows on, off by default, and remembers it", () => {
   const stored = new Map<string, string>();
   Object.defineProperty(window, "localStorage", {
     configurable: true,
     value: { getItem: (key: string) => stored.get(key) ?? null, setItem: (key: string, value: string) => { stored.set(key, value); } },
   });
   render(<AgendaScreen />);
-  expect(document.querySelectorAll("[data-free-time]").length).toBeGreaterThan(0);
+  expect(document.querySelectorAll("[data-free-time]")).toHaveLength(0);
 
   fireEvent.click(screen.getAllByRole("button", { name: "Opções de visualização" })[0]);
   fireEvent.click(screen.getByRole("switch", { name: /Tempo livre/ }));
 
-  expect(document.querySelectorAll("[data-free-time]")).toHaveLength(0);
-  expect(stored.get("braid-agenda-free-time")).toBe("off");
+  expect(document.querySelectorAll("[data-free-time]").length).toBeGreaterThan(0);
+  expect(stored.get("braid-agenda-free-time")).toBe("on");
   stored.clear();
 });
 

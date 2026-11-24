@@ -20,7 +20,7 @@ private val SPACES = Regex("\\s+")
 private val STOP_SPEECH =
     Regex("^(pode |por favor )?(para|parar|pare|chega|encerrar|encerra|cancelar|cancela|stop)( de (ouvir|escutar))?( por favor)?$")
 
-/** "Pode parar!", "chega" e "para de ouvir por favor" encerram o laço de escuta; "parar o carro" não. */
+/** "Pode parar!", "chega" e "para de ouvir por favor" encerram a escuta sem enviar nada; "parar o carro" não. */
 fun isStopSpeech(transcript: String): Boolean {
     val folded =
         Normalizer

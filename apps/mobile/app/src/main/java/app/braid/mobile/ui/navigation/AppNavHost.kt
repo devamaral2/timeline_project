@@ -69,6 +69,8 @@ import kotlinx.coroutines.delay
 fun AppNavHost(
     openTaskId: String? = null,
     onOpenTaskHandled: () -> Unit = {},
+    openChat: Boolean = false,
+    onOpenChatHandled: () -> Unit = {},
     gate: SessionGateViewModel = hiltViewModel(),
     sectionMenu: SectionMenuViewModel = hiltViewModel(),
     chat: ChatViewModel = hiltViewModel(),
@@ -178,6 +180,22 @@ fun AppNavHost(
         if (openTaskId != null && session is SessionState.SignedIn) {
             navController.navigate(TaskDetailRoute(openTaskId))
             onOpenTaskHandled()
+        }
+    }
+
+    // O gesto do assistente do sistema abre o chat depois de entrar; sem sessão, o pedido se perde em vez de abrir o chat
+    // no próximo login.
+    LaunchedEffect(session, openChat) {
+        if (!openChat) return@LaunchedEffect
+        when (session) {
+            is SessionState.SignedIn -> {
+                // O gesto do assistente sempre começa uma conversa nova, mesmo com o chat já aberto.
+                chat.startNewConversation()
+                if (!chatState.open) chat.open()
+                onOpenChatHandled()
+            }
+            SessionState.SignedOut -> onOpenChatHandled()
+            SessionState.Unknown -> Unit
         }
     }
 

@@ -1,9 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- O lembrete acende a tela e abre a tela cheia (ReminderAlertActivity) com o aparelho apagado ou bloqueado. -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!--
+        Reserva para o aparelho que não abre a tela cheia pelo sistema (permissão negada, Não Perturbe, regra do
+        fabricante): o próprio app acende a tela na hora do lembrete.
+    -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission
+        android:name="android.permission.TURN_SCREEN_ON"
+        tools:ignore="ProtectedPermissions" />
+    <!--
+        O lembrete é a função do app, então ele usa USE_EXACT_ALARM (Android 13+), que já vem concedida. Só com
+        SCHEDULE_EXACT_ALARM o Android 14+ nega por padrão, o alarme vira inexato e chega minutos depois, quando a
+        tarefa já começou e o aviso não vale mais.
+    -->
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Com o aparelho em uso, só quem pode aparecer sobre outros apps abre a tela cheia do lembrete direto. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!--
+        Com o uso em segundo plano restrito (a bateria do app em "Restrito", ou a economia de alguns fabricantes), o
+        Android segura o alarme do lembrete até o app ser aberto. Só a isenção de otimização de bateria o libera.
+    -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- O Android 11+ só deixa o app ver os serviços de reconhecimento de voz se ele declarar que os procura. -->
@@ -28,7 +54,44 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- O gesto do assistente chega aqui quando o sistema resolve ASSIST direto para o app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
+
+        <!-- Os três juntos fazem o Braid aparecer em "App assistente digital" (veja data/assistant). -->
+        <service
+            android:name=".BraidVoiceInteractionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION">
+            <meta-data
+                android:name="android.voice_interaction"
+                android:resource="@xml/voice_interaction_service" />
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".BraidVoiceInteractionSessionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_VOICE_INTERACTION" />
+        <service
+            android:name=".data.assistant.BraidRecognitionService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.speech.RecognitionService" />
+            </intent-filter>
+        </service>
+
+        <!-- A tela cheia do lembrete: fica sobre o bloqueio, fora dos recentes e numa tarefa só dela. -->
+        <activity
+            android:name=".ReminderAlertActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:taskAffinity="" />
 
         <receiver
             android:name=".data.reminder.ReminderAlarmReceiver"

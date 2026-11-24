@@ -262,6 +262,6 @@ fun HermesFlyer(
                 scaleY = size
             },
     ) {
-        HermesBot(bot, size = with(density) { button.width.toDp() })
+        HermesBot(bot, size = with(density) { button.width.toDp() }, outlined = true)
     }
 }

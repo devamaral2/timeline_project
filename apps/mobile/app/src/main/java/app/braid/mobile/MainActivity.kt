@@ -1,5 +1,6 @@
 package app.braid.mobile
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -42,9 +43,14 @@ class MainActivity : ComponentActivity() {
     /** A tarefa que a notificação tocada quer abrir, até a navegação consumi-la. */
     private var requestedTask by mutableStateOf<String?>(null)
 
+    /** Verdadeiro até a navegação abrir o chat que o assistente pediu. */
+    private var requestedChat by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestedTask = intent.requestedTaskId()
+        // Recriada (girar a tela, tema) a Activity relê o mesmo Intent: só a abertura de verdade pede o chat.
+        requestedChat = savedInstanceState == null && intent.wantsChat()
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
@@ -68,7 +74,12 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
             BraidTheme(darkTheme = dark) {
-                AppNavHost(openTaskId = requestedTask, onOpenTaskHandled = { requestedTask = null })
+                AppNavHost(
+                    openTaskId = requestedTask,
+                    onOpenTaskHandled = { requestedTask = null },
+                    openChat = requestedChat,
+                    onOpenChatHandled = { requestedChat = false },
+                )
             }
         }
     }
@@ -77,12 +88,21 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         intent.requestedTaskId()?.let { requestedTask = it }
+        if (intent.wantsChat()) requestedChat = true
     }
 
     private fun Intent.requestedTaskId(): String? = getStringExtra(EXTRA_TASK_ID)
 
+    /** O gesto do assistente do sistema, direto (`ASSIST`) ou pela sessão do Braid ([EXTRA_OPEN_CHAT]). */
+    private fun Intent.wantsChat(): Boolean = action == Intent.ACTION_ASSIST || getBooleanExtra(EXTRA_OPEN_CHAT, false)
+
     companion object {
         /** O extra que a notificação do lembrete leva: o id da tarefa cujo detalhe abrir. */
         const val EXTRA_TASK_ID = "app.braid.mobile.TASK_ID"
+
+        /** O extra que o assistente digital leva: abrir o app já com o chat à vista. */
+        const val EXTRA_OPEN_CHAT = "app.braid.mobile.OPEN_CHAT"
+
+        fun openChatIntent(context: Context): Intent = Intent(context, MainActivity::class.java).putExtra(EXTRA_OPEN_CHAT, true)
     }
 }

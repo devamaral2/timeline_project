@@ -425,6 +425,9 @@
   /* O círculo de 46 px do robô vem do componente, pelo `font-size`
      (`hermes-bot.tsx`). */
   .commandBot { font-size: 46px; }
+  /* O robo do botao e so o desenho, na cor dos outros icones da barra, dentro do aro neutro, sobre o fundo da dock: sem o disco cheio. O erro segue vermelho. */
+  .commandButton .commandBot, .hermesFlyer .flyerBot { background: transparent; color: var(--muted-foreground); }
+  .commandButton .commandBot[data-state="error"], .hermesFlyer .flyerBot[data-state="error"] { background: var(--destructive); color: var(--destructive-foreground); }
   /* A cor do modo de visualização pinta a pílula da aba atual, nas três telas
      (`data-list-mode` vem do `useViewMode`). As cores e as
      tintas do texto são tokens do web (`globals.css`). */
@@ -543,18 +546,30 @@
 .hubNotice { font-size: 12px; color: var(--brand-accent); margin: 8px 0; }
 .hubNotice:empty { display: none; }
 .hubFootnote { font-size: 12px; color: var(--muted); text-align: center; margin: 16px 0 0; line-height: 1.5; }
-/* `minmax(0, 1fr)`: sem isso a coluna implicita cresce ate o max-content da linha mais longa e o texto passa da borda em vez de quebrar. */
-.chatLog { list-style: none; margin: 0 0 8px; padding: 20px 4px 0; display: flex; flex-direction: column; gap: 20px; min-width: 0; font-size: 15px; line-height: 24px; }
+/* A conversa (canvas "Chat com o Hermes — conversa limpa", opcao B, sem o balao do pedido): o pedido segue a faixa reta
+   do Hermes, de largura inteira (fio e fundo do campo); a fala do assistente e texto solto, sem caixa, sob o robo cinza
+   e o nome. Enquanto o pedido roda a conversa nao ganha nada:
+   o passo em que o agente esta aparece na linha de status do campo e o resto fica na aba "Processo". */
+.chatLog { list-style: none; margin: 0 0 8px; padding: 20px 0 0; display: flex; flex-direction: column; gap: 18px; min-width: 0; font-size: 15px; line-height: 24px; }
 .chatBubble { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .chatBubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-/* A conversa e reta, ao modo do Hermes: o pedido e um retangulo de largura inteira
-   (fio e fundo do campo), nao um balao; a resposta e texto solto. O campo segue redondo. */
-.chatBubble[data-role="user"] { margin: 0 -4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-xs); background: var(--background); line-height: 22px; }
-.chatBubble[data-role="assistant"] { padding: 0; }
-.chatBubble[data-role="user"] p { white-space: pre-wrap; }
-.chatBubble[data-role="error"] { margin: 0 -4px; padding: 10px 14px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); border-radius: var(--radius-xs); color: var(--destructive); font-size: 13px; line-height: 20px; }
+.chatBubble[data-role="user"] { padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-xs); background: var(--background); line-height: 22px; }
+.chatWho { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; font-weight: 600; line-height: 20px; color: var(--muted); }
+.chatAvatar { flex: none; display: grid; place-items: center; width: 18px; height: 18px; font-size: 18px; }
+.chatBubble[data-role="error"] { padding: 10px 14px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); border-radius: var(--radius-xs); color: var(--destructive); font-size: 13px; line-height: 20px; }
 .chatBubble[data-role="error"] button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; padding: 0; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .chatBubble[data-role="error"] svg { width: 14px; height: 14px; }
+/* O que da para fazer com a ultima resposta, encostado nela: copiar e abrir os passos na aba "Processo". */
+.chatActions { display: flex; align-items: center; margin: -14px -12px 0; color: var(--faint); }
+.chatActions button { display: grid; place-items: center; min-width: 44px; height: 44px; border-radius: var(--radius-sm); color: inherit; cursor: pointer; transition: color var(--duration-fast), transform var(--duration-fast); }
+.chatActions button:hover { color: var(--ink); }
+.chatActions button:active { transform: scale(.94); }
+.chatActions button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.shell .chatActions svg { width: 16px; height: 16px; }
+.chatActions button[data-trace] { display: flex; align-items: center; gap: 4px; margin-left: auto; padding: 0 12px; font-family: var(--font-mono); font-size: 12px; line-height: 16px; }
+.shell .chatActions button[data-trace] svg { width: 12px; height: 12px; stroke-width: 2; }
+/* O passo em que o agente esta, na linha de status do campo: uma luz corre pelo texto enquanto o pedido roda. */
+.chatStep { background: linear-gradient(90deg, var(--muted) 35%, var(--ink) 50%, var(--muted) 65%) 0 0 / 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: chatSweep 1.8s linear infinite; }
 /* Cada registro da resposta e uma linha que abre a pagina dele (o apagado fica so como texto). */
 .chatEntities { list-style: none; margin: 12px 0 0; padding: 0; border-top: 1px solid var(--hairline); }
 .dark .chatDiffLine[data-sign="-"] { color: color-mix(in oklab, var(--destructive) 55%, white); }
@@ -568,47 +583,16 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 .chatEntityChange { font-size: 12px; line-height: 18px; color: var(--muted); }
 .shell .chatEntityGo { width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
 .chatEntities li[data-change="deleted"] .chatEntityName { text-decoration: line-through; color: var(--muted); }
-.chatBubble[data-role="process"] { padding: 0; }
-.processBox { display: grid; gap: 8px; }
-.processTitle { margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.processWaiting { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 12px; }
-.processWaiting svg { width: 14px; height: 14px; animation: processSpin 1s linear infinite; }
-.processSteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--muted); }
-.processSteps li { display: flex; align-items: center; gap: 8px; }
-.processSteps li[data-status="pending"] { color: var(--muted); }
-.processMark { display: grid; place-items: center; flex: none; width: 14px; height: 14px; }
-.shell .processMark svg { width: 14px; height: 14px; stroke-width: 2.2; }
-.processSteps li[data-status="succeeded"] .processMark { color: var(--brand); }
-.processSteps li[data-status="failed"] .processMark { color: var(--destructive); }
-.processSteps li[data-status="running"] .processMark { color: var(--brand-accent); }
-.processSteps li[data-status="running"] .processMark svg { animation: processSpin 1s linear infinite; }
+/* As linhas que uma consulta devolveu, junto da resposta. */
 .processRows { overflow-x: auto; max-height: 220px; font-size: 12px; }
 .processRows table { border-collapse: collapse; width: 100%; }
 .processRows th, .processRows td { padding: 4px 8px 4px 0; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
 .processRows th { color: var(--muted); font-weight: 600; }
 .processRows p { margin: 6px 0 0; color: var(--muted); }
-.processMessage { margin: 0; font-size: 15px; line-height: 24px; text-wrap: pretty; }
-.processCancel { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
-.chatBubble[data-role="process"] [data-status="failed"] ~ .processMessage, .processBox[data-status="failed"] .processMessage { color: var(--destructive); }
-.chatBubble[data-role="hermes-steps"] { justify-self: stretch; padding: 0; background: none; }
-.hermesSteps ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; font-family: var(--font-mono); font-size: 12px; line-height: 18px; color: var(--muted); }
-.hermesSteps li { min-height: 30px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-.hermesTool { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.hermesTool code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 6px; border-radius: 4px; background: var(--secondary); font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
-.hermesMark { display: grid; place-items: center; flex: none; width: 16px; height: 16px; align-self: center; }
-.shell .hermesMark svg { width: 14px; height: 14px; stroke-width: 2.2; }
-.hermesSteps [data-status="done"] .hermesMark { color: var(--brand); }
-.hermesSteps [data-status="failed"] .hermesMark { color: var(--destructive); }
-.hermesSteps [data-status="running"] .hermesMark { color: var(--brand-accent); }
-.hermesSteps [data-status="running"] .hermesMark svg { animation: processSpin 1s linear infinite; }
-.hermesSteps details summary { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; cursor: pointer; list-style: none; }
-.hermesSteps details summary::-webkit-details-marker { display: none; }
-.hermesSteps details summary svg { width: 14px; height: 14px; transition: transform .15s; }
-.hermesSteps details[open] summary svg { transform: rotate(90deg); }
-.hermesSteps details p { margin: 4px 0 0 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) {
-  .processWaiting svg, .processSteps li[data-status="running"] .processMark svg, .hermesSteps [data-status="running"] .hermesMark svg, .hermesSteps details summary svg { animation: none; transition: none; }
+  .chatStep { animation: none; background: none; color: inherit; }
+  .chatActions button { transition: none; }
+  .chatActions button:active { transform: none; }
 }
 
 /* No celular o painel e uma folha presa acima da barra inferior. */
@@ -756,7 +740,7 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 }
 
 
-@keyframes processSpin { to { transform: rotate(360deg); } }
+@keyframes chatSweep { from { background-position: 100% 0; } to { background-position: -66% 0; } }
 @keyframes chatPulse {
   50% { opacity: .45; }
 }

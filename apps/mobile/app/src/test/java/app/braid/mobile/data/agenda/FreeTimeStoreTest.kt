@@ -32,22 +32,22 @@ class FreeTimeStoreTest {
             }
 
     @Test
-    fun `with nothing stored free time is on, as in the web`() =
+    fun `with nothing stored free time is off, as in the web`() =
         runBlocking {
-            assertEquals(true, DataStoreFreeTimeRepository(open()).enabled.first())
+            assertEquals(false, DataStoreFreeTimeRepository(open()).enabled.first())
         }
 
     @Test
-    fun `turning free time off survives closing the app, and on again too`() =
+    fun `turning free time on survives closing the app, and off again too`() =
         runBlocking {
-            DataStoreFreeTimeRepository(open()).select(false)
-            scopes.closeAndJoin()
-            assertEquals(false, DataStoreFreeTimeRepository(open()).enabled.first())
-            scopes.closeAndJoin()
-
             DataStoreFreeTimeRepository(open()).select(true)
             scopes.closeAndJoin()
             assertEquals(true, DataStoreFreeTimeRepository(open()).enabled.first())
+            scopes.closeAndJoin()
+
+            DataStoreFreeTimeRepository(open()).select(false)
+            scopes.closeAndJoin()
+            assertEquals(false, DataStoreFreeTimeRepository(open()).enabled.first())
         }
 
     @Test
@@ -57,6 +57,6 @@ class FreeTimeStoreTest {
             store.edit { it[booleanPreferencesKey("agenda_free_time")] = false }
             store.edit { it.remove(booleanPreferencesKey("agenda_free_time")) }
 
-            assertEquals(true, DataStoreFreeTimeRepository(store).enabled.first())
+            assertEquals(false, DataStoreFreeTimeRepository(store).enabled.first())
         }
 }

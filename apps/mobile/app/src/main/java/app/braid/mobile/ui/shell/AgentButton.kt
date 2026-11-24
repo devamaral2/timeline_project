@@ -35,7 +35,7 @@ import app.braid.mobile.ui.chat.LocalHermesFlight
 import kotlinx.coroutines.delay
 
 /**
- * O botão do agente: um aro da cor da dock em volta do disco da marca com o robô. Fica fora da dock, na ponta. O robô
+ * O botão do agente: um aro da cor da dock, sobre o fundo da dock, em volta do robô, que tem a cor dos outros ícones. Fica fora da dock, na ponta. O robô
  * acompanha o chat mesmo fechado ([bot]: pensa enquanto a IA responde e mostra o desfecho por um instante); com o chat
  * aberto vira um X que o fecha.
  */
@@ -120,7 +120,7 @@ private fun AgentCore(
                 )
             }
         } else {
-            HermesBot(bot, size = CoreSize)
+            HermesBot(bot, size = CoreSize, outlined = true)
         }
     }
 }

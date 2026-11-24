@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Search,
   Settings,
+  Square,
   X,
 } from "lucide-react";
 import { formatTime } from "@repo/timeline";
@@ -22,20 +23,20 @@ import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import { isModelCommand } from "@/lib/entity-edit/entity-edit-target";
 import { briefDate } from "@/lib/dates/day-labels";
 import { modelFooter } from "@/lib/agent-chat/model-selection";
+import { pendingStepLabel } from "@/lib/agent-chat/pending-step";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
 import type { ModelOptionsDto, RequestScreenContext } from "@repo/contracts";
 import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { useSessionState } from "@/lib/session/use-session";
-import { speechErrorMessage } from "@/lib/speech/speech-error-messages";
 import { useSpeechRecognition } from "@/lib/speech/use-speech-recognition";
 import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
 import type { FreeWindow } from "./hub-open";
 import { AgentTrace } from "./agent-trace";
 import { ChatAnswer } from "./chat-answer";
+import { ChatActions, ChatReply } from "./chat-reply";
 import { ModelFooter, useModelPicker } from "./model-picker";
-import { HermesSteps } from "./hermes-steps";
 import { CHANGE_LABELS, EntityRows } from "./entity-rows";
-import { ProcessBox } from "./process-box";
+import { ProcessAnswer } from "./process-answer";
 import { HUB_COMMANDS, type HubCommand, type HubCommandId, isStopSpeech, parseCommand } from "./hub-commands";
 import styles from "@/components/shell/shell.module.css";
 
@@ -179,18 +180,6 @@ export function AgentChatPanel({
     autoStart: listensOnOpen,
   });
   const sendSpokenRef = useRef<(transcript: string) => void>(() => {});
-  // Pedido feito por voz: depois da resposta o chat volta a escutar, ate a pessoa pedir
-  // para parar, tocar na onda, digitar ou enviar pelo teclado.
-  const [voiceLoop, setVoiceLoop] = useState(false);
-  useEffect(() => {
-    if (!voiceLoop || listening || chat.pending || !chat.ready) return;
-    // Silencio nao encerra o ciclo; qualquer outro erro (permissao, microfone, rede) sim.
-    if (voiceError && voiceError !== speechErrorMessage("no-speech")) {
-      setVoiceLoop(false);
-      return;
-    }
-    start();
-  }, [voiceLoop, listening, chat.pending, chat.ready, voiceError, start]);
   // O microfone que abriu sozinho nao reclama: silencio ou permissao negada so
   // viram aviso quando foi a pessoa quem tocou na onda.
   const [quietVoice, setQuietVoice] = useState(listensOnOpen);
@@ -213,8 +202,15 @@ export function AgentChatPanel({
     start();
   }, [listenOnOpen, chat.ready, chat.pending, start]);
 
-  const lastMessageId = chat.messages.at(-1)?.id;
-  const progressLabel = chat.pending?.label;
+  const lastMessage = chat.messages.at(-1);
+  const lastMessageId = lastMessage?.id;
+  const progressLabel = chat.pending ? pendingStepLabel(chat.messages, chat.pending) : undefined;
+  // A última fala do assistente, quando é ela que fecha a conversa: é dela que se copia o texto.
+  const lastAnswer = lastMessage?.role === "assistant" ? lastMessage.text
+    : lastMessage?.role === "process" && lastMessage.request?.status === "done" ? lastMessage.request.message ?? ""
+    : "";
+  // O nome sobre cada fala é o de quem responde agora, o mesmo do topo do chat.
+  const agentName = chat.agentMode ? AGENT_NAMES[chat.agentMode] : "Assistente";
   // Rola ate o fim a cada mensagem nova ou passo de progresso.
   useEffect(() => {
     void lastMessageId;
@@ -232,7 +228,8 @@ export function AgentChatPanel({
   const lastRole = chat.messages.at(-1)?.role;
   const state: HermesState = listening ? "listening" : chat.pending ? "thinking" : lastRole === "error" ? "error" : "idle";
   const statusText = listening ? "Ouvindo…"
-    : chat.pending ? `${chat.pending.label ?? "Pensando"}…`
+    // Enquanto o pedido roda, a linha diz o passo em que o agente está (a conversa não mostra o andamento).
+    : chat.pending ? `${pendingStepLabel(chat.messages, chat.pending)}…`
     : lastRole === "error" ? "Não deu certo"
     : "Esperando o seu pedido";
   const range = freeWindow ? windowRange(freeWindow) : null;
@@ -259,35 +256,29 @@ export function AgentChatPanel({
     // `/model` abre a folha da escolha do modelo (o campo não mostra o modelo); não vira mensagem.
     if (picker.choice && isModelCommand(draft)) {
       if (listening) cancel();
-      setVoiceLoop(false);
       updatePrompt("");
       picker.show();
       return;
     }
-    // Enviar pelo teclado ou pelo botao e pedido de texto: o ciclo de voz acaba.
     if (chat.send(freeWindow ? requestWithWindow(freeWindow, draft) : draft)) {
       // Enviar o que foi dito fecha o microfone: o pedido ja foi.
       if (listening) cancel();
-      setVoiceLoop(false);
       updatePrompt("");
       onClearFreeWindow?.();
     }
   }
 
   // Sem texto que vire comando e sem a IA ocupada, a fala vai direto; senao, cai no campo.
+  // Depois da resposta o microfone fica desligado: quem quer falar de novo toca na onda.
   sendSpokenRef.current = (transcript) => {
-    if (isStopSpeech(transcript)) {
-      setVoiceLoop(false);
-      return;
-    }
+    // "para", "chega": a fala que manda parar nao vira pedido.
+    if (isStopSpeech(transcript)) return;
     const text = (prompt ? `${prompt} ${transcript}` : transcript).slice(0, 4000);
     if (!parseCommand(text) && chat.send(freeWindow ? requestWithWindow(freeWindow, text) : text)) {
-      setVoiceLoop(true);
       updatePrompt("");
       onClearFreeWindow?.();
       return;
     }
-    setVoiceLoop(false);
     updatePrompt(text);
   };
 
@@ -298,7 +289,6 @@ export function AgentChatPanel({
     if (listening) {
       updatePrompt((heard ? `${prompt ? `${prompt} ` : ""}${heard}` : prompt).slice(0, 4000));
       cancel();
-      setVoiceLoop(false);
     }
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
@@ -318,7 +308,7 @@ export function AgentChatPanel({
         <button
           type="button"
           className={field.voice}
-          onClick={listening ? () => { setVoiceLoop(false); stop(); } : () => { setQuietVoice(false); start(); }}
+          onClick={listening ? stop : () => { setQuietVoice(false); start(); }}
           disabled={!chat.ready || Boolean(chat.pending)}
           aria-pressed={listening}
           aria-label={listening ? "Parar de transcrever" : "Transcrever o que eu disser"}
@@ -326,9 +316,16 @@ export function AgentChatPanel({
           <HermesGlyph />
         </button>
       ) : null}
-      <button type="submit" className={field.send} aria-label={chat.pending ? "Aguardando a resposta" : "Enviar mensagem"} disabled={!chat.ready || Boolean(chat.pending) || (!hasText && !highlighted)}>
-        <ArrowUp aria-hidden />
-      </button>
+      {chat.pending?.requestId ? (
+        // Com o pedido aceito pela API, a seta vira o quadrado que o cancela: a conversa não tem mais a caixa de processo.
+        <button type="button" className={field.send} data-stop onClick={chat.cancel} aria-label="Cancelar pedido">
+          <Square aria-hidden fill="currentColor" />
+        </button>
+      ) : (
+        <button type="submit" className={field.send} aria-label={chat.pending ? "Aguardando a resposta" : "Enviar mensagem"} disabled={!chat.ready || Boolean(chat.pending) || (!hasText && !highlighted)}>
+          <ArrowUp aria-hidden />
+        </button>
+      )}
     </>
   );
 
@@ -423,12 +420,15 @@ export function AgentChatPanel({
                   message={message}
                   onChoose={message.id === lastMessageId && chat.ready && !chat.pending ? chat.send : undefined}
                   onRetry={chat.pending ? undefined : chat.retry}
-                  onCancel={chat.pending ? chat.cancel : undefined}
                   entityHref={entityHref}
                   onOpenEntity={onClose}
                   modelOptions={chat.model.options}
+                  name={agentName}
                 />
               ))}
+              {!chat.pending && lastAnswer.trim() ? (
+                <ChatActions text={lastAnswer} steps={traceSteps} onOpenProcess={() => setPane("process")} />
+              ) : null}
             </ol>
             <div ref={endRef} />
           </>
@@ -442,10 +442,10 @@ export function AgentChatPanel({
       </div>
 
       <div className={styles.chatField}>
-        {voiceError && !quietVoice && !voiceLoop && <p className={styles.hubComposerHint}>{voiceError}</p>}
+        {voiceError && !quietVoice && <p className={styles.hubComposerHint}>{voiceError}</p>}
         <p className={field.status} data-state={state} role="status" aria-live="polite">
           <HermesMark state={state} plain />
-          <span>{statusText}</span>
+          <span className={chat.pending && !listening ? styles.chatStep : undefined}>{statusText}</span>
         </p>
         <HermesComposer
           model={picker}
@@ -479,7 +479,6 @@ export function AgentChatPanel({
               // e o que ja estava escrito (ouvido ou nao) fica como texto.
               userTypedRef.current = true;
               if (listening) cancel();
-              setVoiceLoop(false);
               updatePrompt(event.target.value.slice(0, 4000));
             }}
             onKeyDown={onKeyDown}
@@ -498,16 +497,21 @@ export function AgentChatPanel({
 interface ChatBubbleProps {
   message: AgentChatMessage;
   onRetry?: (id: string) => void;
-  onCancel?: () => void;
   /** Envia a alternativa escolhida numa resposta; ausente quando a resposta ja nao espera escolha. */
   onChoose?: (choice: string) => void;
   entityHref?: (entity: AgentChatEntityRef) => string | undefined;
   onOpenEntity?: () => void;
   /** O que o servidor oferece ao modo modelo: dá o nome do modelo no rodapé da resposta. */
   modelOptions?: ModelOptionsDto | null;
+  /** Quem responde ("Assistente", "Hermes", "Modelo"): vai sobre cada fala, ao lado do robô. */
+  name: string;
 }
 
-function ChatBubble({ message, onRetry, onCancel, onChoose, entityHref, onOpenEntity, modelOptions = null }: ChatBubbleProps) {
+/**
+ * Uma fala da conversa (canvas "Chat com o Hermes — conversa limpa", opção B). Os passos do Hermes e do modelo
+ * (`hermes-steps`) e o andamento de um pedido por passos não entram aqui: ficam na aba "Processo".
+ */
+function ChatBubble({ message, onRetry, onChoose, entityHref, onOpenEntity, modelOptions = null, name }: ChatBubbleProps) {
   if (message.role === "user") {
     return (
       <li className={styles.chatBubble} data-role="user">
@@ -519,7 +523,9 @@ function ChatBubble({ message, onRetry, onCancel, onChoose, entityHref, onOpenEn
   if (message.role === "assistant") {
     return (
       <li className={styles.chatBubble} data-role="assistant">
-        <ChatAnswer text={message.text} onChoose={onChoose} />
+        <ChatReply name={name}>
+          <ChatAnswer text={message.text} onChoose={onChoose} />
+        </ChatReply>
         <EntityRows entities={message.entities} entityHref={entityHref} onOpenEntity={onOpenEntity} />
         {message.model ? <ModelFooter text={modelFooter(modelOptions, message.model)} /> : null}
       </li>
@@ -527,20 +533,10 @@ function ChatBubble({ message, onRetry, onCancel, onChoose, entityHref, onOpenEn
   }
 
   if (message.role === "process") {
-    return (
-      <li className={styles.chatBubble} data-role="process">
-        <ProcessBox request={message.request} entityHref={entityHref} onOpenEntity={onOpenEntity} onCancel={onCancel} />
-      </li>
-    );
+    return <ProcessAnswer request={message.request} name={name} entityHref={entityHref} onOpenEntity={onOpenEntity} />;
   }
 
-  if (message.role === "hermes-steps") {
-    return (
-      <li className={styles.chatBubble} data-role="hermes-steps">
-        <HermesSteps steps={message.steps} running={message.running} />
-      </li>
-    );
-  }
+  if (message.role === "hermes-steps") return null;
 
   return (
     <li className={styles.chatBubble} data-role="error">

@@ -86,7 +86,7 @@ data class VoiceUiState(
     val listening: Boolean = false,
     /** O que a sessão já ouviu (frases fechadas e a que ainda sai): aparece no campo enquanto o microfone está aberto. */
     val heard: String = "",
-    /** O erro de voz que a pessoa vê: só quando foi ela quem tocou no microfone e o laço de escuta não está de pé. */
+    /** O erro de voz que a pessoa vê: só quando foi ela quem tocou no microfone. */
     val notice: String? = null,
     /** A tela deve mostrar o pedido de permissão do sistema e devolver a resposta em `microphoneResult`. */
     val askPermission: Boolean = false,

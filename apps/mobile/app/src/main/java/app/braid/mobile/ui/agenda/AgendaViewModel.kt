@@ -91,8 +91,8 @@ data class AgendaUiState(
     /** Quantos dias a lista contínua leu antes do [anchorDay] e depois dele. */
     val before: Int = 0,
     val after: Int = 0,
-    /** O interruptor "Tempo livre" da engrenagem: guardado no aparelho, ligado por padrão. */
-    val showFreeTime: Boolean = true,
+    /** O interruptor "Tempo livre" da engrenagem: guardado no aparelho, desligado por padrão. */
+    val showFreeTime: Boolean = false,
 ) {
     /** Os dias que a leitura atual cobre: a semana do dia escolhido, ou a janela ancorada da lista contínua. */
     val windowDays: List<String>

@@ -7,6 +7,11 @@ import app.braid.mobile.core.designsystem.svgCircle
 internal object ChatIcons {
     val retry = listOf(SvgPart("M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"), SvgPart("M3 3v5h5"))
     val arrowUpRight = listOf(SvgPart("M7 7h10v10"), SvgPart("M7 17 17 7"))
+    val copy =
+        listOf(
+            SvgPart("M10 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"),
+            SvgPart("M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"),
+        )
 
     val bell = listOf(SvgPart("M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"), SvgPart("M10.3 21a1.94 1.94 0 0 0 3.4 0"))
     val settings =

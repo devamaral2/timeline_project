@@ -115,17 +115,14 @@ class ChatVoiceTest {
 
     private fun JsonObject.string(name: String) = getValue(name).jsonPrimitive.content
 
-    /** Fala "texto" e deixa passar o silêncio de 1,8 s: a mensagem sai e o pedido segue até o fim, então o chat volta a ouvir. */
+    /** Fala "texto" e deixa passar o silêncio de 1,8 s: a mensagem sai e o pedido segue até o fim. */
     private suspend fun kotlinx.coroutines.test.TestScope.speakAndFinish(
         chat: ChatViewModel,
         text: String,
-        startsAfter: Int,
     ) {
         speech.hear(text to true)
         pass(1_800)
         chat.until { it.pending == null && it.messages.size == 2 }
-        chat.until { it.voice.listening }
-        assertEquals(startsAfter, speech.starts)
     }
 
     // region Abrir o chat
@@ -324,71 +321,60 @@ class ChatVoiceTest {
 
     // endregion
 
-    // region Laço de escuta
+    // region Depois da resposta
 
     @Test
-    fun `after the answer the chat listens again`() =
+    fun `after the answer the microphone stays off until the person taps it`() =
         runTest {
             val chat = newViewModel()
             chat.open()
 
-            speakAndFinish(chat, "Criar a reunião de sexta", startsAfter = 2)
+            speakAndFinish(chat, "Criar a reunião de sexta")
+            pass(10_000)
 
+            assertEquals(1, speech.starts)
+            assertFalse(chat.state.value.voice.listening)
+
+            chat.toggleVoice()
+
+            assertEquals(2, speech.starts)
+            assertTrue(chat.state.value.voice.listening)
             assertEquals(BotState.Listening, chat.state.value.bot)
         }
 
     @Test
-    fun `saying para or chega ends the loop and sends nothing`() =
+    fun `saying para or chega sends nothing`() =
         runTest {
             val chat = newViewModel()
             chat.open()
-            speakAndFinish(chat, "Criar a reunião de sexta", startsAfter = 2)
 
             speech.hear("Pode parar!" to true)
             pass(1_800)
             pass(10_000)
 
-            assertEquals(1, posts().size)
-            assertEquals(2, speech.starts)
+            assertTrue(posts().isEmpty())
+            assertEquals(1, speech.starts)
             assertFalse(chat.state.value.voice.listening)
             assertEquals(BotState.Idle, chat.state.value.bot)
         }
 
     @Test
-    fun `a no-speech error keeps the loop and any other error ends it`() =
+    fun `sending by keyboard turns the microphone off`() =
         runTest {
             val chat = newViewModel()
             chat.open()
-            speakAndFinish(chat, "Criar a reunião de sexta", startsAfter = 2)
 
-            speech.fail(SpeechError.NoSpeech)
-            speech.end()
-            assertEquals(3, speech.starts)
-
-            speech.fail(SpeechError.Network)
-            speech.end()
+            assertTrue(chat.submit("digitada"))
+            chat.until { it.pending == null && it.messages.size == 2 }
             pass(5_000)
-            assertEquals(3, speech.starts)
-            assertFalse(chat.state.value.voice.listening)
-        }
-
-    @Test
-    fun `sending by keyboard ends the loop and the microphone`() =
-        runTest {
-            val chat = newViewModel()
-            chat.open()
-            speakAndFinish(chat, "primeira", startsAfter = 2)
-
-            assertTrue(chat.submit("segunda, digitada"))
-            chat.until { it.pending == null && it.messages.size == 4 }
 
             assertEquals(1, speech.cancels)
-            assertEquals(2, speech.starts)
+            assertEquals(1, speech.starts)
             assertFalse(chat.state.value.voice.listening)
         }
 
     @Test
-    fun `closing the chat ends the loop even with the request still running`() =
+    fun `closing the chat with the request still running keeps the microphone off`() =
         runTest {
             val chat = newViewModel()
             chat.open()

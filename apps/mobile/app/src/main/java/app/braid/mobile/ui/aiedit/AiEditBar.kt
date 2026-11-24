@@ -113,7 +113,7 @@ fun AiEditBar(
             )
         }
         model.reason?.let { Text(it, color = scheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 20.sp) }
-        HermesStatusLine(botState(model), model.statusText, plain = pill) {
+        HermesStatusLine(botState(model), model.statusText, plain = true) {
             if (model.canDismiss) DismissButton(actions.onDismiss)
         }
         HermesComposer(

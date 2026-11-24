@@ -35,6 +35,12 @@ describe("o catalogo do modo modelo", () => {
     }
   });
 
+  test("na Anthropic o padrao, antes de alguem escolher um modelo, e o Haiku", async () => {
+    const options = await modelOptions(env({ ANTHROPIC_API_KEY: "sk" }), routerLists(ok).lists);
+    expect(options?.default).toEqual({ provider: "anthropic", model: "claude-haiku-5-5", effort: "medium" });
+    expect(options?.providers[0]?.defaultModel).toBe("claude-haiku-5-5");
+  });
+
   test("sem nenhuma chave o modo nao existe", async () => {
     const none = env({});
     expect(modelModeEnabled(none)).toBe(false);

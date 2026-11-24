@@ -22,4 +22,10 @@ internal object SettingsIcons {
             SvgPart("m19.07 4.93-1.41 1.41"),
         )
     val logOut = listOf(SvgPart("m16 17 5-5-5-5"), SvgPart("M21 12H9"), SvgPart("M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"))
+    val mic =
+        listOf(
+            SvgPart("M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"),
+            SvgPart("M19 10v2a7 7 0 0 1-14 0v-2"),
+            SvgPart("M12 19v3"),
+        )
 }

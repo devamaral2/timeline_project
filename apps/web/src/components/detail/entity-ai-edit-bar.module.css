@@ -44,6 +44,8 @@
 .voice:disabled { opacity: .55; cursor: not-allowed; }
 .send { background: var(--primary); color: var(--primary-foreground); }
 .send svg { width: 20px; height: 20px; stroke-width: 2; }
+/* O quadrado que cancela o pedido em andamento, no lugar da seta (o chat). */
+.form .send[data-stop] svg { width: 12px; height: 12px; }
 .send:disabled { border: 1px solid var(--line); background: transparent; color: var(--input); cursor: not-allowed; }
 .voice:focus-visible, .send:focus-visible, .dismiss:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 

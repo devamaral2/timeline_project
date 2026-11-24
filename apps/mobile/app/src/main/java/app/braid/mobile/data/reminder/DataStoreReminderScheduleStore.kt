@@ -9,6 +9,7 @@ import app.braid.mobile.data.preferences.safeData
 import app.braid.mobile.domain.reminder.Reminder
 import app.braid.mobile.domain.reminder.ReminderKind
 import app.braid.mobile.domain.reminder.ReminderScheduleStore
+import app.braid.mobile.domain.task.TaskKind
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -27,6 +28,9 @@ private data class StoredReminder(
     val offsetMinutes: Int,
     val triggerAt: Long,
     val anchor: Long,
+    // Os dois últimos chegaram depois: um cronograma guardado por uma versão anterior é lido com os valores de sempre.
+    val taskKind: String = TaskKind.Common.code,
+    val deadline: Boolean = false,
 )
 
 /** O cronograma dos lembretes no DataStore (`reminders_schedule`), em JSON; um valor ilegível vale cronograma vazio. */
@@ -58,6 +62,8 @@ private fun StoredReminder(reminder: Reminder) =
         offsetMinutes = reminder.offsetMinutes,
         triggerAt = reminder.triggerAt.toEpochMilli(),
         anchor = reminder.anchor.toEpochMilli(),
+        taskKind = reminder.taskKind.code,
+        deadline = reminder.deadline,
     )
 
 private fun StoredReminder.toReminder() =
@@ -69,4 +75,6 @@ private fun StoredReminder.toReminder() =
         offsetMinutes = offsetMinutes,
         triggerAt = Instant.ofEpochMilli(triggerAt),
         anchor = Instant.ofEpochMilli(anchor),
+        taskKind = taskKindOf(taskKind),
+        deadline = deadline,
     )

@@ -11,7 +11,7 @@ import { getServerEnv, type ServerEnv } from "../../config/env";
 const CATALOG: Record<ModelProvider, Omit<ModelProviderOptionDto, "id">> = {
   anthropic: {
     name: "Anthropic",
-    defaultModel: "claude-opus-5-5",
+    defaultModel: "claude-haiku-5-5",
     models: [
       { id: "claude-fable-5-2", name: "Fable 5.2" },
       { id: "claude-opus-5-5", name: "Opus 5.5" },

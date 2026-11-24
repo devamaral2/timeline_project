@@ -44,7 +44,7 @@ import app.braid.mobile.core.designsystem.SvgPart
 private val DockReserve = 90.dp
 
 /**
- * "Configurações", aberta pelo `/configuracoes` do chat: o interruptor de tema (claro/escuro) e o "Sair da conta".
+ * "Configurações", aberta pelo `/configuracoes` do chat: o interruptor de tema (claro/escuro), o assistente do celular e o "Sair da conta".
  * [onBack] volta ao chat; ao sair, a sessão perdida leva ao login pela navegação.
  */
 @Composable
@@ -56,8 +56,11 @@ fun SettingsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     // A tela mostra o que o tema ativo é: o escolhido, ou o do sistema enquanto não há escolha.
     val dark = LocalBraidDarkTheme.current
+    val assistant = rememberAssistantRole()
     SettingsContent(
         dark = dark,
+        assistantHeld = assistant.held,
+        onAssistant = assistant::request,
         signedIn = state.signedIn,
         signingOut = state.signingOut,
         onBack = onBack,
@@ -70,6 +73,8 @@ fun SettingsScreen(
 @Composable
 fun SettingsContent(
     dark: Boolean,
+    assistantHeld: Boolean,
+    onAssistant: () -> Unit,
     signedIn: Boolean,
     signingOut: Boolean,
     onBack: () -> Unit,
@@ -113,6 +118,12 @@ fun SettingsContent(
                 label = if (dark) "Tema claro" else "Tema escuro",
                 enabled = true,
                 onClick = onToggleTheme,
+            )
+            SettingsRow(
+                icon = SettingsIcons.mic,
+                label = if (assistantHeld) "Assistente do celular: Braid" else "Usar como assistente do celular",
+                enabled = true,
+                onClick = onAssistant,
             )
             if (signedIn) {
                 SettingsRow(icon = SettingsIcons.logOut, label = "Sair da conta", enabled = !signingOut, onClick = onSignOut)
