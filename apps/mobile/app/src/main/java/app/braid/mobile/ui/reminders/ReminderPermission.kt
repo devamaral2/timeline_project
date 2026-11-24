@@ -111,12 +111,43 @@ fun ExactAlarmPrompt(
     }
 }
 
+/** O que a faixa diz a quem ainda não deixou o app aparecer sobre outros apps. */
+const val OVERLAY_EXPLANATION =
+    "Para o lembrete abrir em tela cheia também com o celular em uso, permita ao Braid aparecer sobre outros apps."
+
+/**
+ * Convida a dar a permissão de aparecer sobre outros apps: sem ela, com o aparelho em uso, o Android só deixa o
+ * lembrete mostrar o aviso no topo da tela (apagado ou bloqueado, a tela cheia abre de qualquer jeito).
+ */
+@Composable
+fun OverlayPrompt(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var allowed by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
+    var dismissed by rememberSaveable { mutableStateOf(false) }
+
+    // Voltar das configurações com a permissão dada some com a faixa.
+    LifecycleResumeEffect(Unit) {
+        allowed = Settings.canDrawOverlays(context)
+        onPauseOrDispose { }
+    }
+    if (!allowed && !dismissed) {
+        PromptBanner(
+            text = OVERLAY_EXPLANATION,
+            actionLabel = "Permitir",
+            onAction = { context.startActivity(overlaySettingsIntent(context)) },
+            onDismiss = { dismissed = true },
+            modifier = modifier,
+        )
+    }
+}
+
 /** As faixas de permissão dos lembretes, uma sobre a outra no topo. */
 @Composable
 fun ReminderPrompts(modifier: Modifier = Modifier) {
     Column(modifier) {
         ReminderPermissionPrompt()
         ExactAlarmPrompt()
+        OverlayPrompt()
     }
 }
 
@@ -154,4 +185,8 @@ private fun notificationSettingsIntent(context: Context): Intent =
 @RequiresApi(Build.VERSION_CODES.S)
 private fun exactAlarmSettingsIntent(context: Context): Intent =
     Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+private fun overlaySettingsIntent(context: Context): Intent =
+    Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

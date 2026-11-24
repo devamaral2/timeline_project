@@ -5,7 +5,17 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- O lembrete acende a tela e abre a tela cheia (ReminderAlertActivity) com o aparelho apagado ou bloqueado. -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!--
+        O lembrete é a função do app, então ele usa USE_EXACT_ALARM (Android 13+), que já vem concedida. Só com
+        SCHEDULE_EXACT_ALARM o Android 14+ nega por padrão, o alarme vira inexato e chega minutos depois, quando a
+        tarefa já começou e o aviso não vale mais.
+    -->
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Com o aparelho em uso, só quem pode aparecer sobre outros apps abre a tela cheia do lembrete direto. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- O Android 11+ só deixa o app ver os serviços de reconhecimento de voz se ele declarar que os procura. -->
