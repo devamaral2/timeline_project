@@ -14,7 +14,10 @@ import {
   type StoredModelSelection, modelFooter, modelName, providerOffText, resolveSelection, withEffort, withModel, withProvider,
 } from "../../../apps/web/src/lib/agent-chat/model-selection";
 import { hermesStepsOf } from "../../../apps/web/src/lib/agent-chat/hermes-steps";
-import { agentFailureText, type ChatFailureCode } from "../../../apps/web/src/lib/agent-chat/use-agent-chat";
+import { pendingStepLabel } from "../../../apps/web/src/lib/agent-chat/pending-step";
+import {
+  type AgentChatMessage, type AgentChatPending, agentFailureText, type ChatFailureCode,
+} from "../../../apps/web/src/lib/agent-chat/use-agent-chat";
 import { CHANGE_LABELS, requestEntityRef } from "../../../apps/web/src/components/hub/entity-rows";
 import { parseCommand } from "../../../apps/web/src/components/hub/hub-commands";
 import { requestWithWindow } from "../../../apps/web/src/components/hub/agent-chat-panel";
@@ -294,6 +297,47 @@ function polish(text: string, nextIsList: boolean) {
   };
 }
 
+/**
+ * O que a linha de status diz de um pedido em andamento (`pendingStepLabel`): o passo do pedido por passos, a ferramenta
+ * ou o pensamento do Hermes, senão o rótulo do pedido. Só contam as mensagens do pedido em andamento (`m1`).
+ */
+const STEP = (id: string, label: string, status: string) => ({ id, agent: "task-create", label, status });
+const stepsProcess = (steps: ReturnType<typeof STEP>[]): AgentChatMessage =>
+  ({ id: "m1-process", role: "process", request: request({ ...queued, status: "running", steps }) }) as AgentChatMessage;
+const hermesSteps = (id: string, last: "running" | "done"): AgentChatMessage => ({
+  id,
+  role: "hermes-steps",
+  running: true,
+  steps: [
+    { id: "a", kind: "thought", label: "Pensou", status: "done" },
+    { id: "b", kind: "tool", label: "Executou um comando", detail: "date", status: last },
+  ],
+});
+const STEP_PENDING: AgentChatPending = { id: "m1", label: "Realizando processos", requestId: FIRST };
+const PENDING_STEP_CASES: { messages: AgentChatMessage[]; pending: AgentChatPending }[] = [
+  { messages: [{ id: "m1-process", role: "process", request: null }], pending: STEP_PENDING },
+  { messages: [stepsProcess([])], pending: STEP_PENDING },
+  {
+    messages: [stepsProcess([STEP("1", "Criando tarefas", "done"), STEP("2", "Criando notas", "running"), STEP("3", "Editando tarefas", "queued")])],
+    pending: STEP_PENDING,
+  },
+  { messages: [stepsProcess([STEP("1", "Criando tarefas", "done"), STEP("3", "Editando tarefas", "queued")])], pending: STEP_PENDING },
+  { messages: [stepsProcess([STEP("1", "Criando tarefas", "done"), STEP("3", "Esperando o agente", "waiting")])], pending: STEP_PENDING },
+  { messages: [stepsProcess([STEP("1", "Criando tarefas", "done")])], pending: STEP_PENDING },
+  { messages: [hermesSteps("m1-steps", "running")], pending: { id: "m1", label: "Hermes" } },
+  { messages: [hermesSteps("m1-steps", "done")], pending: { id: "m1", label: "Hermes" } },
+  { messages: [{ id: "m1-steps", role: "hermes-steps", running: true, steps: [] }], pending: { id: "m1", label: "Hermes" } },
+  {
+    messages: [
+      { id: "m0", role: "user", text: "que horas são?" },
+      hermesSteps("m0-steps", "done"),
+      { ...stepsProcess([STEP("9", "De outro pedido", "running")]), id: "m0-process" },
+    ],
+    pending: { id: "m1", label: "Haiku 5.5" },
+  },
+  { messages: [], pending: { id: "m1" } },
+];
+
 export function chatFixtures(): Record<string, unknown> {
   return {
     "chat-accepted": { requestId: FIRST },
@@ -353,6 +397,7 @@ export function chatFixtures(): Record<string, unknown> {
       ],
       providerOffText: (["anthropic", "openai", "openrouter"] as const).map((provider) => ({ args: [provider], result: providerOffText(provider) })),
       failureText: FAILURE_CODES.map((code) => ({ args: [code], result: agentFailureText(code) })),
+      pendingStepLabel: PENDING_STEP_CASES.map(({ messages, pending }) => ({ args: [messages, pending], result: pendingStepLabel(messages, pending) })),
     },
   };
 }

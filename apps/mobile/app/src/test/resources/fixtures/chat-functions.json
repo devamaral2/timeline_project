@@ -3086,5 +3086,363 @@
       ],
       "result": "Sua sessão acabou. Entre de novo para continuar."
     }
+  ],
+  "pendingStepLabel": [
+    {
+      "args": [
+        [
+          {
+            "id": "m1-process",
+            "role": "process",
+            "request": null
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Realizando processos",
+          "requestId": "R00000000000000000000000A1"
+        }
+      ],
+      "result": "Entendendo o pedido"
+    },
+    {
+      "args": [
+        [
+          {
+            "id": "m1-process",
+            "role": "process",
+            "request": {
+              "id": "R00000000000000000000000A1",
+              "kind": "request",
+              "route": "steps",
+              "status": "running",
+              "title": "Criar a reunião de sexta",
+              "createdAt": "2026-09-14T14:48:00.000Z",
+              "updatedAt": "2026-09-14T14:48:00.000Z",
+              "text": "Criar a reunião de sexta",
+              "steps": [],
+              "entities": []
+            }
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Realizando processos",
+          "requestId": "R00000000000000000000000A1"
+        }
+      ],
+      "result": "Entendendo o pedido"
+    },
+    {
+      "args": [
+        [
+          {
+            "id": "m1-process",
+            "role": "process",
+            "request": {
+              "id": "R00000000000000000000000A1",
+              "kind": "request",
+              "route": "steps",
+              "status": "running",
+              "title": "Criar a reunião de sexta",
+              "createdAt": "2026-09-14T14:48:00.000Z",
+              "updatedAt": "2026-09-14T14:48:00.000Z",
+              "text": "Criar a reunião de sexta",
+              "steps": [
+                {
+                  "id": "1",
+                  "agent": "task-create",
+                  "label": "Criando tarefas",
+                  "status": "done"
+                },
+                {
+                  "id": "2",
+                  "agent": "task-create",
+                  "label": "Criando notas",
+                  "status": "running"
+                },
+                {
+                  "id": "3",
+                  "agent": "task-create",
+                  "label": "Editando tarefas",
+                  "status": "queued"
+                }
+              ],
+              "entities": []
+            }
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Realizando processos",
+          "requestId": "R00000000000000000000000A1"
+        }
+      ],
+      "result": "Criando notas"
+    },
+    {
+      "args": [
+        [
+          {
+            "id": "m1-process",
+            "role": "process",
+            "request": {
+              "id": "R00000000000000000000000A1",
+              "kind": "request",
+              "route": "steps",
+              "status": "running",
+              "title": "Criar a reunião de sexta",
+              "createdAt": "2026-09-14T14:48:00.000Z",
+              "updatedAt": "2026-09-14T14:48:00.000Z",
+              "text": "Criar a reunião de sexta",
+              "steps": [
+                {
+                  "id": "1",
+                  "agent": "task-create",
+                  "label": "Criando tarefas",
+                  "status": "done"
+                },
+                {
+                  "id": "3",
+                  "agent": "task-create",
+                  "label": "Editando tarefas",
+                  "status": "queued"
+                }
+              ],
+              "entities": []
+            }
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Realizando processos",
+          "requestId": "R00000000000000000000000A1"
+        }
+      ],
+      "result": "Editando tarefas"
+    },
+    {
+      "args": [
+        [
+          {
+            "id": "m1-process",
+            "role": "process",
+            "request": {
+              "id": "R00000000000000000000000A1",
+              "kind": "request",
+              "route": "steps",
+              "status": "running",
+              "title": "Criar a reunião de sexta",
+              "createdAt": "2026-09-14T14:48:00.000Z",
+              "updatedAt": "2026-09-14T14:48:00.000Z",
+              "text": "Criar a reunião de sexta",
+              "steps": [
+                {
+                  "id": "1",
+                  "agent": "task-create",
+                  "label": "Criando tarefas",
+                  "status": "done"
+                },
+                {
+                  "id": "3",
+                  "agent": "task-create",
+                  "label": "Esperando o agente",
+                  "status": "waiting"
+                }
+              ],
+              "entities": []
+            }
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Realizando processos",
+          "requestId": "R00000000000000000000000A1"
+        }
+      ],
+      "result": "Esperando o agente"
+    },
+    {
+      "args": [
+        [
+          {
+            "id": "m1-process",
+            "role": "process",
+            "request": {
+              "id": "R00000000000000000000000A1",
+              "kind": "request",
+              "route": "steps",
+              "status": "running",
+              "title": "Criar a reunião de sexta",
+              "createdAt": "2026-09-14T14:48:00.000Z",
+              "updatedAt": "2026-09-14T14:48:00.000Z",
+              "text": "Criar a reunião de sexta",
+              "steps": [
+                {
+                  "id": "1",
+                  "agent": "task-create",
+                  "label": "Criando tarefas",
+                  "status": "done"
+                }
+              ],
+              "entities": []
+            }
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Realizando processos",
+          "requestId": "R00000000000000000000000A1"
+        }
+      ],
+      "result": "Criando tarefas"
+    },
+    {
+      "args": [
+        [
+          {
+            "id": "m1-steps",
+            "role": "hermes-steps",
+            "running": true,
+            "steps": [
+              {
+                "id": "a",
+                "kind": "thought",
+                "label": "Pensou",
+                "status": "done"
+              },
+              {
+                "id": "b",
+                "kind": "tool",
+                "label": "Executou um comando",
+                "detail": "date",
+                "status": "running"
+              }
+            ]
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Hermes"
+        }
+      ],
+      "result": "Executou um comando"
+    },
+    {
+      "args": [
+        [
+          {
+            "id": "m1-steps",
+            "role": "hermes-steps",
+            "running": true,
+            "steps": [
+              {
+                "id": "a",
+                "kind": "thought",
+                "label": "Pensou",
+                "status": "done"
+              },
+              {
+                "id": "b",
+                "kind": "tool",
+                "label": "Executou um comando",
+                "detail": "date",
+                "status": "done"
+              }
+            ]
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Hermes"
+        }
+      ],
+      "result": "Executou um comando"
+    },
+    {
+      "args": [
+        [
+          {
+            "id": "m1-steps",
+            "role": "hermes-steps",
+            "running": true,
+            "steps": []
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Hermes"
+        }
+      ],
+      "result": "Hermes"
+    },
+    {
+      "args": [
+        [
+          {
+            "id": "m0",
+            "role": "user",
+            "text": "que horas são?"
+          },
+          {
+            "id": "m0-steps",
+            "role": "hermes-steps",
+            "running": true,
+            "steps": [
+              {
+                "id": "a",
+                "kind": "thought",
+                "label": "Pensou",
+                "status": "done"
+              },
+              {
+                "id": "b",
+                "kind": "tool",
+                "label": "Executou um comando",
+                "detail": "date",
+                "status": "done"
+              }
+            ]
+          },
+          {
+            "id": "m0-process",
+            "role": "process",
+            "request": {
+              "id": "R00000000000000000000000A1",
+              "kind": "request",
+              "route": "steps",
+              "status": "running",
+              "title": "Criar a reunião de sexta",
+              "createdAt": "2026-09-14T14:48:00.000Z",
+              "updatedAt": "2026-09-14T14:48:00.000Z",
+              "text": "Criar a reunião de sexta",
+              "steps": [
+                {
+                  "id": "9",
+                  "agent": "task-create",
+                  "label": "De outro pedido",
+                  "status": "running"
+                }
+              ],
+              "entities": []
+            }
+          }
+        ],
+        {
+          "id": "m1",
+          "label": "Haiku 5.5"
+        }
+      ],
+      "result": "Haiku 5.5"
+    },
+    {
+      "args": [
+        [],
+        {
+          "id": "m1"
+        }
+      ],
+      "result": "Pensando"
+    }
   ]
 }

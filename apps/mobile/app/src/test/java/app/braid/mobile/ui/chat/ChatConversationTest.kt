@@ -1,5 +1,8 @@
 package app.braid.mobile.ui.chat
 
+import app.braid.mobile.core.network.BraidJson
+import app.braid.mobile.data.requests.RequestDto
+import app.braid.mobile.data.requests.toDomain
 import app.braid.mobile.domain.chat.HermesStep
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.EntityKind
@@ -11,6 +14,13 @@ import app.braid.mobile.domain.request.TraceKind
 import app.braid.mobile.domain.request.TraceStatus
 import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.support.fixtureCases
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -19,7 +29,8 @@ import java.time.Instant
 
 /**
  * O que entra na conversa e o que a linha de status diz (as regras de `agent-chat-panel.tsx`, `process-answer.tsx` e
- * `pending-step.ts` do web): o andamento de um pedido e os passos do Hermes ficam na aba "Processo", e só o passo atual
+ * `pending-step.ts` do web; a da linha de status confere contra a fixture gerada da função TS, as outras moram no JSX
+ * do web e ficam escritas aqui): o andamento de um pedido e os passos do Hermes ficam na aba "Processo", e só o passo atual
  * vai na linha de status do campo.
  */
 class ChatConversationTest {
@@ -96,50 +107,54 @@ class ChatConversationTest {
         )
     }
 
-    private val pending = ChatPending(id = "m1", label = "Realizando processos", requestId = "r1")
-
-    private fun running(steps: List<RequestStep>) = ChatMessage.Process("m1-process", request(TaskStatus.Running, steps = steps))
-
-    @Test
-    fun `before the server unfolds the request the status line says it is being understood`() {
-        assertEquals("Entendendo o pedido", pendingStepLabel(listOf(ChatMessage.Process("m1-process", null)), pending))
-        assertEquals("Entendendo o pedido", pendingStepLabel(listOf(running(emptyList())), pending))
+    /** Uma mensagem do chat do web, como o gerador a gravou, na mensagem do app. */
+    private fun messageOf(element: JsonElement): ChatMessage {
+        val message = element.jsonObject
+        val id = message.getValue("id").jsonPrimitive.content
+        return when (val role = message.getValue("role").jsonPrimitive.content) {
+            "user" -> ChatMessage.User(id, message.getValue("text").jsonPrimitive.content)
+            "process" ->
+                ChatMessage.Process(
+                    id,
+                    message.getValue("request").takeUnless { it is JsonNull }?.let {
+                        BraidJson.decodeFromJsonElement(RequestDto.serializer(), it).toDomain()
+                    },
+                )
+            "hermes-steps" ->
+                ChatMessage.HermesSteps(
+                    id,
+                    steps =
+                        message.getValue("steps").jsonArray.map {
+                            val step = it.jsonObject
+                            HermesStep(
+                                id = step.getValue("id").jsonPrimitive.content,
+                                kind = requireNotNull(TraceKind.fromCodeOrNull(step.getValue("kind").jsonPrimitive.content)),
+                                label = step.getValue("label").jsonPrimitive.content,
+                                detail = step["detail"]?.jsonPrimitive?.content,
+                                status = TraceStatus.fromCode(step.getValue("status").jsonPrimitive.content),
+                            )
+                        },
+                    running = message.getValue("running").jsonPrimitive.boolean,
+                )
+            else -> error("Mensagem sem tradução no teste: $role")
+        }
     }
 
     @Test
-    fun `a request in steps shows the running step, else the next in line, else the last`() {
-        val active = step.copy(id = "2", label = "Criando notas", status = TaskStatus.Running)
-        val queued = step.copy(id = "3", label = "Editando tarefas", status = TaskStatus.Queued)
-        assertEquals("Criando notas", pendingStepLabel(listOf(running(listOf(step, active, queued))), pending))
-        assertEquals("Editando tarefas", pendingStepLabel(listOf(running(listOf(step, queued))), pending))
-        assertEquals("Criando tarefas", pendingStepLabel(listOf(running(listOf(step))), pending))
-    }
-
-    @Test
-    fun `Hermes and the model show the tool or thought in course, else the last one`() {
-        fun steps(last: TraceStatus) =
-            ChatMessage.HermesSteps(
-                "m1-steps",
-                steps =
-                    listOf(
-                        HermesStep("a", TraceKind.Thought, "Pensou", detail = null, status = TraceStatus.Done),
-                        HermesStep("b", TraceKind.Tool, "Executou um comando", detail = "date", status = last),
+    fun `the status line says the step the web says, for steps, Hermes and the model`() {
+        // Os casos e as respostas vêm de `pendingStepLabel` (`pending-step.ts`), pelo gerador de fixtures.
+        for (case in fixtureCases("chat-functions", "pendingStepLabel")) {
+            val pending = case.args[1].jsonObject
+            val actual =
+                pendingStepLabel(
+                    case.args[0].jsonArray.map(::messageOf),
+                    ChatPending(
+                        id = pending.getValue("id").jsonPrimitive.content,
+                        label = pending["label"]?.jsonPrimitive?.content,
+                        requestId = pending["requestId"]?.jsonPrimitive?.content,
                     ),
-                running = true,
-            )
-        assertEquals("Executou um comando", pendingStepLabel(listOf(steps(TraceStatus.Running)), pending.copy(label = "Hermes")))
-        assertEquals("Executou um comando", pendingStepLabel(listOf(steps(TraceStatus.Done)), pending.copy(label = "Hermes")))
-    }
-
-    @Test
-    fun `with no step the request label stays, and only the steps of the running request count`() {
-        val other =
-            ChatMessage.HermesSteps(
-                "m0-steps",
-                steps = listOf(HermesStep("a", TraceKind.Tool, "Buscou na web", detail = null, status = TraceStatus.Done)),
-                running = false,
-            )
-        assertEquals("Haiku 5.5", pendingStepLabel(listOf(other), pending.copy(label = "Haiku 5.5")))
-        assertEquals("Pensando", pendingStepLabel(emptyList(), ChatPending(id = "m1", label = null)))
+                )
+            assertEquals(case.toString(), case.resultString, actual)
+        }
     }
 }

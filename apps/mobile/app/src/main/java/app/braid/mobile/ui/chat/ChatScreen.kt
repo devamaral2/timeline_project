@@ -454,7 +454,7 @@ private fun CommandList(
 }
 
 /**
- * A conversa (canvas "Chat com o Hermes — conversa limpa", opção B): o pedido num balão à direita e a fala do assistente em
+ * A conversa (canvas "Chat com o Hermes — conversa limpa", opção B): o pedido na faixa de borda de largura cheia e a fala do assistente em
  * texto solto, sob o robô cinza e o nome. Enquanto um pedido roda ela não ganha nada: o passo atual vai na linha de status
  * do campo, e a caixa de processo e os passos do Hermes ficam na aba "Processo".
  */
