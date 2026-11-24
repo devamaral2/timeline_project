@@ -491,13 +491,94 @@ a tag em `ops/production/ai-memory.yaml` no repositório.
 
 ---
 
+## Parte E: ligar o LLM (Anthropic, Claude Haiku 5.5)
+
+Sem LLM, o ai-memory só captura e busca. Com ele, consolida as sessões em
+páginas do wiki. O manifesto já declara `AI_MEMORY_LLM_PROVIDER=anthropic` e
+`AI_MEMORY_LLM_MODEL=claude-haiku-5-5`; falta só a chave. A versão 3.5.1 já
+trata o Haiku 5.5 como modelo atual (corrigido na #1180 do ai-memory).
+
+Não use `anthropic-oauth` (token da assinatura Claude): a Anthropic recusa
+esses tokens em apps de terceiros, e todo pedido volta `429`.
+
+### E1. Criar a chave e guardar no 1Password
+
+**Navegador:** em `console.anthropic.com`, **API keys → Create key**, com um
+nome como `ai-memory-vps`. Use uma chave só para o ai-memory, separada da do
+`api`, para poder revogar e acompanhar o gasto à parte.
+
+Guarde o valor no Environment **de produção** do 1Password, no campo
+`AI_MEMORY_ANTHROPIC_API_KEY`, fora de qualquer scope.
+
+### E2. Acrescentar a chave ao Secret
+
+**Servidor.** O `patch` acrescenta a chave sem mexer no token. O JSON vai por
+stdin, e o `printf` é builtin do shell, então a chave não aparece na lista de
+processos.
+
+```bash
+read -rsp "AI_MEMORY_ANTHROPIC_API_KEY: " V1; echo
+case "$V1" in sk-ant-api*) ;; *) echo "NÃO PARECE UMA CHAVE DE API DA ANTHROPIC";; esac
+printf '{"stringData":{"ANTHROPIC_API_KEY":"%s"}}' "$V1" \
+  | kubectl -n ai-memory patch secret ai-memory-env --type merge --patch-file /dev/stdin
+unset V1
+kubectl -n ai-memory get secret ai-memory-env -o jsonpath='{.data}' | jq 'keys'
+```
+
+Esperado: `["AI_MEMORY_AUTH_TOKEN","ANTHROPIC_API_KEY"]`.
+
+### E3. Aplicar o manifesto novo
+
+**Seu computador**, na raiz do repositório, depois do merge:
+
+```bash
+scp -P <porta> ops/production/ai-memory.yaml <usuario>@<host>:
+```
+
+**Servidor:**
+
+```bash
+sudo install -m 0644 -o root -g root ~/ai-memory.yaml /opt/braid/k8s/ai-memory.yaml
+rm ~/ai-memory.yaml
+grep -n "AI_MEMORY_LLM" /opt/braid/k8s/ai-memory.yaml
+kubectl apply -f /opt/braid/k8s/ai-memory.yaml
+kubectl -n ai-memory rollout status deployment/ai-memory --timeout=300s
+```
+
+O `apply` muda o template do pod e já provoca a troca (estratégia
+`Recreate`: alguns segundos fora do ar; os hooks guardam as capturas no spool
+e reenviam). Se só o Secret tivesse mudado, seria preciso
+`kubectl -n ai-memory rollout restart deployment/ai-memory`.
+
+### E4. Conferir
+
+**Servidor:**
+
+```bash
+kubectl -n ai-memory logs deploy/ai-memory --tail=60 | grep -i -E "llm|provider|anthropic"
+kubectl -n ai-memory exec deploy/ai-memory -- /usr/local/bin/ai-memory llm-test --server
+```
+
+Esperado: uma linha `server provider: anthropic / claude-haiku-5-5 (… ms)`.
+O `--server` testa o que o servidor tem configurado, com a chave dele; um
+`llm-test` rodado na sua máquina falharia, porque a chave não está lá.
+
+- `401` ou `authentication_error`: chave errada ou revogada. Refaça o E2.
+- `400` falando de modelo: confira `AI_MEMORY_LLM_MODEL` no manifesto aplicado.
+- `400` com `credit balance`: falta crédito na conta da Console.
+
+A primeira consolidação acontece nas sessões que terminarem depois disso.
+Para consolidar o que já existe, use `memory_consolidate` por MCP numa sessão
+do Claude Code.
+
+**Desligar:** tire as duas linhas `AI_MEMORY_LLM_*` do manifesto e reaplique.
+A chave pode ficar no Secret.
+
+---
+
 ## Depois
 
-- **Consolidação por LLM.** Acrescente ao Secret `ai-memory-env`
-  `AI_MEMORY_LLM_PROVIDER` e a chave do provedor escolhido (ver
-  `docs/config-properties.md` do ai-memory; o OpenRouter entra como
-  `openai-compat`, a confirmar) e reinicie o deployment. As chaves seguem a
-  regra do 1Password.
+- **Consolidação por LLM.** Ver a Parte E.
 - **Hermes gravando na mesma memória.** O ai-memory tem hooks para o Hermes
   (`install-hooks --agent hermes` imprime o bloco do `config.yaml`). Pela rede
   interna, exige três mudanças: `ai-memory.ai-memory.svc.cluster.local` em
