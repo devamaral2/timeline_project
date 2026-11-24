@@ -63,7 +63,7 @@
 
         <!-- Os três juntos fazem o Braid aparecer em "App assistente digital" (veja data/assistant). -->
         <service
-            android:name=".data.assistant.BraidVoiceInteractionService"
+            android:name=".BraidVoiceInteractionService"
             android:exported="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION">
             <meta-data
@@ -74,7 +74,7 @@
             </intent-filter>
         </service>
         <service
-            android:name=".data.assistant.BraidVoiceInteractionSessionService"
+            android:name=".BraidVoiceInteractionSessionService"
             android:exported="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION" />
         <service

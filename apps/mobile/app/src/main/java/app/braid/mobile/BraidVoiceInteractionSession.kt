@@ -1,4 +1,4 @@
-package app.braid.mobile.data.assistant
+package app.braid.mobile
 
 import android.content.Context
 import android.content.Intent
@@ -25,8 +25,8 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
-import app.braid.mobile.MainActivity
 import app.braid.mobile.core.designsystem.BraidTheme
+import app.braid.mobile.data.assistant.AssistantEntryPoint
 import app.braid.mobile.domain.settings.isDark
 import app.braid.mobile.ui.assistant.AssistantPanel
 import app.braid.mobile.ui.assistant.AssistantRecordsViewModel

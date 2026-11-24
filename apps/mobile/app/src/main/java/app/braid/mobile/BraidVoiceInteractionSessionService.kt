@@ -1,4 +1,4 @@
-package app.braid.mobile.data.assistant
+package app.braid.mobile
 
 import android.os.Bundle
 import android.service.voice.VoiceInteractionSession
