@@ -9,15 +9,25 @@ STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 DEST="/opt/braid/backups/$STAMP"
 mkdir -p "$DEST"
 
-kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid -Fc > "$DEST/braid.dump"
-kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid_auth -Fc > "$DEST/braid_auth.dump"
-kubectl -n braid exec postgres-0 -- pg_dumpall -U postgres --globals-only > "$DEST/globals.sql"
+timeout 1800 kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid -Fc > "$DEST/braid.dump"
+timeout 1800 kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid_auth -Fc > "$DEST/braid_auth.dump"
+timeout 600 kubectl -n braid exec postgres-0 -- pg_dumpall -U postgres --globals-only > "$DEST/globals.sql"
 kubectl -n braid get secrets -o yaml > "$DEST/timeline-secrets.yaml"
 kubectl -n observability get secrets grafana-admin -o yaml > "$DEST/grafana-secret.yaml"
 kubectl -n edge get secrets cloudflared-token -o yaml > "$DEST/tunnel-secret.yaml"
 
-kubectl -n braid exec -i postgres-0 -- pg_restore --list < "$DEST/braid.dump" > "$DEST/braid-list.txt"
-kubectl -n braid exec -i postgres-0 -- pg_restore --list < "$DEST/braid_auth.dump" > "$DEST/auth-list.txt"
+# `pg_restore --list` le so o cabecalho e o TOC e sai sem consumir o resto do stdin.
+# Com um dump maior que o buffer do stream, o `kubectl exec -i` fica esperando para
+# sempre (travou o deploy de 2026-11-25). O `cat` le o arquivo inteiro antes da
+# listagem, e o `timeout` impede que outro travamento segure o deploy por uma hora.
+list_dump() {
+  timeout 600 kubectl -n braid exec -i postgres-0 -- sh -c \
+    'f=$(mktemp) || exit 1; cat > "$f" && pg_restore --list "$f"; rc=$?; rm -f "$f"; exit $rc' \
+    < "$1"
+}
+
+list_dump "$DEST/braid.dump" > "$DEST/braid-list.txt"
+list_dump "$DEST/braid_auth.dump" > "$DEST/auth-list.txt"
 
 ARCHIVE_PATHS=(private k8s bin env.sh k3s-version.txt monitoring-version.txt)
 if [[ -f /opt/braid/release.env ]]; then
