@@ -1,11 +1,13 @@
 package app.braid.mobile.support
 
+import app.braid.mobile.domain.reminder.BackgroundRefresh
 import app.braid.mobile.domain.reminder.Reminder
 import app.braid.mobile.domain.reminder.ReminderAlarms
 import app.braid.mobile.domain.reminder.ReminderNotifier
 import app.braid.mobile.domain.time.AppClock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CopyOnWriteArrayList
 
 /** O relógio dos testes: só anda quando o teste manda. */
 class MutableClock(
@@ -52,5 +54,18 @@ class FakeReminderNotifier : ReminderNotifier {
 
     override suspend fun show(reminder: Reminder) {
         shown += reminder
+    }
+}
+
+/** O WorkManager trocado: guarda a ordem em que a releitura de fundo foi ligada e desligada. */
+class FakeBackgroundRefresh : BackgroundRefresh {
+    val calls = CopyOnWriteArrayList<String>()
+
+    override fun start() {
+        calls += "start"
+    }
+
+    override fun stop() {
+        calls += "stop"
     }
 }

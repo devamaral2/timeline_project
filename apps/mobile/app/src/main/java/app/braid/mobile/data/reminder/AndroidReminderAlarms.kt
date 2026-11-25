@@ -21,10 +21,12 @@ import javax.inject.Singleton
 private val SCHEDULED = stringSetPreferencesKey("reminders_scheduled")
 
 /**
- * O `AlarmManager` de verdade: um alarme por lembrete, que acorda o aparelho mesmo em Doze. Exato quando
- * o usuário permitiu alarmes exatos; do contrário, inexato, que o sistema pode adiantar ou atrasar um pouco (a janela
- * de 1 h do cálculo cobre o atraso). As chaves agendadas ficam no DataStore para o app saber o que cancelar depois de
- * ser fechado.
+ * O `AlarmManager` de verdade: um alarme por lembrete, que acorda o aparelho mesmo em Doze. Exato, ele é um despertador
+ * (`setAlarmClock`): o Android não adia esse tipo nem com o uso em segundo plano restrito (a bateria do app em
+ * "Restrito", a economia da Samsung e de outros fabricantes), que segurava o alarme comum até o app ser aberto. Em
+ * troca, o sistema mostra o relógio na barra de status e o próximo lembrete como "próximo alarme". Sem a permissão de
+ * alarme exato, inexato, que o sistema pode adiantar ou atrasar um pouco (a janela de 1 h do cálculo cobre o atraso). As
+ * chaves agendadas ficam no DataStore para o app saber o que cancelar depois de ser fechado.
  */
 @Singleton
 class AndroidReminderAlarms
@@ -51,11 +53,7 @@ class AndroidReminderAlarms
             val at = reminder.triggerAt.toEpochMilli()
             try {
                 if (exact) {
-                    manager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        at,
-                        operation,
-                    )
+                    manager.setAlarmClock(AlarmManager.AlarmClockInfo(at, showIntentFor(reminder)), operation)
                 } else {
                     manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, operation)
                 }
@@ -65,6 +63,10 @@ class AndroidReminderAlarms
             }
             store.edit { it[SCHEDULED] = it[SCHEDULED].orEmpty() + reminder.key }
         }
+
+        /** O toque no "próximo alarme" do sistema (configurações rápidas, tela de bloqueio) abre a tarefa do lembrete. */
+        private fun showIntentFor(reminder: Reminder): PendingIntent =
+            PendingIntent.getActivity(context, reminder.key.hashCode(), taskDetailIntent(context, reminder), FLAGS)
 
         override suspend fun cancel(key: String) {
             val existing =
