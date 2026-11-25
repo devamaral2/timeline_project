@@ -20,6 +20,17 @@ interface ReminderAlarms {
     suspend fun scheduledKeys(): Set<String>
 }
 
+/**
+ * A releitura da fonte com o app fechado (o WorkManager, de 15 em 15 min com rede): a tarefa criada ou mudada fora do
+ * aparelho (no web, pelo Hermes) ganha o alarme sem o app precisar ser aberto.
+ */
+interface BackgroundRefresh {
+    /** Liga a releitura periódica; ligar de novo não reinicia a contagem. */
+    fun start()
+
+    fun stop()
+}
+
 /** A notificação do sistema para um lembrete que venceu. */
 interface ReminderNotifier {
     suspend fun show(reminder: Reminder)

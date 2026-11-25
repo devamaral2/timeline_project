@@ -1,5 +1,6 @@
 package app.braid.mobile.data.reminder
 
+import app.braid.mobile.domain.reminder.BackgroundRefresh
 import app.braid.mobile.domain.reminder.ExactAlarmPromptRepository
 import app.braid.mobile.domain.reminder.FiredKeysStore
 import app.braid.mobile.domain.reminder.NotificationPermissionRepository
@@ -23,6 +24,9 @@ import javax.inject.Singleton
 abstract class ReminderBindings {
     @Binds
     abstract fun bindAlarms(alarms: AndroidReminderAlarms): ReminderAlarms
+
+    @Binds
+    abstract fun bindBackgroundRefresh(refresh: WorkManagerBackgroundRefresh): BackgroundRefresh
 
     @Binds
     abstract fun bindNotifier(notifier: AndroidReminderNotifier): ReminderNotifier

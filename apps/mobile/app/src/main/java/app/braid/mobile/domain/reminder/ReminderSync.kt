@@ -95,6 +95,9 @@ class ReminderSync(
         }
     }
 
+    /** A releitura de fundo ([BackgroundRefresh]): o processo pode ter acordado só por ela, e sem sessão não lê nada (`null`). */
+    suspend fun refreshWhenSignedIn(): RefreshOutcome? = if (isSignedIn()) refresh() else null
+
     /** Sair da conta: nenhum alarme dela deve disparar, e o que o aparelho guardou (disparados, lidos, cronograma) não vale para a próxima. */
     suspend fun clear() {
         mutex.withLock {
@@ -138,6 +141,18 @@ class ReminderSync(
             .distinctUntilChanged()
             .filter { !it }
             .collect { clear() }
+    }
+
+    /** Liga a releitura de fundo enquanto há sessão e a desliga quando ela acaba; roda enquanto o processo viver. */
+    suspend fun keepBackgroundRefreshWithSession(
+        session: Flow<SessionState>,
+        background: BackgroundRefresh,
+    ) {
+        session
+            .filter { it !is SessionState.Unknown }
+            .map { it is SessionState.SignedIn }
+            .distinctUntilChanged()
+            .collect { signedIn -> if (signedIn) background.start() else background.stop() }
     }
 
     /** O processo pode ter acordado só pelo alarme: a sessão guardada é lida antes de decidir. */

@@ -6,6 +6,7 @@ import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.domain.session.SessionUser
 import app.braid.mobile.domain.task.TaskChanges
+import app.braid.mobile.support.FakeBackgroundRefresh
 import app.braid.mobile.support.FakeReminderAlarms
 import app.braid.mobile.support.FakeReminderNotifier
 import app.braid.mobile.support.InMemorySessionStorage
@@ -432,6 +433,36 @@ class ReminderSyncTest {
             assertTrue(alarms.scheduled.isEmpty())
             assertTrue(fired.read().isEmpty())
             assertTrue(stores.readKeys.read().isEmpty())
+            job.cancel()
+        }
+
+    @Test
+    fun `the background read runs only with a session, which a process woken by it reads first`() =
+        runBlocking {
+            assertEquals(null, newSync(session = null).refreshWhenSignedIn())
+            assertEquals(0, backend.requestsTo("GET", "/api/tasks").size)
+
+            // Processo novo, acordado só pela releitura de fundo: o estado da sessão ainda é "desconhecido".
+            assertEquals(RefreshOutcome.Refreshed, newSync().refreshWhenSignedIn())
+            assertEquals(1, backend.requestsTo("GET", "/api/tasks").size)
+            assertEquals(5, alarms.scheduled.size)
+        }
+
+    @Test
+    fun `the background read is on while signed in and off once the session ends`() =
+        runBlocking {
+            val background = FakeBackgroundRefresh()
+            val session = MutableStateFlow<SessionState>(SessionState.Unknown)
+            val job = CoroutineScope(Dispatchers.Default).launch { sync.keepBackgroundRefreshWithSession(session, background) }
+            delay(100)
+            assertEquals(emptyList<String>(), background.calls)
+
+            session.value = SessionState.SignedIn(SessionUser("user-1", "Rafael", "r@example.com"))
+            withTimeout(5_000) { while (background.calls.isEmpty()) delay(10) }
+            session.value = SessionState.SignedOut
+            withTimeout(5_000) { while (background.calls.size < 2) delay(10) }
+
+            assertEquals(listOf("start", "stop"), background.calls)
             job.cancel()
         }
 
