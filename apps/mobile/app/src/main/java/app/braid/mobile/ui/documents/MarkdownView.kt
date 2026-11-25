@@ -1,16 +1,23 @@
 package app.braid.mobile.ui.documents
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,11 +27,25 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -35,6 +56,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -44,10 +66,16 @@ import app.braid.mobile.core.designsystem.BraidDisplayFont
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
+import app.braid.mobile.core.network.thirdPartyImageLoader
+import app.braid.mobile.domain.markdown.InlineRun
 import app.braid.mobile.domain.markdown.MarkdownBlock
 import app.braid.mobile.domain.markdown.MarkdownInline
 import app.braid.mobile.domain.markdown.MarkdownListItem
+import app.braid.mobile.domain.markdown.VideoLink
 import app.braid.mobile.domain.markdown.parseMarkdown
+import app.braid.mobile.domain.markdown.soleYouTubeLink
+import app.braid.mobile.domain.markdown.splitPictures
+import coil3.compose.SubcomposeAsyncImage
 
 /**
  * O markdown de um documento de texto, como o `MarkdownView` do web: títulos, listas, ênfase, código e links. O
@@ -58,9 +86,20 @@ fun MarkdownView(
     source: String,
     modifier: Modifier = Modifier,
 ) {
-    val blocks = remember(source) { parseMarkdown(source) }
-    MarkdownBlocks(blocks, modifier)
+    val blocks = remember(source) { parseMarkdown(source, images = true) }
+    // As imagens do documento aparecem todas juntas, quando a pessoa pede; o estado é desta leitura, não é guardado.
+    var shown by remember { mutableStateOf(false) }
+    val images = remember(shown) { ImagesState(shown) { shown = true } }
+    CompositionLocalProvider(LocalImages provides images) { MarkdownBlocks(blocks, modifier) }
 }
+
+/** Se as imagens do documento já foram pedidas, e como pedi-las. */
+private class ImagesState(
+    val shown: Boolean,
+    val show: () -> Unit,
+)
+
+private val LocalImages = staticCompositionLocalOf { ImagesState(shown = false) {} }
 
 @Composable
 private fun MarkdownBlocks(
@@ -72,7 +111,7 @@ private fun MarkdownBlocks(
         blocks.forEach { block ->
             when (block) {
                 is MarkdownBlock.Heading -> HeadingBlock(block)
-                is MarkdownBlock.Paragraph -> InlineText(block.content, BODY)
+                is MarkdownBlock.Paragraph -> ParagraphBlock(block)
                 is MarkdownBlock.ListBlock -> ListBlock(block)
                 is MarkdownBlock.Code -> CodeBlock(block.text)
                 is MarkdownBlock.Quote -> QuoteBlock(block)
@@ -96,8 +135,37 @@ private fun HeadingBlock(block: MarkdownBlock.Heading) {
     InlineText(block.content, style, Modifier.padding(top = 4.dp))
 }
 
+/** Um link do YouTube sozinho no parágrafo vira o cartão do vídeo; o resto é texto, com as imagens em linha própria. */
+@Composable
+private fun ParagraphBlock(block: MarkdownBlock.Paragraph) {
+    val video = remember(block) { soleYouTubeLink(block) }
+    if (video != null) VideoBlock(video) else InlineText(block.content, BODY)
+}
+
 @Composable
 private fun InlineText(
+    content: List<MarkdownInline>,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+) {
+    val runs = remember(content) { splitPictures(content) }
+    val only = runs.singleOrNull()
+    if (only is InlineRun.Text) {
+        RunText(only.nodes, style, modifier)
+    } else {
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            runs.forEach { run ->
+                when (run) {
+                    is InlineRun.Text -> RunText(run.nodes, style)
+                    is InlineRun.Picture -> Picture(run)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RunText(
     content: List<MarkdownInline>,
     style: TextStyle,
     modifier: Modifier = Modifier,
@@ -124,6 +192,8 @@ private fun annotated(
                 when (node) {
                     is MarkdownInline.Text -> append(node.text)
                     MarkdownInline.LineBreak -> append("\n")
+                    // Só chega aqui a imagem dentro de negrito ou de um link com texto: fica o texto alternativo.
+                    is MarkdownInline.Image -> append(node.alt)
                     is MarkdownInline.Strong -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(node.content) }
                     is MarkdownInline.Emphasis -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(node.content) }
                     is MarkdownInline.Strike ->
@@ -259,3 +329,136 @@ private fun TableRow(
 }
 
 private val TABLE_CELL_WIDTH = 132.dp
+
+private const val VIDEO_RADIUS = 10
+private const val PLAY_BUTTON = 44
+
+/**
+ * O vídeo de um link do YouTube sozinho no parágrafo. No app não há player embutido nem miniatura: abrir o documento
+ * não faz requisição nenhuma, e "Assistir no YouTube" entrega o endereço original ao YouTube (ou ao navegador). Sob o
+ * cartão fica o link, como no web.
+ */
+@Composable
+private fun VideoBlock(link: VideoLink) {
+    val context = LocalContext.current
+    val ink = MaterialTheme.colorScheme.onBackground
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val shape = RoundedCornerShape(VIDEO_RADIUS.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(VIDEO_ASPECT)
+                .clip(shape)
+                .background(ink.copy(alpha = WASH_ALPHA), shape)
+                .border(0.5.dp, MaterialTheme.colorScheme.outline, shape)
+                .clickable(role = Role.Button, onClickLabel = WATCH_ON_YOUTUBE) { openOutside(context, link.href) }
+                .semantics { contentDescription = WATCH_ON_YOUTUBE },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.size(PLAY_BUTTON.dp).background(ink, RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
+                    SvgIcon(BraidIcons.play, size = 18.dp, color = MaterialTheme.colorScheme.background)
+                }
+                Text(WATCH_ON_YOUTUBE, color = ink, style = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium))
+            }
+        }
+        val caption =
+            buildAnnotatedString {
+                withLink(LinkAnnotation.Url(link.href, TextLinkStyles(SpanStyle(textDecoration = TextDecoration.Underline)))) {
+                    append(link.caption)
+                }
+            }
+        Text(caption, color = muted, style = TextStyle(fontSize = 13.sp, lineHeight = 18.sp))
+    }
+}
+
+private const val VIDEO_ASPECT = 16f / 9f
+private const val WATCH_ON_YOUTUBE = "Assistir no YouTube"
+
+private fun openOutside(
+    context: Context,
+    href: String,
+) {
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(href)))
+    } catch (missing: ActivityNotFoundException) {
+        // Sem app nem navegador para o endereço: não há para onde ir.
+    }
+}
+
+private const val IMAGE_ALT_PLACEHOLDER = "Imagem"
+private const val SHOW_IMAGES = "Mostrar imagens"
+
+/**
+ * Uma imagem do documento. Até a pessoa pedir ela é só um botão com o texto alternativo, porque abrir um documento não
+ * pode disparar requisição a um servidor qualquer; pedida (qualquer botão libera todas), é buscada por um cliente sem
+ * a sessão do app, sem `Referer` e sem cookies (`thirdPartyImageLoader`).
+ */
+@Composable
+private fun Picture(run: InlineRun.Picture) {
+    val images = LocalImages.current
+    val alt = run.image.alt
+    if (!images.shown) {
+        ImagePlaceholder(alt, images.show)
+        return
+    }
+    val context = LocalContext.current
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val shape = RoundedCornerShape(VIDEO_RADIUS.dp)
+    val opens = run.href?.takeIf { opensOutside(it) }
+    SubcomposeAsyncImage(
+        model = run.image.src,
+        imageLoader = thirdPartyImageLoader(context),
+        contentDescription = alt.ifEmpty { null },
+        contentScale = ContentScale.FillWidth,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .then(if (opens != null) Modifier.clickable(role = Role.Button) { openOutside(context, opens) } else Modifier),
+        loading = {
+            Box(Modifier.fillMaxWidth().height(LOADING_HEIGHT).background(MaterialTheme.colorScheme.onBackground.copy(alpha = WASH_ALPHA)))
+        },
+        error = { Text(alt.ifEmpty { IMAGE_ALT_PLACEHOLDER }, color = muted, style = TextStyle(fontSize = 13.sp, lineHeight = 18.sp)) },
+    )
+}
+
+private val LOADING_HEIGHT = 120.dp
+
+@Composable
+private fun ImagePlaceholder(
+    alt: String,
+    onShow: () -> Unit,
+) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val line = MaterialTheme.colorScheme.outline
+    val description = if (alt.isNotEmpty()) "$SHOW_IMAGES: $alt" else SHOW_IMAGES
+    Row(
+        Modifier
+            .heightIn(min = 44.dp)
+            .drawBehind {
+                drawRoundRect(
+                    line,
+                    cornerRadius = CornerRadius(8.dp.toPx()),
+                    style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))),
+                )
+            }.clip(RoundedCornerShape(8.dp))
+            .clickable(role = Role.Button, onClick = onShow)
+            .semantics { contentDescription = description }
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SvgIcon(BraidIcons.image, size = 16.dp, color = muted, strokeWidth = 1.75f)
+        Text(
+            alt.ifEmpty { IMAGE_ALT_PLACEHOLDER },
+            Modifier.weight(1f, fill = false),
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = TextStyle(fontSize = 13.sp, lineHeight = 18.sp),
+        )
+        Text(SHOW_IMAGES, color = muted, style = TextStyle(fontSize = 12.sp, lineHeight = 16.sp))
+    }
+}

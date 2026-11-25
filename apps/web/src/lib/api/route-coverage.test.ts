@@ -38,18 +38,29 @@ const declaredRoutes: string[] = [
   ...Object.values(requestsRoutes),
 ];
 
+/**
+ * Rotas do catálogo que o web não chama: quem chama é outro cliente. A extensão do navegador
+ * (`apps/extension/src/api.ts`) guarda a página lida pela rota abaixo.
+ */
+const otherClientRoutes: string[] = ["POST /api/tasks/daily-reading"];
+
 test("o leitor do catálogo acha as rotas documentadas", () => {
   expect(documentedRoutes().length, "nenhuma rota lida do catálogo").toBeGreaterThan(0);
 });
 
 test("toda rota documentada tem uma função no cliente", () => {
-  const missing = documentedRoutes().filter((route) => !declaredRoutes.includes(route));
+  const missing = documentedRoutes().filter((route) => !declaredRoutes.includes(route) && !otherClientRoutes.includes(route));
   expect(missing, "rotas documentadas sem função no cliente da API").toEqual([]);
 });
 
 test("toda rota que o cliente declara existe no catálogo", () => {
   const unknown = declaredRoutes.filter((route) => !documentedRoutes().includes(route));
   expect(unknown, "rotas declaradas no cliente que o catálogo não tem").toEqual([]);
+});
+
+test("as rotas de outros clientes existem no catálogo e o web não as declara", () => {
+  expect(otherClientRoutes.filter((route) => !documentedRoutes().includes(route)), "rotas de outro cliente que o catálogo não tem").toEqual([]);
+  expect(otherClientRoutes.filter((route) => declaredRoutes.includes(route)), "rotas que o web passou a chamar").toEqual([]);
 });
 
 // --- Cada função declarada chama a rota que declara ---------------------------------------------------------------

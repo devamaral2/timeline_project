@@ -43,6 +43,17 @@ object BraidIcons {
     val plus = listOf(SvgPart("M5 12h14"), SvgPart("M12 5v14"))
     val circle = listOf(SvgPart(svgCircle(12f, 12f, 10f)))
 
+    /** O `Image` do lucide: a imagem do documento que espera a pessoa pedir. */
+    val image =
+        listOf(
+            SvgPart(svgRect(3f, 3f, 18f, 18f, 2f)),
+            SvgPart(svgCircle(9f, 9f, 2f)),
+            SvgPart("m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"),
+        )
+
+    /** O triângulo do play, cheio: o vídeo do YouTube que abre fora do app. */
+    val play = listOf(SvgPart("M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z", fill = true))
+
     /** O `Loader` aberto do lucide: o pedido em andamento. */
     val spinner = listOf(SvgPart("M21 12a9 9 0 1 1-6.219-8.56"))
 

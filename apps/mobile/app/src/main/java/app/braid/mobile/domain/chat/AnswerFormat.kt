@@ -105,7 +105,7 @@ private fun splitTechnicalIn(
             is MarkdownInline.Emphasis -> listOf(MarkdownInline.Emphasis(splitTechnicalIn(child.content, inLink)))
             is MarkdownInline.Strike -> listOf(MarkdownInline.Strike(splitTechnicalIn(child.content, inLink)))
             is MarkdownInline.Link -> listOf(MarkdownInline.Link(child.href, splitTechnicalIn(child.content, true)))
-            is MarkdownInline.Code, MarkdownInline.LineBreak -> listOf(child)
+            is MarkdownInline.Code, is MarkdownInline.Image, MarkdownInline.LineBreak -> listOf(child)
         }
     }
 
@@ -119,6 +119,7 @@ fun plainText(children: List<MarkdownInline>): String =
             is MarkdownInline.Emphasis -> plainText(it.content)
             is MarkdownInline.Strike -> plainText(it.content)
             is MarkdownInline.Link -> plainText(it.content)
+            is MarkdownInline.Image -> it.alt
             MarkdownInline.LineBreak -> "\n"
         }
     }

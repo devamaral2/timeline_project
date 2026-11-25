@@ -301,6 +301,8 @@ private fun AnnotatedString.Builder.appendInline(
                 withStyle(
                     SpanStyle(textDecoration = TextDecoration.LineThrough),
                 ) { appendInline(child.content, link, code) }
+            // O chat não liga a leitura de imagem (`parseMarkdown` sem `images`); o texto alternativo é a rede de segurança.
+            is MarkdownInline.Image -> append(child.alt)
             MarkdownInline.LineBreak -> append("\n")
             is MarkdownInline.Link -> {
                 val bare =

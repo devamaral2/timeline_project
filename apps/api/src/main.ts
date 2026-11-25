@@ -1,11 +1,13 @@
 import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
+import type { NestExpressApplication } from "@nestjs/platform-express";
 import { AppModule } from "./app.module";
 import { DomainExceptionFilter } from "./common/domain-exception.filter";
 import { configureApiDocumentation } from "./common/openapi";
 import { getDatabaseEnv, getServerEnv, isLoopbackHost } from "./config/env";
 import { loadRootEnv } from "./config/load-env";
+import { DAILY_READING_BODY_LIMIT_BYTES } from "./features/save-daily-reading/save-daily-reading.controller";
 
 /**
  * Bind em 127.0.0.1 por padrao: em producao o backend nao e exposto para fora
@@ -25,7 +27,10 @@ async function bootstrap(): Promise<void> {
   getDatabaseEnv();
 
   const { API_PORT, API_HOST } = getServerEnv();
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // O markdown de uma pagina lida passa dos 100 kB padrao. A API so ouve o
+  // gateway, que ja segura as demais rotas no teto dele; aqui o teto e um so.
+  app.useBodyParser("json", { limit: DAILY_READING_BODY_LIMIT_BYTES });
   app.useGlobalFilters(new DomainExceptionFilter());
   app.enableShutdownHooks();
   configureApiDocumentation(app);

@@ -4,6 +4,7 @@
 - `apps/mobile`: Android native app (Kotlin + Compose) that mirrors the web experience.
 - `apps/api`: business use cases and the HTTP API for tasks, artifacts, recurrences, and AI requests.
 - `apps/auth`: identity gateway handling sign-in, sessions, access, and roles.
+- `apps/extension`: Chrome extension that saves the open page, as markdown, into the day's "Leitura diária" task.
 - `packages/contracts`: shared data contracts and types.
 - `packages/timeline`: shared date windows, grouping, and timeline calculations.
 - `packages/theme`: shared visual tokens and colors.

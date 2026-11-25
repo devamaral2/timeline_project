@@ -48,3 +48,20 @@
 .markdown table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: 13px; }
 .markdown :is(th, td) { padding: 6px 12px; border: 1px solid var(--md-line); text-align: left; }
 .markdown th { color: var(--md-strong); font-weight: 600; background: var(--md-wash); }
+
+/* O player de um link do YouTube sozinho na linha, com o link original embaixo. */
+.markdown .video { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.markdown .video iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; background: var(--md-wash); }
+.markdown .video figcaption { color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
+
+/* A imagem só é buscada quando a pessoa pede; até lá, o texto alternativo no lugar dela. */
+.markdown img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
+.markdown .imagePlaceholder {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 10px;
+  border: 1px dashed var(--md-line); border-radius: 8px; background: none; color: inherit;
+  font: inherit; font-size: 13px; line-height: 18px; text-align: left; cursor: pointer;
+}
+.markdown .imagePlaceholder:hover { background: var(--md-wash); }
+.markdown .imagePlaceholder:focus-visible { outline: 2px solid var(--md-strong); outline-offset: 2px; }
+.markdown .imagePlaceholder svg { flex-shrink: 0; width: 16px; height: 16px; color: var(--muted-foreground); }
+.markdown .imagePlaceholder small { flex-shrink: 0; color: var(--muted-foreground); font-size: 12px; }

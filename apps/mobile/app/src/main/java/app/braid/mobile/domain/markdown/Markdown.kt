@@ -3,7 +3,8 @@ package app.braid.mobile.domain.markdown
 /*
  * O markdown dos documentos de texto, no subconjunto que o web mostra: títulos, parágrafos, listas (com marcadores,
  * numeradas e de tarefas), citações, código, régua, tabelas, ênfase, código em linha, riscado e links. HTML cru nunca
- * é interpretado (vira texto) e imagem vira o texto alternativo, como no `MarkdownView` do web.
+ * é interpretado (vira texto). A imagem só é lida como imagem (`MarkdownInline.Image`) quando quem chama pede, e só se o
+ * endereço for `http(s)`: o leitor de documentos pede; o chat e o assistente não, e ali ela vira o texto alternativo.
  */
 
 sealed interface MarkdownBlock {
@@ -71,12 +72,24 @@ sealed interface MarkdownInline {
         val content: List<MarkdownInline>,
     ) : MarkdownInline
 
+    /** Uma imagem de um endereço `http(s)`; [alt] é o texto alternativo, que pode vir vazio. */
+    data class Image(
+        val src: String,
+        val alt: String,
+    ) : MarkdownInline
+
     data object LineBreak : MarkdownInline
 }
 
-fun parseMarkdown(source: String): List<MarkdownBlock> = BlockParser.parse(source.split(Regex("\r?\n")))
+/** [images] liga a leitura de imagem; desligado, ela vira o texto alternativo. */
+fun parseMarkdown(
+    source: String,
+    images: Boolean = false,
+): List<MarkdownBlock> = BlockParser(images).parse(source.split(Regex("\r?\n")))
 
-private object BlockParser {
+private class BlockParser(
+    private val images: Boolean,
+) {
     private val heading = Regex("^ {0,3}(#{1,6})[ \\t]+(.*?)(?:[ \\t]+#+)?[ \\t]*$")
     private val emptyHeading = Regex("^ {0,3}(#{1,6})[ \\t]*$")
     private val fence = Regex("^ {0,3}(`{3,}|~{3,})(.*)$")
@@ -133,7 +146,7 @@ private object BlockParser {
         blocks: MutableList<MarkdownBlock>,
     ): Int? {
         heading.matchEntire(line)?.let {
-            blocks += MarkdownBlock.Heading(it.groupValues[1].length, parseInline(it.groupValues[2].trim()))
+            blocks += MarkdownBlock.Heading(it.groupValues[1].length, parseInline(it.groupValues[2].trim(), images))
             return index + 1
         }
         emptyHeading.matchEntire(line)?.let {
@@ -244,10 +257,10 @@ private object BlockParser {
         var index = start + 2
         while (index < lines.size && lines[index].isNotBlank() && !startsBlock(lines[index])) {
             val cells = splitRow(lines[index])
-            rows += List(columns.size) { column -> parseInline(cells.getOrElse(column) { "" }) }
+            rows += List(columns.size) { column -> parseInline(cells.getOrElse(column) { "" }, images) }
             index++
         }
-        blocks += MarkdownBlock.Table(columns.map(::parseInline), rows)
+        blocks += MarkdownBlock.Table(columns.map { parseInline(it, images) }, rows)
         return index
     }
 
@@ -291,7 +304,7 @@ private object BlockParser {
             joined.append(if (hard) line.trimEnd().removeSuffix("\\") else line.trim())
             if (!last) joined.append(if (hard) "\n" else " ")
         }
-        blocks += MarkdownBlock.Paragraph(parseInline(joined.toString().trim()))
+        blocks += MarkdownBlock.Paragraph(parseInline(joined.toString().trim(), images))
         return index
     }
 
@@ -305,12 +318,18 @@ private object BlockParser {
             listMarker.matchEntire(line)?.let { it.groupValues[4].isNotBlank() } == true
 }
 
+/** O endereço é `http` ou `https`: o único que o leitor busca. */
+fun isRemoteUrl(href: String): Boolean = href.startsWith("http://", true) || href.startsWith("https://", true)
+
 private val angleAutolink = Regex("^<(https?://[^\\s<>]+)>")
 
 private val escapable = "\\`*_{}[]()#+-.!|~<>\"'$%&,/:;=?@^"
 
 /** O texto em linha: código, links, ênfase e riscado. O que não fecha vira texto. */
-fun parseInline(text: String): List<MarkdownInline> {
+fun parseInline(
+    text: String,
+    images: Boolean = false,
+): List<MarkdownInline> {
     val out = mutableListOf<MarkdownInline>()
     val plain = StringBuilder()
 
@@ -359,8 +378,13 @@ fun parseInline(text: String): List<MarkdownInline> {
                     plain.append(char)
                     index++
                 } else {
-                    // A imagem não é buscada: vira o texto alternativo.
-                    plain.append(link.label)
+                    if (images && isRemoteUrl(link.href)) {
+                        flush()
+                        out += MarkdownInline.Image(link.href, link.label)
+                    } else {
+                        // Sem leitura de imagem, ou com um endereço que não é da rede: fica o texto alternativo.
+                        plain.append(link.label)
+                    }
                     index = link.end
                 }
             }
@@ -371,7 +395,7 @@ fun parseInline(text: String): List<MarkdownInline> {
                     index++
                 } else {
                     flush()
-                    out += MarkdownInline.Link(link.href, parseInline(link.label))
+                    out += MarkdownInline.Link(link.href, parseInline(link.label, images))
                     index = link.end
                 }
             }
@@ -390,7 +414,7 @@ fun parseInline(text: String): List<MarkdownInline> {
                 index += url.length
             }
             char == '*' || char == '_' || char == '~' -> {
-                val emphasis = parseEmphasis(text, index)
+                val emphasis = parseEmphasis(text, index, images)
                 if (emphasis == null) {
                     plain.append(char)
                     index++
@@ -506,6 +530,7 @@ private fun bareUrl(
 private fun parseEmphasis(
     text: String,
     open: Int,
+    images: Boolean,
 ): Pair<MarkdownInline, Int>? {
     val char = text[open]
     val run = text.drop(open).takeWhile { it == char }.length
@@ -532,7 +557,7 @@ private fun parseEmphasis(
             // `**a *b***`: o fecho é o fim da sequência de marcadores, para o de dentro fechar primeiro.
             var end = close
             while (width == 2 && char != '~' && text.getOrNull(end + width) == char) end++
-            val content = parseInline(text.substring(afterOpen, end))
+            val content = parseInline(text.substring(afterOpen, end), images)
             val node =
                 when {
                     char == '~' -> MarkdownInline.Strike(content)

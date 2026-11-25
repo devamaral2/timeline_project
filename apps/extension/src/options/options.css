@@ -1,0 +1,55 @@
+/* As cores são as da paleta do Candeia (packages/theme): névoa no claro, o índigo do Hermes no escuro. */
+:root {
+  --background: #f1f5f6; --foreground: #152429; --card: #ffffff; --muted: #586a70; --border: #d9e3e6;
+  --primary: #203d46; --primary-foreground: #ffffff; --brand: #2e8a7a; --danger: #aa474f;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #171720; --foreground: #ece8df; --card: #1d1e2a; --muted: #a0a7cb; --border: #323444;
+    --primary: #ece8df; --primary-foreground: #1d1e2a; --brand: #00b5ab; --danger: #fda0a3;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background); color: var(--foreground); font: 16px/26px system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { display: flex; flex-direction: column; gap: 32px; max-width: 560px; margin: 0 auto; padding: 56px 24px 72px; }
+
+header { display: flex; flex-direction: column; gap: 8px; }
+.eyebrow { margin: 0; color: var(--brand); font-size: 13px; font-weight: 600; letter-spacing: .04em; line-height: 18px; }
+h1 { margin: 0; font: 400 34px/40px Newsreader, Georgia, "Times New Roman", serif; }
+h2 { margin: 0 0 8px; font-size: 15px; font-weight: 600; line-height: 22px; }
+.lede { margin: 0; color: var(--muted); }
+.lede strong { color: var(--foreground); font-weight: 600; }
+
+form { display: flex; flex-direction: column; gap: 8px; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); }
+label { font-size: 14px; font-weight: 600; line-height: 20px; }
+.field { display: flex; gap: 8px; }
+input {
+  flex: 1; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--background); color: inherit; font: inherit;
+}
+input::placeholder { color: var(--muted); opacity: .8; }
+input:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; border-color: transparent; }
+button {
+  height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: var(--primary); color: var(--primary-foreground);
+  font: inherit; font-weight: 600; cursor: pointer;
+}
+button:hover { opacity: .92; }
+button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+button:disabled { opacity: .6; cursor: progress; }
+.hint, .status { margin: 0; font-size: 14px; line-height: 20px; }
+.hint { color: var(--muted); }
+.status:empty { display: none; }
+.status[data-tone="ok"]::before, .status[data-tone="error"]::before {
+  content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--brand);
+}
+.status[data-tone="error"] { color: var(--danger); }
+.status[data-tone="error"]::before { background: var(--danger); }
+.status a { color: inherit; font-weight: 600; text-underline-offset: 3px; }
+
+ul { display: flex; flex-direction: column; gap: 8px; margin: 0; padding-left: 20px; color: var(--muted); font-size: 15px; line-height: 24px; }
+li::marker { color: var(--border); }
+kbd { padding: 1px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--foreground); font: 12px/18px ui-monospace, Menlo, monospace; }
+
+@media (max-width: 480px) { .field { flex-direction: column; } }
