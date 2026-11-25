@@ -1,0 +1,25 @@
+{
+  "name": "@repo/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "lint": "biome lint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "@repo/contracts": "workspace:*",
+    "turndown": "^7.2.0",
+    "turndown-plugin-gfm": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.0",
+    "@types/node": "^24.0.0",
+    "@types/turndown": "^5.0.5",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  }
+}

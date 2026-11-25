@@ -77,6 +77,16 @@ export default defineWorkspace([
   {
     resolve: { alias: packageAliases },
     test: {
+      name: "extension",
+      root: "./apps/extension",
+      // A leitura da pagina e DOM puro; as APIs `chrome.*` ficam no service worker, fora dos testes.
+      environment: "jsdom",
+      include: ["src/**/*.{test,spec}.ts"],
+    },
+  },
+  {
+    resolve: { alias: packageAliases },
+    test: {
       name: "contracts",
       root: "./packages/contracts",
       environment: "node",

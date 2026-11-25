@@ -1,5 +1,5 @@
 import { Injectable, type INestApplication, type NestMiddleware } from "@nestjs/common";
-import type { NextFunction, Request, Response } from "express";
+import { json, type NextFunction, type Request, type Response } from "express";
 import { ulid } from "ulid";
 import type { RequestContext } from "../common/request-context";
 import { SECURITY_POLICY } from "../config/security-policy";
@@ -47,6 +47,9 @@ export function configureHttpShell(app: INestApplication, logger: AuthLogger = n
 
   const context = new RequestContextMiddleware();
   app.use(context.use.bind(context));
+  // Quem le o corpo primeiro vence: nas rotas de corpo grande o parser de teto
+  // maior roda antes e o geral, logo abaixo, encontra o corpo ja lido.
+  app.use([...SECURITY_POLICY.largeBodyPaths], json({ limit: SECURITY_POLICY.maxLargeRequestBodyBytes }));
   adapter.useBodyParser("json", false, { limit: SECURITY_POLICY.maxRequestBodyBytes });
   app.useGlobalFilters(new AuthExceptionFilter(logger));
 }

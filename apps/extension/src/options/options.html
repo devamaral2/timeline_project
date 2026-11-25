@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Leitura diária · Opções</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Candeia</p>
+        <h1>Leitura diária</h1>
+        <p class="lede">
+          Um clique no ícone da extensão guarda a página aberta, em markdown, na tarefa
+          <strong>Leitura diária</strong> de hoje. Se a tarefa ainda não existe, ela é criada.
+        </p>
+      </header>
+
+      <form id="form" novalidate>
+        <label for="base-url">Endereço do seu Candeia</label>
+        <div class="field">
+          <input id="base-url" name="baseUrl" type="url" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://candeia.exemplo.dev" aria-describedby="hint status" required />
+          <button type="submit">Salvar</button>
+        </div>
+        <p id="hint" class="hint">O mesmo endereço que você abre no navegador para usar o app. O Chrome vai pedir permissão para a extensão falar com ele.</p>
+        <p id="status" class="status" role="status" aria-live="polite"></p>
+      </form>
+
+      <section aria-labelledby="como">
+        <h2 id="como">Como funciona</h2>
+        <ul>
+          <li>A extensão usa a sessão que você já tem aberta no Candeia neste navegador. Ela não guarda senha nem token.</li>
+          <li>Ela só lê a aba em que você clica no ícone (ou usa o atalho <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd>).</li>
+          <li>Imagens entram no texto como endereços e aparecem no Candeia quando você pede. Um vídeo do YouTube vira o player.</li>
+          <li>Guardar a mesma página de novo no mesmo dia atualiza o documento dela.</li>
+        </ul>
+      </section>
+    </main>
+    <script src="options.js"></script>
+  </body>
+</html>

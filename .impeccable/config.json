@@ -11,6 +11,15 @@
         ],
         "createdAt": "2026-11-08T09:46:58.457Z",
         "reason": "Claude triage: L176 is the round 6px 'past' dot in the agenda legend (.timeLegend); the file has no border-left/border-inline-start, so no side-tab accent exists"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "apps/web/src/components/notes/markdown.module.css"
+        ],
+        "createdAt": "2026-11-24T15:16:30.754Z",
+        "reason": "agent triage: line 41 is the markdown blockquote rule (2px neutral left border, typographic convention), committed before this session; not a card accent"
       }
     ]
   }

@@ -227,6 +227,22 @@ export const updateTaskInputSchema = z.object({
   artifacts: z.array(updateTaskArtifactSchema).optional(),
 }).strict();
 
+/** O teto do markdown de uma pagina lida. O corpo HTTP da rota tem folga sobre ele (escapes do JSON, UTF-8). */
+export const DAILY_READING_MARKDOWN_MAX = 300_000;
+
+/** `POST /api/tasks/daily-reading`: uma pagina lida, ja em markdown. */
+export const dailyReadingInputSchema = z.object({
+  url: z.string().max(2048).regex(/^https?:\/\/\S+$/i),
+  title: z.string().trim().min(1).max(300),
+  markdown: z.string().max(DAILY_READING_MARKDOWN_MAX).refine((value) => value.trim().length > 0),
+  siteName: z.string().trim().max(120).optional(),
+  byline: z.string().trim().max(200).optional(),
+}).strict();
+
+export const dailyReadingResultSchema = z.object({
+  taskId: z.string(), artifactId: z.string(), taskCreated: z.boolean(), artifactCreated: z.boolean(),
+}).strict();
+
 /** `POST /api/artifacts`: o artefato e as tarefas em que ele ja nasce aparecendo. */
 export const createArtifactRequestSchema = z.union(createArtifactVariants({ taskIds: z.array(z.string()).optional() }));
 

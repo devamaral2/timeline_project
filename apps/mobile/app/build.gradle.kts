@@ -162,6 +162,8 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlin.serialization)
     implementation(libs.okhttp)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     debugImplementation(libs.okhttp.logging)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)

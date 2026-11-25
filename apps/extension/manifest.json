@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Candeia: Leitura diária",
+  "short_name": "Leitura diária",
+  "description": "Guarda a página aberta, em markdown, na tarefa Leitura diária do dia.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "116",
+  "icons": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png" },
+  "action": {
+    "default_title": "Guardar na Leitura diária",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png" }
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "options_ui": { "page": "options.html", "open_in_tab": true },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Alt+Shift+L" },
+      "description": "Guardar a página na Leitura diária"
+    }
+  }
+}

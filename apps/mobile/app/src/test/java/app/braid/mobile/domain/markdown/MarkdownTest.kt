@@ -8,12 +8,14 @@ import app.braid.mobile.domain.markdown.MarkdownBlock.Quote
 import app.braid.mobile.domain.markdown.MarkdownBlock.Rule
 import app.braid.mobile.domain.markdown.MarkdownBlock.Table
 import app.braid.mobile.domain.markdown.MarkdownInline.Emphasis
+import app.braid.mobile.domain.markdown.MarkdownInline.Image
 import app.braid.mobile.domain.markdown.MarkdownInline.LineBreak
 import app.braid.mobile.domain.markdown.MarkdownInline.Link
 import app.braid.mobile.domain.markdown.MarkdownInline.Strike
 import app.braid.mobile.domain.markdown.MarkdownInline.Strong
 import app.braid.mobile.domain.markdown.MarkdownInline.Text
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import app.braid.mobile.domain.markdown.MarkdownInline.Code as InlineCode
 
@@ -102,8 +104,87 @@ class MarkdownTest {
     }
 
     @Test
-    fun `an image is not fetched, it becomes its alt text`() {
+    fun `by default an image is not read, it becomes its alt text`() {
         assertEquals(listOf(paragraph(text("veja foto agora"))), parseMarkdown("veja ![foto](https://x.test/a.png) agora"))
+    }
+
+    @Test
+    fun `with image reading on, a remote image keeps its address and alt text`() {
+        assertEquals(
+            listOf(paragraph(text("veja "), Image("https://x.test/a.png", "foto"), text(" agora"))),
+            parseMarkdown("veja ![foto](https://x.test/a.png) agora", images = true),
+        )
+        assertEquals(
+            listOf(paragraph(Image("https://x.test/a.png", ""))),
+            parseMarkdown("![](https://x.test/a.png \"título\")", images = true),
+        )
+    }
+
+    @Test
+    fun `an image that is not on the network stays as its alt text even with image reading on`() {
+        assertEquals(listOf(paragraph(text("local"))), parseMarkdown("![local](/c.png)", images = true))
+        assertEquals(listOf(paragraph(text("data"))), parseMarkdown("![data](data:image/png;base64,AAAA)", images = true))
+    }
+
+    @Test
+    fun `an image inside a list item or a table cell is read too`() {
+        assertEquals(
+            listOf(ListBlock(false, 1, listOf(item(Image("https://x.test/a.png", "a"))))),
+            parseMarkdown("- ![a](https://x.test/a.png)", images = true),
+        )
+        assertEquals(
+            Table(listOf(listOf(text("H"))), listOf(listOf(listOf(Image("https://x.test/a.png", "a"))))),
+            parseMarkdown("| H |\n| - |\n| ![a](https://x.test/a.png) |", images = true).single(),
+        )
+    }
+
+    @Test
+    fun `pictures are split from the text around them, and only a linked picture keeps its link`() {
+        val image = Image("https://x.test/a.png", "a")
+        assertEquals(listOf(InlineRun.Text(listOf(text("só texto")))), splitPictures(listOf(text("só texto"))))
+        assertEquals(
+            listOf(InlineRun.Text(listOf(text("antes "))), InlineRun.Picture(image), InlineRun.Text(listOf(text(" depois")))),
+            splitPictures(listOf(text("antes "), image, text(" depois"))),
+        )
+        assertEquals(listOf(InlineRun.Picture(image)), splitPictures(listOf(image, text(" "), LineBreak)))
+        assertEquals(
+            listOf(InlineRun.Picture(image, "https://x.test/destino")),
+            splitPictures(listOf(Link("https://x.test/destino", listOf(image)))),
+        )
+        val strong = Strong(listOf(image))
+        assertEquals(listOf(InlineRun.Text(listOf(strong))), splitPictures(listOf(strong)))
+    }
+
+    @Test
+    fun `a paragraph that is only a youtube link is a video, with the caption the web gives`() {
+        val bare = parseMarkdown("  https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90  ").single() as Paragraph
+        assertEquals(
+            VideoLink("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90", YouTubeVideo("dQw4w9WgXcQ", 90), null),
+            soleYouTubeLink(bare),
+        )
+        assertEquals("Abrir no YouTube", soleYouTubeLink(bare)?.caption)
+
+        val labelled = parseMarkdown("[Palestra](https://youtu.be/aqz-KE-bpKQ)").single() as Paragraph
+        assertEquals("Palestra", soleYouTubeLink(labelled)?.caption)
+
+        val labelIsAddress = parseMarkdown("[https://youtu.be/aqz-KE-bpKQ](https://youtu.be/aqz-KE-bpKQ)").single() as Paragraph
+        assertEquals("Abrir no YouTube", soleYouTubeLink(labelIsAddress)?.caption)
+
+        val www = parseMarkdown("www.youtube.com/watch?v=dQw4w9WgXcQ").single() as Paragraph
+        assertEquals("Abrir no YouTube", soleYouTubeLink(www)?.caption)
+    }
+
+    @Test
+    fun `a youtube link in a sentence, a non video address or another site stays a plain link`() {
+        for (source in listOf(
+            "Veja https://youtu.be/dQw4w9WgXcQ depois.",
+            "https://vimeo.com/123456",
+            "https://www.youtube.com/@canal",
+            "https://youtu.be/dQw4w9WgXcQ e https://youtu.be/aqz-KE-bpKQ",
+            "https://youtu.be/dQw4w9WgXcQ  \nhttps://youtu.be/aqz-KE-bpKQ",
+        )) {
+            assertNull(source, soleYouTubeLink(parseMarkdown(source).single() as Paragraph))
+        }
     }
 
     @Test
