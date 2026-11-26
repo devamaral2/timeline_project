@@ -102,6 +102,10 @@ _Avoid_: pedido de página, favorito, clipe
 A reserva por tempo limitado (5 minutos) que o serviço local faz de um pedido de transcrição. Ele a renova enquanto trabalha, mandando a etapa e a porcentagem; se vence (o computador desligou), o pedido volta para a fila. A entrega, com o resultado ou com a falha, a encerra: o resultado leva o pedido a `running` (formatação com o Haiku) e a falha o leva a `failed`, com um código fechado (`too_large`, `private`, `unavailable`, `no_audio`, `failed`) que o documento mostra por extenso.
 _Avoid_: trava, lock, reserva do job
 
+**Serviço local de transcrição**:
+App (`apps/transcriber`) que roda no computador de casa como serviço do usuário no systemd e sobe no login. Busca os pedidos de transcrição na API, um por vez, com a chave de dispositivo; baixa o áudio, usa a legenda feita por alguém ou transcreve com o Whisper, separa os falantes, recolhe os momentos mais assistidos e os 50 comentários mais recentes, e entrega. Não abre porta nenhuma e nunca guarda a chave da Anthropic: quem chama o Haiku é a API.
+_Avoid_: worker de transcrição, transcritor, daemon
+
 **Leitura diária**:
 Tarefa de pessoa, uma por dia, em que as páginas e os vídeos guardados no dia se juntam, cada um como um documento de texto. Nasce a fazer, às 18h do dia, quando ainda não existe, e toda gravação nela a devolve para a fazer, mesmo que já estivesse concluída. O conteúdo só entra por uma porta (`DailyReadingGate`), que reconhece o mesmo conteúdo pelo endereço canônico da linha da fonte. O dia é o do pedido, no fuso das tarefas.
 _Avoid_: leitura do dia, inbox, clipping

@@ -41,6 +41,11 @@ Os scopes de produção são:
 - `mcp-runtime`: `MCP_TOKEN`, `AUTH_INTERNAL_SERVICE_KEY`, `MCP_OWNER_USER_ID` e,
   em produção, `API_SERVICE_URL=http://api.braid.svc.cluster.local:3001`.
 
+- `transcriber-runtime`: `TRANSCRIBER_API_URL` (o endereço público do gateway) e
+  `TRANSCRIBER_DEVICE_KEY` (a chave de dispositivo), mais `HF_TOKEN` (pyannote) e
+  ajustes opcionais. É do serviço local de transcrição, que roda no computador de
+  casa, não na VPS: ver [o README do app](../../apps/transcriber/README.md).
+
 Não adicione ao ambiente de produção `AUTH_TEST_DATABASE_URL`, `ADMIN_PASSWORD`,
 portas locais ou o IP privado usado pelo mobile. O mobile continua fora do
 deploy k3s.
