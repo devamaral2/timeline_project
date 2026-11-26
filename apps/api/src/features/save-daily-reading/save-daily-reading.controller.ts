@@ -12,6 +12,7 @@ import { CurrentUser } from "../../http/request-identity/current-user.decorator"
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { ARTIFACT_REPOSITORY, ENTITY_BATCH_WRITER, TASK_CARD_QUERY } from "../../infrastructure/persistence";
+import { DailyReadingGate } from "./daily-reading.gate";
 import { SaveDailyReadingUseCase } from "./save-daily-reading.usecase";
 
 /** O caminho da rota, tambem usado para dar a ela um corpo maior que o das demais. */
@@ -45,17 +46,22 @@ export class SaveDailyReadingController {
 @Module({
   imports: [ApiCoreModule.forRoot()],
   controllers: [SaveDailyReadingController],
-  providers: [{
-    provide: SaveDailyReadingUseCase,
-    inject: [TASK_CARD_QUERY, ARTIFACT_REPOSITORY, ArtifactBuilder, CreateTaskUseCase, ENTITY_BATCH_WRITER, MaterializeRecurrencesUseCase],
-    useFactory: (
-      cards: TaskCardQuery,
-      artifacts: ArtifactRepository,
-      builder: ArtifactBuilder,
-      createTask: CreateTaskUseCase,
-      writer: EntityBatchWriter,
-      recurrences: MaterializeRecurrencesUseCase,
-    ) => new SaveDailyReadingUseCase(cards, artifacts, builder, createTask, writer, recurrences),
-  }],
+  providers: [
+    {
+      provide: DailyReadingGate,
+      inject: [TASK_CARD_QUERY, ARTIFACT_REPOSITORY, ArtifactBuilder, CreateTaskUseCase, ENTITY_BATCH_WRITER, MaterializeRecurrencesUseCase],
+      useFactory: (
+        cards: TaskCardQuery,
+        artifacts: ArtifactRepository,
+        builder: ArtifactBuilder,
+        createTask: CreateTaskUseCase,
+        writer: EntityBatchWriter,
+        recurrences: MaterializeRecurrencesUseCase,
+      ) => new DailyReadingGate(cards, artifacts, builder, createTask, writer, recurrences),
+    },
+    { provide: SaveDailyReadingUseCase, inject: [DailyReadingGate], useFactory: (gate: DailyReadingGate) => new SaveDailyReadingUseCase(gate) },
+  ],
+  // A porta da Leitura diária é de quem põe conteúdo nela: a extensão e o pedido de transcrição.
+  exports: [DailyReadingGate],
 })
 export class SaveDailyReadingModule {}

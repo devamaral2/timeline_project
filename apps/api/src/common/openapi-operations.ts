@@ -7,6 +7,8 @@ import {
   createRecurrenceInputSchema,
   dailyReadingInputSchema,
   dailyReadingResultSchema,
+  transcriptionRequestInputSchema,
+  transcriptionRequestResultSchema,
   taskCardSchema,
   taskSchema,
   recurrenceSchema,
@@ -50,6 +52,8 @@ export const documentedSchemas = {
   CreatedTask: z.object({ taskId: z.string() }),
   DailyReadingInput: dailyReadingInputSchema,
   DailyReadingResult: dailyReadingResultSchema,
+  TranscriptionRequestInput: transcriptionRequestInputSchema,
+  TranscriptionRequestResult: transcriptionRequestResultSchema,
   TagSuggestion: tagSuggestionSchema,
   PlaceSuggestion: placeSuggestionSchema,
   Artifact: artifactSchema,
@@ -184,6 +188,15 @@ export const documentedOperations: Record<string, OperationDoc> = {
       "Recebe uma página já em markdown e a guarda como artefato de texto na tarefa \"Leitura diária\" de hoje, criando a tarefa a fazer, às 18h do dia, quando ela ainda não existe. A mesma página guardada de novo no mesmo dia atualiza o artefato dela. Guardar uma página numa leitura que já existe a devolve para a fazer. Imagens e vídeos entram no markdown como endereços.",
     body: "DailyReadingInput",
     success: { status: 200, description: "A página está na leitura do dia.", schema: "DailyReadingResult" },
+    errors: { 400: invalid },
+  },
+  "POST /api/tasks/transcription-requests": {
+    tag: "Tarefas",
+    summary: "Pede a transcrição de um vídeo do YouTube",
+    description:
+      "Recebe o endereço de um vídeo do YouTube (`watch?v=`, `youtu.be/`, `shorts/`, `embed/` ou `live/`) e, numa gravação só, cria a tarefa de agente `save_content_with_transcription` em `awaiting_transcription`, o documento \"Transcrição na fila\" na Leitura diária do dia e o job que o serviço local de transcrição reserva. A Leitura diária nasce a fazer, às 18h do dia, ou volta para a fazer. O mesmo vídeo no mesmo dia, com o pedido ainda esperando ou rodando, devolve o pedido que existe (`created: false`); com o pedido já concluído ou falho, nasce outro que atualiza o mesmo documento. Canal, playlist e busca são recusados.",
+    body: "TranscriptionRequestInput",
+    success: { status: 200, description: "O pedido está na fila de transcrição.", schema: "TranscriptionRequestResult" },
     errors: { 400: invalid },
   },
   "GET /api/tasks/{taskId}": {
