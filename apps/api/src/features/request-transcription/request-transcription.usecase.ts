@@ -1,10 +1,10 @@
 import type { TranscriptionRequestInput, TranscriptionRequestResult } from "@repo/contracts";
+import { youtubeVideoLinkOf } from "@repo/contracts/youtube";
 import type { TranscriptionRequestData, TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import { Task, TaskValidationError } from "../../domain";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { composeReadingArticle } from "../save-daily-reading/daily-reading-article";
 import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
-import { youtubeVideoLinkOf } from "./youtube-link";
 
 /** O que o documento diz até a transcrição chegar. */
 export const TRANSCRIPTION_QUEUED_TEXT = "Transcrição na fila";

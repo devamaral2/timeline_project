@@ -19,6 +19,11 @@
       "react-native": "./src/device-key.ts",
       "types": "./dist/device-key.d.ts",
       "default": "./dist/device-key.js"
+    },
+    "./youtube": {
+      "react-native": "./src/youtube.ts",
+      "types": "./dist/youtube.d.ts",
+      "default": "./dist/youtube.js"
     }
   },
   "files": ["dist", "src"],

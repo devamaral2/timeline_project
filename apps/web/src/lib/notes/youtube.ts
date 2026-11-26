@@ -1,3 +1,5 @@
+import { youtubeVideoLinkOf } from "@repo/contracts/youtube";
+
 /** Um vídeo do YouTube lido de um endereço. */
 export interface YouTubeVideo {
   id: string;
@@ -5,34 +7,17 @@ export interface YouTubeVideo {
   startSeconds?: number;
 }
 
-const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
-const HOSTS = new Set(["youtube.com", "youtube-nocookie.com"]);
-/** Os caminhos em que o id vem logo depois: `/embed/ID`, `/shorts/ID`, `/live/ID`, `/v/ID`. */
-const ID_PATHS = new Set(["embed", "shorts", "live", "v"]);
-
 /**
  * O vídeo de um endereço do YouTube (`watch?v=`, `youtu.be/`, `shorts/`,
  * `embed/`, `live/`), ou `null` quando o endereço não é de um vídeo: canal,
- * playlist sem vídeo, busca ou outro site.
+ * playlist sem vídeo, busca ou outro site. O reconhecimento é o de
+ * `@repo/contracts/youtube`; aqui entra só o instante de início.
  */
 export function youtubeVideoOf(href: string): YouTubeVideo | null {
-  let url: URL;
-  try {
-    url = new URL(href);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
-
-  const host = url.hostname.toLowerCase().replace(/^(www|m|music)\./, "");
-  const [first, second] = url.pathname.split("/").filter(Boolean);
-  let id: string | null | undefined;
-  if (host === "youtu.be") id = first;
-  else if (HOSTS.has(host)) id = first === "watch" ? url.searchParams.get("v") : ID_PATHS.has(first ?? "") ? second : null;
-  if (!id || !VIDEO_ID.test(id)) return null;
-
-  const startSeconds = parseStart(url.searchParams.get("t") ?? url.searchParams.get("start"));
-  return startSeconds ? { id, startSeconds } : { id };
+  const link = youtubeVideoLinkOf(href);
+  if (!link) return null;
+  const startSeconds = parseStart(link.start);
+  return startSeconds ? { id: link.id, startSeconds } : { id: link.id };
 }
 
 /** `90`, `90s` ou `1h2m3s`. */

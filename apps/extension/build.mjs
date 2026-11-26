@@ -9,7 +9,9 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 const out = `${root}dist`;
 const watch = process.argv.includes("--watch");
 
-const common = { bundle: true, target: "chrome116", platform: "browser", sourcemap: watch ? "inline" : false, logLevel: "info", absWorkingDir: root };
+// O reconhecimento do link do YouTube vem direto do fonte do contracts, sem exigir o `dist` dele compilado.
+const alias = { "@repo/contracts/youtube": fileURLToPath(new URL("../../packages/contracts/src/youtube.ts", import.meta.url)) };
+const common = { bundle: true, alias, target: "chrome116", platform: "browser", sourcemap: watch ? "inline" : false, logLevel: "info", absWorkingDir: root };
 const bundles = [
   { ...common, entryPoints: ["src/background.ts"], outfile: "dist/background.js", format: "esm" },
   // Injetado na página: um script clássico, sem import nem export.
