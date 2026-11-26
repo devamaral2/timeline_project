@@ -18,6 +18,7 @@ import { operationId } from "@/lib/api/operation-id";
 import { requestTranscription } from "@/lib/api/transcription";
 import { TRANSCRIPTION_TEXTS } from "@/lib/transcription/texts";
 import { soleYouTubeVideoLink } from "@/lib/notes/youtube";
+import { isOpenRequest } from "@/lib/tasks/agent-request-model";
 
 /** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (tarefa ou nota). */
 export interface AgentChatEntityRef {
@@ -142,9 +143,9 @@ export function agentFailureText(code: ChatFailureCode): string {
  */
 const RESUMABLE: ReadonlySet<ChatFailureCode> = new Set(["connection_failed", "connection_lost", "session_expired"]);
 
-/** O pedido ainda não terminou: a API o entrega como fila, execução ou espera. */
+/** O pedido ainda não terminou: a API o entrega como fila, execução ou espera (a regra é `isOpenRequest`). */
 export function isRequestOpen(request: Pick<RequestDto, "status">): boolean {
-  return request.status === "queued" || request.status === "running" || request.status === "waiting";
+  return isOpenRequest(request.status);
 }
 
 /** Um pedido aberto que o chat mostra: a rota por passos, a do Hermes ou a do modelo. */
