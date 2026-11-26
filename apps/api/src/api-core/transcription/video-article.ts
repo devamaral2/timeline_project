@@ -1,5 +1,5 @@
-import type { TranscriptionRequestData } from "../../api-core/transcription/transcription-requests";
-import { composeReadingArticle, type ReadingArticle } from "../save-daily-reading/daily-reading-article";
+import type { TranscriptionRequestData } from "./transcription-requests";
+import { composeReadingArticle, type ReadingArticle } from "../tasks/daily-reading-article";
 
 /** O nome do documento até a formatação conhecer o título real do vídeo. */
 export const provisionalVideoTitle = (videoId: string): string => `Vídeo do YouTube (${videoId})`;

@@ -1,19 +1,19 @@
 import type { TranscriptionResult } from "@repo/contracts";
 import { describe, expect, test } from "vitest";
-import { InMemoryTranscriptionRequests } from "../../api-core/transcription/testing/in-memory-transcription-requests";
+import { InMemoryTranscriptionRequests } from "./testing/in-memory-transcription-requests";
 import {
   TRANSCRIPTION_DELIVERY_MAX_BYTES,
   TRANSCRIPTION_FORMAT_JOB,
   TRANSCRIPTION_LEASE_MS,
   TRANSCRIPTION_JOB,
   TRANSCRIPTION_MAX_ATTEMPTS,
-} from "../../api-core/transcription/transcription-requests";
-import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
-import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-task-relations";
-import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
+} from "./transcription-requests";
+import { InMemoryTaskCardQuery } from "../tasks/testing/in-memory-task-card.query";
+import { InMemoryTaskRelations } from "../tasks/testing/in-memory-task-relations";
+import { createTasksKit } from "../tasks/testing/in-memory-tasks-kit";
 import { Task } from "../../domain";
-import { RequestTranscriptionUseCase } from "../request-transcription/request-transcription.usecase";
-import { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
+import { RequestTranscriptionUseCase } from "../../features/request-transcription/request-transcription.usecase";
+import { DailyReadingGate } from "../tasks/daily-reading.gate";
 import { TranscriptionWorkerUseCase } from "./transcription-worker.usecase";
 
 const actor = { userId: "auth-user-1", permissions: ["transcription:work"] };

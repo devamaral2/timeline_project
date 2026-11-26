@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { ArtifactBuilder } from "../../../../api-core/artifacts/services/artifact-builder.service";
 import { CreateTaskUseCase } from "../../../../api-core/tasks/create-task.usecase";
-import { DailyReadingGate } from "../../../../features/save-daily-reading/daily-reading.gate";
+import { DailyReadingGate } from "../../../../api-core/tasks/daily-reading.gate";
 import { SaveDailyReadingUseCase } from "../../../../features/save-daily-reading/save-daily-reading.usecase";
 import { PostgresEntityBatchWriter } from "../../agent-batch/postgres-entity-batch-writer";
 import { PostgresWorkoutCatalog } from "../../artifacts/postgres-workout.catalog";

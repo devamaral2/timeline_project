@@ -11,11 +11,11 @@ import {
   TranscriptionLeaseLostError,
   type TranscriptionRequestData,
   type TranscriptionRequests,
-} from "../../api-core/transcription/transcription-requests";
+} from "./transcription-requests";
 import type { EntityBatchWriter } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { composeRequestArticle } from "../request-transcription/video-article";
-import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
+import { composeRequestArticle } from "./video-article";
+import type { DailyReadingGate } from "../tasks/daily-reading.gate";
 
 /** O que o documento diz de cada falha, em palavras de quem lê. O motivo é o código fechado, nunca a mensagem do `yt-dlp`. */
 const FAILURE_TEXT: Record<TranscriptionFailureCode, string> = {

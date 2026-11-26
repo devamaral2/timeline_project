@@ -2,8 +2,8 @@ import type { DailyReadingInput, DailyReadingResult } from "@repo/contracts";
 import type { TaskRelations } from "../../api-core/tasks/task-relations";
 import { Task, TaskValidationError } from "../../domain";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { composeReadingArticle } from "./daily-reading-article";
-import type { DailyReadingGate } from "./daily-reading.gate";
+import { composeReadingArticle } from "../../api-core/tasks/daily-reading-article";
+import type { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
 
 /**
  * Guarda uma página lida na tarefa "Leitura diária" do dia, pela porta da

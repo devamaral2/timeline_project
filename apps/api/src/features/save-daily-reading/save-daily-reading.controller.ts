@@ -13,7 +13,7 @@ import { CurrentUser } from "../../http/request-identity/current-user.decorator"
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { ARTIFACT_REPOSITORY, ENTITY_BATCH_WRITER, TASK_CARD_QUERY, TASK_RELATIONS } from "../../infrastructure/persistence";
-import { DailyReadingGate } from "./daily-reading.gate";
+import { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
 import { SaveDailyReadingUseCase } from "./save-daily-reading.usecase";
 
 /** O caminho da rota, tambem usado para dar a ela um corpo maior que o das demais. */

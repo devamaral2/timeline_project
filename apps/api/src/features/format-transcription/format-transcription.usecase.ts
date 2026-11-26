@@ -7,8 +7,8 @@ import {
 } from "../../api-core/agent/gateways/structured-completion.gateway";
 import type { FormattingInput, TranscriptionPlace, TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { composeRequestArticle } from "../request-transcription/video-article";
-import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
+import { composeRequestArticle } from "../../api-core/transcription/video-article";
+import type { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
 import { commentsPrompt, commentsReplySchema, COMMENTS_SYSTEM, formatPrompt, formatReplySchema, FORMAT_SYSTEM } from "./transcription-prompts";
 import { bylineOf, composeTranscriptionDocument, paragraphs, type TranscriptionSummary } from "./transcription-document";
 

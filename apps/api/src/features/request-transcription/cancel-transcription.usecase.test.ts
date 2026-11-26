@@ -4,8 +4,8 @@ import { InMemoryTranscriptionRequests } from "../../api-core/transcription/test
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
 import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-task-relations";
 import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
-import { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
-import { TranscriptionWorkerUseCase } from "../transcription-worker/transcription-worker.usecase";
+import { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
+import { TranscriptionWorkerUseCase } from "../../api-core/transcription/transcription-worker.usecase";
 import { CancelTranscriptionUseCase, TRANSCRIPTION_CANCELLED_TEXT } from "./cancel-transcription.usecase";
 import { RequestTranscriptionUseCase } from "./request-transcription.usecase";
 

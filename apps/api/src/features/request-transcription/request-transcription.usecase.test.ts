@@ -5,7 +5,7 @@ import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-ta
 import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-task-relations";
 import { createTasksKit, type TasksKitOptions } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { Artifact, Task, TaskValidationError } from "../../domain";
-import { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
+import { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
 import { RequestTranscriptionUseCase } from "./request-transcription.usecase";
 
 const actor = { userId: "auth-user-1" };

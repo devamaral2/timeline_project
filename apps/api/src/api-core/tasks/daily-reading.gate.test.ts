@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
-import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
+import { InMemoryTaskCardQuery } from "./testing/in-memory-task-card.query";
+import { createTasksKit } from "./testing/in-memory-tasks-kit";
 import { Task } from "../../domain";
 import { composeReadingArticle } from "./daily-reading-article";
 import { DailyReadingGate } from "./daily-reading.gate";

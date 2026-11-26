@@ -8,8 +8,8 @@ import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit
 import { InMemoryTranscriptionRequests } from "../../api-core/transcription/testing/in-memory-transcription-requests";
 import { Task } from "../../domain";
 import { RequestTranscriptionUseCase } from "../request-transcription/request-transcription.usecase";
-import { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
-import { TranscriptionWorkerUseCase } from "../transcription-worker/transcription-worker.usecase";
+import { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
+import { TranscriptionWorkerUseCase } from "../../api-core/transcription/transcription-worker.usecase";
 import { FormatTranscriptionUseCase } from "./format-transcription.usecase";
 
 const actor = { userId: "auth-user-1", permissions: ["transcription:work"] };
