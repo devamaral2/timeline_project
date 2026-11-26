@@ -4,7 +4,7 @@ import type { SecretGenerator } from "../../../common/secret-generator";
 import type { DeviceKeyRepository } from "../../../auth-core/persistence/postgres-device-key.repository";
 import type { UserReader } from "../../../auth-core/persistence/postgres-user.repository";
 import { hashSecretToken } from "../../../auth-core/security/secret-token";
-import { DEVICE_KEY_PREFIX, TRANSCRIPTION_WORK_PERMISSION } from "../../../domain/device-keys/device-key";
+import { DEVICE_KEY_PREFIX, TRANSCRIPTION_WORK_PERMISSION } from "@repo/contracts/device-key";
 import { canSignIn, normalizeEmail } from "../../../domain/users/user";
 
 /** Emite uma chave para um usuario ativo. A chave em claro so existe neste retorno. */

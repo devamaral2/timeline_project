@@ -4,10 +4,8 @@ import {
   Injectable,
   type ExecutionContext,
 } from "@nestjs/common";
-import { assertFromGateway, DEVICE_PERMISSIONS_HEADER, type GatewayRequest } from "./gateway-identity.guard";
-
-/** A unica permissao da chave de dispositivo do servico local (mesmo valor emitido pelo `auth`). */
-export const TRANSCRIPTION_WORK_PERMISSION = "transcription:work";
+import { DEVICE_PERMISSIONS_HEADER, TRANSCRIPTION_WORK_PERMISSION } from "@repo/contracts/device-key";
+import { assertFromGateway, type GatewayRequest } from "./gateway-identity.guard";
 
 /**
  * Guarda das rotas do servico local de transcricao: exige a identidade do

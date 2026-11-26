@@ -1,15 +1,13 @@
+import { DEVICE_KEY_PREFIX, TRANSCRIPTION_WORK_PERMISSION } from "@repo/contracts/device-key";
+
 /**
  * Chave de dispositivo: credencial de vida longa e revogavel que um servico
  * rodando fora da VPS (o servico local de transcricao) usa no lugar de uma
  * sessao. Ela NAO e uma permissao de papel (RBAC): vive em `device_keys`, tem
  * uma unica permissao e so vale nas rotas que o gateway lista para ela.
  */
-export const TRANSCRIPTION_WORK_PERMISSION = "transcription:work";
 export const DEVICE_PERMISSIONS = [TRANSCRIPTION_WORK_PERMISSION] as const;
 export type DevicePermission = (typeof DEVICE_PERMISSIONS)[number];
-
-/** Prefixo que distingue a chave de um JWT de sessao no `Authorization: Bearer`. */
-export const DEVICE_KEY_PREFIX = "bdk_";
 
 export function looksLikeDeviceKey(token: string): boolean {
   return token.startsWith(DEVICE_KEY_PREFIX);
@@ -28,6 +26,3 @@ export interface DeviceKeyIdentity {
  * Nenhuma outra rota aceita a chave, e esta nao aceita sessao comum.
  */
 export const DEVICE_ROUTE_PREFIX = "api/transcription-worker";
-
-/** Cabecalho com que o gateway encaminha a permissao da chave para a API. */
-export const DEVICE_PERMISSIONS_HEADER = "x-auth-permissions";

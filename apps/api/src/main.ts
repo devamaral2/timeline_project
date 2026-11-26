@@ -2,13 +2,13 @@ import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import { TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES } from "@repo/contracts/device-key";
 import { AppModule } from "./app.module";
 import { DomainExceptionFilter } from "./common/domain-exception.filter";
 import { configureApiDocumentation } from "./common/openapi";
 import { getDatabaseEnv, getServerEnv, isLoopbackHost } from "./config/env";
 import { loadRootEnv } from "./config/load-env";
 import { DAILY_READING_BODY_LIMIT_BYTES } from "./features/save-daily-reading/save-daily-reading.controller";
-import { TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES } from "./features/transcription-worker/transcription-worker.controller";
 
 /**
  * Bind em 127.0.0.1 por padrao: em producao o backend nao e exposto para fora

@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { DEVICE_KEY_PREFIX } from "@repo/contracts/device-key";
 import type { ServiceConfig } from "./service";
 
 export class ConfigError extends Error {
@@ -56,7 +57,9 @@ export function loadConfig(env: Env): Config {
 
   const deviceKey = (env.TRANSCRIBER_DEVICE_KEY ?? "").trim();
   if (!deviceKey) problems.push("TRANSCRIBER_DEVICE_KEY não está definida (a chave de dispositivo, no 1Password)");
-  else if (!deviceKey.startsWith("bdk_")) problems.push("TRANSCRIBER_DEVICE_KEY não parece uma chave de dispositivo (deveria começar com bdk_)");
+  else if (!deviceKey.startsWith(DEVICE_KEY_PREFIX)) {
+    problems.push(`TRANSCRIBER_DEVICE_KEY não parece uma chave de dispositivo (deveria começar com ${DEVICE_KEY_PREFIX})`);
+  }
 
   const maxDurationSeconds = Math.round(positive("TRANSCRIBER_MAX_DURATION_HOURS", 4) * 3600);
   const maxAudioBytes = Math.round(positive("TRANSCRIBER_MAX_AUDIO_MB", 500) * 1024 * 1024);
