@@ -3,6 +3,8 @@ package app.braid.mobile.ui.chat
 import app.braid.mobile.data.chat.DefaultChatRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
+import app.braid.mobile.data.transcription.DefaultTranscriptionRepository
+import app.braid.mobile.data.transcription.TranscriptionApi
 import app.braid.mobile.domain.chat.ChatPolling
 import app.braid.mobile.domain.chat.ModelSelector
 import app.braid.mobile.domain.speech.SpeechError
@@ -87,8 +89,17 @@ class ChatVoiceTest {
     private fun chatOf(): ChatViewModel {
         val repository = DefaultChatRepository(graph.apis.create(RequestsApi::class.java))
         val models = ModelSelector(repository, InMemoryModelSelectionStore())
-        return ChatViewModel(repository, graph.sessionRepository, AppClock { now }, ChatPolling(), models, speech, microphone)
-            .also { created += it }
+        val transcription = DefaultTranscriptionRepository(graph.apis.create(TranscriptionApi::class.java))
+        return ChatViewModel(
+            repository,
+            graph.sessionRepository,
+            AppClock { now },
+            ChatPolling(),
+            models,
+            transcription,
+            speech,
+            microphone,
+        ).also { created += it }
     }
 
     private suspend fun ChatViewModel.until(predicate: (ChatUiState) -> Boolean): ChatUiState =

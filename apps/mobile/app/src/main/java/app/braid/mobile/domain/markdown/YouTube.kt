@@ -131,3 +131,14 @@ private fun imageFreeText(content: List<MarkdownInline>): String =
             MarkdownInline.LineBreak -> ""
         }
     }
+
+/**
+ * O endereço de uma mensagem que é só um link de vídeo do YouTube (espaços ao redor não contam), ou `null` quando há
+ * outro texto junto, mais de um link ou o endereço não é de um vídeo. Porta do `soleYouTubeVideoLink` do web: é o que
+ * manda a mensagem do chat direto para o pedido de transcrição.
+ */
+fun soleYouTubeVideoLink(text: String): String? {
+    val link = text.trim { it.isWhitespace() || it == '\uFEFF' || Character.isSpaceChar(it) }
+    if (link.isEmpty() || link.any { it.isWhitespace() || it == '\uFEFF' || Character.isSpaceChar(it) }) return null
+    return if (youtubeVideoOf(link) != null) link else null
+}
