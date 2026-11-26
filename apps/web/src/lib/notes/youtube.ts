@@ -53,3 +53,14 @@ export function youtubeEmbedUrl(video: YouTubeVideo): string {
   const start = video.startSeconds ? `?start=${video.startSeconds}` : "";
   return `https://www.youtube-nocookie.com/embed/${video.id}${start}`;
 }
+
+/**
+ * O endereço de uma mensagem que é só um link de vídeo do YouTube (espaços ao redor não contam), ou `null` quando
+ * há outro texto junto, mais de um link ou o endereço não é de um vídeo. É o que manda a mensagem do chat direto
+ * para o pedido de transcrição, sem passar pelo agente.
+ */
+export function soleYouTubeVideoLink(text: string): string | null {
+  const link = text.trim();
+  if (!link || /\s/.test(link)) return null;
+  return youtubeVideoOf(link) ? link : null;
+}

@@ -9,6 +9,7 @@ import app.braid.mobile.domain.speech.MicrophonePermission
 import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskDetailRepository
 import app.braid.mobile.domain.time.AppClock
+import app.braid.mobile.domain.transcription.TranscriptionRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
@@ -29,6 +30,9 @@ interface AssistantEntryPoint {
     fun polling(): ChatPolling
 
     fun models(): ModelSelector
+
+    /** O link de vídeo do YouTube sozinho no chat vai ao pedido de transcrição. */
+    fun transcription(): TranscriptionRepository
 
     /** Um reconhecedor só desta conversa: guarda a sessão de escuta, então não é o do app. */
     fun speech(): SpeechRecognizer

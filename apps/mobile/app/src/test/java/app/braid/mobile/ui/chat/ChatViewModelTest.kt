@@ -3,6 +3,8 @@ package app.braid.mobile.ui.chat
 import app.braid.mobile.data.chat.DefaultChatRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
+import app.braid.mobile.data.transcription.DefaultTranscriptionRepository
+import app.braid.mobile.data.transcription.TranscriptionApi
 import app.braid.mobile.domain.agenda.FreeWindow
 import app.braid.mobile.domain.chat.ChatAgent
 import app.braid.mobile.domain.chat.ChatPolling
@@ -97,7 +99,20 @@ class ChatViewModelTest {
         polling: ChatPolling = ChatPolling(),
         repository: DefaultChatRepository = DefaultChatRepository(graph.apis.create(RequestsApi::class.java)),
         selector: ModelSelector = ModelSelector(repository, store),
-    ): ChatViewModel = ChatViewModel(repository, graph.sessionRepository, AppClock { now }, polling, selector).also { created += it }
+    ): ChatViewModel =
+        ChatViewModel(
+            repository,
+            graph.sessionRepository,
+            AppClock {
+                now
+            },
+            polling,
+            selector,
+            DefaultTranscriptionRepository(graph.apis.create(TranscriptionApi::class.java)),
+        ).also {
+            created +=
+                it
+        }
 
     private suspend fun ChatViewModel.until(predicate: (ChatUiState) -> Boolean): ChatUiState =
         withContext(Dispatchers.Default) { withTimeout(10_000) { state.first(predicate) } }

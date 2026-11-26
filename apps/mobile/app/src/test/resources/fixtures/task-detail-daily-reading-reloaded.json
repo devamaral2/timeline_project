@@ -1,0 +1,20 @@
+{
+  "id": "task-leitura",
+  "actor": "human",
+  "kind": "common",
+  "status": "todo",
+  "priority": "medium",
+  "name": "Leitura diária",
+  "description": "",
+  "startedAt": "2026-09-14T21:00:00.000Z",
+  "longRunning": false,
+  "notifyOffsetsMinutes": [],
+  "tags": [],
+  "artifactTypes": [],
+  "revision": 4,
+  "createdAt": "2026-09-14T12:00:00.000Z",
+  "updatedAt": "2026-09-14T13:00:00.000Z",
+  "artifacts": [],
+  "subtaskIds": [],
+  "requests": []
+}

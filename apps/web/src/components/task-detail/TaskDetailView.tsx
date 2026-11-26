@@ -76,6 +76,12 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
     return change({ expectedRevision: task.revision, artifacts: artifactLinkInputs(next) }, "Não foi possível ligar o documento. Tente novamente.");
   };
 
+  /** O pedido de transcrição já gravou o documento do vídeo na Leitura diária: relê a tarefa e a agenda. */
+  const videoRequested = () => {
+    window.dispatchEvent(new Event(agendaRefreshEvent));
+    void onChanged();
+  };
+
   const lead = (
     <>
       <nav className={styles.topbar} aria-label="Navegação do registro">
@@ -100,7 +106,13 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
     <DetailFrame type={task.kind} leadLabel="Resumo da tarefa" bodyLabel="Conteúdo da tarefa" lead={lead}>
       <TaskInfoSection task={task} />
       <TaskHierarchySection userId={userId} task={task} />
-      <TaskArtifactsSection userId={userId} task={task} busy={saving} onAddArtifact={(artifact) => void addArtifact(artifact)} />
+      <TaskArtifactsSection
+        userId={userId}
+        task={task}
+        busy={saving}
+        onAddArtifact={(artifact) => void addArtifact(artifact)}
+        onVideoRequested={videoRequested}
+      />
       <TaskRequestsSection userId={userId} task={task} />
       {error ? <DetailMessage alert>{error}</DetailMessage> : null}
       <EntityAiEditBar
