@@ -36,10 +36,9 @@ class TranscriptionFixturesTest {
         fun text(key: String) = web.getValue(key).jsonPrimitive.content
         assertEquals(text("chatPending"), TranscriptionText.CHAT_PENDING)
         assertEquals(text("chatQueued"), TranscriptionText.CHAT_QUEUED)
-        assertEquals(text("chatAgain"), TranscriptionText.CHAT_AGAIN)
+        assertEquals(text("alreadyQueued"), TranscriptionText.ALREADY_QUEUED)
         assertEquals(text("invalidLink"), TranscriptionText.INVALID_LINK)
         assertEquals(text("formQueued"), TranscriptionText.FORM_QUEUED)
-        assertEquals(text("formAgain"), TranscriptionText.FORM_AGAIN)
         assertEquals(text("formFailed"), TranscriptionText.FORM_FAILED)
         assertEquals(text("dailyReading"), TranscriptionText.DAILY_READING)
     }

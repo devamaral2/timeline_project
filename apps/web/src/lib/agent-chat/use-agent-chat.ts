@@ -455,7 +455,7 @@ export function useAgentChat({
         {
           id: `${id}-transcription`,
           role: "assistant",
-          text: result.created ? TRANSCRIPTION_TEXTS.chatQueued : TRANSCRIPTION_TEXTS.chatAgain,
+          text: result.created ? TRANSCRIPTION_TEXTS.chatQueued : TRANSCRIPTION_TEXTS.alreadyQueued,
           entities: [{ kind: "task", id: result.taskId, change: "updated", label: TRANSCRIPTION_TEXTS.dailyReading }],
         },
       ]);

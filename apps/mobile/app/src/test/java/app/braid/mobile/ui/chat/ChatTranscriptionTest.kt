@@ -153,7 +153,7 @@ class ChatTranscriptionTest {
             chat.send(video)
             val second = chat.until { it.pending == null && it.messages.size == 4 }
 
-            assertEquals(TranscriptionText.CHAT_AGAIN, (second.messages[3] as ChatMessage.Assistant).text)
+            assertEquals(TranscriptionText.ALREADY_QUEUED, (second.messages[3] as ChatMessage.Assistant).text)
         }
 
     @Test

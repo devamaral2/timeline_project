@@ -54,7 +54,7 @@ export function TaskAddVideo({ onRequested }: TaskAddVideoProps) {
     try {
       const result = await requestTranscription(url);
       hide();
-      setNotice(result.created ? TEXTS.formQueued : TEXTS.formAgain);
+      setNotice(result.created ? TEXTS.formQueued : TEXTS.alreadyQueued);
       onRequested();
     } catch (cause) {
       setError(cause instanceof ApiRequestError && cause.kind === "invalid_input" ? TEXTS.invalidLink : TEXTS.formFailed);

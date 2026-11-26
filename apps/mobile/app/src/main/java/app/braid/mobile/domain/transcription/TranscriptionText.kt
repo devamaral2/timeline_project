@@ -15,15 +15,14 @@ object TranscriptionText {
     const val CHAT_QUEUED =
         "O vídeo entrou na fila de transcrição. O documento já está na Leitura diária de hoje e o texto chega quando a transcrição terminar."
 
-    /** A resposta do chat quando o mesmo vídeo já esperava no dia. */
-    const val CHAT_AGAIN = "Esse vídeo já estava na fila de transcrição. Nada foi duplicado."
+    /** Quando o mesmo vídeo já esperava no dia: a resposta do chat e o aviso sob o botão "Adicionar vídeo". */
+    const val ALREADY_QUEUED = "Esse vídeo já estava na fila de transcrição. Nada foi duplicado."
 
     /** Link que não é de vídeo do YouTube (canal, playlist, busca), no chat e no campo do botão. */
     const val INVALID_LINK = "Esse link não é de um vídeo do YouTube."
 
     /** O aviso sob o botão "Adicionar vídeo" quando o vídeo entrou na fila. */
     const val FORM_QUEUED = "O vídeo entrou na fila de transcrição. O texto chega na Leitura diária quando a transcrição terminar."
-    const val FORM_AGAIN = "Esse vídeo já estava na fila de transcrição. Nada foi duplicado."
     const val FORM_FAILED = "Não foi possível pedir a transcrição. Tente novamente."
 
     /** O nome da tarefa que a resposta do chat abre. */

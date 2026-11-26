@@ -348,7 +348,7 @@ class ChatViewModel
                 if (id !in following) return@launch
                 following -= id
                 val reading = RequestEntity(EntityKind.Task, result.taskId, TranscriptionText.DAILY_READING, null, RequestOperation.Update)
-                val text = if (result.created) TranscriptionText.CHAT_QUEUED else TranscriptionText.CHAT_AGAIN
+                val text = if (result.created) TranscriptionText.CHAT_QUEUED else TranscriptionText.ALREADY_QUEUED
                 commit {
                     it.copy(
                         pending = if (it.pending?.id == id) null else it.pending,
