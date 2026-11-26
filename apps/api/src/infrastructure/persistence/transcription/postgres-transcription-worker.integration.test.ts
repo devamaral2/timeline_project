@@ -13,6 +13,7 @@ import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-
 import { PostgresWorkoutCatalog } from "../artifacts/postgres-workout.catalog";
 import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
 import { PostgresTaskCardQuery } from "../tasks/queries/postgres-task-card.query";
+import { PostgresTaskRelations } from "../tasks/relations/postgres-task-relations";
 import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 import { OTHER_USER, USER, countRows, selectRows } from "../testing/fixtures";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
@@ -50,7 +51,7 @@ describe("servico local de transcricao no Postgres", () => {
     gate = new DailyReadingGate(new PostgresTaskCardQuery(ctx.db), artifacts, builder, createTask, writer, undefined, () => now);
     const requests = new PostgresTranscriptionRequests(ctx.db);
     requestsStore = requests;
-    request = new RequestTranscriptionUseCase(gate, requests);
+    request = new RequestTranscriptionUseCase(gate, requests, new PostgresTaskRelations());
     worker = new TranscriptionWorkerUseCase(gate, writer, requests, () => now);
   }, 60000);
 

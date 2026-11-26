@@ -1,5 +1,6 @@
 import type { TranscriptionRequestInput, TranscriptionRequestResult } from "@repo/contracts";
 import { youtubeVideoLinkOf } from "@repo/contracts/youtube";
+import type { TaskRelations } from "../../api-core/tasks/task-relations";
 import type { TranscriptionRequestData, TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import { Task, TaskValidationError } from "../../domain";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
@@ -24,6 +25,7 @@ export class RequestTranscriptionUseCase {
   constructor(
     private readonly gate: Pick<DailyReadingGate, "exclusive" | "now" | "today">,
     private readonly requests: TranscriptionRequests,
+    private readonly relations: TaskRelations,
   ) {}
 
   async execute(input: TranscriptionRequestInput, actor: AuthenticatedUser): Promise<TranscriptionRequestResult> {
@@ -71,13 +73,14 @@ export class RequestTranscriptionUseCase {
           requestId = request.id;
           return {
             tasks: [{ op: "create", entity: request }],
-            afterWrite: (tx) =>
-              this.requests.record(tx, {
-                requestId: request.id,
-                userId: actor.userId,
-                readingTaskId: where.readingTaskId,
+            afterWrite: async (tx) => {
+              await this.relations.record(tx, {
+                fromTaskId: request.id,
+                toTaskId: where.readingTaskId,
                 relation: where.readingCreated ? "generates" : "updates",
-              }),
+              });
+              await this.requests.enqueue(tx, { requestId: request.id, userId: actor.userId });
+            },
           };
         },
       });

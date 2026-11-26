@@ -2,6 +2,7 @@ import type { TranscriptionResult } from "@repo/contracts";
 import { describe, expect, test, vi } from "vitest";
 import { InMemoryTranscriptionRequests } from "../../api-core/transcription/testing/in-memory-transcription-requests";
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
+import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-task-relations";
 import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
 import { TranscriptionWorkerUseCase } from "../transcription-worker/transcription-worker.usecase";
@@ -31,7 +32,7 @@ function setup() {
     ...kit,
     requests,
     cancelOfTasks,
-    request: new RequestTranscriptionUseCase(gate, requests),
+    request: new RequestTranscriptionUseCase(gate, requests, new InMemoryTaskRelations()),
     worker: new TranscriptionWorkerUseCase(gate, kit.batchWriter, requests, clock),
     cancel: new CancelTranscriptionUseCase(gate, requests, { cancelOfTasks }, clock),
   };

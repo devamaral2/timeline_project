@@ -8,6 +8,7 @@ import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-
 import { PostgresWorkoutCatalog } from "../artifacts/postgres-workout.catalog";
 import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
 import { PostgresTaskCardQuery } from "../tasks/queries/postgres-task-card.query";
+import { PostgresTaskRelations } from "../tasks/relations/postgres-task-relations";
 import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 import { USER, countRows, selectRows } from "../testing/fixtures";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
@@ -30,7 +31,7 @@ describe("pedido de transcricao no Postgres", () => {
     const writer = new PostgresEntityBatchWriter(ctx.db);
     const createTask = new CreateTaskUseCase(tasks, artifacts, builder, writer, () => now);
     const gate = new DailyReadingGate(new PostgresTaskCardQuery(ctx.db), artifacts, builder, createTask, writer, undefined, () => now);
-    useCase = new RequestTranscriptionUseCase(gate, new PostgresTranscriptionRequests(ctx.db));
+    useCase = new RequestTranscriptionUseCase(gate, new PostgresTranscriptionRequests(ctx.db), new PostgresTaskRelations());
   }, 60000);
 
   beforeEach(async () => {

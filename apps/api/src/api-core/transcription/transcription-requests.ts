@@ -64,19 +64,15 @@ export interface OpenTranscriptionRequest {
 }
 
 /**
- * Persistência do pedido de transcrição que o lote de entidades não cobre: a
- * relação entre tarefas e o job. `record` roda na transação do escritor em lote
- * (`EntityBatch.afterWrite`), para que o pedido, o documento, a ligação com a
- * leitura e o job existam se e somente se existem juntos.
+ * Persistência do pedido de transcrição que o lote de entidades não cobre: o
+ * job do serviço local e o que ele guarda. `enqueue` roda na transação do escritor em lote
+ * (`EntityBatch.afterWrite`), para que o pedido, o documento e o job existam se e somente se existem juntos.
  */
 export interface TranscriptionRequests {
   /** O pedido do mesmo vídeo, no mesmo dia, que ainda está em `awaiting_transcription` ou `running`. */
   findOpen(userId: string, url: string, day: string): Promise<OpenTranscriptionRequest | undefined>;
-  /** A relação do pedido com a Leitura diária (`generates` quando ele a criou, `updates` quando a alterou) e o job. */
-  record(
-    tx: unknown,
-    input: { requestId: string; userId: string; readingTaskId: string; relation: "generates" | "updates" },
-  ): Promise<void>;
+  /** Enfileira o job do serviço local do pedido. A relação dele com a Leitura diária é de `TaskRelations`. */
+  enqueue(tx: unknown, input: { requestId: string; userId: string }): Promise<void>;
 
   /**
    * O pedido mais antigo da pessoa que espera o serviço local, com o lease novo. Antes, o job cujo lease

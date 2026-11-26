@@ -21,9 +21,9 @@ import { appendEntry } from "../requests/request-rows";
 import type { Db, Tx } from "../shared/tx";
 
 /**
- * O que o lote de entidades nao grava do pedido de transcricao: a relacao do
- * pedido com a Leitura diaria e o job do servico local (ADR 0013). O pedido e o
- * documento ja sao gravados pelo escritor em lote; isto roda na transacao dele.
+ * O que o lote de entidades nao grava do pedido de transcricao: o job do servico
+ * local (ADR 0013) e o que ele guarda. O pedido, o documento e a relacao com a
+ * Leitura diaria (`TaskRelations`) sao gravados na mesma transacao do escritor em lote.
  */
 export class PostgresTranscriptionRequests implements TranscriptionRequests {
   constructor(private readonly db: Db) {}
@@ -40,16 +40,8 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
     return { requestId: row.id, readingTaskId: row.data.readingTaskId, artifactId: row.data.artifactId };
   }
 
-  async record(
-    tx: unknown,
-    input: { requestId: string; userId: string; readingTaskId: string; relation: "generates" | "updates" },
-  ): Promise<void> {
-    const transaction = tx as Tx;
-    await transaction.execute(sql`
-      INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
-      VALUES (${input.requestId}, ${input.readingTaskId}, ${input.relation})
-      ON CONFLICT DO NOTHING`);
-    await enqueueJobInTransaction(transaction as unknown as JobTransaction, {
+  async enqueue(tx: unknown, input: { requestId: string; userId: string }): Promise<void> {
+    await enqueueJobInTransaction(tx as unknown as JobTransaction, {
       kind: TRANSCRIPTION_JOB,
       userId: input.userId,
       actorId: input.userId,

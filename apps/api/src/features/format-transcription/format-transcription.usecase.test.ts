@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { FastStageError, LlmUnavailableError } from "../../api-core/agent/errors/agent.errors";
 import type { StructuredCompletionGateway, StructuredCompletionInput } from "../../api-core/agent/gateways/structured-completion.gateway";
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
+import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-task-relations";
 import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { InMemoryTranscriptionRequests } from "../../api-core/transcription/testing/in-memory-transcription-requests";
 import { Task } from "../../domain";
@@ -82,7 +83,7 @@ function setup(haiku: FakeHaiku = new FakeHaiku()) {
     },
     /** Um pedido entregue e esperando a formatação, como a entrega o deixa. */
     async delivered(result: TranscriptionResult = RESULT) {
-      const created = await new RequestTranscriptionUseCase(gate, requests).execute({ url: VIDEO }, actor);
+      const created = await new RequestTranscriptionUseCase(gate, requests, new InMemoryTaskRelations()).execute({ url: VIDEO }, actor);
       const worker = new TranscriptionWorkerUseCase(gate, kit.batchWriter, requests, clock);
       const reservation = await worker.reserve(actor);
       if (!reservation) throw new Error("sem reserva");

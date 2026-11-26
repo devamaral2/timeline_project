@@ -30,9 +30,8 @@ interface LeasedJob {
   progress?: { stage: TranscriptionStage; percent: number };
 }
 
-/** O equivalente em memoria do que o Postgres grava na transacao do lote: as relacoes entre tarefas, os jobs e as entradas. */
+/** O equivalente em memoria do que o Postgres grava na transacao do lote: os jobs e as entradas. */
 export class InMemoryTranscriptionRequests implements TranscriptionRequests {
-  readonly relations: { fromTaskId: string; toTaskId: string; relation: string }[] = [];
   /** Os jobs do servico local que ja nasceram, na ordem. */
   readonly jobs: { kind: string; userId: string; taskId: string }[] = [];
   /** Os jobs internos de formatacao enfileirados pela entrega. */
@@ -62,11 +61,7 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
     return undefined;
   }
 
-  async record(
-    _tx: unknown,
-    input: { requestId: string; userId: string; readingTaskId: string; relation: "generates" | "updates" },
-  ): Promise<void> {
-    this.relations.push({ fromTaskId: input.requestId, toTaskId: input.readingTaskId, relation: input.relation });
+  async enqueue(_tx: unknown, input: { requestId: string; userId: string }): Promise<void> {
     this.jobs.push({ kind: TRANSCRIPTION_JOB, userId: input.userId, taskId: input.requestId });
     this.queue.push({ taskId: input.requestId, userId: input.userId, status: "queued", attempts: 0 });
   }

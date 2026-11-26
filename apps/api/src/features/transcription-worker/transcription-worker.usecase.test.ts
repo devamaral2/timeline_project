@@ -9,6 +9,7 @@ import {
   TRANSCRIPTION_MAX_ATTEMPTS,
 } from "../../api-core/transcription/transcription-requests";
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
+import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-task-relations";
 import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { Task } from "../../domain";
 import { RequestTranscriptionUseCase } from "../request-transcription/request-transcription.usecase";
@@ -54,7 +55,7 @@ function setup() {
   return {
     ...kit,
     requests,
-    request: new RequestTranscriptionUseCase(gate, requests),
+    request: new RequestTranscriptionUseCase(gate, requests, new InMemoryTaskRelations()),
     worker: new TranscriptionWorkerUseCase(gate, kit.batchWriter, requests, clock),
     advance: (ms: number) => {
       current = new Date(current.getTime() + ms);
