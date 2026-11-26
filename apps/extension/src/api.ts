@@ -1,4 +1,4 @@
-import type { DailyReadingInput, DailyReadingResult } from "@repo/contracts";
+import type { DailyReadingInput, DailyReadingResult, TranscriptionRequestInput, TranscriptionRequestResult } from "@repo/contracts";
 
 /**
  * A extensão fala com o Candeia pela mesma porta do app web: `/api/*` na origem
@@ -69,6 +69,24 @@ export async function saveReading(baseUrl: string, page: DailyReadingInput, fetc
   );
   if (!response.ok) throw new ApiError(response.status);
   return (await response.json()) as DailyReadingResult;
+}
+
+/**
+ * `POST /api/tasks/transcription-requests`: pede a transcrição de um vídeo do
+ * YouTube. O pedido nasce na hora, na fila do serviço local, e o documento do
+ * vídeo entra na Leitura diária do dia.
+ */
+export async function requestTranscription(baseUrl: string, videoUrl: string, fetchImpl: Fetch = fetch): Promise<TranscriptionRequestResult> {
+  const body: TranscriptionRequestInput = { url: videoUrl };
+  const response = await withSession(fetchImpl, baseUrl, () =>
+    request(fetchImpl, `${baseUrl}/api/tasks/transcription-requests`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+  if (!response.ok) throw new ApiError(response.status);
+  return (await response.json()) as TranscriptionRequestResult;
 }
 
 /** Quem está com a sessão aberta, ou `null` sem sessão. */
