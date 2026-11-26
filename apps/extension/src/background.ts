@@ -2,7 +2,7 @@ import { currentUser } from "./api";
 import { youtubeLinkOf } from "./capture/youtube";
 import type { CapturedPage } from "./capture/page";
 import { failureToast, savedToast, transcriptionToast } from "./messages";
-import { saveFromTab, type Saved } from "./save";
+import { saveFromTab, type ContentKind, type Saved } from "./save";
 import { hostPermissionOf, readSettings } from "./settings";
 import { showToast, type Toast } from "./toast";
 
@@ -26,6 +26,10 @@ const BADGES = {
   ok: { text: "✓", color: "#2e8a7a" },
   error: { text: "!", color: "#aa474f" },
 } as const;
+
+/** O texto do emblema enquanto trabalha e depois de guardar, por tipo de conteúdo. */
+const BUSY_TITLE: Record<ContentKind, string> = { transcription: "Pedindo a transcrição…", page: "Guardando na Leitura diária…" };
+const SAVED_TITLE: Record<ContentKind, string> = { transcription: "Vídeo na fila de transcrição", page: "Guardada na Leitura diária" };
 
 /** O emblema vale só para a aba e some sozinho quando ela vai para outra página. */
 async function setBadge(tabId: number, state: keyof typeof BADGES, title: string): Promise<void> {
@@ -79,8 +83,10 @@ async function saveTab(tab: chrome.tabs.Tab): Promise<void> {
     return;
   }
 
-  const video = tab.url !== undefined && youtubeLinkOf(tab.url) !== null;
-  await setBadge(tabId, "busy", video ? "Pedindo a transcrição…" : "Guardando na Leitura diária…");
+  // O endereço da aba é lido uma vez: ele decide o que o clique guarda, o texto do emblema e o aviso de falha.
+  const video = tab.url ? youtubeLinkOf(tab.url) : null;
+  const content: ContentKind = video ? "transcription" : "page";
+  await setBadge(tabId, "busy", BUSY_TITLE[content]);
   let captureFailed = false;
   const read = async () => {
     try {
@@ -92,15 +98,15 @@ async function saveTab(tab: chrome.tabs.Tab): Promise<void> {
   };
 
   try {
-    const saved = await saveFromTab(baseUrl, tab.url, read);
-    await setBadge(tabId, "ok", saved.kind === "transcription" ? "Vídeo na fila de transcrição" : "Guardada na Leitura diária");
+    const saved = await saveFromTab(baseUrl, video, read);
+    await setBadge(tabId, "ok", SAVED_TITLE[saved.kind]);
     await toast(tabId, await savedMessage(baseUrl, saved));
   } catch (error) {
     if (captureFailed) {
       await setBadge(tabId, "error", "O Chrome não deixa extensões lerem esta página.");
       return;
     }
-    const message = failureToast(error, baseUrl, video ? "transcription" : "page");
+    const message = failureToast(error, baseUrl, content);
     await setBadge(tabId, "error", message.title);
     await toast(tabId, message);
   }

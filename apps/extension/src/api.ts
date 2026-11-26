@@ -50,8 +50,21 @@ async function withSession(fetchImpl: Fetch, baseUrl: string, call: () => Promis
   return second;
 }
 
+/** Um `POST` de JSON para a API, com a sessão renovada num 401; devolve a resposta lida ou `ApiError`. */
+async function postJson<Result>(fetchImpl: Fetch, baseUrl: string, path: string, body: unknown): Promise<Result> {
+  const response = await withSession(fetchImpl, baseUrl, () =>
+    request(fetchImpl, `${baseUrl}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+  if (!response.ok) throw new ApiError(response.status);
+  return (await response.json()) as Result;
+}
+
 /** `POST /api/tasks/daily-reading`: guarda a página na Leitura diária do dia. */
-export async function saveReading(baseUrl: string, page: DailyReadingInput, fetchImpl: Fetch = fetch): Promise<DailyReadingResult> {
+export function saveReading(baseUrl: string, page: DailyReadingInput, fetchImpl: Fetch = fetch): Promise<DailyReadingResult> {
   // So os campos do contrato: a API recusa campo que nao conhece.
   const body: DailyReadingInput = {
     url: page.url,
@@ -60,15 +73,7 @@ export async function saveReading(baseUrl: string, page: DailyReadingInput, fetc
     ...(page.siteName ? { siteName: page.siteName } : {}),
     ...(page.byline ? { byline: page.byline } : {}),
   };
-  const response = await withSession(fetchImpl, baseUrl, () =>
-    request(fetchImpl, `${baseUrl}/api/tasks/daily-reading`, {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify(body),
-    }),
-  );
-  if (!response.ok) throw new ApiError(response.status);
-  return (await response.json()) as DailyReadingResult;
+  return postJson(fetchImpl, baseUrl, "/api/tasks/daily-reading", body);
 }
 
 /**
@@ -76,17 +81,9 @@ export async function saveReading(baseUrl: string, page: DailyReadingInput, fetc
  * YouTube. O pedido nasce na hora, na fila do serviço local, e o documento do
  * vídeo entra na Leitura diária do dia.
  */
-export async function requestTranscription(baseUrl: string, videoUrl: string, fetchImpl: Fetch = fetch): Promise<TranscriptionRequestResult> {
+export function requestTranscription(baseUrl: string, videoUrl: string, fetchImpl: Fetch = fetch): Promise<TranscriptionRequestResult> {
   const body: TranscriptionRequestInput = { url: videoUrl };
-  const response = await withSession(fetchImpl, baseUrl, () =>
-    request(fetchImpl, `${baseUrl}/api/tasks/transcription-requests`, {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify(body),
-    }),
-  );
-  if (!response.ok) throw new ApiError(response.status);
-  return (await response.json()) as TranscriptionRequestResult;
+  return postJson(fetchImpl, baseUrl, "/api/tasks/transcription-requests", body);
 }
 
 /** Quem está com a sessão aberta, ou `null` sem sessão. */

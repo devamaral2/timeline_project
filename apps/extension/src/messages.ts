@@ -1,6 +1,7 @@
 import type { DailyReadingResult, TranscriptionRequestResult } from "@repo/contracts";
 import { ApiError, SignedOutError } from "./api";
 import type { CapturedPage } from "./capture/page";
+import type { ContentKind } from "./save";
 import type { Toast } from "./toast";
 
 /** O aviso de uma página guardada: o que foi guardado e onde, com o caminho para abrir. */
@@ -37,9 +38,9 @@ export function transcriptionToast(result: TranscriptionRequestResult, taskUrl: 
   };
 }
 
-/** O aviso de uma falha, dizendo o que a pessoa pode fazer. `action` é o que o clique tentava fazer. */
-export function failureToast(error: unknown, baseUrl: string, action: "page" | "transcription" = "page"): Toast {
-  const transcription = action === "transcription";
+/** O aviso de uma falha, dizendo o que a pessoa pode fazer. `content` é o que o clique tentava guardar. */
+export function failureToast(error: unknown, baseUrl: string, content: ContentKind = "page"): Toast {
+  const transcription = content === "transcription";
   if (error instanceof SignedOutError) {
     return {
       tone: "error",
