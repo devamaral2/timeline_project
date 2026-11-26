@@ -75,6 +75,14 @@ export default defineWorkspace([
     },
   },
   {
+    test: {
+      name: "transcriber",
+      root: "./apps/transcriber",
+      environment: "node",
+      include: ["src/**/*.{test,spec}.ts"],
+    },
+  },
+  {
     resolve: { alias: packageAliases },
     test: {
       name: "extension",
