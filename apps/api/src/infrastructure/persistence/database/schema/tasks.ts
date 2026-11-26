@@ -18,6 +18,7 @@ import {
   ACTORS,
   AGENT_KINDS,
   AGENT_STATUSES,
+  OFF_AGENDA_KINDS,
   ENTRY_KINDS,
   ENTRY_ROLES,
   TASK_KINDS,
@@ -79,11 +80,11 @@ export const tasks = pgTable(
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (table) => [
-    // Agenda: pessoa e agente, sem passos e sem tarefas longas.
+    // Agenda: pessoa e agente, sem passos, sem conteudo guardado (ADR 0021) e sem tarefas longas.
     index("tasks_agenda_idx")
       .on(table.userId, table.startedAt, table.id)
       .where(
-        sql`${table.startedAt} IS NOT NULL AND NOT ${table.longRunning} AND ${table.kind} <> 'step' AND ${table.deletedAt} IS NULL`,
+        sql`${table.startedAt} IS NOT NULL AND NOT ${table.longRunning} AND ${table.kind} NOT IN (${sqlList(OFF_AGENDA_KINDS)}) AND ${table.deletedAt} IS NULL`,
       ),
     // Lista de tarefas: tudo o que tem status, de pessoa e de agente, sem passos.
     index("tasks_tracked_idx")

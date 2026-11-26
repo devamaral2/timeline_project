@@ -7,11 +7,13 @@ import { z } from "zod";
  */
 const taskActorSchema = z.enum(["human", "agent"]);
 const humanTaskKindSchema = z.enum(["common", "meal", "sleep", "training"]);
-const agentRequestKindSchema = z.enum(["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"]);
+const agentRequestKindSchema = z.enum([
+  "request", "save_content", "save_content_with_transcription", "search_request", "build_request", "inquiry_request", "review_request", "cron",
+]);
 const taskKindSchema = z.enum([...humanTaskKindSchema.options, ...agentRequestKindSchema.options, "step"]);
 const humanTaskStatusSchema = z.enum(["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]);
-const agentTaskStatusSchema = z.enum(["queued", "running", "waiting", "done", "failed", "cancel"]);
-const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, "queued", "running", "waiting", "failed"]);
+const agentTaskStatusSchema = z.enum(["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"]);
+const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, "queued", "running", "waiting", "awaiting_transcription", "failed"]);
 const taskPrioritySchema = z.enum(["urgent", "high", "medium", "low"]);
 const taskArtifactRelationSchema = z.enum(["creates", "updates", "uses", "deletes"]);
 const artifactTypeSchema = z.enum(["text", "food", "sleep", "training", "workout", "skill", "agent", "router"]);

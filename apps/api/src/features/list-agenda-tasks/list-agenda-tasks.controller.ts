@@ -1,6 +1,6 @@
 import { Controller, Get, Inject, Query, UseGuards } from "@nestjs/common";
 import type { AgendaPageDto } from "@repo/contracts";
-import { ACTORS, TASK_KINDS, type Actor, type TaskKind } from "../../domain/index";
+import { ACTORS, AGENDA_KINDS, type Actor, type TaskKind } from "../../domain/index";
 import { assertAgendaCursor, parseLimit } from "../../api-core/http-input-validation";
 import { parseEnum, parseInstant } from "../../api-core/list-filters";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
@@ -8,8 +8,6 @@ import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identi
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { ListAgendaTasksUseCase } from "./list-agenda-tasks.usecase";
 
-/** Os passos nunca aparecem na agenda, entao nao sao um filtro. */
-const AGENDA_KINDS = TASK_KINDS.filter((kind) => kind !== "step");
 
 @Controller("api/tasks")
 export class ListAgendaTasksController {

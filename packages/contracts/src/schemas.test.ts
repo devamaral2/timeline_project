@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { artifactSchema, createTaskInputSchema, updateTaskInputSchema } from "./schemas";
+import { artifactSchema, createTaskInputSchema, requestSchema, taskCardSchema, updateTaskInputSchema } from "./schemas";
 
 const food = {
   description: "arroz", items: [],
@@ -65,4 +65,32 @@ test.each(["previousTaskIds", "nextTaskIds"])("the task input schemas refuse %s 
 
 test("the update schema identifies the task by taskId, not by its old name", () => {
   expect(updateTaskInputSchema.safeParse({ [nomeAntigo("taskId")]: "t1", expectedRevision: 1 }).success).toBe(false);
+});
+
+const agentCard = (kind: string, status: string) => ({
+  id: "t1", actor: "agent", kind, status, priority: "medium", name: "Guardar", description: "", longRunning: false,
+  notifyOffsetsMinutes: [], tags: [], artifactTypes: [], revision: 1, createdAt: "2026-11-26T12:00:00Z", updatedAt: "2026-11-26T12:00:00Z",
+});
+
+test.each([
+  ["save_content", "done"],
+  ["save_content_with_transcription", "awaiting_transcription"],
+  ["save_content_with_transcription", "running"],
+  ["request", "awaiting_transcription"],
+])("a task card accepts the agent kind %s with the status %s", (kind, status) => {
+  expect(taskCardSchema.safeParse(agentCard(kind, status)).success).toBe(true);
+});
+
+test("a task card refuses a kind or a status that no set has", () => {
+  expect(taskCardSchema.safeParse(agentCard("save_page", "done")).success).toBe(false);
+  expect(taskCardSchema.safeParse(agentCard("save_content", "transcribing")).success).toBe(false);
+});
+
+test("the request list accepts the saved content and the awaiting transcription status", () => {
+  const request = {
+    id: "r1", kind: "save_content_with_transcription", route: "steps", status: "awaiting_transcription", title: "Vídeo",
+    createdAt: "2026-11-26T12:00:00Z", updatedAt: "2026-11-26T12:00:00Z", steps: [], entities: [],
+  };
+  expect(requestSchema.safeParse(request).success).toBe(true);
+  expect(requestSchema.safeParse({ ...request, kind: "save_content", status: "done" }).success).toBe(true);
 });

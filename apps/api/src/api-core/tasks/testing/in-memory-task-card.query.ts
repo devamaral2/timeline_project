@@ -1,4 +1,4 @@
-import { MAX_TASK_BLOCK_DAYS, type Task, type Recurrence } from "../../../domain/index";
+import { MAX_TASK_BLOCK_DAYS, OFF_AGENDA_KINDS, type Task, type Recurrence } from "../../../domain/index";
 import type {
   AgendaPage,
   AgendaQueryParams,
@@ -17,6 +17,8 @@ const MAX_TASK_BLOCK_MS = MAX_TASK_BLOCK_DAYS * 24 * 60 * 60 * 1000;
 function compareIds(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
+
+const isOffAgenda = (kind: string) => (OFF_AGENDA_KINDS as readonly string[]).includes(kind);
 
 /** O instante pelo qual a lista de tarefas ordena e filtra: o inicio ou, sem ele, o fim planejado. */
 function trackedInstantOf(task: Task): Date | undefined {
@@ -39,7 +41,7 @@ export class InMemoryTaskCardQuery implements TaskCardQuery {
     const matching = this.database.tasks
       .filter((task) => {
         const startedAt = task.startedAt;
-        if (task.userId !== params.userId || !startedAt || task.longRunning || task.kind === "step") return false;
+        if (task.userId !== params.userId || !startedAt || task.longRunning || isOffAgenda(task.kind)) return false;
         if (params.to && startedAt > params.to) return false;
         if (params.from) {
           // Um bloco dura no maximo 31 dias: quem ainda toca a janela comecou no maximo isso antes dela.
