@@ -7,6 +7,7 @@ import { CreateTaskModule } from "./features/create-task/create-task.module";
 import { SaveDailyReadingModule } from "./features/save-daily-reading/save-daily-reading.controller";
 import { RequestTranscriptionModule } from "./features/request-transcription/request-transcription.controller";
 import { TranscriptionWorkerModule } from "./features/transcription-worker/transcription-worker.controller";
+import { FormatTranscriptionModule } from "./features/format-transcription/format-transcription.module";
 import { GetTaskModule } from "./features/get-task/get-task.module";
 import { ListAgendaTasksModule } from "./features/list-agenda-tasks/list-agenda-tasks.module";
 import { ListTrackedTasksModule } from "./features/list-tracked-tasks/list-tracked-tasks.module";
@@ -50,6 +51,7 @@ import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/r
     SaveDailyReadingModule,
     RequestTranscriptionModule,
     TranscriptionWorkerModule,
+    FormatTranscriptionModule,
     GetTaskModule,
     UpdateTaskModule,
     DeleteTaskModule,

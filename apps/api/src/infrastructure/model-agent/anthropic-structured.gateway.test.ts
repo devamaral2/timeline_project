@@ -52,6 +52,15 @@ describe("a chamada estruturada na Anthropic", () => {
     expect(String(bodies[0]?.system)).toContain(JSON.stringify(INPUT.schema));
   });
 
+  test("com strictSchema, o schema vai em output_config.format e sai do prompt", async () => {
+    const { gateway, bodies } = setup(reply([{ type: "text", text: "{\"sql\":\"select 1\"}" }]));
+
+    await expect(gateway.complete({ ...INPUT, strictSchema: true })).resolves.toMatchObject({ value: { sql: "select 1" } });
+
+    expect(bodies[0]?.output_config).toEqual({ effort: "high", format: { type: "json_schema", schema: INPUT.schema } });
+    expect(bodies[0]?.system).toBe(INPUT.system);
+  });
+
   test("o Haiku nao tem o fallback do servidor: a chamada vai sem ele", async () => {
     const { gateway, bodies } = setup(reply([{ type: "text", text: "{\"sql\":\"select 1\"}" }]));
     await gateway.complete({ ...INPUT, model: { provider: "anthropic", model: "claude-haiku-5-5", effort: "low" } });

@@ -24,11 +24,15 @@ import app.braid.mobile.domain.chat.pendingLabelOf
 import app.braid.mobile.domain.chat.providerOf
 import app.braid.mobile.domain.chat.providerOffText
 import app.braid.mobile.domain.chat.requestWithWindow
+import app.braid.mobile.domain.markdown.soleYouTubeVideoLink
 import app.braid.mobile.domain.request.AgentRequest
+import app.braid.mobile.domain.request.EntityKind
 import app.braid.mobile.domain.request.HermesOffException
 import app.braid.mobile.domain.request.ModelEffort
 import app.braid.mobile.domain.request.ModelOffException
 import app.braid.mobile.domain.request.ModelProvider
+import app.braid.mobile.domain.request.RequestEntity
+import app.braid.mobile.domain.request.RequestOperation
 import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isOpenRequest
@@ -45,6 +49,8 @@ import app.braid.mobile.domain.speech.speechErrorMessage
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.domain.timeline.dayKeyOf
+import app.braid.mobile.domain.transcription.TranscriptionRepository
+import app.braid.mobile.domain.transcription.TranscriptionText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -83,6 +89,7 @@ class ChatViewModel
         private val clock: AppClock,
         private val polling: ChatPolling,
         private val models: ModelSelector,
+        private val transcription: TranscriptionRepository,
         private val speech: SpeechRecognizer = NoSpeechRecognizer,
         private val microphone: MicrophonePermission = GrantedMicrophone,
     ) : ViewModel() {
@@ -271,8 +278,11 @@ class ChatViewModel
             val agent = mutableState.value.agentMode
             following += id
             commit { it.copy(messages = it.messages + ChatMessage.User(id, trimmed), pending = ChatPending(id, null)) }
+            // Só o link de um vídeo do YouTube, no assistente da agenda, vai direto ao pedido de transcrição (spec #39).
+            val videoLink = if (command == null && agent == null) soleYouTubeVideoLink(trimmed) else null
             val run = {
                 when {
+                    videoLink != null -> runTranscription(id, videoLink)
                     command is ChatModeCommand.Model -> enterModelMode(id, command.provider, command.text)
                     command is ChatModeCommand.Hermes -> runAgent(ChatAgent.Hermes, id, command.text ?: trimmed)
                     agent != null -> runAgent(agent, id, trimmed)
@@ -312,6 +322,40 @@ class ChatViewModel
                     )
                 }
                 followRequest(id, requestId)
+            }
+        }
+
+        /**
+         * A mensagem que é só um link de vídeo do YouTube: vai direto ao pedido de transcrição, antes do agente de roteamento,
+         * sem gastar modelo para classificá-la. A resposta diz que o vídeo entrou na fila e leva à Leitura diária. Não abre
+         * pedido de chat: não há rastro nem caixa de processo.
+         */
+        private fun runTranscription(
+            id: String,
+            url: String,
+        ) {
+            if (userId == null) return
+            commit { it.copy(pending = ChatPending(id, TranscriptionText.CHAT_PENDING)) }
+            viewModelScope.launch {
+                val result =
+                    try {
+                        transcription.request(url)
+                    } catch (failure: ChatRequestException) {
+                        val refused = failure.failure == ChatFailureCode.InvalidInput
+                        fail(id, failure.failure, if (refused) TranscriptionText.INVALID_LINK else null)
+                        return@launch
+                    }
+                if (id !in following) return@launch
+                following -= id
+                val reading = RequestEntity(EntityKind.Task, result.taskId, TranscriptionText.DAILY_READING, null, RequestOperation.Update)
+                val text = if (result.created) TranscriptionText.CHAT_QUEUED else TranscriptionText.CHAT_AGAIN
+                commit {
+                    it.copy(
+                        pending = if (it.pending?.id == id) null else it.pending,
+                        messages = it.messages + ChatMessage.Assistant("$id-transcription", text, listOf(reading)),
+                    )
+                }
+                mutableEntitiesChanged.tryEmit(Unit)
             }
         }
 

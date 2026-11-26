@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { advanceRequest, requestFixture, requestsArea } from "@/test/fake-api/requests";
+import { transcriptionArea } from "@/test/fake-api/transcription";
 import { AgentChatPanel, agentEntityHref, requestWithWindow, useAgendaChat } from "./agent-chat-panel";
 import type { FreeWindow } from "./hub-open";
 
@@ -67,7 +68,7 @@ function ask(text: string) {
 }
 
 beforeEach(() => {
-  api = createFakeApi({ areas: [requestsArea()] });
+  api = createFakeApi({ areas: [requestsArea(), transcriptionArea] });
   net.authedFetch.mockReset();
   net.authedFetch.mockImplementation(api.authedFetch);
   session.user = { userId: "user-1" };
@@ -608,4 +609,36 @@ test("closing and reopening the chat does not follow twice a request it already 
   await waitFor(() => expect(listCalls()).toHaveLength(3));
   await settle();
   expect(within(screen.getByRole("log")).getAllByText("o que tenho hoje?")).toHaveLength(1);
+});
+
+test("a mensagem que é só um link de vídeo do YouTube pede a transcrição e a resposta leva à Leitura diária", async () => {
+  render(<Harness entityHref={(entity) => `/user-1/tarefas/${entity.id}`} />);
+  ask("https://youtu.be/dQw4w9WgXcQ");
+
+  const log = screen.getByRole("log");
+  await waitFor(() => expect(within(log).getByText(/entrou na fila de transcrição/)).toBeInTheDocument());
+  expect(api.calls.filter((call) => call.pathname === "/api/tasks/transcription-requests").map((call) => call.body)).toEqual([
+    { url: "https://youtu.be/dQw4w9WgXcQ" },
+  ]);
+  expect(requestPosts()).toHaveLength(0);
+  expect(within(log).getByRole("link", { name: /Leitura diária/ })).toHaveAttribute("href", "/user-1/tarefas/leitura-diaria");
+  expect(requestAgendaRefresh).toHaveBeenCalledTimes(1);
+});
+
+test("o link de canal do YouTube não é pedido de transcrição: vai ao agente como qualquer mensagem", async () => {
+  render(<Harness />);
+  ask("https://www.youtube.com/@canal");
+
+  await waitFor(() => expect(requestPosts()).toHaveLength(1));
+  expect(api.calls.filter((call) => call.pathname === "/api/tasks/transcription-requests")).toHaveLength(0);
+});
+
+test("a API recusar o link de vídeo mostra o aviso e a ação de tentar de novo", async () => {
+  render(<Harness />);
+  api.failNext("POST", "/api/tasks/transcription-requests", 400);
+  ask("https://youtu.be/dQw4w9WgXcQ");
+
+  const log = screen.getByRole("log");
+  await waitFor(() => expect(within(log).getByText("Esse link não é de um vídeo do YouTube.")).toBeInTheDocument());
+  expect(within(log).getByRole("button", { name: "Tentar de novo" })).toBeInTheDocument();
 });

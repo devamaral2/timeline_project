@@ -13,7 +13,8 @@ const MAX_TOKENS = 16_000;
  *
  * O schema vai escrito no prompt, e nao em `output_config.format`: a saida presa ao schema aceita no maximo 16
  * campos com uniao de tipos por pedido, e os agentes de escrita e de edicao tem dezenas de campos que podem vir
- * `null`. Quem chama valida a resposta contra o schema, como ja faz com o OpenRouter.
+ * `null`. Quem chama valida a resposta contra o schema, como ja faz com o OpenRouter. Quem tem um schema pequeno
+ * pede a saida presa com `strictSchema` (a formatacao da transcricao, spec #39); a validacao de quem chama continua.
  */
 export class AnthropicStructuredCompletionGateway implements StructuredCompletionGateway {
   private readonly client: Pick<Anthropic, "beta">;
@@ -34,10 +35,13 @@ export class AnthropicStructuredCompletionGateway implements StructuredCompletio
       response = await this.client.beta.messages.create({
         model: selection.model,
         max_tokens: MAX_TOKENS,
-        system: withSchemaInstruction(input.system, input.schema),
+        system: input.strictSchema ? input.system : withSchemaInstruction(input.system, input.schema),
         messages: [{ role: "user", content: input.user }],
         thinking: { type: "adaptive", display: "summarized" },
-        output_config: { effort: EFFORTS[selection.effort] },
+        output_config: {
+          effort: EFFORTS[selection.effort],
+          ...(input.strictSchema ? { format: { type: "json_schema" as const, schema: input.schema } } : {}),
+        },
         ...(fallback ? { betas: [FALLBACK_BETA], fallbacks: "default" as const } : {}),
       }, { signal, maxRetries: 1 });
     } catch (error) {

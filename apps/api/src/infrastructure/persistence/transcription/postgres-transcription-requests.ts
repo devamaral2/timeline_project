@@ -5,6 +5,8 @@ import {
   TRANSCRIPTION_JOB,
   TRANSCRIPTION_LEASE_MS,
   TranscriptionLeaseLostError,
+  TranscriptionNotRunningError,
+  type FormattingInput,
   type OpenTranscriptionRequest,
   type ReservedTranscription,
   type TranscriptionRequestData,
@@ -134,6 +136,49 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
     const transaction = tx as Tx;
     await this.close(transaction, input);
     await this.setStatus(transaction, input.requestId, "failed", { failureCode: input.code }, input.at);
+  }
+
+  async awaitingFormat(userId: string, requestId: string): Promise<FormattingInput | undefined> {
+    const result = await this.db.execute<{ data: TranscriptionRequestData; entry: { type?: string } & TranscriptionResult }>(sql`
+      SELECT t.data, e.data AS entry FROM tasks t
+      JOIN task_entries e ON e.task_id = t.id AND e.kind = 'input' AND e.data->>'type' = 'transcription'
+      WHERE t.id = ${requestId} AND t.user_id = ${userId} AND t.actor = 'agent'
+        AND t.kind = 'save_content_with_transcription' AND t.status = 'running' AND t.deleted_at IS NULL
+      ORDER BY e.id DESC LIMIT 1`);
+    const row = result.rows[0];
+    if (!row) return undefined;
+    const { type: _type, ...entry } = row.entry;
+    return { data: row.data, result: entry };
+  }
+
+  async finish(
+    tx: unknown,
+    input: {
+      requestId: string;
+      userId: string;
+      status: "done" | "failed";
+      at: Date;
+      failureCode?: TranscriptionFailureCode;
+      commentsSummaryFailed?: boolean;
+    },
+  ): Promise<void> {
+    const transaction = tx as Tx;
+    const data = input.failureCode ? { failureCode: input.failureCode } : {};
+    const updated = await transaction.execute(sql`
+      UPDATE tasks SET status = ${input.status}, finished_at = ${input.at.toISOString()}, updated_at = now(),
+        data = data || ${JSON.stringify(data)}::jsonb
+      WHERE id = ${input.requestId} AND user_id = ${input.userId} AND actor = 'agent'
+        AND kind = 'save_content_with_transcription' AND status = 'running'
+      RETURNING id`);
+    if (updated.rows.length !== 1) throw new TranscriptionNotRunningError();
+    if (input.commentsSummaryFailed) {
+      await appendEntry(transaction, {
+        taskId: input.requestId,
+        userId: input.userId,
+        kind: "trace",
+        data: { stage: "comments_summary", status: "failed" },
+      });
+    }
   }
 
   /** Fecha o job do servico local, e so se o lease ainda e de quem entrega: sem isso, a transacao inteira se desfaz. */
