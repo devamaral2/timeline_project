@@ -4,8 +4,8 @@ import type { TaskRelations } from "../../api-core/tasks/task-relations";
 import type { TranscriptionRequestData, TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import { Task, TaskValidationError } from "../../domain";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
-import { composeVideoArticle } from "./video-article";
+import type { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
+import { composeVideoArticle } from "../../api-core/transcription/video-article";
 
 /** O que o documento diz até a transcrição chegar. */
 export const TRANSCRIPTION_QUEUED_TEXT = "Transcrição na fila";

@@ -7,7 +7,7 @@ import { TRANSCRIPTION_FORMAT_JOB, type TranscriptionRequests } from "../../api-
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
 import { AnthropicStructuredCompletionGateway } from "../../infrastructure/model-agent/anthropic-structured.gateway";
 import { TRANSCRIPTION_REQUESTS } from "../../infrastructure/persistence";
-import { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
+import { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
 import { SaveDailyReadingModule } from "../save-daily-reading/save-daily-reading.controller";
 import { FormatTranscriptionUseCase } from "./format-transcription.usecase";
 

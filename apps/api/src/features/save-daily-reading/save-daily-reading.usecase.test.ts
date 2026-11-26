@@ -3,8 +3,8 @@ import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-ta
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
 import { createTasksKit, type TasksKitOptions } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { Artifact, Task, TaskValidationError } from "../../domain";
-import { composeReadingArticle, isDailyReadingName, readingSourceOf, readingSourceUrl } from "./daily-reading-article";
-import { DailyReadingGate } from "./daily-reading.gate";
+import { composeReadingArticle, isDailyReadingName, readingSourceOf, readingSourceUrl } from "../../api-core/tasks/daily-reading-article";
+import { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
 import { SaveDailyReadingUseCase } from "./save-daily-reading.usecase";
 
 const actor = { userId: "auth-user-1" };
@@ -44,7 +44,7 @@ function task(id: string, startedAt: string, overrides: Partial<Parameters<typeo
 /** As tarefas que não são o registro `save_content` de uma gravação. */
 const withoutSaves = (tasks: Task[]) => tasks.filter((candidate) => candidate.kind !== "save_content");
 
-const bodyOf = (artifact: Artifact | null) => (artifact?.data as { body: string }).body;
+const bodyOf = (artifact: Artifact | null) => (artifact?.data as { body?: string } | undefined)?.body;
 
 test("sem a leitura do dia, a tarefa nasce a fazer às 18h com a página como artefato, numa gravação só", async () => {
   const { useCase, taskRepository, artifactRepository, batchWriter } = setup();

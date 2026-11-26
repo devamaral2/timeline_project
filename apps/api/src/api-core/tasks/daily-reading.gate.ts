@@ -1,7 +1,7 @@
 import { dayKeyOf, zonedDayEnd, zonedDayStart, zonedTimeAt } from "@repo/timeline";
-import type { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
-import { NO_RECURRENCES, type RecurrenceMaterializer } from "../../api-core/recurrences/materialize-recurrences.usecase";
-import { TASK_TIME_ZONE, toEntityBatch, type CreateTaskUseCase } from "../../api-core/tasks/create-task.usecase";
+import type { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
+import { NO_RECURRENCES, type RecurrenceMaterializer } from "../recurrences/materialize-recurrences.usecase";
+import { TASK_TIME_ZONE, toEntityBatch, type CreateTaskUseCase } from "./create-task.usecase";
 import type { Artifact, Task, TaskReviseChanges } from "../../domain";
 import type { ArtifactRepository, EntityBatchWriter, StagedChange, TaskCardQuery } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";

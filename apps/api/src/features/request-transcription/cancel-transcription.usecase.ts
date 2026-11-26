@@ -1,8 +1,8 @@
 import type { TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import type { JobsService } from "../../infrastructure/jobs/jobs.service";
-import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
-import { composeRequestArticle } from "./video-article";
+import type { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
+import { composeRequestArticle } from "../../api-core/transcription/video-article";
 
 /** O que o documento diz depois que a pessoa cancela o pedido. */
 export const TRANSCRIPTION_CANCELLED_TEXT = "Transcrição cancelada";

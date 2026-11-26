@@ -1,7 +1,7 @@
 "use client";
 
 import { Video } from "lucide-react";
-import { type FormEvent, useId, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { requestTranscription } from "@/lib/api/transcription";
 import { youtubeVideoOf } from "@/lib/notes/youtube";
@@ -24,11 +24,17 @@ interface TaskAddVideoProps {
 export function TaskAddVideo({ onRequested }: TaskAddVideoProps) {
   const fieldId = useId();
   const errorId = useId();
+  const fieldRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [link, setLink] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // O campo recebe o foco ao abrir, como antes, sem o atributo que o leitor de tela estranha.
+  useEffect(() => {
+    if (open) fieldRef.current?.focus();
+  }, [open]);
 
   function show() {
     setNotice(null);
@@ -70,11 +76,11 @@ export function TaskAddVideo({ onRequested }: TaskAddVideoProps) {
           <label className={styles.label} htmlFor={fieldId}>Link do vídeo do YouTube</label>
           <input
             id={fieldId}
+            ref={fieldRef}
             className={styles.input}
             type="url"
             inputMode="url"
             autoComplete="off"
-            autoFocus
             placeholder="https://www.youtube.com/watch?v=…"
             value={link}
             aria-invalid={error ? true : undefined}
