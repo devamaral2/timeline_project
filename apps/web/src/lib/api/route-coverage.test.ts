@@ -42,9 +42,15 @@ const declaredRoutes: string[] = [
 
 /**
  * Rotas do catálogo que o web não chama: quem chama é outro cliente. A extensão do navegador
- * (`apps/extension/src/api.ts`) guarda a página lida pela rota abaixo.
+ * (`apps/extension/src/api.ts`) guarda a página lida por `daily-reading`; o serviço local de transcrição reserva,
+ * renova e entrega os pedidos pelas três rotas `transcription-worker`, com a chave de dispositivo.
  */
-const otherClientRoutes: string[] = ["POST /api/tasks/daily-reading"];
+const otherClientRoutes: string[] = [
+  "POST /api/tasks/daily-reading",
+  "POST /api/transcription-worker/next",
+  "POST /api/transcription-worker/lease",
+  "POST /api/transcription-worker/deliver",
+];
 
 test("o leitor do catálogo acha as rotas documentadas", () => {
   expect(documentedRoutes().length, "nenhuma rota lida do catálogo").toBeGreaterThan(0);
