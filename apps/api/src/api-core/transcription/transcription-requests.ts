@@ -79,6 +79,34 @@ export interface TranscriptionRequests {
   accept(tx: unknown, input: { requestId: string; userId: string; leaseToken: string; result: TranscriptionResult }): Promise<void>;
   /** A falha entra: leva o pedido a `failed` com o código e fecha o job do serviço local. Mesma transação e mesma regra do lease. */
   reject(tx: unknown, input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date }): Promise<void>;
+
+  /**
+   * O pedido que espera a formatação (da pessoa, em `running`, com o resultado cru entregue), com o que a formatação
+   * lê. `undefined` em qualquer outro caso: cancelado, já terminado, de outra pessoa ou sem resultado.
+   */
+  awaitingFormat(userId: string, requestId: string): Promise<FormattingInput | undefined>;
+  /**
+   * A formatação termina o pedido (`done` ou `failed`). Com `failureCode`, ele fica em `tasks.data`; com
+   * `commentsSummaryFailed`, o pedido ganha uma entrada dizendo que o resumo dos comentários falhou. Roda na
+   * transação do escritor em lote; se o pedido já não está em `running`, desfaz tudo.
+   */
+  finish(
+    tx: unknown,
+    input: {
+      requestId: string;
+      userId: string;
+      status: "done" | "failed";
+      at: Date;
+      failureCode?: TranscriptionFailureCode;
+      commentsSummaryFailed?: boolean;
+    },
+  ): Promise<void>;
+}
+
+/** O que a formatação lê do pedido: onde o documento está e o resultado cru que o serviço local entregou. */
+export interface FormattingInput {
+  data: TranscriptionRequestData;
+  result: TranscriptionResult;
 }
 
 /** O pedido que o serviço local acabou de reservar. */
@@ -88,6 +116,14 @@ export interface ReservedTranscription {
   url: string;
   leaseToken: string;
   leaseExpiresAt: Date;
+}
+
+/** O pedido deixou de esperar a formatação (foi cancelado ou terminado) entre a leitura e a gravação. */
+export class TranscriptionNotRunningError extends Error {
+  constructor(message = "O pedido de transcrição não está mais em andamento") {
+    super(message);
+    this.name = "TranscriptionNotRunningError";
+  }
 }
 
 /** O lease não é mais de quem o apresenta: venceu, foi trocado, o pedido mudou ou nunca foi dele. */

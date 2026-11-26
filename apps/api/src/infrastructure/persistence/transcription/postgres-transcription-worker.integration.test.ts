@@ -3,6 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest"
 import { ArtifactBuilder } from "../../../api-core/artifacts/services/artifact-builder.service";
 import { CreateTaskUseCase } from "../../../api-core/tasks/create-task.usecase";
 import { TRANSCRIPTION_FORMAT_JOB, TRANSCRIPTION_JOB } from "../../../api-core/transcription/transcription-requests";
+import { FastStageError } from "../../../api-core/agent/errors/agent.errors";
+import { FormatTranscriptionUseCase } from "../../../features/format-transcription/format-transcription.usecase";
 import { RequestTranscriptionUseCase } from "../../../features/request-transcription/request-transcription.usecase";
 import { DailyReadingGate } from "../../../features/save-daily-reading/daily-reading.gate";
 import { TranscriptionWorkerUseCase } from "../../../features/transcription-worker/transcription-worker.usecase";
@@ -34,6 +36,8 @@ describe("servico local de transcricao no Postgres", () => {
   let artifacts: PostgresArtifactRepository;
   let request: RequestTranscriptionUseCase;
   let worker: TranscriptionWorkerUseCase;
+  let requestsStore: PostgresTranscriptionRequests;
+  let gate: DailyReadingGate;
 
   beforeAll(async () => {
     ctx = await createPostgresTestContext();
@@ -42,8 +46,9 @@ describe("servico local de transcricao no Postgres", () => {
     const builder = new ArtifactBuilder(new PostgresWorkoutCatalog(ctx.db));
     const writer = new PostgresEntityBatchWriter(ctx.db);
     const createTask = new CreateTaskUseCase(tasks, artifacts, builder, writer, () => now);
-    const gate = new DailyReadingGate(new PostgresTaskCardQuery(ctx.db), artifacts, builder, createTask, writer, undefined, () => now);
+    gate = new DailyReadingGate(new PostgresTaskCardQuery(ctx.db), artifacts, builder, createTask, writer, undefined, () => now);
     const requests = new PostgresTranscriptionRequests(ctx.db);
+    requestsStore = requests;
     request = new RequestTranscriptionUseCase(gate, requests);
     worker = new TranscriptionWorkerUseCase(gate, writer, requests, () => now);
   }, 60000);
@@ -166,5 +171,81 @@ describe("servico local de transcricao no Postgres", () => {
     expect(await tasks.findById(created.requestId)).toMatchObject({ status: "awaiting_transcription" });
     expect(await countRows(ctx.pool, "task_entries")).toBe(0);
     expect(await selectRows(ctx.pool, "SELECT kind, status FROM jobs")).toEqual([{ kind: TRANSCRIPTION_JOB, status: "running" }]);
+  });
+
+  describe("formatacao do resultado entregue", () => {
+    const bodyOf = async (artifactId: string): Promise<string> => {
+      const artifact = await artifacts.findById(artifactId);
+      return ((artifact as { data: { body: string } }).data).body;
+    };
+    const format = { speakers: [{ label: "Falante 1", name: "Ana" }], topics: [{ title: "Abertura", summary: "Começo.", startSegment: 0, minute: 0 }], hotMoments: [] };
+    const haiku = (comments: unknown | Error) => ({
+      complete: async (input: { schemaName: string }) => {
+        const value = input.schemaName === "transcription_format" ? format : comments;
+        if (value instanceof Error) throw value;
+        return { value, modelName: "claude-haiku-5-5" };
+      },
+    });
+
+    async function deliveredRequest(result: TranscriptionResult = { ...RESULT, comments: [{ author: "ana", text: "Bom", likes: 1, publishedAt: "2026-08-16T10:00:00Z" }] }) {
+      const { created, reservation } = await reserved();
+      await ctx.pool.query("UPDATE tasks SET status = 'done', finished_at = now() WHERE id = $1", [created.taskId]);
+      await worker.deliver({ requestId: created.requestId, leaseToken: reservation.leaseToken, outcome: "completed", result }, actor);
+      return created;
+    }
+
+    test("monta o documento, leva o pedido a done e a leitura de volta para a fazer", async () => {
+      const created = await deliveredRequest();
+
+      await new FormatTranscriptionUseCase(gate, requestsStore, haiku({ summary: "Gostaram." }), () => now).run(created.requestId, USER);
+
+      const request = await tasks.findById(created.requestId);
+      expect(request).toMatchObject({ status: "done" });
+      expect(request?.finishedAt).toBeInstanceOf(Date);
+      const artifact = await artifacts.findById(created.artifactId);
+      expect(artifact?.name).toBe("Entrevista");
+      const body = await bodyOf(created.artifactId);
+      expect(body).toContain("## Resumo\n- [Abertura](#t-0) (00:00): Começo.");
+      expect(body).toContain("## Comentários\nGostaram.");
+      expect(body).toContain("{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Ana:** Olá, tudo bem?");
+      expect(await tasks.findById(created.taskId)).toMatchObject({ status: "todo" });
+      expect(await countRows(ctx.pool, "task_entries", "kind = 'trace'")).toBe(0);
+    });
+
+    test("com falha só nos comentários, o pedido termina done e ganha a entrada", async () => {
+      const created = await deliveredRequest();
+
+      await new FormatTranscriptionUseCase(gate, requestsStore, haiku(new FastStageError("provider")), () => now).run(created.requestId, USER);
+
+      expect(await tasks.findById(created.requestId)).toMatchObject({ status: "done" });
+      expect(await bodyOf(created.artifactId)).not.toContain("## Comentários");
+      expect(await selectRows(ctx.pool, "SELECT kind, data FROM task_entries WHERE kind = 'trace'")).toEqual([
+        { kind: "trace", data: { stage: "comments_summary", status: "failed" } },
+      ]);
+    });
+
+    test("com o Haiku fora do ar, o pedido termina failed com o motivo, e rodar de novo não muda nada", async () => {
+      const created = await deliveredRequest();
+      const down = { complete: () => Promise.reject(new FastStageError("timeout")) };
+      const useCase = new FormatTranscriptionUseCase(gate, requestsStore, down, () => now);
+
+      await useCase.run(created.requestId, USER);
+      await useCase.run(created.requestId, USER);
+
+      expect(await tasks.findById(created.requestId)).toMatchObject({ status: "failed", data: { failureCode: "failed" } });
+      expect(await bodyOf(created.artifactId)).toContain("a formatação do resultado falhou.");
+      expect(await tasks.findById(created.taskId)).toMatchObject({ status: "todo" });
+    });
+
+    test("pedido de outra pessoa ou ainda na fila não é formatado", async () => {
+      const created = await deliveredRequest();
+      const useCase = new FormatTranscriptionUseCase(gate, requestsStore, haiku({ summary: "x" }), () => now);
+
+      await useCase.run(created.requestId, OTHER_USER);
+
+      expect(await tasks.findById(created.requestId)).toMatchObject({ status: "running" });
+      expect(await requestsStore.awaitingFormat(USER, created.requestId)).toMatchObject({ data: { videoId: "dQw4w9WgXcQ" }, result: { video: { title: "Entrevista" } } });
+      expect(await requestsStore.awaitingFormat(OTHER_USER, created.requestId)).toBeUndefined();
+    });
   });
 });
