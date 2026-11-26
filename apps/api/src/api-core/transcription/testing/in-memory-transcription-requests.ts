@@ -2,6 +2,7 @@ import type { TranscriptionFailureCode, TranscriptionResult, TranscriptionStage 
 import { Task } from "../../../domain";
 import type { InMemoryTaskDatabase } from "../../tasks/testing/in-memory-task-database";
 import type {
+  FormattingInput,
   OpenTranscriptionRequest,
   ReservedTranscription,
   TranscriptionRequestData,
@@ -12,6 +13,7 @@ import {
   TRANSCRIPTION_JOB,
   TRANSCRIPTION_LEASE_MS,
   TranscriptionLeaseLostError,
+  TranscriptionNotRunningError,
 } from "../transcription-requests";
 
 interface LeasedJob {
@@ -128,6 +130,34 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
   ): Promise<void> {
     this.close(input.userId, input.requestId, input.leaseToken);
     this.setStatus(input.requestId, "failed", { failureCode: input.code }, input.at);
+  }
+
+  async awaitingFormat(userId: string, requestId: string): Promise<FormattingInput | undefined> {
+    const task = this.database.tasks.find((stored) => stored.id === requestId);
+    if (task?.userId !== userId || task.kind !== "save_content_with_transcription" || task.status !== "running") return undefined;
+    const entry = this.entries.filter((stored) => stored.taskId === requestId && stored.data.type === "transcription").at(-1);
+    if (!entry) return undefined;
+    const { type: _type, ...result } = entry.data;
+    return { data: task.data as unknown as TranscriptionRequestData, result: result as unknown as TranscriptionResult };
+  }
+
+  async finish(
+    _tx: unknown,
+    input: {
+      requestId: string;
+      userId: string;
+      status: "done" | "failed";
+      at: Date;
+      failureCode?: TranscriptionFailureCode;
+      commentsSummaryFailed?: boolean;
+    },
+  ): Promise<void> {
+    const task = this.database.tasks.find((stored) => stored.id === input.requestId);
+    if (task?.userId !== input.userId || task.status !== "running") throw new TranscriptionNotRunningError();
+    this.setStatus(input.requestId, input.status, input.failureCode ? { failureCode: input.failureCode } : {}, input.at);
+    if (input.commentsSummaryFailed) {
+      this.entries.push({ taskId: input.requestId, kind: "trace", data: { stage: "comments_summary", status: "failed" } });
+    }
   }
 
   /** O progresso passageiro que o serviço local mandou ao renovar. */
