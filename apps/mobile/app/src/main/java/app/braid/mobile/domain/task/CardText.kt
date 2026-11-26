@@ -114,6 +114,7 @@ private fun agentWhenLabel(
     now: Instant,
 ): String {
     if (card.status == TaskStatus.Waiting) return "aguarda sua resposta"
+    if (card.status == TaskStatus.AwaitingTranscription) return "aguarda a transcrição"
     val startedAt = card.startedAt
     if (card.status == TaskStatus.Queued) {
         return if (startedAt != null) "na fila · ${elapsedLabel(startedAt, now)}" else "na fila"

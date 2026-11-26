@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
-import { MAX_TASK_BLOCK_DAYS, type Recurrence } from "../../../../domain/index";
+import { MAX_TASK_BLOCK_DAYS, OFF_AGENDA_KINDS, type Recurrence } from "../../../../domain/index";
 import type {
   AgendaPage,
   AgendaQueryParams,
@@ -38,7 +38,7 @@ export class PostgresTaskCardQuery implements TaskCardQuery {
       sql`e.user_id = ${params.userId}`,
       sql`e.started_at IS NOT NULL`,
       sql`NOT e.long_running`,
-      sql`e.kind <> 'step'`,
+      sql`e.kind NOT IN ${[...OFF_AGENDA_KINDS]}`,
       sql`e.deleted_at IS NULL`,
     ];
     if (params.to) conditions.push(sql`e.started_at <= ${params.to}`);

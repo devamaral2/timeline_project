@@ -30,6 +30,7 @@ describe("TaskStatusGlyph", () => {
     ["queued", "Agente, na fila"],
     ["running", "Agente, executando"],
     ["waiting", "Agente, aguardando você"],
+    ["awaiting_transcription", "Agente, aguardando a transcrição"],
     ["done", "Agente, feito"],
     ["failed", "Agente, falhou"],
     ["cancel", "Agente, cancelado"],
@@ -50,6 +51,8 @@ describe("TaskKindMark", () => {
   const humanKinds: TaskKind[] = ["common", "meal", "sleep", "training"];
   const agentKinds: TaskKind[] = [
     "request",
+    "save_content",
+    "save_content_with_transcription",
     "search_request",
     "build_request",
     "inquiry_request",

@@ -154,6 +154,15 @@ object BraidIcons {
                     SvgPart("M6.5 12h11"),
                 )
             "request" -> messageSquare
+            "save_content" -> listOf(SvgPart("m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"))
+            "save_content_with_transcription" ->
+                listOf(
+                    SvgPart(svgRect(2f, 5f, 20f, 14f, 2f)),
+                    SvgPart("M7 15h4"),
+                    SvgPart("M15 15h2"),
+                    SvgPart("M7 11h2"),
+                    SvgPart("M13 11h4"),
+                )
             "search_request" -> search
             "build_request" -> wrench
             "inquiry_request" ->

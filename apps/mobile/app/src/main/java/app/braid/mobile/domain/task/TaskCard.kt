@@ -20,6 +20,8 @@ enum class TaskKind(
     Sleep("sleep"),
     Training("training"),
     Request("request"),
+    SaveContent("save_content"),
+    SaveContentWithTranscription("save_content_with_transcription"),
     SearchRequest("search_request"),
     BuildRequest("build_request"),
     InquiryRequest("inquiry_request"),
@@ -47,6 +49,7 @@ enum class TaskStatus(
     Queued("queued"),
     Running("running"),
     Waiting("waiting"),
+    AwaitingTranscription("awaiting_transcription"),
     Failed("failed"),
     ;
 

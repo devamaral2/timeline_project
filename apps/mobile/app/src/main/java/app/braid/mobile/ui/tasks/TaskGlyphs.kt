@@ -37,6 +37,7 @@ fun taskStatusName(
             TaskStatus.Queued -> "Agente, na fila"
             TaskStatus.Running -> "Agente, executando"
             TaskStatus.Waiting -> "Agente, aguardando você"
+            TaskStatus.AwaitingTranscription -> "Agente, aguardando a transcrição"
             TaskStatus.Done -> "Agente, feito"
             TaskStatus.Failed -> "Agente, falhou"
             TaskStatus.Cancel -> "Agente, cancelado"
@@ -66,7 +67,7 @@ private fun glyphColor(status: TaskStatus?): Color {
     val tokens = braidTokens()
     return when (status) {
         null -> tokens.routine
-        TaskStatus.Doing, TaskStatus.InHold, TaskStatus.Running, TaskStatus.Waiting -> tokens.warning
+        TaskStatus.Doing, TaskStatus.InHold, TaskStatus.Running, TaskStatus.Waiting, TaskStatus.AwaitingTranscription -> tokens.warning
         TaskStatus.Done -> tokens.success
         TaskStatus.Failed -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -102,6 +103,7 @@ fun TaskStatusGlyph(
                         add(SvgPart("M10 9v6"))
                         add(SvgPart("M14 9v6"))
                     }
+                    TaskStatus.AwaitingTranscription -> add(SvgPart("M12 7.5V12l3 2"))
                     TaskStatus.Done -> add(SvgPart("m8.5 12.2 2.4 2.4 4.6-4.9"))
                     TaskStatus.Failed -> {
                         add(SvgPart("M12 8v5"))

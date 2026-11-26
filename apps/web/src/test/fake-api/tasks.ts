@@ -14,6 +14,9 @@ import { type ArtifactLink, type TaskArtifactEntry, artifactsOfTask, relinkTaskA
 
 /** Área de tarefas: agenda, lista acompanhada, tarefa, hierarquia (tarefa principal e subtarefas) e tags. */
 
+/** Tarefas de agente fora da agenda (ADR 0021). */
+const OFF_AGENDA_KINDS: readonly string[] = ["step", "save_content", "save_content_with_transcription"];
+
 const TASKS = "tasks";
 const CARD_KEYS = [
   "id", "actor", "kind", "status", "priority", "name", "description", "location", "startedAt", "estimatedFinishAt",
@@ -105,9 +108,9 @@ function agenda(request: FakeRequest, store: FakeStore): FakeResult {
   if (!Number.isInteger(offset) || offset < 0) return { status: 400 };
   const limit = Math.min(Number(request.query.get("limit") ?? store.pageSize), 100);
 
-  // A agenda mostra o que tem horário e não é tarefa longa; passos nunca aparecem.
+  // A agenda mostra o que tem horário e não é tarefa longa; passos e conteúdo guardado nunca aparecem.
   const tasks = [...table(store).values()]
-    .filter((task) => task.kind !== "step" && !task.longRunning)
+    .filter((task) => !OFF_AGENDA_KINDS.includes(task.kind) && !task.longRunning)
     .filter((task) => inWindow(task, from, to))
     .filter((task) => !actor || task.actor === actor)
     .filter((task) => !tag || task.tags.includes(tag))

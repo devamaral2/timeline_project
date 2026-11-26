@@ -95,6 +95,8 @@ describe("PostgresTaskCardQuery", () => {
         }),
       );
       await saved(agentTask(USER, "Passo", { kind: "step", status: "done" }));
+      await saved(agentTask(USER, "Pagina guardada", { kind: "save_content", status: "done" }));
+      await saved(agentTask(USER, "Video", { kind: "save_content_with_transcription", status: "awaiting_transcription" }));
       await tracked("Sem inicio", { estimatedFinishAt: at("2026-11-10T20:00:00Z") });
       const removed = await reference("Apagado", "2026-11-10T16:00:00Z");
       await tasks.delete(removed.id, USER);
@@ -204,11 +206,17 @@ describe("PostgresTaskCardQuery", () => {
       const { timed, request, deadline, long, undated } = await seed();
       await reference("De referencia", "2026-11-10T15:00:00Z");
       await saved(agentTask(USER, "Passo", { kind: "step", status: "done" }));
+      const page = await saved(agentTask(USER, "Pagina guardada", { kind: "save_content", status: "done" }));
+      const video = await saved(
+        agentTask(USER, "Video", { kind: "save_content_with_transcription", status: "awaiting_transcription" }),
+      );
       const removed = await tracked("Apagado");
       await tasks.delete(removed.id, USER);
       await saved(trackedTask(OTHER_USER, "Do outro"));
 
-      expect(await list()).toEqual([timed.id, request.id, deadline.id, long.id, undated.id]);
+      expect((await list()).sort()).toEqual(
+        [timed.id, request.id, deadline.id, long.id, undated.id, page.id, video.id].sort(),
+      );
     });
 
     test("filtra por status, prioridade, tag e executor", async () => {

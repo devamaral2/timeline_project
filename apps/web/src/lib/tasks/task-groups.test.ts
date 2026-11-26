@@ -35,6 +35,8 @@ test("junta os dois executores nos seis grupos, na ordem do canvas, e tira os gr
     card({ id: "treino", status: "doing" }),
     card({ id: "esperando", actor: "agent", kind: "request", status: "waiting" }),
     card({ id: "fila", actor: "agent", kind: "cron", status: "queued" }),
+    card({ id: "video", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription" }),
+    card({ id: "pagina", actor: "agent", kind: "save_content", status: "done" }),
     card({ id: "perdida", status: "missed" }),
     card({ id: "feita", status: "done" }),
   ]);
@@ -43,8 +45,8 @@ test("junta os dois executores nos seis grupos, na ordem do canvas, e tira os gr
     ["Em curso", false, ["rodando", "treino"]],
     ["A fazer", false, ["luz", "fila"]],
     ["Sem data", false, ["fotos"]],
-    ["Em espera", false, ["pneu", "esperando"]],
-    ["Feitas", true, ["feita-agente", "feita"]],
+    ["Em espera", false, ["pneu", "esperando", "video"]],
+    ["Feitas", true, ["feita-agente", "pagina", "feita"]],
     ["Encerradas", true, ["falhou", "cancelada", "perdida"]],
   ]);
 });

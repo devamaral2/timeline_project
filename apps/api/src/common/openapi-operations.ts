@@ -19,7 +19,7 @@ import {
   updateRecurrenceInputSchema,
 } from "@repo/contracts/schemas";
 import { z } from "zod";
-import { ACTORS, ARTIFACT_TYPES, TASK_KINDS, TASK_STATUSES, PRIORITIES } from "../domain";
+import { ACTORS, AGENDA_KINDS, ARTIFACT_TYPES, TASK_STATUSES, PRIORITIES } from "../domain";
 import { editRequestBody } from "../features/request-agent-file-edit/request-agent-file-edit.controller";
 import { restoreBody } from "../features/restore-agent-file/restore-agent-file.controller";
 import { startEditRequestBody } from "../features/start-edit-request/start-edit-request.controller";
@@ -142,7 +142,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
       from: instant("Início da janela."),
       to: instant("Fim da janela."),
       actor: { description: "De quem é a tarefa.", enum: ACTORS },
-      kind: { description: "Só tarefas deste tipo.", enum: TASK_KINDS.filter((kind) => kind !== "step") },
+      kind: { description: "Só tarefas deste tipo.", enum: [...AGENDA_KINDS] },
       tag,
       cursor: { description: "O `nextCursor` da página anterior." },
       limit: limit(100, 50),

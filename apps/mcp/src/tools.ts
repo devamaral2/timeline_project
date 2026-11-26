@@ -10,7 +10,7 @@ const WEEKDAY_CODES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
 const HUMAN_KINDS = ["common", "meal", "sleep", "training"] as const;
 const REQUEST_KINDS = ["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"] as const;
 const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
-const AGENT_ONLY_STATUSES = ["queued", "running", "waiting", "failed"] as const;
+const AGENT_ONLY_STATUSES = ["queued", "running", "waiting", "awaiting_transcription", "failed"] as const;
 const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 /** Os tipos de artefato que o dono cria e edita; os de configuracao do agente ficam de fora. */
 const ARTIFACT_TYPES = ["text", "food", "sleep", "training"] as const;

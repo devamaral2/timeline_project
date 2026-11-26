@@ -35,6 +35,14 @@ test("maps a card to the grid model, keeping the card for the row", () => {
   });
 });
 
+test.each(["step", "save_content", "save_content_with_transcription"] as const)(
+  "a %s task never enters the grid, even when the response carries it",
+  (kind) => {
+    const grouped = agendaTasksByDay([card({ id: "kept" }), card({ id: "left-out", actor: "agent", kind, status: "done" })]);
+    expect(Object.values(grouped).flat().map((task) => task.id)).toEqual(["kept"]);
+  },
+);
+
 test("the grid closes at the planned end, so a real conclusion does not move the task", () => {
   const grouped = agendaTasksByDay([
     card({ finishedAt: "2026-09-14T13:00:00.000Z", status: "done" }),
