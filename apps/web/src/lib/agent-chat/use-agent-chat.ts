@@ -583,7 +583,8 @@ export function useAgentChat({
       followingRef.current.add(id);
       commitPending({ id });
       const agent = agentModeRef.current;
-      const videoLink = !command && !agent ? soleYouTubeVideoLink(trimmed) : null;
+      // Em qualquer modo: o link sozinho é um pedido de transcrição, não uma conversa com o agente.
+      const videoLink = command ? null : soleYouTubeVideoLink(trimmed);
       const run = () => {
         if (videoLink) void runTranscription(id, videoLink);
         else if (command?.kind === "agent" && command.agent === "model") void enterModelMode(id, command.provider, command.text);

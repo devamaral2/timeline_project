@@ -173,7 +173,42 @@ class ChatTranscriptionTest {
         }
 
     @Test
-    fun `in Hermes mode the link goes to the Hermes`() =
+    fun `in Hermes mode a link alone also asks for the transcription, not the Hermes`() =
+        runTest {
+            serveQueued()
+            val chat = newViewModel()
+            chat.send("/hermes")
+            chat.until { it.agentMode == ChatAgent.Hermes }
+
+            chat.send(video)
+            val done = chat.until { it.pending == null && it.messages.any { m -> m.id.endsWith("-transcription") } }
+
+            assertEquals(1, backend.requestsTo("POST", transcriptionPath).size)
+            assertEquals(0, backend.requestsTo("POST", "$requestsPath/hermes").size)
+            assertEquals(ChatAgent.Hermes, done.agentMode)
+            assertEquals(TranscriptionText.CHAT_QUEUED, (done.messages.last() as ChatMessage.Assistant).text)
+        }
+
+    @Test
+    fun `in model mode a link alone also asks for the transcription, not the model`() =
+        runTest {
+            backend.route("GET", "$requestsPath/model/options", fixture("chat-model-options"))
+            serveQueued()
+            val chat = newViewModel()
+            chat.send("/modelo")
+            chat.until { it.agentMode == ChatAgent.Model && it.pending == null }
+
+            chat.send(video)
+            val done = chat.until { it.pending == null && it.messages.any { m -> m.id.endsWith("-transcription") } }
+
+            assertEquals(1, backend.requestsTo("POST", transcriptionPath).size)
+            assertEquals(0, backend.requestsTo("POST", "$requestsPath/model").size)
+            assertEquals(ChatAgent.Model, done.agentMode)
+            assertEquals(TranscriptionText.CHAT_QUEUED, (done.messages.last() as ChatMessage.Assistant).text)
+        }
+
+    @Test
+    fun `in Hermes mode a link inside a sentence still goes to the Hermes`() =
         runTest {
             backend.route("POST", "$requestsPath/hermes", fixture("chat-hermes-accepted", 202))
             backend.route("GET", "$requestsPath/R00000000000000000000000A1", fixture("chat-hermes-done"))
@@ -181,7 +216,7 @@ class ChatTranscriptionTest {
             chat.send("/hermes")
             chat.until { it.agentMode == ChatAgent.Hermes }
 
-            chat.send(video)
+            chat.send("resuma $video")
             chat.until { it.pending == null && it.messages.any { m -> m.id.endsWith("-answer") } }
 
             assertEquals(1, backend.requestsTo("POST", "$requestsPath/hermes").size)

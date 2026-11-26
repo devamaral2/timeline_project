@@ -17,10 +17,11 @@ const VIDEO = "https://youtu.be/dQw4w9WgXcQ";
 
 const transcriptionPosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/tasks/transcription-requests");
 const stepsPosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests");
+const modelPosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests/model");
 const hermesPosts = () => api.calls.filter((call) => call.method === "POST" && call.pathname === "/api/requests/hermes");
 
 beforeEach(() => {
-  api = createFakeApi({ areas: [requestsArea({ hermes: "on" }), transcriptionArea] });
+  api = createFakeApi({ areas: [requestsArea({ hermes: "on", model: "on" }), transcriptionArea] });
   net.authedFetch.mockReset();
   net.authedFetch.mockImplementation(api.authedFetch);
 });
@@ -81,11 +82,38 @@ test("um link que não é de vídeo (canal) segue para o agente de sempre", asyn
   expect(transcriptionPosts()).toHaveLength(0);
 });
 
-test("no modo Hermes o link vai ao Hermes, não à transcrição", async () => {
+test("no modo Hermes o link sozinho também pede a transcrição, sem ir ao Hermes", async () => {
   const { result } = setup();
   act(() => { result.current.send("/hermes"); });
   await waitFor(() => expect(result.current.agentMode).toBe("hermes"));
   act(() => { result.current.send(VIDEO); });
+
+  await waitFor(() => expect(transcriptionPosts()).toHaveLength(1));
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(hermesPosts()).toHaveLength(0);
+  expect(result.current.agentMode).toBe("hermes");
+  expect(result.current.messages.at(-1)).toMatchObject({ role: "assistant", text: expect.stringContaining("entrou na fila de transcrição") });
+});
+
+test("no modo modelo o link sozinho também pede a transcrição, sem ir ao modelo", async () => {
+  const { result } = setup();
+  act(() => { result.current.send("/modelo"); });
+  await waitFor(() => expect(result.current.agentMode).toBe("model"));
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  act(() => { result.current.send(VIDEO); });
+
+  await waitFor(() => expect(transcriptionPosts()).toHaveLength(1));
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(modelPosts()).toHaveLength(0);
+  expect(result.current.agentMode).toBe("model");
+  expect(result.current.messages.at(-1)).toMatchObject({ role: "assistant", text: expect.stringContaining("entrou na fila de transcrição") });
+});
+
+test("no modo Hermes, um link no meio do texto segue para o Hermes", async () => {
+  const { result } = setup();
+  act(() => { result.current.send("/hermes"); });
+  await waitFor(() => expect(result.current.agentMode).toBe("hermes"));
+  act(() => { result.current.send(`resuma ${VIDEO}`); });
 
   await waitFor(() => expect(hermesPosts()).toHaveLength(1));
   expect(transcriptionPosts()).toHaveLength(0);
