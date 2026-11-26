@@ -181,7 +181,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
     tag: "Tarefas",
     summary: "Guarda uma página lida na Leitura diária do dia",
     description:
-      "Recebe uma página já em markdown e a guarda como artefato de texto na tarefa \"Leitura diária\" de hoje, criando a tarefa quando ela ainda não existe. A mesma página guardada de novo no mesmo dia atualiza o artefato dela. Imagens e vídeos entram no markdown como endereços.",
+      "Recebe uma página já em markdown e a guarda como artefato de texto na tarefa \"Leitura diária\" de hoje, criando a tarefa a fazer, às 18h do dia, quando ela ainda não existe. A mesma página guardada de novo no mesmo dia atualiza o artefato dela. Guardar uma página numa leitura que já existe a devolve para a fazer. Imagens e vídeos entram no markdown como endereços.",
     body: "DailyReadingInput",
     success: { status: 200, description: "A página está na leitura do dia.", schema: "DailyReadingResult" },
     errors: { 400: invalid },

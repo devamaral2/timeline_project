@@ -1,15 +1,16 @@
 import type { DailyReadingInput, DailyReadingResult } from "@repo/contracts";
-import { dayKeyOf, zonedDayEnd, zonedDayStart } from "@repo/timeline";
-import { planArtifactLinks } from "../../api-core/artifacts/artifact-targets";
+import { dayKeyOf, zonedDayEnd, zonedDayStart, zonedTimeAt } from "@repo/timeline";
 import type { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
 import { NO_RECURRENCES, type RecurrenceMaterializer } from "../../api-core/recurrences/materialize-recurrences.usecase";
 import { TASK_TIME_ZONE, type CreateTaskUseCase } from "../../api-core/tasks/create-task.usecase";
-import { TaskValidationError, type Artifact, type Task } from "../../domain";
-import type { ArtifactRepository, EntityBatchWriter, TaskCardQuery, TaskRepository } from "../../domain/ports";
+import { TaskValidationError, type Artifact, type Task, type TaskReviseChanges } from "../../domain";
+import type { ArtifactRepository, EntityBatchWriter, StagedChange, TaskCardQuery } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { DAILY_READING_TASK_NAME, composeReadingArticle, isDailyReadingName, readingSourceOf, type ReadingArticle } from "./daily-reading-article";
 
 const AGENDA_PAGE = 100;
+/** A hora do dia em que a leitura nova fica marcada. */
+const DAILY_READING_TIME = "18:00";
 /** Um dia com mais páginas de agenda do que isto não existe; o teto só impede um laço sem fim. */
 const AGENDA_PAGES_MAX = 10;
 
@@ -17,10 +18,11 @@ const AGENDA_PAGES_MAX = 10;
  * Guarda uma página lida na tarefa "Leitura diária" do dia. A tarefa do dia é a
  * de pessoa com esse nome e início hoje (no fuso das tarefas): a ocorrência de
  * uma série, se a pessoa tem uma, ou a que esta rota criou mais cedo. Sem
- * nenhuma, ela nasce agora, de referência, junto com o artefato.
+ * nenhuma, ela nasce a fazer, às 18h do dia, junto com o artefato.
  *
  * Guardar de novo a mesma página no mesmo dia atualiza o artefato dela, não
- * cria outro.
+ * cria outro. Toda página guardada numa leitura que já existe a devolve para
+ * a fazer: há o que ler de novo, mesmo que ela já estivesse concluída.
  */
 export class SaveDailyReadingUseCase {
   /** Duas páginas guardadas ao mesmo tempo esperam uma pela outra: sem isso, cada uma criaria a sua tarefa do dia. */
@@ -28,7 +30,6 @@ export class SaveDailyReadingUseCase {
 
   constructor(
     private readonly taskCardQuery: Pick<TaskCardQuery, "agenda">,
-    private readonly taskRepository: Pick<TaskRepository, "findByIds">,
     private readonly artifactRepository: Pick<ArtifactRepository, "findByIds">,
     private readonly artifactBuilder: ArtifactBuilder,
     private readonly createTask: Pick<CreateTaskUseCase, "prepare" | "save">,
@@ -55,10 +56,19 @@ export class SaveDailyReadingUseCase {
     const now = this.clock();
     const artifactInput = { type: "text" as const, name: article.name, data: { body: article.body } };
 
-    const task = await this.todayTask(actor.userId, now);
+    const today = dayKeyOf(now, TASK_TIME_ZONE);
+    const task = await this.todayTask(actor.userId, today);
     if (!task) {
       // Tarefa e artefato numa transacao so, com a tarefa criando o artefato.
-      const prepared = await this.createTask.prepare({ name: DAILY_READING_TASK_NAME, artifacts: [artifactInput] }, actor);
+      const prepared = await this.createTask.prepare(
+        {
+          name: DAILY_READING_TASK_NAME,
+          status: "todo",
+          startedAt: zonedTimeAt(today, DAILY_READING_TIME, TASK_TIME_ZONE).toISOString(),
+          artifacts: [artifactInput],
+        },
+        actor,
+      );
       await this.createTask.save(prepared);
       const [artifact] = prepared.artifacts;
       if (!artifact) throw new Error("Daily reading task was prepared without its artifact");
@@ -70,21 +80,24 @@ export class SaveDailyReadingUseCase {
       const revised = saved.revise({ name: article.name, data: { body: article.body } });
       await this.batchWriter.commit({
         userId: actor.userId,
-        tasks: [],
+        tasks: [backToTodo(task, {}, now)],
         artifacts: [{ op: "update", entity: revised, expectedRevision: saved.revision }],
       });
       return { taskId: task.id, artifactId: saved.id, taskCreated: false, artifactCreated: false };
     }
 
     const artifact = await this.artifactBuilder.fromCreateInput(artifactInput, actor.userId, now);
-    const tasks = await planArtifactLinks(artifact.id, [], [task.id], this.taskRepository, actor.userId, "creates");
-    await this.batchWriter.commit({ userId: actor.userId, tasks, artifacts: [{ op: "create", entity: artifact }] });
+    const artifactLinks = [...task.artifactLinks, { artifactId: artifact.id, relation: "creates" as const, fromRecurrence: false }];
+    await this.batchWriter.commit({
+      userId: actor.userId,
+      tasks: [backToTodo(task, { artifactLinks }, now)],
+      artifacts: [{ op: "create", entity: artifact }],
+    });
     return { taskId: task.id, artifactId: artifact.id, taskCreated: false, artifactCreated: true };
   }
 
   /** A "Leitura diária" de pessoa que começa hoje; com mais de uma, a que começa mais cedo. */
-  private async todayTask(userId: string, now: Date): Promise<Task | undefined> {
-    const today = dayKeyOf(now, TASK_TIME_ZONE);
+  private async todayTask(userId: string, today: string): Promise<Task | undefined> {
     const from = zonedDayStart(today, TASK_TIME_ZONE);
     const to = zonedDayEnd(today, TASK_TIME_ZONE);
     // A ocorrencia de hoje de uma serie so existe depois de gerada.
@@ -116,4 +129,9 @@ export class SaveDailyReadingUseCase {
         readingSourceOf((artifact.data as { body: string }).body) === sourceUrl,
     );
   }
+}
+
+/** A leitura com o que mudou nela, de volta a fazer e sem a hora de conclusão. */
+function backToTodo(task: Task, changes: Pick<TaskReviseChanges, "artifactLinks">, now: Date): StagedChange<Task> {
+  return { op: "update", entity: task.revise({ ...changes, status: "todo", finishedAt: null }, now), expectedRevision: task.revision };
 }

@@ -7,11 +7,11 @@ import { ApiCoreModule } from "../../api-core/api-core.module";
 import { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
 import { MaterializeRecurrencesUseCase } from "../../api-core/recurrences/materialize-recurrences.usecase";
 import { CreateTaskUseCase } from "../../api-core/tasks/create-task.usecase";
-import type { ArtifactRepository, EntityBatchWriter, TaskCardQuery, TaskRepository } from "../../domain/ports";
+import type { ArtifactRepository, EntityBatchWriter, TaskCardQuery } from "../../domain/ports";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { ARTIFACT_REPOSITORY, ENTITY_BATCH_WRITER, TASK_CARD_QUERY, TASK_REPOSITORY } from "../../infrastructure/persistence";
+import { ARTIFACT_REPOSITORY, ENTITY_BATCH_WRITER, TASK_CARD_QUERY } from "../../infrastructure/persistence";
 import { SaveDailyReadingUseCase } from "./save-daily-reading.usecase";
 
 /** O caminho da rota, tambem usado para dar a ela um corpo maior que o das demais. */
@@ -47,16 +47,15 @@ export class SaveDailyReadingController {
   controllers: [SaveDailyReadingController],
   providers: [{
     provide: SaveDailyReadingUseCase,
-    inject: [TASK_CARD_QUERY, TASK_REPOSITORY, ARTIFACT_REPOSITORY, ArtifactBuilder, CreateTaskUseCase, ENTITY_BATCH_WRITER, MaterializeRecurrencesUseCase],
+    inject: [TASK_CARD_QUERY, ARTIFACT_REPOSITORY, ArtifactBuilder, CreateTaskUseCase, ENTITY_BATCH_WRITER, MaterializeRecurrencesUseCase],
     useFactory: (
       cards: TaskCardQuery,
-      tasks: TaskRepository,
       artifacts: ArtifactRepository,
       builder: ArtifactBuilder,
       createTask: CreateTaskUseCase,
       writer: EntityBatchWriter,
       recurrences: MaterializeRecurrencesUseCase,
-    ) => new SaveDailyReadingUseCase(cards, tasks, artifacts, builder, createTask, writer, recurrences),
+    ) => new SaveDailyReadingUseCase(cards, artifacts, builder, createTask, writer, recurrences),
   }],
 })
 export class SaveDailyReadingModule {}

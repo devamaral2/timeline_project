@@ -1,7 +1,7 @@
 # Extensão do Chrome: Leitura diária
 
 Um clique no ícone guarda a página aberta, em markdown, na tarefa **Leitura diária** de hoje.
-Se a tarefa do dia ainda não existe, ela é criada junto com o documento.
+Se a tarefa do dia ainda não existe, ela é criada junto com o documento, a fazer e marcada para as 18h.
 
 ## Instalar
 
@@ -29,7 +29,8 @@ página foi guardada e `!` quando algo falhou, e um aviso na página diz o que a
 | Vídeo do YouTube | O link do vídeo, que o app mostra como player, e a descrição |
 | Página sem texto principal | Só o endereço e a descrição da página |
 
-Guardar a mesma página de novo no mesmo dia atualiza o documento dela em vez de criar outro.
+Guardar a mesma página de novo no mesmo dia atualiza o documento dela em vez de criar outro. Toda página
+guardada numa leitura que já existe a devolve para a fazer, mesmo que ela já estivesse concluída.
 
 ## Imagens e vídeos
 

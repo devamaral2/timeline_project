@@ -8,6 +8,8 @@ import { SaveDailyReadingUseCase } from "./save-daily-reading.usecase";
 const actor = { userId: "auth-user-1" };
 // 17/08/2026, 12:00 em Sao Paulo.
 const now = new Date("2026-08-17T15:00:00.000Z");
+// 17/08/2026, 18:00 em Sao Paulo.
+const sixPm = new Date("2026-08-17T21:00:00.000Z");
 
 const page = {
   url: "https://jornal.example/economia/juros?ref=home#comentarios",
@@ -21,7 +23,6 @@ function setup(options: TasksKitOptions = {}, materialized: Date[] = []) {
   const kit = createTasksKit({ ...options, clock: () => now });
   const useCase = new SaveDailyReadingUseCase(
     new InMemoryTaskCardQuery(kit.database),
-    kit.taskRepository,
     kit.artifactRepository,
     kit.artifactBuilder,
     kit.createTask,
@@ -38,7 +39,7 @@ function task(id: string, startedAt: string, overrides: Partial<Parameters<typeo
 
 const bodyOf = (artifact: Artifact | null) => (artifact?.data as { body: string }).body;
 
-test("sem a leitura do dia, a tarefa nasce agora com a página como artefato, numa gravação só", async () => {
+test("sem a leitura do dia, a tarefa nasce a fazer às 18h com a página como artefato, numa gravação só", async () => {
   const { useCase, taskRepository, artifactRepository, batchWriter } = setup();
 
   const result = await useCase.execute(page, actor);
@@ -50,10 +51,11 @@ test("sem a leitura do dia, a tarefa nasce agora com a página como artefato, nu
     userId: actor.userId,
     actor: "human",
     name: "Leitura diária",
-    startedAt: now,
+    status: "todo",
+    startedAt: sixPm,
     artifactLinks: [{ artifactId: result.artifactId, relation: "creates", fromRecurrence: false }],
   });
-  expect(created?.status).toBeUndefined();
+  expect(created?.finishedAt).toBeUndefined();
   const artifact = await artifactRepository.findById(result.artifactId);
   expect(artifact).toMatchObject({ userId: actor.userId, type: "text", name: "Juros caem pela terceira vez" });
   expect(bodyOf(artifact)).toBe(
@@ -76,6 +78,33 @@ test("com a leitura do dia, a página entra nela e nenhuma tarefa nasce", async 
     artifactLinks: [other, { artifactId: result.artifactId, relation: "creates", fromRecurrence: false }],
     revision: 2,
   });
+});
+
+test("uma página nova numa leitura concluída a devolve para a fazer, sem mexer no horário", async () => {
+  const { useCase, taskRepository } = setup({
+    tasks: [task("hoje", "2026-08-17T11:00:00.000Z", { status: "done", finishedAt: new Date("2026-08-17T12:00:00.000Z") })],
+  });
+
+  await useCase.execute(page, actor);
+
+  const revised = await taskRepository.findById("hoje");
+  expect(revised).toMatchObject({ status: "todo", startedAt: new Date("2026-08-17T11:00:00.000Z"), revision: 2 });
+  expect(revised?.finishedAt).toBeUndefined();
+});
+
+test("atualizar uma página já guardada também devolve a leitura para a fazer", async () => {
+  const { useCase, taskRepository, batchWriter } = setup();
+  const first = await useCase.execute(page, actor);
+  const created = await taskRepository.findById(first.taskId);
+  if (!created) throw new Error("a leitura do dia não foi criada");
+  await taskRepository.save(created.revise({ status: "done", finishedAt: now }, now));
+
+  await useCase.execute({ ...page, markdown: "Texto atualizado." }, actor);
+
+  const revised = await taskRepository.findById(first.taskId);
+  expect(revised).toMatchObject({ status: "todo", startedAt: sixPm });
+  expect(revised?.finishedAt).toBeUndefined();
+  expect(batchWriter.commits.at(-1)?.tasks).toHaveLength(1);
 });
 
 test("o nome da tarefa é reconhecido sem acento nem caixa, e as séries do dia são geradas antes da busca", async () => {
