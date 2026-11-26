@@ -345,6 +345,52 @@ describe("formatar a transcrição entregue", () => {
     expect(kit.haiku.calls).toEqual([]);
   });
 
+  test("o documento do pedido foi apagado antes da formatação: nasce outro e o pedido passa a apontar para ele", async () => {
+    const kit = setup();
+    const created = await kit.delivered();
+    await kit.artifactRepository.delete(created.artifactId, actor.userId);
+
+    await kit.format.run(created.requestId, actor.userId);
+
+    const request = await kit.taskRepository.findById(created.requestId);
+    const artifactId = (request?.data as { artifactId: string }).artifactId;
+    expect(request).toMatchObject({ status: "done" });
+    expect(artifactId).not.toBe(created.artifactId);
+    expect(await bodyOf(kit, artifactId)).toContain("## Transcrição");
+    expect(kit.database.artifacts.map((artifact) => artifact.id)).toEqual([artifactId]);
+    const reading = await kit.taskRepository.findById(created.taskId);
+    expect(reading?.artifactLinks.map((link) => link.artifactId)).toContain(artifactId);
+  });
+
+  test("a leitura do dia foi apagada antes da formatação: nasce outra e o pedido passa a apontar para ela e para o documento novo", async () => {
+    const kit = setup();
+    const created = await kit.delivered();
+    kit.database.tasks = kit.database.tasks.filter((task) => task.id !== created.taskId);
+    await kit.artifactRepository.delete(created.artifactId, actor.userId);
+
+    await kit.format.run(created.requestId, actor.userId);
+
+    const request = await kit.taskRepository.findById(created.requestId);
+    const data = request?.data as { artifactId: string; readingTaskId: string };
+    expect(data.readingTaskId).not.toBe(created.taskId);
+    expect(await kit.taskRepository.findById(data.readingTaskId)).toMatchObject({ name: "Leitura diária", status: "todo" });
+    expect(await bodyOf(kit, data.artifactId)).toContain("## Transcrição");
+  });
+
+  test("o documento do pedido segue existindo mas a pessoa tirou a linha da fonte: é ele que a formatação atualiza", async () => {
+    const kit = setup();
+    const created = await kit.delivered();
+    const saved = await kit.artifactRepository.findById(created.artifactId);
+    if (!saved) throw new Error("sem documento");
+    await kit.artifactRepository.update(saved.revise({ data: { body: "Minhas anotações" } }), actor.userId, saved.revision);
+
+    await kit.format.run(created.requestId, actor.userId);
+
+    expect(kit.database.artifacts).toHaveLength(1);
+    expect(await bodyOf(kit, created.artifactId)).toContain("## Transcrição");
+    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ data: { artifactId: created.artifactId } });
+  });
+
   test("pedido que não espera formatação (cancelado, já pronto, de outra pessoa) não chama o Haiku nem grava", async () => {
     const kit = setup();
     const created = await kit.delivered();

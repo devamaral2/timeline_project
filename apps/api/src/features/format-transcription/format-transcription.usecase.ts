@@ -5,7 +5,7 @@ import {
   jsonSchemaOf,
   type StructuredCompletionGateway,
 } from "../../api-core/agent/gateways/structured-completion.gateway";
-import type { FormattingInput, TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
+import type { FormattingInput, TranscriptionPlace, TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { composeReadingArticle } from "../save-daily-reading/daily-reading-article";
 import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
@@ -91,9 +91,9 @@ export class FormatTranscriptionUseCase {
 
     const comments = await this.summarizeComments(requestId, result);
     const markdown = composeMarkdown(pending.data.videoId, result, segments, format, comments.summary);
-    await this.place(userId, pending, markdown, (tx) =>
+    await this.place(userId, pending, markdown, (tx, where) =>
       this.requests.finish(tx, {
-        requestId, userId, status: "done", at: this.clock(), ...(comments.failed ? { commentsSummaryFailed: true } : {}),
+        requestId, userId, status: "done", at: this.clock(), where, ...(comments.failed ? { commentsSummaryFailed: true } : {}),
       }));
   }
 
@@ -104,8 +104,8 @@ export class FormatTranscriptionUseCase {
   }
 
   private async finishFailed(requestId: string, userId: string, pending: FormattingInput): Promise<void> {
-    await this.place(userId, pending, FORMAT_FAILED_TEXT, (tx) =>
-      this.requests.finish(tx, { requestId, userId, status: "failed", at: this.clock(), failureCode: "failed" }));
+    await this.place(userId, pending, FORMAT_FAILED_TEXT, (tx, where) =>
+      this.requests.finish(tx, { requestId, userId, status: "failed", at: this.clock(), failureCode: "failed", where }));
   }
 
   /** A chamada 2: sem comentários não há o que resumir; se falha, só a seção some. */
@@ -130,7 +130,12 @@ export class FormatTranscriptionUseCase {
   }
 
   /** O documento do pedido, com o nome real do vídeo, e a Leitura diária do dia do pedido de volta para a fazer. */
-  private async place(userId: string, pending: FormattingInput, markdown: string, finish: (tx: unknown) => Promise<void>): Promise<void> {
+  private async place(
+    userId: string,
+    pending: FormattingInput,
+    markdown: string,
+    finish: (tx: unknown, where: TranscriptionPlace) => Promise<void>,
+  ): Promise<void> {
     const { data, result } = pending;
     const article = composeReadingArticle({
       url: data.url,
@@ -141,7 +146,11 @@ export class FormatTranscriptionUseCase {
     });
     if (!article) throw new Error("O endereço do pedido de transcrição deixou de ser um endereço");
     const actor: AuthenticatedUser = { userId };
-    await this.gate.place({ actor, article, day: data.day, companion: () => ({ afterWrite: finish }) });
+    // O documento do pedido é o que se atualiza; se ele (ou a leitura) foi apagado, nasce outro e o pedido aponta para o novo.
+    await this.gate.place({
+      actor, article, day: data.day, artifactId: data.artifactId,
+      companion: (where) => ({ afterWrite: (tx) => finish(tx, where) }),
+    });
   }
 }
 

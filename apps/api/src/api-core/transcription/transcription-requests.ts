@@ -41,6 +41,21 @@ export interface TranscriptionRequestData {
   artifactId: string;
 }
 
+/**
+ * Onde o documento do pedido ficou ao ser gravado: se a leitura ou o documento do pedido sumiram, nasceram outros, e
+ * o pedido passa a apontar para eles (`tasks.data`).
+ */
+export interface TranscriptionPlace {
+  readingTaskId: string;
+  artifactId: string;
+}
+
+/** O que entra em `tasks.data` de `where`: só os dois ids, mesmo que quem chama passe mais campos. */
+export const placeData = (where: TranscriptionPlace): TranscriptionPlace => ({
+  readingTaskId: where.readingTaskId,
+  artifactId: where.artifactId,
+});
+
 /** Um pedido que ainda espera o serviço local ou está sendo formatado. */
 export interface OpenTranscriptionRequest {
   requestId: string;
@@ -88,8 +103,14 @@ export interface TranscriptionRequests {
    * e enfileira o job de formatação. Roda na transação do escritor em lote; sem o lease, desfaz tudo.
    */
   accept(tx: unknown, input: { requestId: string; userId: string; leaseToken: string; result: TranscriptionResult }): Promise<void>;
-  /** A falha entra: leva o pedido a `failed` com o código e fecha o job do serviço local. Mesma transação e mesma regra do lease. */
-  reject(tx: unknown, input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date }): Promise<void>;
+  /**
+   * A falha entra: leva o pedido a `failed` com o código, grava onde o documento ficou e fecha o job do serviço local.
+   * Mesma transação e mesma regra do lease.
+   */
+  reject(
+    tx: unknown,
+    input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date; where: TranscriptionPlace },
+  ): Promise<void>;
 
   /**
    * Os dados do pedido da pessoa que ainda não terminou: esperando o serviço local (`awaiting_transcription`) ou a
@@ -97,10 +118,10 @@ export interface TranscriptionRequests {
    */
   open(userId: string, requestId: string): Promise<TranscriptionRequestData | undefined>;
   /**
-   * A pessoa cancela o pedido: leva-o a `cancel`, com `errorCode: "cancelled"`, e cancela o job do serviço local e o
+   * A pessoa cancela o pedido: leva-o a `cancel`, com `errorCode: "cancelled"`, grava onde o documento ficou e cancela o job do serviço local e o
    * de formatação, se houver. Roda na transação do escritor em lote; se o pedido já terminou, desfaz tudo.
    */
-  cancel(tx: unknown, input: { requestId: string; userId: string; at: Date }): Promise<void>;
+  cancel(tx: unknown, input: { requestId: string; userId: string; at: Date; where: TranscriptionPlace }): Promise<void>;
 
   /**
    * O pedido que espera a formatação (da pessoa, em `running`, com o resultado cru entregue), com o que a formatação
@@ -108,7 +129,7 @@ export interface TranscriptionRequests {
    */
   awaitingFormat(userId: string, requestId: string): Promise<FormattingInput | undefined>;
   /**
-   * A formatação termina o pedido (`done` ou `failed`). Com `failureCode`, ele fica em `tasks.data`; com
+   * A formatação termina o pedido (`done` ou `failed`) e grava onde o documento ficou. Com `failureCode`, ele fica em `tasks.data`; com
    * `commentsSummaryFailed`, o pedido ganha uma entrada dizendo que o resumo dos comentários falhou. Roda na
    * transação do escritor em lote; se o pedido já não está em `running`, desfaz tudo.
    */
@@ -121,6 +142,7 @@ export interface TranscriptionRequests {
       at: Date;
       failureCode?: TranscriptionFailureCode;
       commentsSummaryFailed?: boolean;
+      where: TranscriptionPlace;
     },
   ): Promise<void>;
 }

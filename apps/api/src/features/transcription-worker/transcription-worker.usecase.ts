@@ -116,7 +116,8 @@ export class TranscriptionWorkerUseCase {
       actor,
       article,
       day: data.day,
-      companion: () => ({
+      artifactId: data.artifactId,
+      companion: (where) => ({
         afterWrite: (tx) =>
           this.requests.reject(tx, {
             requestId: input.requestId,
@@ -124,6 +125,7 @@ export class TranscriptionWorkerUseCase {
             leaseToken: input.leaseToken,
             code,
             at: this.clock(),
+            where,
           }),
       }),
     });

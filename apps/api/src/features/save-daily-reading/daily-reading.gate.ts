@@ -36,6 +36,12 @@ export interface PlaceArticleInput {
   article: ReadingArticle;
   /** O dia da leitura (`AAAA-MM-DD` no fuso das tarefas). Ausente, é hoje. */
   day?: string;
+  /**
+   * O documento que o chamador já tem para este artigo (o do pedido de transcrição). Se ele ainda existe na leitura, é
+   * ele que é atualizado, mesmo que a linha da fonte já não esteja no texto; se sumiu, vale o reconhecimento pela fonte
+   * e, sem ele, nasce outro (o chamador lê o id novo em `PlacedArticle`).
+   */
+  artifactId?: string;
   /** Recebe onde o artigo caiu, antes de gravar, e devolve o que entra no mesmo lote. */
   companion?: (placed: PlacedArticle) => Companion;
 }
@@ -98,7 +104,7 @@ export class DailyReadingGate {
     return result;
   }
 
-  private async placeNow({ actor, article, day, companion }: PlaceArticleInput): Promise<PlacedArticle> {
+  private async placeNow({ actor, article, day, artifactId, companion }: PlaceArticleInput): Promise<PlacedArticle> {
     const now = this.clock();
     const readingDay = day ?? dayKeyOf(now, TASK_TIME_ZONE);
     const artifactInput = { type: "text" as const, name: article.name, data: { body: article.body } };
@@ -122,7 +128,7 @@ export class DailyReadingGate {
       return placed;
     }
 
-    const saved = await this.articleOf(reading, article.sourceUrl, actor.userId);
+    const saved = await this.articleOf(reading, article.sourceUrl, actor.userId, artifactId);
     if (saved) {
       const revised = saved.revise({ name: article.name, data: { body: article.body } });
       const placed = { readingTaskId: reading.id, readingCreated: false, artifactId: saved.id, artifactCreated: false };
@@ -183,16 +189,14 @@ export class DailyReadingGate {
     return found.sort((left, right) => (left.startedAt as Date).getTime() - (right.startedAt as Date).getTime())[0];
   }
 
-  /** O artefato de texto da leitura que guarda esta mesma fonte. */
-  private async articleOf(reading: Task, sourceUrl: string, userId: string): Promise<Artifact | undefined> {
+  /** O artefato de texto da leitura que o chamador indicou ou, sem ele, o que guarda esta mesma fonte. */
+  private async articleOf(reading: Task, sourceUrl: string, userId: string, preferredId?: string): Promise<Artifact | undefined> {
     const ids = reading.artifactLinks.map((link) => link.artifactId);
     if (ids.length === 0) return undefined;
-    const artifacts = await this.artifactRepository.findByIds(ids);
-    return artifacts.find(
-      (artifact) =>
-        artifact.userId === userId &&
-        artifact.type === "text" &&
-        readingSourceOf((artifact.data as { body: string }).body) === sourceUrl,
+    const texts = (await this.artifactRepository.findByIds(ids)).filter((artifact) => artifact.userId === userId && artifact.type === "text");
+    return (
+      texts.find((artifact) => artifact.id === preferredId) ??
+      texts.find((artifact) => readingSourceOf((artifact.data as { body: string }).body) === sourceUrl)
     );
   }
 }

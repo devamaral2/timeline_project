@@ -6,10 +6,12 @@ import type {
   FormattingInput,
   OpenTranscriptionRequest,
   ReservedTranscription,
+  TranscriptionPlace,
   TranscriptionRequestData,
   TranscriptionRequests,
 } from "../transcription-requests";
 import {
+  placeData,
   TRANSCRIPTION_FORMAT_JOB,
   TRANSCRIPTION_JOB,
   TRANSCRIPTION_LEASE_MS,
@@ -144,10 +146,10 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
 
   async reject(
     _tx: unknown,
-    input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date },
+    input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date; where: TranscriptionPlace },
   ): Promise<void> {
     this.close(input.userId, input.requestId, input.leaseToken);
-    this.setStatus(input.requestId, "failed", { failureCode: input.code }, input.at);
+    this.setStatus(input.requestId, "failed", { failureCode: input.code, ...placeData(input.where) }, input.at);
   }
 
   async open(userId: string, requestId: string): Promise<TranscriptionRequestData | undefined> {
@@ -157,12 +159,12 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
     return task.data as unknown as TranscriptionRequestData;
   }
 
-  async cancel(_tx: unknown, input: { requestId: string; userId: string; at: Date }): Promise<void> {
+  async cancel(_tx: unknown, input: { requestId: string; userId: string; at: Date; where: TranscriptionPlace }): Promise<void> {
     const task = this.database.tasks.find((stored) => stored.id === input.requestId);
     if (task?.userId !== input.userId || (task.status !== "awaiting_transcription" && task.status !== "running")) {
       throw new TranscriptionNotRunningError();
     }
-    this.setStatus(input.requestId, "cancel", { errorCode: "cancelled" }, input.at);
+    this.setStatus(input.requestId, "cancel", { errorCode: "cancelled", ...placeData(input.where) }, input.at);
     for (const job of this.queue) {
       if (job.taskId === input.requestId && (job.status === "queued" || job.status === "running")) job.status = "cancelled";
     }
@@ -186,11 +188,12 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
       at: Date;
       failureCode?: TranscriptionFailureCode;
       commentsSummaryFailed?: boolean;
+      where: TranscriptionPlace;
     },
   ): Promise<void> {
     const task = this.database.tasks.find((stored) => stored.id === input.requestId);
     if (task?.userId !== input.userId || task.status !== "running") throw new TranscriptionNotRunningError();
-    this.setStatus(input.requestId, input.status, input.failureCode ? { failureCode: input.failureCode } : {}, input.at);
+    this.setStatus(input.requestId, input.status, { ...(input.failureCode ? { failureCode: input.failureCode } : {}), ...placeData(input.where) }, input.at);
     if (input.commentsSummaryFailed) {
       this.entries.push({ taskId: input.requestId, kind: "trace", data: { stage: "comments_summary", status: "failed" } });
     }

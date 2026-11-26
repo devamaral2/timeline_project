@@ -37,8 +37,9 @@ export class CancelTranscriptionUseCase {
       actor,
       article,
       day: data.day,
-      companion: () => ({
-        afterWrite: (tx) => this.requests.cancel(tx, { requestId, userId: actor.userId, at: this.clock() }),
+      artifactId: data.artifactId,
+      companion: (where) => ({
+        afterWrite: (tx) => this.requests.cancel(tx, { requestId, userId: actor.userId, at: this.clock(), where }),
       }),
     });
     // O job de formatação que o worker já está rodando para.

@@ -273,6 +273,22 @@ describe("entregar a falha", () => {
     expect(kit.requests.openJobs()).toEqual([]);
   });
 
+  test("com o documento do pedido apagado, a falha cria outro e o pedido passa a apontar para ele", async () => {
+    const kit = setup();
+    const created = await queued(kit);
+    await kit.artifactRepository.delete(created.artifactId, actor.userId);
+    const reservation = await kit.worker.reserve(actor);
+    if (!reservation) throw new Error("sem reserva");
+
+    await kit.worker.deliver({ requestId: created.requestId, leaseToken: reservation.leaseToken, outcome: "failed", code: "private" }, actor);
+
+    const request = await kit.taskRepository.findById(created.requestId);
+    const artifactId = (request?.data as { artifactId: string }).artifactId;
+    expect(artifactId).not.toBe(created.artifactId);
+    expect(await bodyOf(kit, artifactId)).toContain("o vídeo é privado.");
+    expect(kit.database.artifacts.map((artifact) => artifact.id)).toEqual([artifactId]);
+  });
+
   test("a mesma entrega duas vezes não vale: o pedido já está encerrado", async () => {
     const kit = setup();
     const created = await queued(kit);

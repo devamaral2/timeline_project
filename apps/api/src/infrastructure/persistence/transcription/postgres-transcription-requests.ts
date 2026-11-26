@@ -1,6 +1,7 @@
 import type { TranscriptionFailureCode, TranscriptionResult, TranscriptionStage } from "@repo/contracts";
 import { sql } from "drizzle-orm";
 import {
+  placeData,
   type AbandonedTranscription,
   TRANSCRIPTION_FORMAT_JOB,
   TRANSCRIPTION_JOB,
@@ -11,6 +12,7 @@ import {
   type FormattingInput,
   type OpenTranscriptionRequest,
   type ReservedTranscription,
+  type TranscriptionPlace,
   type TranscriptionRequestData,
   type TranscriptionRequests,
 } from "../../../api-core/transcription/transcription-requests";
@@ -144,11 +146,11 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
 
   async reject(
     tx: unknown,
-    input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date },
+    input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date; where: TranscriptionPlace },
   ): Promise<void> {
     const transaction = tx as Tx;
     await this.close(transaction, input);
-    await this.setStatus(transaction, input.requestId, "failed", { failureCode: input.code }, input.at);
+    await this.setStatus(transaction, input.requestId, "failed", { failureCode: input.code, ...placeData(input.where) }, input.at);
   }
 
   async open(userId: string, requestId: string): Promise<TranscriptionRequestData | undefined> {
@@ -159,11 +161,11 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
     return result.rows[0]?.data;
   }
 
-  async cancel(tx: unknown, input: { requestId: string; userId: string; at: Date }): Promise<void> {
+  async cancel(tx: unknown, input: { requestId: string; userId: string; at: Date; where: TranscriptionPlace }): Promise<void> {
     const transaction = tx as Tx;
     const updated = await transaction.execute(sql`
       UPDATE tasks SET status = 'cancel', finished_at = ${input.at.toISOString()}, updated_at = now(),
-        data = data || ${JSON.stringify({ errorCode: "cancelled" })}::jsonb
+        data = data || ${JSON.stringify({ errorCode: "cancelled", ...placeData(input.where) })}::jsonb
       WHERE id = ${input.requestId} AND user_id = ${input.userId} AND actor = 'agent'
         AND kind = 'save_content_with_transcription' AND status IN ('awaiting_transcription', 'running')
       RETURNING id`);
@@ -195,10 +197,11 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
       at: Date;
       failureCode?: TranscriptionFailureCode;
       commentsSummaryFailed?: boolean;
+      where: TranscriptionPlace;
     },
   ): Promise<void> {
     const transaction = tx as Tx;
-    const data = input.failureCode ? { failureCode: input.failureCode } : {};
+    const data = { ...(input.failureCode ? { failureCode: input.failureCode } : {}), ...placeData(input.where) };
     const updated = await transaction.execute(sql`
       UPDATE tasks SET status = ${input.status}, finished_at = ${input.at.toISOString()}, updated_at = now(),
         data = data || ${JSON.stringify(data)}::jsonb

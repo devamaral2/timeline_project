@@ -249,6 +249,21 @@ describe("servico local de transcricao no Postgres", () => {
       expect(await countRows(ctx.pool, "task_entries", "kind = 'trace'")).toBe(0);
     });
 
+    test("com o documento apagado antes da formatação, nasce outro e o pedido passa a apontar para ele", async () => {
+      const created = await deliveredRequest();
+      await artifacts.delete(created.artifactId, USER);
+
+      await new FormatTranscriptionUseCase(gate, requestsStore, haiku({ summary: "Gostaram." }), () => now).run(created.requestId, USER);
+
+      const request = await tasks.findById(created.requestId);
+      const artifactId = (request?.data as { artifactId: string }).artifactId;
+      expect(request).toMatchObject({ status: "done" });
+      expect(artifactId).not.toBe(created.artifactId);
+      expect(await bodyOf(artifactId)).toContain("## Transcrição");
+      expect(await countRows(ctx.pool, "artifacts", "type = 'text' AND deleted_at IS NULL")).toBe(1);
+      expect((await tasks.findById(created.taskId))?.artifactLinks.map((link) => link.artifactId)).toContain(artifactId);
+    });
+
     test("com falha só nos comentários, o pedido termina done e ganha a entrada", async () => {
       const created = await deliveredRequest();
 
