@@ -94,7 +94,7 @@ test("sem a leitura do dia, ela nasce a fazer às 18h, com o documento na fila e
 });
 
 test("com a leitura do dia concluída, o pedido a devolve para a fazer e liga o documento a ela, sem criar outra", async () => {
-  const { useCase, database, taskRepository, requests, relations } = setup({
+  const { useCase, database, taskRepository, relations } = setup({
     tasks: [reading({ status: "done", finishedAt: new Date("2026-08-17T12:00:00.000Z") })],
   });
 

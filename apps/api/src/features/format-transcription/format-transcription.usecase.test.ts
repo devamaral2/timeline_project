@@ -354,7 +354,7 @@ describe("formatar a transcrição entregue", () => {
     await kit.format.run(created.requestId, actor.userId);
 
     const request = await kit.taskRepository.findById(created.requestId);
-    const artifactId = (request?.data as { artifactId: string }).artifactId;
+    const { artifactId } = (request?.data ?? {}) as { artifactId: string };
     expect(request).toMatchObject({ status: "done" });
     expect(artifactId).not.toBe(created.artifactId);
     expect(await bodyOf(kit, artifactId)).toContain("## Transcrição");

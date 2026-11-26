@@ -284,7 +284,7 @@ describe("entregar a falha", () => {
     await kit.worker.deliver({ requestId: created.requestId, leaseToken: reservation.leaseToken, outcome: "failed", code: "private" }, actor);
 
     const request = await kit.taskRepository.findById(created.requestId);
-    const artifactId = (request?.data as { artifactId: string }).artifactId;
+    const { artifactId } = (request?.data ?? {}) as { artifactId: string };
     expect(artifactId).not.toBe(created.artifactId);
     expect(await bodyOf(kit, artifactId)).toContain("o vídeo é privado.");
     expect(kit.database.artifacts.map((artifact) => artifact.id)).toEqual([artifactId]);

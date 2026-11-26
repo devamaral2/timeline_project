@@ -257,7 +257,7 @@ describe("servico local de transcricao no Postgres", () => {
       await new FormatTranscriptionUseCase(gate, requestsStore, haiku({ summary: "Gostaram." }), () => now).run(created.requestId, USER);
 
       const request = await tasks.findById(created.requestId);
-      const artifactId = (request?.data as { artifactId: string }).artifactId;
+      const { artifactId } = (request?.data ?? {}) as { artifactId: string };
       expect(request).toMatchObject({ status: "done" });
       expect(artifactId).not.toBe(created.artifactId);
       expect(await bodyOf(artifactId)).toContain("## Transcrição");
