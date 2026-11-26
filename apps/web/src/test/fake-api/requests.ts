@@ -13,7 +13,7 @@ import type { FakeApi, FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 const REQUESTS = "requests";
 const OWNERS = "requestOwners";
 const CLIENT_MESSAGES = "clientMessages";
-const OPEN = new Set<RequestDto["status"]>(["queued", "running", "waiting"]);
+const OPEN = new Set<RequestDto["status"]>(["queued", "running", "waiting", "awaiting_transcription"]);
 
 const requestId = z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/);
 const clientMessageId = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);

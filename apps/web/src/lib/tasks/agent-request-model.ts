@@ -6,12 +6,12 @@ import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
  * contagem de passos feitos, o texto das entradas e o que o pedido produziu. Funções puras; a tela só as chama.
  */
 
-const OPEN_STATUSES: readonly AgentTaskStatus[] = ["queued", "running", "waiting"];
+const OPEN_STATUSES: readonly AgentTaskStatus[] = ["queued", "running", "waiting", "awaiting_transcription"];
 
 /** De quanto em quanto tempo uma tela se relê enquanto há pedido de agente em aberto (detalhe e listas). */
 export const AGENT_REQUEST_POLL_MS = 3000;
 
-/** Pedido em fila, executando ou aguardando o usuário: a tela continua relendo. */
+/** Pedido em fila, executando, aguardando o usuário ou a transcrição: a tela continua relendo. */
 export function isOpenRequest(status: AgentTaskStatus): boolean {
   return OPEN_STATUSES.includes(status);
 }

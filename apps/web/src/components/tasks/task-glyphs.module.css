@@ -15,7 +15,8 @@
 .statusGlyph[data-status="doing"],
 .statusGlyph[data-status="inHold"],
 .statusGlyph[data-status="running"],
-.statusGlyph[data-status="waiting"] { color: var(--warning); }
+.statusGlyph[data-status="waiting"],
+.statusGlyph[data-status="awaiting_transcription"] { color: var(--warning); }
 .statusGlyph[data-status="done"] { color: var(--success); }
 .statusGlyph[data-status="failed"] { color: var(--destructive); }
 .statusGlyph[data-status="reference"] { color: var(--routine); }
