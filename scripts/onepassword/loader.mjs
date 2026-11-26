@@ -26,6 +26,8 @@ const INITIAL_VALUES = {
 // O modo modelo (ADR 0019) liga cada provedor cuja chave existe; o token do MCP liga as ferramentas da agenda dele.
 const DEFAULT_SCOPE_OPTIONAL_KEYS = new Set([
   "HERMES_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "MCP_TOKEN", "MCP_OWNER_USER_ID",
+  // Servico local de transcricao (apps/transcriber): roda no computador de casa, nao em `pnpm dev`.
+  "TRANSCRIBER_API_URL", "TRANSCRIBER_DEVICE_KEY", "HF_TOKEN",
 ]);
 const SCOPES = Object.freeze({
   "api-runtime": {
@@ -84,6 +86,19 @@ const SCOPES = Object.freeze({
   "mcp-runtime": {
     required: ["MCP_TOKEN", "AUTH_INTERNAL_SERVICE_KEY", "MCP_OWNER_USER_ID"],
     optional: ["API_SERVICE_URL"],
+  },
+  // Servico local de transcricao (apps/transcriber, spec #39): so a chave de dispositivo e o endereco do
+  // gateway. A chave so serve em /api/transcription-worker/*. HF_TOKEN e do pyannote (Hugging Face).
+  "transcriber-runtime": {
+    required: ["TRANSCRIBER_API_URL", "TRANSCRIBER_DEVICE_KEY"],
+    optional: [
+      "HF_TOKEN",
+      "TRANSCRIBER_MAX_DURATION_HOURS",
+      "TRANSCRIBER_MAX_AUDIO_MB",
+      "TRANSCRIBER_CACHE_DIR",
+      "TRANSCRIBER_CACHE_DAYS",
+      "TRANSCRIBER_POLL_SECONDS",
+    ],
   },
   "web-build": {
     required: ["BACKEND_URL", "AUTH_SERVICE_URL"],

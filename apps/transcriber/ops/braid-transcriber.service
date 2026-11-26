@@ -1,0 +1,36 @@
+# Serviço systemd de usuário do serviço local de transcrição (apps/transcriber).
+# Sobe quando você entra na sessão e para quando sai: o computador não precisa ficar ligado o tempo todo,
+# porque um pedido que ele pegou e não terminou volta para a fila quando o lease (5 min) vence.
+#
+# Instalar (o README do app tem o passo a passo completo):
+#   pnpm --filter @repo/transcriber run build
+#   mkdir -p ~/.config/systemd/user ~/.config/braid-transcriber
+#   cp apps/transcriber/ops/braid-transcriber.service ~/.config/systemd/user/
+#   (crie ~/.config/braid-transcriber/op.env com o token do 1Password, chmod 600)
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now braid-transcriber
+#
+# Ajuste WorkingDirectory se o checkout estiver em outro lugar.
+[Unit]
+Description=Braid: serviço local de transcrição de vídeos do YouTube
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Documents/projects/timeline_project
+# OP_SERVICE_ACCOUNT_TOKEN e OP_ENVIRONMENT_ID: o carregador do projeto os troca pela chave de dispositivo.
+EnvironmentFile=%h/.config/braid-transcriber/op.env
+Environment=ONEPASSWORD_SCOPE=transcriber-runtime
+# O yt-dlp de ~/.local/bin (binário que se atualiza sozinho) vem antes do instalado pelo gerenciador de pacotes.
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+ExecStart=/usr/bin/node scripts/onepassword/exec.mjs /usr/bin/node apps/transcriber/dist/main.js
+Restart=on-failure
+RestartSec=30
+# A máquina é de uso pessoal: o serviço trabalha com a prioridade mais baixa.
+Nice=10
+IOSchedulingClass=idle
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target
