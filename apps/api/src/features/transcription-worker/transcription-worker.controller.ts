@@ -19,12 +19,10 @@ import { TranscriptionWorkerUseCase } from "./transcription-worker.usecase";
  * O corpo da entrega: a transcrição de um vídeo de horas, com as falas
  * separadas, passa dos 100 kB padrão do Express e do 1 MB da Leitura diária. O
  * teto da entrega (`TRANSCRIPTION_DELIVERY_MAX_BYTES`) fica abaixo deste, para a
- * recusa por tamanho ser uma resposta do pedido. O gateway usa o mesmo valor.
+ * recusa por tamanho ser uma resposta do pedido. O gateway usa o mesmo valor
+ * (`SECURITY_POLICY.maxDeliveryBodyBytes`).
  */
 export const TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES = 4 * 1024 * 1024;
-
-/** Onde mora a rota de entrega, para quem dá o limite de corpo maior a ela. */
-export const TRANSCRIPTION_DELIVERY_PATH = "/api/transcription-worker/deliver";
 
 /**
  * As três operações do serviço local de transcrição (`apps/transcriber`),
