@@ -254,6 +254,44 @@ export const transcriptionRequestResultSchema = z.object({
   requestId: z.string(), taskId: z.string(), artifactId: z.string(), created: z.boolean(),
 }).strict();
 
+/** O servico local de transcricao (`/api/transcription-worker/*`). */
+export const transcriptionStageSchema = z.enum(["metadata", "download", "transcription", "speakers", "comments"]);
+export const transcriptionFailureCodeSchema = z.enum(["too_large", "private", "unavailable", "no_audio", "failed"]);
+
+export const transcriptionReservationSchema = z.object({
+  requestId: z.string(), url: z.string(), leaseToken: z.string(), leaseExpiresAt: z.string(),
+}).strict();
+
+export const transcriptionLeaseInputSchema = z.object({
+  requestId: z.string(), leaseToken: z.string(), stage: transcriptionStageSchema, percent: z.number().min(0).max(100),
+}).strict();
+
+export const transcriptionLeaseResultSchema = z.object({ leaseExpiresAt: z.string() }).strict();
+
+const seconds = z.number().min(0);
+export const transcriptionResultSchema = z.object({
+  video: z.object({
+    title: z.string(), channel: z.string(), durationSeconds: seconds, description: z.string(),
+    chapters: z.array(z.object({ startSeconds: seconds, title: z.string() }).strict()),
+  }).strict(),
+  source: z.enum(["subtitles", "whisper"]),
+  segments: z.array(z.object({ startSeconds: seconds, endSeconds: seconds, speaker: z.string(), text: z.string() }).strict()),
+  hotMoments: z.array(z.object({ startSeconds: seconds, endSeconds: seconds, score: z.number().min(0).max(1) }).strict()),
+  comments: z.array(z.object({
+    author: z.string(), text: z.string(), likes: z.number().int().min(0), publishedAt: z.string(),
+  }).strict()).max(50),
+}).strict();
+
+export const transcriptionDeliveryInputSchema = z.discriminatedUnion("outcome", [
+  z.object({ requestId: z.string(), leaseToken: z.string(), outcome: z.literal("completed"), result: transcriptionResultSchema }).strict(),
+  z.object({ requestId: z.string(), leaseToken: z.string(), outcome: z.literal("failed"), code: transcriptionFailureCodeSchema }).strict(),
+]);
+
+export const transcriptionDeliveryResultSchema = z.discriminatedUnion("status", [
+  z.object({ requestId: z.string(), status: z.literal("running") }).strict(),
+  z.object({ requestId: z.string(), status: z.literal("failed"), code: transcriptionFailureCodeSchema }).strict(),
+]);
+
 /** `POST /api/artifacts`: o artefato e as tarefas em que ele ja nasce aparecendo. */
 export const createArtifactRequestSchema = z.union(createArtifactVariants({ taskIds: z.array(z.string()).optional() }));
 
