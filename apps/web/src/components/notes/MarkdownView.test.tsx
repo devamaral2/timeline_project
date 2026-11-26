@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 import { MarkdownView } from "./MarkdownView";
 
 test("um link do YouTube sozinho na linha vira o player, com o link original embaixo", () => {
@@ -46,4 +46,61 @@ test("as imagens só são buscadas quando a pessoa pede, todas de uma vez e sem 
   expect(images[0]).toHaveAttribute("referrerpolicy", "no-referrer");
   expect(images[0]).toHaveAttribute("loading", "lazy");
   expect(screen.queryByRole("button")).toBeNull();
+});
+
+const SOURCE = [
+  "## Resumo",
+  "- [Abertura](#t-0)",
+  "- [O ponto central](#t-125)",
+  "- [Fonte](https://exemplo.dev/a)",
+  "## Transcrição",
+  "{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Ana:** Bem-vindos.",
+  "{#t-125} [02:05](https://youtu.be/dQw4w9WgXcQ?t=125) **Bia:** O ponto central é este.",
+  "{#outro} fica como texto",
+].join("\n\n");
+
+const scrolled = vi.fn();
+Element.prototype.scrollIntoView = scrolled;
+afterEach(() => scrolled.mockClear());
+
+test("um bloco que começa com {#t-segundos} vira a âncora do trecho, sem mostrar a marca", () => {
+  const { container } = render(<MarkdownView source={SOURCE} />);
+
+  const block = container.querySelector("#t-125");
+  expect(block?.tagName).toBe("P");
+  expect(block).toHaveTextContent("02:05 Bia: O ponto central é este.");
+  expect(block?.textContent).not.toContain("{#");
+  expect(container.querySelector("#t-0")).toHaveTextContent("00:00 Ana: Bem-vindos.");
+  // Só a convenção t-<segundos> vira âncora; outro id continua texto, para um documento não tomar ids da página.
+  expect(container.querySelector("#outro")).toBeNull();
+  expect(screen.getByText("{#outro} fica como texto")).toBeInTheDocument();
+});
+
+test("tocar num link interno rola até o trecho dentro do mesmo documento", () => {
+  const { container } = render(<MarkdownView source={SOURCE} />);
+
+  fireEvent.click(screen.getByRole("link", { name: "O ponto central" }));
+
+  expect(scrolled).toHaveBeenCalledTimes(1);
+  expect(scrolled.mock.contexts[0]).toBe(container.querySelector("#t-125"));
+});
+
+test("um link interno sem trecho correspondente não rola e não quebra", () => {
+  render(<MarkdownView source={"[Sumiu](#t-999)"} />);
+
+  fireEvent.click(screen.getByRole("link", { name: "Sumiu" }));
+
+  expect(scrolled).not.toHaveBeenCalled();
+});
+
+test("links externos e o player do YouTube seguem como estão, mesmo ao lado de âncoras", () => {
+  const { container } = render(<MarkdownView source={`${SOURCE}\n\nhttps://youtu.be/dQw4w9WgXcQ`} />);
+
+  const external = screen.getByRole("link", { name: "Fonte" });
+  expect(external).toHaveAttribute("target", "_blank");
+  expect(external).toHaveAttribute("rel", "noopener noreferrer");
+  fireEvent.click(external);
+  fireEvent.click(screen.getByRole("link", { name: "02:05" }));
+  expect(scrolled).not.toHaveBeenCalled();
+  expect(container.querySelectorAll("iframe")).toHaveLength(1);
 });
