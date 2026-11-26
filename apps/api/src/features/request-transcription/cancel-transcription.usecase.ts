@@ -1,8 +1,8 @@
 import type { TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import type { JobsService } from "../../infrastructure/jobs/jobs.service";
-import { composeReadingArticle } from "../save-daily-reading/daily-reading-article";
 import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
+import { composeRequestArticle } from "./video-article";
 
 /** O que o documento diz depois que a pessoa cancela o pedido. */
 export const TRANSCRIPTION_CANCELLED_TEXT = "Transcrição cancelada";
@@ -25,13 +25,7 @@ export class CancelTranscriptionUseCase {
   async execute(requestId: string, actor: AuthenticatedUser): Promise<boolean> {
     const data = await this.requests.open(actor.userId, requestId);
     if (!data) return false;
-    const article = composeReadingArticle({
-      url: data.url,
-      title: `Vídeo do YouTube (${data.videoId})`,
-      markdown: TRANSCRIPTION_CANCELLED_TEXT,
-      siteName: "YouTube",
-    });
-    if (!article) throw new Error("O endereço do pedido de transcrição deixou de ser um endereço");
+    const article = composeRequestArticle(data, TRANSCRIPTION_CANCELLED_TEXT);
 
     await this.gate.place({
       actor,

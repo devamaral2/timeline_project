@@ -7,7 +7,7 @@ import {
 } from "../../api-core/agent/gateways/structured-completion.gateway";
 import type { FormattingInput, TranscriptionPlace, TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { composeReadingArticle } from "../save-daily-reading/daily-reading-article";
+import { composeRequestArticle } from "../request-transcription/video-article";
 import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
 
 /** O Haiku 5.5 no esforço padrão dele (spec #39); nunca o modelo que o usuário escolheu no chat. */
@@ -137,14 +137,10 @@ export class FormatTranscriptionUseCase {
     finish: (tx: unknown, where: TranscriptionPlace) => Promise<void>,
   ): Promise<void> {
     const { data, result } = pending;
-    const article = composeReadingArticle({
-      url: data.url,
-      title: result.video.title.trim() || `Vídeo do YouTube (${data.videoId})`,
-      markdown,
-      siteName: "YouTube",
-      byline: plain(result.video.channel, NAME_MAX) || undefined,
+    const article = composeRequestArticle(data, markdown, {
+      title: result.video.title,
+      byline: plain(result.video.channel, NAME_MAX),
     });
-    if (!article) throw new Error("O endereço do pedido de transcrição deixou de ser um endereço");
     const actor: AuthenticatedUser = { userId };
     // O documento do pedido é o que se atualiza; se ele (ou a leitura) foi apagado, nasce outro e o pedido aponta para o novo.
     await this.gate.place({

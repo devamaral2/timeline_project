@@ -14,13 +14,30 @@ const DAILY_READING_TIME = "18:00";
 const AGENDA_PAGES_MAX = 10;
 
 /** Onde o artigo caiu: a leitura do dia e o artefato dele, e o que nasceu agora. */
-export interface PlacedArticle {
-  readingTaskId: string;
+export class PlacedArticle {
+  readonly readingTaskId: string;
   /** A leitura do dia nasceu agora. */
-  readingCreated: boolean;
-  artifactId: string;
+  readonly readingCreated: boolean;
+  readonly artifactId: string;
   /** `false`: o artefato da mesma fonte já estava na leitura e foi atualizado. */
-  artifactCreated: boolean;
+  readonly artifactCreated: boolean;
+
+  constructor(where: { readingTaskId: string; readingCreated: boolean; artifactId: string; artifactCreated: boolean }) {
+    this.readingTaskId = where.readingTaskId;
+    this.readingCreated = where.readingCreated;
+    this.artifactId = where.artifactId;
+    this.artifactCreated = where.artifactCreated;
+  }
+
+  /** O que a tarefa de agente que registra a gravação fez com o artefato: o criou ou o atualizou. */
+  artifactRelation(): "creates" | "updates" {
+    return this.artifactCreated ? "creates" : "updates";
+  }
+
+  /** O que a tarefa de agente que registra a gravação fez com a leitura do dia: a gerou ou a alterou. */
+  readingRelation(): "generates" | "updates" {
+    return this.readingCreated ? "generates" : "updates";
+  }
 }
 
 /** O que o chamador grava na mesma transação que o artigo (a tarefa de agente que o registra, as relações dela, um job). */
@@ -123,7 +140,7 @@ export class DailyReadingGate {
       );
       const [artifact] = prepared.artifacts;
       if (!artifact) throw new Error("Daily reading task was prepared without its artifact");
-      const placed = { readingTaskId: prepared.task.id, readingCreated: true, artifactId: artifact.id, artifactCreated: true };
+      const placed = new PlacedArticle({ readingTaskId: prepared.task.id, readingCreated: true, artifactId: artifact.id, artifactCreated: true });
       await this.commit(toEntityBatch(prepared), companion?.(placed));
       return placed;
     }
@@ -131,7 +148,7 @@ export class DailyReadingGate {
     const saved = await this.articleOf(reading, article.sourceUrl, actor.userId, artifactId);
     if (saved) {
       const revised = saved.revise({ name: article.name, data: { body: article.body } });
-      const placed = { readingTaskId: reading.id, readingCreated: false, artifactId: saved.id, artifactCreated: false };
+      const placed = new PlacedArticle({ readingTaskId: reading.id, readingCreated: false, artifactId: saved.id, artifactCreated: false });
       await this.commit(
         {
           userId: actor.userId,
@@ -145,7 +162,7 @@ export class DailyReadingGate {
 
     const artifact = await this.artifactBuilder.fromCreateInput(artifactInput, actor.userId, now);
     const artifactLinks = [...reading.artifactLinks, { artifactId: artifact.id, relation: "creates" as const, fromRecurrence: false }];
-    const placed = { readingTaskId: reading.id, readingCreated: false, artifactId: artifact.id, artifactCreated: true };
+    const placed = new PlacedArticle({ readingTaskId: reading.id, readingCreated: false, artifactId: artifact.id, artifactCreated: true });
     await this.commit(
       {
         userId: actor.userId,

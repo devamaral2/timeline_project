@@ -39,7 +39,7 @@ export class SaveDailyReadingUseCase {
           startedAt: now,
           finishedAt: now,
           data: { url: article.sourceUrl },
-          artifactLinks: [{ artifactId: where.artifactId, relation: where.artifactCreated ? "creates" : "updates", fromRecurrence: false }],
+          artifactLinks: [{ artifactId: where.artifactId, relation: where.artifactRelation(), fromRecurrence: false }],
         });
         return {
           tasks: [{ op: "create", entity: saved }],
@@ -47,7 +47,7 @@ export class SaveDailyReadingUseCase {
             this.relations.record(tx, {
               fromTaskId: saved.id,
               toTaskId: where.readingTaskId,
-              relation: where.readingCreated ? "generates" : "updates",
+              relation: where.readingRelation(),
             }),
         };
       },

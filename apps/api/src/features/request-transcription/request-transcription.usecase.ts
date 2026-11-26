@@ -4,8 +4,8 @@ import type { TaskRelations } from "../../api-core/tasks/task-relations";
 import type { TranscriptionRequestData, TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import { Task, TaskValidationError } from "../../domain";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { composeReadingArticle } from "../save-daily-reading/daily-reading-article";
 import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
+import { composeVideoArticle } from "./video-article";
 
 /** O que o documento diz até a transcrição chegar. */
 export const TRANSCRIPTION_QUEUED_TEXT = "Transcrição na fila";
@@ -31,12 +31,7 @@ export class RequestTranscriptionUseCase {
   async execute(input: TranscriptionRequestInput, actor: AuthenticatedUser): Promise<TranscriptionRequestResult> {
     const video = youtubeVideoLinkOf(input.url);
     if (!video) throw new TaskValidationError("O endereço não é de um vídeo do YouTube");
-    const article = composeReadingArticle({
-      url: video.canonical,
-      title: `Vídeo do YouTube (${video.id})`,
-      markdown: TRANSCRIPTION_QUEUED_TEXT,
-      siteName: "YouTube",
-    });
+    const article = composeVideoArticle({ url: video.canonical, videoId: video.id }, TRANSCRIPTION_QUEUED_TEXT);
     if (!article) throw new TaskValidationError("O endereço não é de um vídeo do YouTube");
     const day = this.gate.today();
 
@@ -68,7 +63,7 @@ export class RequestTranscriptionUseCase {
             name: `Transcrição do vídeo ${video.id}`,
             startedAt: this.gate.now(),
             data: { ...data },
-            artifactLinks: [{ artifactId: where.artifactId, relation: where.artifactCreated ? "creates" : "updates", fromRecurrence: false }],
+            artifactLinks: [{ artifactId: where.artifactId, relation: where.artifactRelation(), fromRecurrence: false }],
           });
           requestId = request.id;
           return {
@@ -77,7 +72,7 @@ export class RequestTranscriptionUseCase {
               await this.relations.record(tx, {
                 fromTaskId: request.id,
                 toTaskId: where.readingTaskId,
-                relation: where.readingCreated ? "generates" : "updates",
+                relation: where.readingRelation(),
               });
               await this.requests.enqueue(tx, { requestId: request.id, userId: actor.userId });
             },
