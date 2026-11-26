@@ -16,6 +16,7 @@
 .markdown > :last-child { margin-bottom: 0; }
 .markdown :is(p, ul, ol, blockquote, pre, table, h2, h3, h4, h5, h6, hr) { margin: 0; }
 .markdown p { white-space: pre-wrap; }
+.markdown .anchor { scroll-margin-top: 16px; }
 
 .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { color: var(--md-strong); font-size: 15px; font-weight: 600; line-height: 22px; }
 .markdown h2 { font-size: 18px; line-height: 26px; }
