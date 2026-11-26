@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import { InMemoryTranscriptionRequests } from "../../api-core/transcription/testing/in-memory-transcription-requests";
 import { TRANSCRIPTION_JOB } from "../../api-core/transcription/transcription-requests";
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
+import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-task-relations";
 import { createTasksKit, type TasksKitOptions } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { Artifact, Task, TaskValidationError } from "../../domain";
 import { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
@@ -28,8 +29,9 @@ function setup(options: TasksKitOptions = {}) {
     undefined,
     () => now,
   );
-  const useCase = new RequestTranscriptionUseCase(gate, requests);
-  return { ...kit, useCase, requests };
+  const relations = new InMemoryTaskRelations();
+  const useCase = new RequestTranscriptionUseCase(gate, requests, relations);
+  return { ...kit, useCase, requests, relations };
 }
 
 function reading(overrides: Partial<Parameters<typeof Task.create>[0]> = {}): Task {
@@ -54,7 +56,7 @@ function withStatus(task: Task, status: Task["status"], finishedAt?: Date): Task
 const bodyOf = (artifact: Artifact | null) => (artifact?.data as { body?: string } | undefined)?.body;
 
 test("sem a leitura do dia, ela nasce a fazer às 18h, com o documento na fila e o pedido aguardando, numa gravação só", async () => {
-  const { useCase, taskRepository, artifactRepository, batchWriter, requests } = setup();
+  const { useCase, taskRepository, artifactRepository, batchWriter, requests, relations } = setup();
 
   const result = await useCase.execute({ url: VIDEO }, actor);
 
@@ -87,12 +89,12 @@ test("sem a leitura do dia, ela nasce a fazer às 18h, com o documento na fila e
   });
   expect(request?.finishedAt).toBeUndefined();
 
-  expect(requests.relations).toEqual([{ fromTaskId: result.requestId, toTaskId: result.taskId, relation: "generates" }]);
+  expect(relations.recorded).toEqual([{ fromTaskId: result.requestId, toTaskId: result.taskId, relation: "generates" }]);
   expect(requests.jobs).toEqual([{ kind: TRANSCRIPTION_JOB, userId: actor.userId, taskId: result.requestId }]);
 });
 
 test("com a leitura do dia concluída, o pedido a devolve para a fazer e liga o documento a ela, sem criar outra", async () => {
-  const { useCase, database, taskRepository, requests } = setup({
+  const { useCase, database, taskRepository, relations } = setup({
     tasks: [reading({ status: "done", finishedAt: new Date("2026-08-17T12:00:00.000Z") })],
   });
 
@@ -108,7 +110,7 @@ test("com a leitura do dia concluída, o pedido a devolve para a fazer e liga o 
   });
   expect(revised?.finishedAt).toBeUndefined();
   expect(database.tasks.filter((task) => task.actor === "human")).toHaveLength(1);
-  expect(requests.relations).toEqual([{ fromTaskId: result.requestId, toTaskId: "hoje", relation: "updates" }]);
+  expect(relations.recorded).toEqual([{ fromTaskId: result.requestId, toTaskId: "hoje", relation: "updates" }]);
 });
 
 test.each(["awaiting_transcription", "running"] as const)(
@@ -133,7 +135,7 @@ test.each(["awaiting_transcription", "running"] as const)(
 test.each(["done", "failed"] as const)(
   "o mesmo vídeo no mesmo dia, com o pedido já %s, cria outro pedido que atualiza o mesmo documento e devolve a leitura para a fazer",
   async (status) => {
-    const { useCase, taskRepository, artifactRepository, database, requests } = setup();
+    const { useCase, taskRepository, artifactRepository, database, requests, relations } = setup();
     const first = await useCase.execute({ url: VIDEO }, actor);
     const finished = await taskRepository.findById(first.requestId);
     const readingTask = await taskRepository.findById(first.taskId);
@@ -162,7 +164,7 @@ test.each(["done", "failed"] as const)(
     const revised = await taskRepository.findById(first.taskId);
     expect(revised).toMatchObject({ status: "todo" });
     expect(revised?.finishedAt).toBeUndefined();
-    expect(requests.relations.at(-1)).toEqual({ fromTaskId: second.requestId, toTaskId: first.taskId, relation: "updates" });
+    expect(relations.recorded.at(-1)).toEqual({ fromTaskId: second.requestId, toTaskId: first.taskId, relation: "updates" });
     expect(requests.jobs).toHaveLength(2);
   },
 );

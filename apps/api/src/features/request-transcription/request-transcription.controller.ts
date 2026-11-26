@@ -4,13 +4,16 @@ import { transcriptionRequestInputSchema } from "@repo/contracts/schemas";
 import { z } from "zod";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
 import { ApiCoreModule } from "../../api-core/api-core.module";
+import type { TaskRelations } from "../../api-core/tasks/task-relations";
 import type { TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { TRANSCRIPTION_REQUESTS } from "../../infrastructure/persistence";
+import { JobsService } from "../../infrastructure/jobs/jobs.service";
+import { TASK_RELATIONS, TRANSCRIPTION_REQUESTS } from "../../infrastructure/persistence";
 import { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
 import { SaveDailyReadingModule } from "../save-daily-reading/save-daily-reading.controller";
+import { CancelTranscriptionUseCase } from "./cancel-transcription.usecase";
 import { RequestTranscriptionUseCase } from "./request-transcription.usecase";
 
 /**
@@ -39,9 +42,17 @@ export class RequestTranscriptionController {
   providers: [
     {
       provide: RequestTranscriptionUseCase,
-      inject: [DailyReadingGate, TRANSCRIPTION_REQUESTS],
-      useFactory: (gate: DailyReadingGate, requests: TranscriptionRequests) => new RequestTranscriptionUseCase(gate, requests),
+      inject: [DailyReadingGate, TRANSCRIPTION_REQUESTS, TASK_RELATIONS],
+      useFactory: (gate: DailyReadingGate, requests: TranscriptionRequests, relations: TaskRelations) =>
+        new RequestTranscriptionUseCase(gate, requests, relations),
+    },
+    {
+      provide: CancelTranscriptionUseCase,
+      inject: [DailyReadingGate, TRANSCRIPTION_REQUESTS, JobsService],
+      useFactory: (gate: DailyReadingGate, requests: TranscriptionRequests, jobs: JobsService) =>
+        new CancelTranscriptionUseCase(gate, requests, jobs),
     },
   ],
+  exports: [CancelTranscriptionUseCase],
 })
 export class RequestTranscriptionModule {}

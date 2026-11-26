@@ -14,7 +14,7 @@ import {
 } from "../../api-core/transcription/transcription-requests";
 import type { EntityBatchWriter } from "../../domain/ports";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { composeReadingArticle } from "../save-daily-reading/daily-reading-article";
+import { composeRequestArticle } from "../request-transcription/video-article";
 import type { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
 
 /** O que o documento diz de cada falha, em palavras de quem lê. O motivo é o código fechado, nunca a mensagem do `yt-dlp`. */
@@ -48,6 +48,10 @@ export class TranscriptionWorkerUseCase {
 
   /** O próximo pedido da pessoa que espera o serviço local, ou nada. */
   async reserve(actor: AuthenticatedUser): Promise<TranscriptionReservation | undefined> {
+    // O pedido que já gastou as reservas falha antes de a fila procurar o próximo: ele não volta mais.
+    for (const abandoned of await this.requests.abandoned(actor.userId)) {
+      await this.fail(abandoned, abandoned.data, "failed", actor);
+    }
     const reserved = await this.requests.reserve(actor.userId);
     if (!reserved) return undefined;
     return {
@@ -100,19 +104,14 @@ export class TranscriptionWorkerUseCase {
     code: TranscriptionFailureCode,
     actor: AuthenticatedUser,
   ): Promise<TranscriptionDeliveryResult> {
-    const article = composeReadingArticle({
-      url: data.url,
-      title: `Vídeo do YouTube (${data.videoId})`,
-      markdown: `Transcrição indisponível: ${FAILURE_TEXT[code]}`,
-      siteName: "YouTube",
-    });
-    if (!article) throw new Error("O endereço do pedido de transcrição deixou de ser um endereço");
+    const article = composeRequestArticle(data, `Transcrição indisponível: ${FAILURE_TEXT[code]}`);
 
     await this.gate.place({
       actor,
       article,
       day: data.day,
-      companion: () => ({
+      artifactId: data.artifactId,
+      companion: (where) => ({
         afterWrite: (tx) =>
           this.requests.reject(tx, {
             requestId: input.requestId,
@@ -120,6 +119,7 @@ export class TranscriptionWorkerUseCase {
             leaseToken: input.leaseToken,
             code,
             at: this.clock(),
+            where,
           }),
       }),
     });

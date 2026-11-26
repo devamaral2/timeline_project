@@ -14,13 +14,30 @@ const DAILY_READING_TIME = "18:00";
 const AGENDA_PAGES_MAX = 10;
 
 /** Onde o artigo caiu: a leitura do dia e o artefato dele, e o que nasceu agora. */
-export interface PlacedArticle {
-  readingTaskId: string;
+export class PlacedArticle {
+  readonly readingTaskId: string;
   /** A leitura do dia nasceu agora. */
-  readingCreated: boolean;
-  artifactId: string;
+  readonly readingCreated: boolean;
+  readonly artifactId: string;
   /** `false`: o artefato da mesma fonte já estava na leitura e foi atualizado. */
-  artifactCreated: boolean;
+  readonly artifactCreated: boolean;
+
+  constructor(where: { readingTaskId: string; readingCreated: boolean; artifactId: string; artifactCreated: boolean }) {
+    this.readingTaskId = where.readingTaskId;
+    this.readingCreated = where.readingCreated;
+    this.artifactId = where.artifactId;
+    this.artifactCreated = where.artifactCreated;
+  }
+
+  /** O que a tarefa de agente que registra a gravação fez com o artefato: o criou ou o atualizou. */
+  artifactRelation(): "creates" | "updates" {
+    return this.artifactCreated ? "creates" : "updates";
+  }
+
+  /** O que a tarefa de agente que registra a gravação fez com a leitura do dia: a gerou ou a alterou. */
+  readingRelation(): "generates" | "updates" {
+    return this.readingCreated ? "generates" : "updates";
+  }
 }
 
 /** O que o chamador grava na mesma transação que o artigo (a tarefa de agente que o registra, as relações dela, um job). */
@@ -36,6 +53,12 @@ export interface PlaceArticleInput {
   article: ReadingArticle;
   /** O dia da leitura (`AAAA-MM-DD` no fuso das tarefas). Ausente, é hoje. */
   day?: string;
+  /**
+   * O documento que o chamador já tem para este artigo (o do pedido de transcrição). Se ele ainda existe na leitura, é
+   * ele que é atualizado, mesmo que a linha da fonte já não esteja no texto; se sumiu, vale o reconhecimento pela fonte
+   * e, sem ele, nasce outro (o chamador lê o id novo em `PlacedArticle`).
+   */
+  artifactId?: string;
   /** Recebe onde o artigo caiu, antes de gravar, e devolve o que entra no mesmo lote. */
   companion?: (placed: PlacedArticle) => Companion;
 }
@@ -98,7 +121,7 @@ export class DailyReadingGate {
     return result;
   }
 
-  private async placeNow({ actor, article, day, companion }: PlaceArticleInput): Promise<PlacedArticle> {
+  private async placeNow({ actor, article, day, artifactId, companion }: PlaceArticleInput): Promise<PlacedArticle> {
     const now = this.clock();
     const readingDay = day ?? dayKeyOf(now, TASK_TIME_ZONE);
     const artifactInput = { type: "text" as const, name: article.name, data: { body: article.body } };
@@ -117,15 +140,15 @@ export class DailyReadingGate {
       );
       const [artifact] = prepared.artifacts;
       if (!artifact) throw new Error("Daily reading task was prepared without its artifact");
-      const placed = { readingTaskId: prepared.task.id, readingCreated: true, artifactId: artifact.id, artifactCreated: true };
+      const placed = new PlacedArticle({ readingTaskId: prepared.task.id, readingCreated: true, artifactId: artifact.id, artifactCreated: true });
       await this.commit(toEntityBatch(prepared), companion?.(placed));
       return placed;
     }
 
-    const saved = await this.articleOf(reading, article.sourceUrl, actor.userId);
+    const saved = await this.articleOf(reading, article.sourceUrl, actor.userId, artifactId);
     if (saved) {
       const revised = saved.revise({ name: article.name, data: { body: article.body } });
-      const placed = { readingTaskId: reading.id, readingCreated: false, artifactId: saved.id, artifactCreated: false };
+      const placed = new PlacedArticle({ readingTaskId: reading.id, readingCreated: false, artifactId: saved.id, artifactCreated: false });
       await this.commit(
         {
           userId: actor.userId,
@@ -139,7 +162,7 @@ export class DailyReadingGate {
 
     const artifact = await this.artifactBuilder.fromCreateInput(artifactInput, actor.userId, now);
     const artifactLinks = [...reading.artifactLinks, { artifactId: artifact.id, relation: "creates" as const, fromRecurrence: false }];
-    const placed = { readingTaskId: reading.id, readingCreated: false, artifactId: artifact.id, artifactCreated: true };
+    const placed = new PlacedArticle({ readingTaskId: reading.id, readingCreated: false, artifactId: artifact.id, artifactCreated: true });
     await this.commit(
       {
         userId: actor.userId,
@@ -183,16 +206,14 @@ export class DailyReadingGate {
     return found.sort((left, right) => (left.startedAt as Date).getTime() - (right.startedAt as Date).getTime())[0];
   }
 
-  /** O artefato de texto da leitura que guarda esta mesma fonte. */
-  private async articleOf(reading: Task, sourceUrl: string, userId: string): Promise<Artifact | undefined> {
+  /** O artefato de texto da leitura que o chamador indicou ou, sem ele, o que guarda esta mesma fonte. */
+  private async articleOf(reading: Task, sourceUrl: string, userId: string, preferredId?: string): Promise<Artifact | undefined> {
     const ids = reading.artifactLinks.map((link) => link.artifactId);
     if (ids.length === 0) return undefined;
-    const artifacts = await this.artifactRepository.findByIds(ids);
-    return artifacts.find(
-      (artifact) =>
-        artifact.userId === userId &&
-        artifact.type === "text" &&
-        readingSourceOf((artifact.data as { body: string }).body) === sourceUrl,
+    const texts = (await this.artifactRepository.findByIds(ids)).filter((artifact) => artifact.userId === userId && artifact.type === "text");
+    return (
+      texts.find((artifact) => artifact.id === preferredId) ??
+      texts.find((artifact) => readingSourceOf((artifact.data as { body: string }).body) === sourceUrl)
     );
   }
 }

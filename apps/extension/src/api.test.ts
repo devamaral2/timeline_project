@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
 import { ApiError, SignedOutError, currentUser, requestTranscription, saveReading } from "./api";
+import { youtubeLinkOf } from "./capture/youtube";
 import { failureToast, savedToast, transcriptionToast } from "./messages";
 import { saveFromTab } from "./save";
 import { hostPermissionOf, normalizeBaseUrl } from "./settings";
@@ -154,7 +155,7 @@ test("numa aba de vídeo do YouTube o botão pede a transcrição, sem ler a pá
 
   const saved = await saveFromTab(
     BASE,
-    "https://youtu.be/dQw4w9WgXcQ?si=abc&t=90",
+    youtubeLinkOf("https://youtu.be/dQw4w9WgXcQ?si=abc&t=90"),
     async () => {
       read = true;
       return page;
@@ -171,14 +172,14 @@ test("numa aba de vídeo do YouTube o botão pede a transcrição, sem ler a pá
 test("em outra página o botão guarda a página na Leitura diária", async () => {
   const { fetchImpl, calls } = fakeFetch(json(saved));
 
-  expect(await saveFromTab(BASE, "https://jornal.example/a", articleOnTab, fetchImpl)).toEqual({ kind: "page", page, result: saved });
+  expect(await saveFromTab(BASE, youtubeLinkOf("https://jornal.example/a"), articleOnTab, fetchImpl)).toEqual({ kind: "page", page, result: saved });
   expect(calls.map((call) => new URL(call.url).pathname)).toEqual(["/api/tasks/daily-reading"]);
 });
 
 test("no YouTube fora de um vídeo (canal, busca, início) o botão guarda a página", async () => {
   for (const tabUrl of ["https://www.youtube.com/@canal", "https://www.youtube.com/results?search_query=x", "https://www.youtube.com/"]) {
     const { fetchImpl, calls } = fakeFetch(json(saved));
-    expect((await saveFromTab(BASE, tabUrl, articleOnTab, fetchImpl)).kind).toBe("page");
+    expect((await saveFromTab(BASE, youtubeLinkOf(tabUrl), articleOnTab, fetchImpl)).kind).toBe("page");
     expect(new URL(calls[0]?.url ?? "").pathname).toBe("/api/tasks/daily-reading");
   }
 });

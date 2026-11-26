@@ -64,3 +64,15 @@ test.each(["leitura nova", "leitura existente com o artefato", "leitura existent
     expect(database.tasks.filter((task) => task.actor === "human")).toHaveLength(1);
   },
 );
+
+test("o resultado diz que relação cada gravação tem com o que nasceu e com o que foi atualizado", async () => {
+  const { gate } = setup();
+
+  const first = await gate.place({ actor, article });
+  const again = await gate.place({ actor, article });
+  const other = await gate.place({ actor, article: { ...article, sourceUrl: "https://outro.example/b", body: "Fonte: [x](https://outro.example/b)\n\nB\n" } });
+
+  expect([first.artifactRelation(), first.readingRelation()]).toEqual(["creates", "generates"]);
+  expect([again.artifactRelation(), again.readingRelation()]).toEqual(["updates", "updates"]);
+  expect([other.artifactRelation(), other.readingRelation()]).toEqual(["creates", "updates"]);
+});

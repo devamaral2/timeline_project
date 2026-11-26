@@ -1,7 +1,7 @@
 "use client";
 
 import { Image as ImageIcon } from "lucide-react";
-import { Children, createContext, useContext, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { Children, createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Components, ExtraProps } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -127,17 +127,23 @@ export function MarkdownView({ source, className }: { source: string; className?
   const [shown, setShown] = useState(false);
   const images = useMemo(() => ({ shown, show: () => setShown(true) }), [shown]);
   const root = useRef<HTMLDivElement>(null);
-  /** Um link `#t-125` rola até o trecho deste documento; o resto do documento da página não é tocado. */
-  const followAnchor = (event: MouseEvent<HTMLDivElement>) => {
-    const link = event.target instanceof Element ? event.target.closest("a") : null;
-    const id = internalAnchorOf(link?.getAttribute("href"));
-    if (!id) return;
-    event.preventDefault();
-    root.current?.querySelector(`[id="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
+  // Um link `#t-125` rola até o trecho deste documento; o resto do documento da página não é tocado. O ouvinte é do
+  // próprio nó (os links já são focáveis e respondem ao teclado), então a `div` não precisa de papel interativo.
+  useEffect(() => {
+    const node = root.current;
+    if (!node) return;
+    const followAnchor = (event: Event) => {
+      const link = event.target instanceof Element ? event.target.closest("a") : null;
+      const id = internalAnchorOf(link?.getAttribute("href"));
+      if (!id) return;
+      event.preventDefault();
+      node.querySelector(`[id="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    node.addEventListener("click", followAnchor);
+    return () => node.removeEventListener("click", followAnchor);
+  }, []);
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: delega o clique dos links internos, que já são focáveis.
-    <div ref={root} className={cn(styles.markdown, className)} onClick={followAnchor}>
+    <div ref={root} className={cn(styles.markdown, className)}>
       <ImagesContext.Provider value={images}>
         <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
           {source}

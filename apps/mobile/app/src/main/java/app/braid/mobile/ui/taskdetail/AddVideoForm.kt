@@ -60,7 +60,7 @@ class AddVideoForm(
             try {
                 val result = transcription.request(url)
                 mutableState.value =
-                    AddVideoState(notice = if (result.created) TranscriptionText.FORM_QUEUED else TranscriptionText.FORM_AGAIN)
+                    AddVideoState(notice = if (result.created) TranscriptionText.FORM_QUEUED else TranscriptionText.ALREADY_QUEUED)
                 onRequested()
             } catch (cancelled: CancellationException) {
                 throw cancelled

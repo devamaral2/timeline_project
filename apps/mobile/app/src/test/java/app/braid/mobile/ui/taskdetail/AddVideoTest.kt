@@ -140,7 +140,7 @@ class AddVideoTest {
             form.type(video)
             form.submit()
 
-            assertEquals(TranscriptionText.FORM_AGAIN, form.until { it.notice != null }.notice)
+            assertEquals(TranscriptionText.ALREADY_QUEUED, form.until { it.notice != null }.notice)
         }
 
     @Test

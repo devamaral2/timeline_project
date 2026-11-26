@@ -18,6 +18,12 @@ export const TRANSCRIPTION_FORMAT_JOB = "video-transcription-format";
 export const TRANSCRIPTION_LEASE_MS = 5 * 60 * 1000;
 
 /**
+ * Quantas vezes o pedido pode ser reservado. Depois da quinta reserva cujo lease venceu sem entrega, o pedido
+ * falha com o código `failed` em vez de voltar à fila: um vídeo que derruba o serviço local não o derruba para sempre.
+ */
+export const TRANSCRIPTION_MAX_ATTEMPTS = 5;
+
+/**
  * O teto da entrega, medido no JSON do resultado. Acima dele o pedido falha com
  * `too_large`. O corpo da rota aceita mais que isto (`TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES`)
  * para que a recusa seja uma resposta, e não um corte da conexão.
@@ -35,6 +41,21 @@ export interface TranscriptionRequestData {
   artifactId: string;
 }
 
+/**
+ * Onde o documento do pedido ficou ao ser gravado: se a leitura ou o documento do pedido sumiram, nasceram outros, e
+ * o pedido passa a apontar para eles (`tasks.data`).
+ */
+export interface TranscriptionPlace {
+  readingTaskId: string;
+  artifactId: string;
+}
+
+/** O que entra em `tasks.data` de `where`: só os dois ids, mesmo que quem chama passe mais campos. */
+export const placeData = (where: TranscriptionPlace): TranscriptionPlace => ({
+  readingTaskId: where.readingTaskId,
+  artifactId: where.artifactId,
+});
+
 /** Um pedido que ainda espera o serviço local ou está sendo formatado. */
 export interface OpenTranscriptionRequest {
   requestId: string;
@@ -43,25 +64,26 @@ export interface OpenTranscriptionRequest {
 }
 
 /**
- * Persistência do pedido de transcrição que o lote de entidades não cobre: a
- * relação entre tarefas e o job. `record` roda na transação do escritor em lote
- * (`EntityBatch.afterWrite`), para que o pedido, o documento, a ligação com a
- * leitura e o job existam se e somente se existem juntos.
+ * Persistência do pedido de transcrição que o lote de entidades não cobre: o
+ * job do serviço local e o que ele guarda. `enqueue` roda na transação do escritor em lote
+ * (`EntityBatch.afterWrite`), para que o pedido, o documento e o job existam se e somente se existem juntos.
  */
 export interface TranscriptionRequests {
   /** O pedido do mesmo vídeo, no mesmo dia, que ainda está em `awaiting_transcription` ou `running`. */
   findOpen(userId: string, url: string, day: string): Promise<OpenTranscriptionRequest | undefined>;
-  /** A relação do pedido com a Leitura diária (`generates` quando ele a criou, `updates` quando a alterou) e o job. */
-  record(
-    tx: unknown,
-    input: { requestId: string; userId: string; readingTaskId: string; relation: "generates" | "updates" },
-  ): Promise<void>;
+  /** Enfileira o job do serviço local do pedido. A relação dele com a Leitura diária é de `TaskRelations`. */
+  enqueue(tx: unknown, input: { requestId: string; userId: string }): Promise<void>;
 
   /**
    * O pedido mais antigo da pessoa que espera o serviço local, com o lease novo. Antes, o job cujo lease
-   * venceu volta para a fila. Sem pedido esperando, nada.
+   * venceu volta para a fila, desde que ainda caiba em `TRANSCRIPTION_MAX_ATTEMPTS`. Sem pedido esperando, nada.
    */
   reserve(userId: string): Promise<ReservedTranscription | undefined>;
+  /**
+   * Os pedidos da pessoa cuja reserva venceu pela última vez permitida (`TRANSCRIPTION_MAX_ATTEMPTS`), cada um com o
+   * lease que o segurava: eles não voltam à fila, e quem chama os leva a `failed` por `reject`.
+   */
+  abandoned(userId: string): Promise<AbandonedTranscription[]>;
   /** Estende o lease do pedido e guarda o progresso. `undefined` quando o lease não vale mais (vencido, trocado ou cancelado). */
   renew(
     userId: string,
@@ -77,8 +99,25 @@ export interface TranscriptionRequests {
    * e enfileira o job de formatação. Roda na transação do escritor em lote; sem o lease, desfaz tudo.
    */
   accept(tx: unknown, input: { requestId: string; userId: string; leaseToken: string; result: TranscriptionResult }): Promise<void>;
-  /** A falha entra: leva o pedido a `failed` com o código e fecha o job do serviço local. Mesma transação e mesma regra do lease. */
-  reject(tx: unknown, input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date }): Promise<void>;
+  /**
+   * A falha entra: leva o pedido a `failed` com o código, grava onde o documento ficou e fecha o job do serviço local.
+   * Mesma transação e mesma regra do lease.
+   */
+  reject(
+    tx: unknown,
+    input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date; where: TranscriptionPlace },
+  ): Promise<void>;
+
+  /**
+   * Os dados do pedido da pessoa que ainda não terminou: esperando o serviço local (`awaiting_transcription`) ou a
+   * formatação (`running`). `undefined` em qualquer outro caso.
+   */
+  open(userId: string, requestId: string): Promise<TranscriptionRequestData | undefined>;
+  /**
+   * A pessoa cancela o pedido: leva-o a `cancel`, com `errorCode: "cancelled"`, grava onde o documento ficou e cancela o job do serviço local e o
+   * de formatação, se houver. Roda na transação do escritor em lote; se o pedido já terminou, desfaz tudo.
+   */
+  cancel(tx: unknown, input: { requestId: string; userId: string; at: Date; where: TranscriptionPlace }): Promise<void>;
 
   /**
    * O pedido que espera a formatação (da pessoa, em `running`, com o resultado cru entregue), com o que a formatação
@@ -86,7 +125,7 @@ export interface TranscriptionRequests {
    */
   awaitingFormat(userId: string, requestId: string): Promise<FormattingInput | undefined>;
   /**
-   * A formatação termina o pedido (`done` ou `failed`). Com `failureCode`, ele fica em `tasks.data`; com
+   * A formatação termina o pedido (`done` ou `failed`) e grava onde o documento ficou. Com `failureCode`, ele fica em `tasks.data`; com
    * `commentsSummaryFailed`, o pedido ganha uma entrada dizendo que o resumo dos comentários falhou. Roda na
    * transação do escritor em lote; se o pedido já não está em `running`, desfaz tudo.
    */
@@ -99,6 +138,7 @@ export interface TranscriptionRequests {
       at: Date;
       failureCode?: TranscriptionFailureCode;
       commentsSummaryFailed?: boolean;
+      where: TranscriptionPlace;
     },
   ): Promise<void>;
 }
@@ -107,6 +147,13 @@ export interface TranscriptionRequests {
 export interface FormattingInput {
   data: TranscriptionRequestData;
   result: TranscriptionResult;
+}
+
+/** O pedido que esgotou as reservas: o lease que o segurava, para fechá-lo, e os dados para o documento dizer o motivo. */
+export interface AbandonedTranscription {
+  requestId: string;
+  leaseToken: string;
+  data: TranscriptionRequestData;
 }
 
 /** O pedido que o serviço local acabou de reservar. */

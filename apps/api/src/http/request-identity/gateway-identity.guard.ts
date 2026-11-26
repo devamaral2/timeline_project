@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
   type ExecutionContext,
 } from "@nestjs/common";
+import { DEVICE_PERMISSIONS_HEADER } from "@repo/contracts/device-key";
 import type { Request } from "express";
 import { getServerEnv } from "../../config/env";
 import type { AuthenticatedUser } from "./authenticated-user";
@@ -13,9 +14,6 @@ import type { AuthenticatedUser } from "./authenticated-user";
 export interface GatewayRequest extends Request {
   actor?: AuthenticatedUser;
 }
-
-/** Cabecalho com que o gateway encaminha as permissoes de uma chave de dispositivo (nunca de uma sessao). */
-export const DEVICE_PERMISSIONS_HEADER = "x-auth-permissions";
 
 /** Confere que a requisicao veio do gateway Auth interno e devolve o id do usuario encaminhado. */
 export function assertFromGateway(request: Request): string {

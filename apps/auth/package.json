@@ -21,6 +21,7 @@
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@repo/contracts": "workspace:*",
     "@scalar/nestjs-api-reference": "^1.2.17",
     "drizzle-orm": "^0.44.0",
     "express": "^5.2.1",

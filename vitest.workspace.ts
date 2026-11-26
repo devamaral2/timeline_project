@@ -12,6 +12,8 @@ const resolve = (relativePath: string) =>
  */
 const packageAliases = {
   "@repo/contracts/schemas": resolve("./packages/contracts/src/schemas.ts"),
+  "@repo/contracts/device-key": resolve("./packages/contracts/src/device-key.ts"),
+  "@repo/contracts/youtube": resolve("./packages/contracts/src/youtube.ts"),
   "@repo/contracts": resolve("./packages/contracts/src/index.ts"),
   "@repo/theme": resolve("./packages/theme/src/index.ts"),
   "@repo/timeline": resolve("./packages/timeline/src/index.ts"),
@@ -75,6 +77,7 @@ export default defineWorkspace([
     },
   },
   {
+    resolve: { alias: packageAliases },
     test: {
       name: "transcriber",
       root: "./apps/transcriber",

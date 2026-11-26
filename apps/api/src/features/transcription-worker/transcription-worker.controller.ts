@@ -16,15 +16,6 @@ import { SaveDailyReadingModule } from "../save-daily-reading/save-daily-reading
 import { TranscriptionWorkerUseCase } from "./transcription-worker.usecase";
 
 /**
- * O corpo da entrega: a transcrição de um vídeo de horas, com as falas
- * separadas, passa dos 100 kB padrão do Express e do 1 MB da Leitura diária. O
- * teto da entrega (`TRANSCRIPTION_DELIVERY_MAX_BYTES`) fica abaixo deste, para a
- * recusa por tamanho ser uma resposta do pedido. O gateway usa o mesmo valor
- * (`SECURITY_POLICY.maxDeliveryBodyBytes`).
- */
-export const TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES = 4 * 1024 * 1024;
-
-/**
  * As três operações do serviço local de transcrição (`apps/transcriber`),
  * sob `/api/transcription-worker`: o gateway só abre esse prefixo para a chave
  * de dispositivo, e a guarda recusa quem não traz a permissão de transcrição.

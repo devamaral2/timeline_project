@@ -1,4 +1,5 @@
 import type { TranscriptionDeliveryInput, TranscriptionReservation } from "@repo/contracts";
+import { errorMessage } from "./error-message";
 import { LeaseKeeper } from "./lease-keeper";
 import type { Logger } from "./logger";
 import {
@@ -57,7 +58,7 @@ export class TranscriberService {
       await ytdlp.update(signal);
       log.info("yt-dlp atualizado");
     } catch (cause) {
-      log.warn(`não consegui atualizar o yt-dlp, sigo com o que está instalado: ${describe(cause)}`);
+      log.warn(`não consegui atualizar o yt-dlp, sigo com o que está instalado: ${errorMessage(cause)}`);
     }
     await this.cleanCache();
   }
@@ -91,7 +92,7 @@ export class TranscriberService {
       reservation = await api.next();
     } catch (cause) {
       if (cause instanceof WorkerAuthError) log.error(`${cause.message}; confira a chave no 1Password (ela pode ter sido revogada)`);
-      else log.warn(`não consegui buscar pedidos: ${describe(cause)}`);
+      else log.warn(`não consegui buscar pedidos: ${errorMessage(cause)}`);
       return "error";
     }
     if (!reservation) return "idle";
@@ -107,7 +108,7 @@ export class TranscriberService {
       const removed = await cache.cleanup(this.lastCleanup);
       log.info(removed.length > 0 ? `cache limpo: ${removed.length} arquivo(s) com mais de 7 dias apagado(s)` : "cache sem nada vencido");
     } catch (cause) {
-      log.warn(`não consegui limpar o cache: ${describe(cause)}`);
+      log.warn(`não consegui limpar o cache: ${errorMessage(cause)}`);
     }
   }
 
@@ -157,7 +158,7 @@ export class TranscriberService {
   /** Entrega com repetição para falha de rede. Sem conseguir, o pedido volta à fila quando o lease vencer. */
   private async deliver(input: TranscriptionDeliveryInput, log: Logger): Promise<void> {
     const { api, config, sleep } = this.deps;
-    const never = new AbortController().signal;
+    const noAbort = new AbortController().signal;
     let current = input;
     for (let attempt = 0; ; attempt += 1) {
       try {
@@ -184,14 +185,13 @@ export class TranscriberService {
         }
         const delay = config.deliveryRetryDelaysMs[attempt];
         if (delay === undefined) {
-          log.error(`não consegui entregar (${describe(cause)}); o pedido volta à fila quando o lease vencer`);
+          log.error(`não consegui entregar (${errorMessage(cause)}); o pedido volta à fila quando o lease vencer`);
           return;
         }
-        log.warn(`falha ao entregar (${describe(cause)}); tentando de novo`);
-        await sleep(delay, never);
+        log.warn(`falha ao entregar (${errorMessage(cause)}); tentando de novo`);
+        await sleep(delay, noAbort);
       }
     }
   }
 }
 
-const describe = (cause: unknown) => (cause instanceof Error ? cause.message : String(cause));

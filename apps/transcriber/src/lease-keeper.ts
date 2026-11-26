@@ -1,4 +1,5 @@
 import type { TranscriptionReservation, TranscriptionStage } from "@repo/contracts";
+import { errorMessage } from "./error-message";
 import type { Logger } from "./logger";
 import { LeaseLostError, type WorkerApi } from "./ports";
 
@@ -65,7 +66,7 @@ export class LeaseKeeper {
         this.onLost();
         return;
       }
-      this.log.warn(`não consegui renovar o lease: ${cause instanceof Error ? cause.message : cause}`);
+      this.log.warn(`não consegui renovar o lease: ${errorMessage(cause)}`);
     }
   }
 }

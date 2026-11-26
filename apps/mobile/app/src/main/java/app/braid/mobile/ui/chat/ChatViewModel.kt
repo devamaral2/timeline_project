@@ -278,8 +278,8 @@ class ChatViewModel
             val agent = mutableState.value.agentMode
             following += id
             commit { it.copy(messages = it.messages + ChatMessage.User(id, trimmed), pending = ChatPending(id, null)) }
-            // Só o link de um vídeo do YouTube, no assistente da agenda, vai direto ao pedido de transcrição (spec #39).
-            val videoLink = if (command == null && agent == null) soleYouTubeVideoLink(trimmed) else null
+            // O link de um vídeo do YouTube sozinho, em qualquer modo, vai direto ao pedido de transcrição (spec #39).
+            val videoLink = if (command == null) soleYouTubeVideoLink(trimmed) else null
             val run = {
                 when {
                     videoLink != null -> runTranscription(id, videoLink)
@@ -348,7 +348,7 @@ class ChatViewModel
                 if (id !in following) return@launch
                 following -= id
                 val reading = RequestEntity(EntityKind.Task, result.taskId, TranscriptionText.DAILY_READING, null, RequestOperation.Update)
-                val text = if (result.created) TranscriptionText.CHAT_QUEUED else TranscriptionText.CHAT_AGAIN
+                val text = if (result.created) TranscriptionText.CHAT_QUEUED else TranscriptionText.ALREADY_QUEUED
                 commit {
                     it.copy(
                         pending = if (it.pending?.id == id) null else it.pending,

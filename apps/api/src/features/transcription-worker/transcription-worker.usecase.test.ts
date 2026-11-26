@@ -6,8 +6,10 @@ import {
   TRANSCRIPTION_FORMAT_JOB,
   TRANSCRIPTION_LEASE_MS,
   TRANSCRIPTION_JOB,
+  TRANSCRIPTION_MAX_ATTEMPTS,
 } from "../../api-core/transcription/transcription-requests";
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
+import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-task-relations";
 import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { Task } from "../../domain";
 import { RequestTranscriptionUseCase } from "../request-transcription/request-transcription.usecase";
@@ -53,7 +55,7 @@ function setup() {
   return {
     ...kit,
     requests,
-    request: new RequestTranscriptionUseCase(gate, requests),
+    request: new RequestTranscriptionUseCase(gate, requests, new InMemoryTaskRelations()),
     worker: new TranscriptionWorkerUseCase(gate, kit.batchWriter, requests, clock),
     advance: (ms: number) => {
       current = new Date(current.getTime() + ms);
@@ -134,6 +136,75 @@ describe("reservar o próximo pedido", () => {
   });
 });
 
+describe("o teto de reservas do pedido", () => {
+  /** O serviço reserva o pedido e some: o lease vence sem renovar nem entregar. */
+  async function abandon(kit: ReturnType<typeof setup>, times: number) {
+    for (let attempt = 0; attempt < times; attempt++) {
+      const reservation = await kit.worker.reserve(actor);
+      if (!reservation) throw new Error(`sem reserva na vez ${attempt + 1}`);
+      kit.advance(TRANSCRIPTION_LEASE_MS + 1);
+    }
+  }
+
+  test("o teto são cinco reservas", () => {
+    expect(TRANSCRIPTION_MAX_ATTEMPTS).toBe(5);
+  });
+
+  test("com quatro leases vencidos, o pedido ainda volta à fila", async () => {
+    const kit = setup();
+    const { requestId } = await queued(kit);
+    await abandon(kit, TRANSCRIPTION_MAX_ATTEMPTS - 1);
+
+    expect((await kit.worker.reserve(actor))?.requestId).toBe(requestId);
+    expect(await kit.taskRepository.findById(requestId)).toMatchObject({ status: "awaiting_transcription" });
+  });
+
+  test("com o quinto lease vencido, o pedido falha como numa entrega com falha: o documento diz o motivo e a leitura volta para a fazer", async () => {
+    const kit = setup();
+    const created = await queued(kit);
+    const reading = await kit.taskRepository.findById(created.taskId);
+    if (!reading) throw new Error("sem leitura");
+    kit.database.tasks = kit.database.tasks.map((task) => (task.id === reading.id ? reading.revise({ status: "done", finishedAt: new Date() }) : task));
+    await abandon(kit, TRANSCRIPTION_MAX_ATTEMPTS);
+
+    await expect(kit.worker.reserve(actor)).resolves.toBeUndefined();
+
+    const request = await kit.taskRepository.findById(created.requestId);
+    expect(request).toMatchObject({ status: "failed", data: { failureCode: "failed" } });
+    expect(request?.finishedAt).toBeInstanceOf(Date);
+    expect(await bodyOf(kit, created.artifactId)).toContain("Transcrição indisponível: a transcrição falhou.");
+    const revised = await kit.taskRepository.findById(created.taskId);
+    expect(revised).toMatchObject({ status: "todo" });
+    expect(revised?.finishedAt).toBeUndefined();
+    expect(kit.requests.openJobs()).toEqual([]);
+    await expect(kit.worker.reserve(actor)).resolves.toBeUndefined();
+  });
+
+  test("o pedido com o quinto lease ainda valendo não falha", async () => {
+    const kit = setup();
+    const { requestId } = await queued(kit);
+    await abandon(kit, TRANSCRIPTION_MAX_ATTEMPTS - 1);
+    await kit.worker.reserve(actor);
+
+    await expect(kit.worker.reserve(actor)).resolves.toBeUndefined();
+    expect(await kit.taskRepository.findById(requestId)).toMatchObject({ status: "awaiting_transcription" });
+  });
+
+  test("o pedido de outra pessoa não falha na reserva desta", async () => {
+    const kit = setup();
+    const other = { userId: "auth-user-2", permissions: ["transcription:work"] };
+    const { requestId } = await queued(kit, VIDEO, other);
+    for (let attempt = 0; attempt < TRANSCRIPTION_MAX_ATTEMPTS; attempt++) {
+      await kit.worker.reserve(other);
+      kit.advance(TRANSCRIPTION_LEASE_MS + 1);
+    }
+
+    await kit.worker.reserve(actor);
+
+    expect(await kit.taskRepository.findById(requestId)).toMatchObject({ status: "awaiting_transcription" });
+  });
+});
+
 describe("renovar o lease com o progresso", () => {
   test("estende o lease e guarda a etapa e a porcentagem", async () => {
     const kit = setup();
@@ -201,6 +272,22 @@ describe("entregar a falha", () => {
     expect(revised).toMatchObject({ status: "todo" });
     expect(revised?.finishedAt).toBeUndefined();
     expect(kit.requests.openJobs()).toEqual([]);
+  });
+
+  test("com o documento do pedido apagado, a falha cria outro e o pedido passa a apontar para ele", async () => {
+    const kit = setup();
+    const created = await queued(kit);
+    await kit.artifactRepository.delete(created.artifactId, actor.userId);
+    const reservation = await kit.worker.reserve(actor);
+    if (!reservation) throw new Error("sem reserva");
+
+    await kit.worker.deliver({ requestId: created.requestId, leaseToken: reservation.leaseToken, outcome: "failed", code: "private" }, actor);
+
+    const request = await kit.taskRepository.findById(created.requestId);
+    const { artifactId } = (request?.data ?? {}) as { artifactId: string };
+    expect(artifactId).not.toBe(created.artifactId);
+    expect(await bodyOf(kit, artifactId)).toContain("o vídeo é privado.");
+    expect(kit.database.artifacts.map((artifact) => artifact.id)).toEqual([artifactId]);
   });
 
   test("a mesma entrega duas vezes não vale: o pedido já está encerrado", async () => {

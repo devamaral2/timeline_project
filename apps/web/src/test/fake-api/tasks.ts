@@ -9,13 +9,11 @@ import {
   updateTaskInputSchema,
 } from "@repo/contracts/schemas";
 import { z } from "zod";
+import { isAgendaCard } from "@/components/agenda/agenda-data";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 import { type ArtifactLink, type TaskArtifactEntry, artifactsOfTask, relinkTaskArtifacts } from "./artifacts";
 
 /** Área de tarefas: agenda, lista acompanhada, tarefa, hierarquia (tarefa principal e subtarefas) e tags. */
-
-/** Tarefas de agente fora da agenda (ADR 0021). */
-const OFF_AGENDA_KINDS: readonly string[] = ["step", "save_content", "save_content_with_transcription"];
 
 const TASKS = "tasks";
 const CARD_KEYS = [
@@ -110,7 +108,7 @@ function agenda(request: FakeRequest, store: FakeStore): FakeResult {
 
   // A agenda mostra o que tem horário e não é tarefa longa; passos e conteúdo guardado nunca aparecem.
   const tasks = [...table(store).values()]
-    .filter((task) => !OFF_AGENDA_KINDS.includes(task.kind) && !task.longRunning)
+    .filter((task) => isAgendaCard(toCard(task)))
     .filter((task) => inWindow(task, from, to))
     .filter((task) => !actor || task.actor === actor)
     .filter((task) => !tag || task.tags.includes(tag))

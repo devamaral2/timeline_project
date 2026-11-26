@@ -18,6 +18,7 @@ import { operationId } from "@/lib/api/operation-id";
 import { requestTranscription } from "@/lib/api/transcription";
 import { TRANSCRIPTION_TEXTS } from "@/lib/transcription/texts";
 import { soleYouTubeVideoLink } from "@/lib/notes/youtube";
+import { isOpenRequest } from "@/lib/tasks/agent-request-model";
 
 /** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (tarefa ou nota). */
 export interface AgentChatEntityRef {
@@ -142,9 +143,9 @@ export function agentFailureText(code: ChatFailureCode): string {
  */
 const RESUMABLE: ReadonlySet<ChatFailureCode> = new Set(["connection_failed", "connection_lost", "session_expired"]);
 
-/** O pedido ainda não terminou: a API o entrega como fila, execução ou espera. */
+/** O pedido ainda não terminou: a API o entrega como fila, execução ou espera (a regra é `isOpenRequest`). */
 export function isRequestOpen(request: Pick<RequestDto, "status">): boolean {
-  return request.status === "queued" || request.status === "running" || request.status === "waiting";
+  return isOpenRequest(request.status);
 }
 
 /** Um pedido aberto que o chat mostra: a rota por passos, a do Hermes ou a do modelo. */
@@ -455,7 +456,7 @@ export function useAgentChat({
         {
           id: `${id}-transcription`,
           role: "assistant",
-          text: result.created ? TRANSCRIPTION_TEXTS.chatQueued : TRANSCRIPTION_TEXTS.chatAgain,
+          text: result.created ? TRANSCRIPTION_TEXTS.chatQueued : TRANSCRIPTION_TEXTS.alreadyQueued,
           entities: [{ kind: "task", id: result.taskId, change: "updated", label: TRANSCRIPTION_TEXTS.dailyReading }],
         },
       ]);
@@ -583,7 +584,8 @@ export function useAgentChat({
       followingRef.current.add(id);
       commitPending({ id });
       const agent = agentModeRef.current;
-      const videoLink = !command && !agent ? soleYouTubeVideoLink(trimmed) : null;
+      // Em qualquer modo: o link sozinho é um pedido de transcrição, não uma conversa com o agente.
+      const videoLink = command ? null : soleYouTubeVideoLink(trimmed);
       const run = () => {
         if (videoLink) void runTranscription(id, videoLink);
         else if (command?.kind === "agent" && command.agent === "model") void enterModelMode(id, command.provider, command.text);

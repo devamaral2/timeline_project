@@ -11,8 +11,8 @@ import type {
 import type { EditCandidate } from "./request-candidates";
 import type { DispatchRoute, EntityKind, Expected, RequestAgent, RequestJobKind } from "./request-steps";
 
-export type RequestStatus = "queued" | "running" | "waiting" | "done" | "failed" | "cancel";
-export type StepStatus = Exclude<RequestStatus, "waiting">;
+export type RequestStatus = "queued" | "running" | "waiting" | "awaiting_transcription" | "done" | "failed" | "cancel";
+export type StepStatus = Exclude<RequestStatus, "waiting" | "awaiting_transcription">;
 
 /** O que o pedido mostra de cada entidade que gravou, lido da propria entidade: nunca o texto bruto do pedido. */
 export interface EntitySummary {

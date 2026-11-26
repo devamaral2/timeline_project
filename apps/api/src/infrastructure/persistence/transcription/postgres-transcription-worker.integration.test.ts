@@ -2,8 +2,9 @@ import type { TranscriptionResult } from "@repo/contracts";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { ArtifactBuilder } from "../../../api-core/artifacts/services/artifact-builder.service";
 import { CreateTaskUseCase } from "../../../api-core/tasks/create-task.usecase";
-import { TRANSCRIPTION_FORMAT_JOB, TRANSCRIPTION_JOB } from "../../../api-core/transcription/transcription-requests";
+import { TRANSCRIPTION_FORMAT_JOB, TRANSCRIPTION_JOB, TRANSCRIPTION_MAX_ATTEMPTS } from "../../../api-core/transcription/transcription-requests";
 import { FastStageError } from "../../../api-core/agent/errors/agent.errors";
+import { CancelTranscriptionUseCase } from "../../../features/request-transcription/cancel-transcription.usecase";
 import { FormatTranscriptionUseCase } from "../../../features/format-transcription/format-transcription.usecase";
 import { RequestTranscriptionUseCase } from "../../../features/request-transcription/request-transcription.usecase";
 import { DailyReadingGate } from "../../../features/save-daily-reading/daily-reading.gate";
@@ -12,6 +13,7 @@ import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-
 import { PostgresWorkoutCatalog } from "../artifacts/postgres-workout.catalog";
 import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
 import { PostgresTaskCardQuery } from "../tasks/queries/postgres-task-card.query";
+import { PostgresTaskRelations } from "../tasks/relations/postgres-task-relations";
 import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 import { OTHER_USER, USER, countRows, selectRows } from "../testing/fixtures";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
@@ -49,7 +51,7 @@ describe("servico local de transcricao no Postgres", () => {
     gate = new DailyReadingGate(new PostgresTaskCardQuery(ctx.db), artifacts, builder, createTask, writer, undefined, () => now);
     const requests = new PostgresTranscriptionRequests(ctx.db);
     requestsStore = requests;
-    request = new RequestTranscriptionUseCase(gate, requests);
+    request = new RequestTranscriptionUseCase(gate, requests, new PostgresTaskRelations());
     worker = new TranscriptionWorkerUseCase(gate, writer, requests, () => now);
   }, 60000);
 
@@ -101,6 +103,42 @@ describe("servico local de transcricao no Postgres", () => {
       worker.deliver({ requestId: created.requestId, leaseToken: reservation.leaseToken, outcome: "failed", code: "failed" }, actor),
     ).rejects.toThrow(/lease/i);
     expect(await tasks.findById(created.requestId)).toMatchObject({ status: "awaiting_transcription" });
+  });
+
+  test("depois da quinta reserva vencida o pedido falha em vez de voltar à fila, e a leitura volta para a fazer", async () => {
+    const created = await request.execute({ url: VIDEO }, actor);
+    await ctx.pool.query("UPDATE tasks SET status = 'done', finished_at = now() WHERE id = $1", [created.taskId]);
+    for (let attempt = 1; attempt <= TRANSCRIPTION_MAX_ATTEMPTS; attempt++) {
+      expect(await worker.reserve(actor), `reserva ${attempt}`).toMatchObject({ requestId: created.requestId });
+      await ctx.pool.query("UPDATE jobs SET lease_until = now() - interval '1 second' WHERE task_id = $1", [created.requestId]);
+    }
+
+    expect(await worker.reserve(actor)).toBeUndefined();
+
+    expect(await tasks.findById(created.requestId)).toMatchObject({ status: "failed", data: { failureCode: "failed" } });
+    const body = (await artifacts.findById(created.artifactId))?.data as { body: string };
+    expect(body.body).toContain("Transcrição indisponível: a transcrição falhou.");
+    expect(await tasks.findById(created.taskId)).toMatchObject({ status: "todo" });
+    expect(await selectRows(ctx.pool, "SELECT status FROM jobs")).toEqual([{ status: "succeeded" }]);
+  });
+
+  test("cancelar o pedido na fila cancela o job, o documento diz que foi cancelado e a leitura volta para a fazer", async () => {
+    const created = await request.execute({ url: VIDEO }, actor);
+    const reservation = await worker.reserve(actor);
+    if (!reservation) throw new Error("sem reserva");
+    await ctx.pool.query("UPDATE tasks SET status = 'done', finished_at = now() WHERE id = $1", [created.taskId]);
+
+    expect(await new CancelTranscriptionUseCase(gate, requestsStore, { cancelOfTasks: async () => {} }, () => now).execute(created.requestId, actor)).toBe(true);
+
+    expect(await tasks.findById(created.requestId)).toMatchObject({ status: "cancel", data: { errorCode: "cancelled" } });
+    expect(await selectRows(ctx.pool, "SELECT kind, status FROM jobs")).toEqual([{ kind: TRANSCRIPTION_JOB, status: "cancelled" }]);
+    const body = (await artifacts.findById(created.artifactId))?.data as { body: string };
+    expect(body.body).toBe(`Fonte: [YouTube](${VIDEO})\n\nTranscrição cancelada\n`);
+    expect(await tasks.findById(created.taskId)).toMatchObject({ status: "todo" });
+    await expect(
+      worker.deliver({ requestId: created.requestId, leaseToken: reservation.leaseToken, outcome: "completed", result: RESULT }, actor),
+    ).rejects.toThrow(/lease/i);
+    expect(await worker.reserve(actor)).toBeUndefined();
   });
 
   test("renovar estende o lease e guarda o progresso no job", async () => {
@@ -210,6 +248,21 @@ describe("servico local de transcricao no Postgres", () => {
       expect(body).toContain("{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Ana:** Olá, tudo bem?");
       expect(await tasks.findById(created.taskId)).toMatchObject({ status: "todo" });
       expect(await countRows(ctx.pool, "task_entries", "kind = 'trace'")).toBe(0);
+    });
+
+    test("com o documento apagado antes da formatação, nasce outro e o pedido passa a apontar para ele", async () => {
+      const created = await deliveredRequest();
+      await artifacts.delete(created.artifactId, USER);
+
+      await new FormatTranscriptionUseCase(gate, requestsStore, haiku({ summary: "Gostaram." }), () => now).run(created.requestId, USER);
+
+      const request = await tasks.findById(created.requestId);
+      const { artifactId } = (request?.data ?? {}) as { artifactId: string };
+      expect(request).toMatchObject({ status: "done" });
+      expect(artifactId).not.toBe(created.artifactId);
+      expect(await bodyOf(artifactId)).toContain("## Transcrição");
+      expect(await countRows(ctx.pool, "artifacts", "type = 'text' AND deleted_at IS NULL")).toBe(1);
+      expect((await tasks.findById(created.taskId))?.artifactLinks.map((link) => link.artifactId)).toContain(artifactId);
     });
 
     test("com falha só nos comentários, o pedido termina done e ganha a entrada", async () => {

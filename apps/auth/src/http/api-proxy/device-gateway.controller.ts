@@ -3,7 +3,8 @@ import type { Response } from "express";
 import { DeviceKeyAuthGuard, type DeviceKeyRequest } from "../../auth-core/security/device-key-auth.guard";
 import type { RuntimeEnv } from "../../config/env";
 import { RUNTIME_ENV } from "../../config/tokens";
-import { DEVICE_PERMISSIONS_HEADER, DEVICE_ROUTE_PREFIX } from "../../domain/device-keys/device-key";
+import { DEVICE_PERMISSIONS_HEADER } from "@repo/contracts/device-key";
+import { DEVICE_ROUTE_PREFIX } from "../../domain/device-keys/device-key";
 import { forwardToApi } from "./api-gateway.forward";
 
 /**

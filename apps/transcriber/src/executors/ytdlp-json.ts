@@ -1,10 +1,5 @@
 import type { HeatmapBin, RawComment, SubtitleTrack, VideoMetadata } from "../types";
-
-type Json = Record<string, unknown>;
-
-const isRecord = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
-const text = (value: unknown): string => (typeof value === "string" ? value : "");
-const num = (value: unknown): number | null => (typeof value === "number" && Number.isFinite(value) ? value : null);
+import { isRecord, num, text } from "./json-guards";
 
 function chaptersOf(value: unknown): VideoMetadata["chapters"] {
   if (!Array.isArray(value)) return [];

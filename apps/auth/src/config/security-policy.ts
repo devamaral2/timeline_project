@@ -1,3 +1,5 @@
+import { TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES } from "@repo/contracts/device-key";
+
 /** Security durations and limits are deliberately not deployment knobs. */
 export const SECURITY_POLICY = {
   accessTokenTtlSeconds: 900,
@@ -18,5 +20,5 @@ export const SECURITY_POLICY = {
    * horas. O teto e o mesmo da API (apps/api).
    */
   deliveryBodyPaths: ["/api/transcription-worker/deliver"],
-  maxDeliveryBodyBytes: 4 * 1024 * 1024,
+  maxDeliveryBodyBytes: TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES,
 } as const;
