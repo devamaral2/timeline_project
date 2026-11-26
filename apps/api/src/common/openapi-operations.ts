@@ -7,8 +7,13 @@ import {
   createRecurrenceInputSchema,
   dailyReadingInputSchema,
   dailyReadingResultSchema,
+  transcriptionDeliveryInputSchema,
+  transcriptionDeliveryResultSchema,
+  transcriptionLeaseInputSchema,
+  transcriptionLeaseResultSchema,
   transcriptionRequestInputSchema,
   transcriptionRequestResultSchema,
+  transcriptionReservationSchema,
   taskCardSchema,
   taskSchema,
   recurrenceSchema,
@@ -54,6 +59,11 @@ export const documentedSchemas = {
   DailyReadingResult: dailyReadingResultSchema,
   TranscriptionRequestInput: transcriptionRequestInputSchema,
   TranscriptionRequestResult: transcriptionRequestResultSchema,
+  TranscriptionReservation: transcriptionReservationSchema,
+  TranscriptionLeaseInput: transcriptionLeaseInputSchema,
+  TranscriptionLeaseResult: transcriptionLeaseResultSchema,
+  TranscriptionDeliveryInput: transcriptionDeliveryInputSchema,
+  TranscriptionDeliveryResult: transcriptionDeliveryResultSchema,
   TagSuggestion: tagSuggestionSchema,
   PlaceSuggestion: placeSuggestionSchema,
   Artifact: artifactSchema,
@@ -91,6 +101,10 @@ export const documentedTags = [
   { name: "Artefatos", description: "O conteúdo que as tarefas criam e usam: texto, alimento, sono e treino." },
   { name: "Séries", description: "Regras de repetição e o que cada ocorrência copia." },
   { name: "Pedidos ao agente", description: "Abrir, acompanhar e cancelar pedidos em texto ou fala." },
+  {
+    name: "Serviço local de transcrição",
+    description: "As três operações do serviço que transcreve vídeos no computador do dono (spec #39). Só a chave de dispositivo com a permissão de transcrição as acessa; sessão comum recebe 403.",
+  },
   { name: "Configuração do agente", description: "Skills e agentes do Hermes como arquivos (ADR 0005). Só o dono acessa." },
 ] as const;
 
@@ -198,6 +212,30 @@ export const documentedOperations: Record<string, OperationDoc> = {
     body: "TranscriptionRequestInput",
     success: { status: 200, description: "O pedido está na fila de transcrição.", schema: "TranscriptionRequestResult" },
     errors: { 400: invalid },
+  },
+  "POST /api/transcription-worker/next": {
+    tag: "Serviço local de transcrição",
+    summary: "Reserva o próximo pedido de transcrição",
+    description:
+      "Devolve o pedido mais antigo do dono que espera o serviço local, com o endereço canônico do vídeo e o lease (`leaseToken`, `leaseExpiresAt`). Antes, o pedido cujo lease venceu volta para a fila. Com a fila vazia, responde 204 sem corpo. O serviço renova o lease em `lease` enquanto trabalha.",
+    success: { status: 200, description: "O pedido reservado (ou 204, sem corpo, quando não há pedido na fila).", schema: "TranscriptionReservation" },
+  },
+  "POST /api/transcription-worker/lease": {
+    tag: "Serviço local de transcrição",
+    summary: "Renova o lease do pedido com o progresso",
+    description: "Estende o lease e guarda a etapa e a porcentagem. Um lease vencido, trocado ou cancelado responde 409: o serviço deve largar o pedido.",
+    body: "TranscriptionLeaseInput",
+    success: { status: 200, description: "O novo vencimento do lease.", schema: "TranscriptionLeaseResult" },
+    errors: { 400: invalid, 409: "O lease não vale mais: venceu, foi trocado ou o pedido foi cancelado." },
+  },
+  "POST /api/transcription-worker/deliver": {
+    tag: "Serviço local de transcrição",
+    summary: "Entrega o resultado ou a falha do pedido",
+    description:
+      "Com `outcome: completed`, grava o resultado cru numa entrada do pedido, leva o pedido a `running` e enfileira a formatação com o Haiku; acima do teto de tamanho, o pedido fica `failed` com `too_large` e a resposta já diz isso. Com `outcome: failed`, o pedido vai para `failed` com o código fechado, o documento diz o motivo e a Leitura diária do dia do pedido volta para a fazer. O corpo aceita até 4 MiB.",
+    body: "TranscriptionDeliveryInput",
+    success: { status: 200, description: "Como o pedido ficou: `running`, ou `failed` com o código.", schema: "TranscriptionDeliveryResult" },
+    errors: { 400: invalid, 409: "O lease não vale mais: venceu, foi trocado ou o pedido foi cancelado." },
   },
   "GET /api/tasks/{taskId}": {
     tag: "Tarefas",

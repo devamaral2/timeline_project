@@ -50,6 +50,7 @@ export function configureHttpShell(app: INestApplication, logger: AuthLogger = n
   // Quem le o corpo primeiro vence: nas rotas de corpo grande o parser de teto
   // maior roda antes e o geral, logo abaixo, encontra o corpo ja lido.
   app.use([...SECURITY_POLICY.largeBodyPaths], json({ limit: SECURITY_POLICY.maxLargeRequestBodyBytes }));
+  app.use([...SECURITY_POLICY.deliveryBodyPaths], json({ limit: SECURITY_POLICY.maxDeliveryBodyBytes }));
   adapter.useBodyParser("json", false, { limit: SECURITY_POLICY.maxRequestBodyBytes });
   app.useGlobalFilters(new AuthExceptionFilter(logger));
 }
