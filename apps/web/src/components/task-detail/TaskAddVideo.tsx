@@ -5,14 +5,11 @@ import { type FormEvent, useId, useState } from "react";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { requestTranscription } from "@/lib/api/transcription";
 import { youtubeVideoOf } from "@/lib/notes/youtube";
+import { TRANSCRIPTION_TEXTS as TEXTS } from "@/lib/transcription/texts";
 import controls from "@/components/ui/controls.module.css";
 import relations from "./task-relations.module.css";
 import styles from "./task-add-video.module.css";
 
-const INVALID_LINK = "Esse link não é de um vídeo do YouTube.";
-const QUEUED = "O vídeo entrou na fila de transcrição. O texto chega na Leitura diária quando a transcrição terminar.";
-const QUEUED_AGAIN = "Esse vídeo já estava na fila de transcrição. Nada foi duplicado.";
-const FAILED = "Não foi possível pedir a transcrição. Tente novamente.";
 
 interface TaskAddVideoProps {
   /** O pedido foi gravado: a tela relê a tarefa (o documento do vídeo já está nela). */
@@ -49,7 +46,7 @@ export function TaskAddVideo({ onRequested }: TaskAddVideoProps) {
     if (busy) return;
     const url = link.trim();
     if (!youtubeVideoOf(url)) {
-      setError(INVALID_LINK);
+      setError(TEXTS.invalidLink);
       return;
     }
     setBusy(true);
@@ -57,10 +54,10 @@ export function TaskAddVideo({ onRequested }: TaskAddVideoProps) {
     try {
       const result = await requestTranscription(url);
       hide();
-      setNotice(result.created ? QUEUED : QUEUED_AGAIN);
+      setNotice(result.created ? TEXTS.formQueued : TEXTS.formAgain);
       onRequested();
     } catch (cause) {
-      setError(cause instanceof ApiRequestError && cause.kind === "invalid_input" ? INVALID_LINK : FAILED);
+      setError(cause instanceof ApiRequestError && cause.kind === "invalid_input" ? TEXTS.invalidLink : TEXTS.formFailed);
     } finally {
       setBusy(false);
     }

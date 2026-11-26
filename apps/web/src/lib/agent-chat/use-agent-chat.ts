@@ -16,6 +16,7 @@ import {
 } from "./model-selection-store";
 import { operationId } from "@/lib/api/operation-id";
 import { requestTranscription } from "@/lib/api/transcription";
+import { TRANSCRIPTION_TEXTS } from "@/lib/transcription/texts";
 import { soleYouTubeVideoLink } from "@/lib/notes/youtube";
 
 /** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (tarefa ou nota). */
@@ -99,13 +100,6 @@ const HERMES_OFF_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION)
 const HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda.";
 const MODEL_OFF_TEXT = "O modo modelo está desligado neste ambiente.";
 
-/** O que a linha de status diz enquanto o pedido de transcrição é gravado. */
-const TRANSCRIPTION_PENDING_LABEL = "Pedindo a transcrição";
-const TRANSCRIPTION_QUEUED_TEXT =
-  "O vídeo entrou na fila de transcrição. O documento já está na Leitura diária de hoje e o texto chega quando a transcrição terminar.";
-const TRANSCRIPTION_AGAIN_TEXT = "Esse vídeo já estava na fila de transcrição. Nada foi duplicado.";
-const TRANSCRIPTION_INVALID_TEXT = "Esse link não é de um vídeo do YouTube.";
-const DAILY_READING_NAME = "Leitura diária";
 
 /** "Falando com o Hermes" ou "Falando com Sonnet 5.5": o que o chat diz enquanto espera a resposta do agente. */
 function pendingLabelOf(agent: ChatAgent, selection: ModelSelection | undefined, options: ModelOptionsDto | null): string {
@@ -444,13 +438,13 @@ export function useAgentChat({
   const runTranscription = useCallback(
     async (id: string, url: string): Promise<void> => {
       if (!userId) return;
-      commitPending({ id, label: TRANSCRIPTION_PENDING_LABEL });
+      commitPending({ id, label: TRANSCRIPTION_TEXTS.chatPending });
       let result: Awaited<ReturnType<typeof requestTranscription>>;
       try {
         result = await requestTranscription(url);
       } catch (error) {
         const code = startFailureCode(error);
-        fail(id, code, code === "invalid_input" ? TRANSCRIPTION_INVALID_TEXT : undefined);
+        fail(id, code, code === "invalid_input" ? TRANSCRIPTION_TEXTS.invalidLink : undefined);
         return;
       }
       if (disposedRef.current || !followingRef.current.has(id)) return;
@@ -461,8 +455,8 @@ export function useAgentChat({
         {
           id: `${id}-transcription`,
           role: "assistant",
-          text: result.created ? TRANSCRIPTION_QUEUED_TEXT : TRANSCRIPTION_AGAIN_TEXT,
-          entities: [{ kind: "task", id: result.taskId, change: "updated", label: DAILY_READING_NAME }],
+          text: result.created ? TRANSCRIPTION_TEXTS.chatQueued : TRANSCRIPTION_TEXTS.chatAgain,
+          entities: [{ kind: "task", id: result.taskId, change: "updated", label: TRANSCRIPTION_TEXTS.dailyReading }],
         },
       ]);
       onEntitiesChangedRef.current?.();
