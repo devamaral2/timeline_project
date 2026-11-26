@@ -3,6 +3,7 @@ import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-ta
 import { createTasksKit, type TasksKitOptions } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { Artifact, Task, TaskValidationError } from "../../domain";
 import { composeReadingArticle, isDailyReadingName, readingSourceOf, readingSourceUrl } from "./daily-reading-article";
+import { DailyReadingGate } from "./daily-reading.gate";
 import { SaveDailyReadingUseCase } from "./save-daily-reading.usecase";
 
 const actor = { userId: "auth-user-1" };
@@ -21,7 +22,7 @@ const page = {
 
 function setup(options: TasksKitOptions = {}, materialized: Date[] = []) {
   const kit = createTasksKit({ ...options, clock: () => now });
-  const useCase = new SaveDailyReadingUseCase(
+  const gate = new DailyReadingGate(
     new InMemoryTaskCardQuery(kit.database),
     kit.artifactRepository,
     kit.artifactBuilder,
@@ -30,6 +31,7 @@ function setup(options: TasksKitOptions = {}, materialized: Date[] = []) {
     { materialize: async (_userId, until) => void materialized.push(until as Date) },
     () => now,
   );
+  const useCase = new SaveDailyReadingUseCase(gate);
   return { ...kit, useCase, materialized };
 }
 
