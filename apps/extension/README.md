@@ -2,6 +2,7 @@
 
 Um clique no ícone guarda a página aberta, em markdown, na tarefa **Leitura diária** de hoje.
 Se a tarefa do dia ainda não existe, ela é criada junto com o documento, a fazer e marcada para as 18h.
+Numa aba de vídeo do YouTube, o clique pede a transcrição do vídeo (veja "Vídeo do YouTube" abaixo).
 
 ## Instalar
 
@@ -26,8 +27,18 @@ página foi guardada e `!` quando algo falhou, e um aviso na página diz o que a
 | Página | O que é guardado |
 | --- | --- |
 | Reportagem, artigo, post | O texto principal em markdown, sem menu, anúncio nem rodapé |
-| Vídeo do YouTube | O link do vídeo, que o app mostra como player, e a descrição |
 | Página sem texto principal | Só o endereço e a descrição da página |
+
+### Vídeo do YouTube
+
+Numa aba de vídeo do YouTube (`watch?v=`, `youtu.be/`, `shorts/`, `embed/` ou `live/`), o clique **não lê
+a página**: manda só o endereço do vídeo para `POST /api/tasks/transcription-requests` e não pergunta nada.
+O pedido entra na fila do serviço local de transcrição, e o documento do vídeo aparece na Leitura diária
+com "Transcrição na fila" até o texto chegar. O aviso diz que o vídeo entrou na fila de transcrição e leva
+à Leitura diária; o ícone mostra `✓`. Pedir de novo o mesmo vídeo no mesmo dia, enquanto o pedido espera,
+devolve o pedido que já existe (o aviso diz "Este vídeo já está na fila").
+
+Em outras páginas do YouTube (início, canal, busca, playlist) vale a regra das demais páginas.
 
 Guardar a mesma página de novo no mesmo dia atualiza o documento dela em vez de criar outro. Toda página
 guardada numa leitura que já existe a devolve para a fazer, mesmo que ela já estivesse concluída.
@@ -47,8 +58,9 @@ Se o site tirar a imagem do ar, ela some do documento: o texto fica, a imagem n�
 
 ## Como funciona
 
-- `src/background.ts`: o service worker. No clique, injeta o leitor na aba, manda o resultado para
-  `POST /api/tasks/daily-reading` e mostra o aviso.
+- `src/background.ts`: o service worker. No clique, mostra o aviso do resultado de `src/save.ts`.
+- `src/save.ts`: decide pelo endereço da aba. Vídeo do YouTube: pede a transcrição, sem ler a página.
+  Outra página: injeta o leitor na aba e manda o resultado para `POST /api/tasks/daily-reading`.
 - `src/capture/`: lê a página. `page.ts` escolhe o que guardar (o Readability, do modo de leitura do
   Firefox, acha o texto principal numa cópia do documento); `markdown.ts` converte para markdown com o
   Turndown e trata imagens, vídeos e links.
@@ -74,5 +86,5 @@ A extensão não guarda senha nem token e não lê histórico nem outras abas.
 pnpm exec vitest run --workspace vitest.workspace.ts --project extension
 ```
 
-Os testes cobrem a leitura da página e o cliente da API. O service worker usa as APIs `chrome.*` e
+Os testes cobrem a leitura da página, o cliente da API e a escolha entre pedir a transcrição e guardar a página. O service worker usa as APIs `chrome.*` e
 fica fora deles.
