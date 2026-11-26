@@ -58,3 +58,19 @@ pnpm --filter @repo/auth run create-admin
 
 O comando só funciona fora de `production` e pode ser repetido quando o admin
 já existir.
+
+## Chave de dispositivo (serviço local de transcrição)
+
+O serviço local de transcrição entra com uma chave própria, que só serve para
+reservar, renovar e entregar transcrições (`/api/transcription-worker/*`) e
+pode ser revogada sem tocar na conta.
+
+```bash
+pnpm --filter @repo/auth run device-key -- issue --email admin@example.com --label "pc de casa"
+pnpm --filter @repo/auth run device-key -- revoke --id <keyId>
+```
+
+A saída de `issue` traz `key=bdk_...` uma única vez: guarde-a no 1Password. O
+banco guarda só o hash, então não há como recuperá-la; perdeu, revogue e emita
+outra. A revogação vale no pedido seguinte. Cada emissão e revogação fica na
+auditoria (`device_key.issued`, `device_key.revoked`).
