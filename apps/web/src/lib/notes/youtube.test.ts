@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { youtubeEmbedUrl, youtubeVideoOf } from "./youtube";
+import { soleYouTubeVideoLink, youtubeEmbedUrl, youtubeVideoOf } from "./youtube";
 
 test("lê o id nas formas de endereço de vídeo do YouTube", () => {
   const id = "dQw4w9WgXcQ";
@@ -46,4 +46,19 @@ test("o que não é vídeo do YouTube não vira player", () => {
 test("o player usa o domínio sem cookies e respeita o início", () => {
   expect(youtubeEmbedUrl({ id: "dQw4w9WgXcQ" })).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
   expect(youtubeEmbedUrl({ id: "dQw4w9WgXcQ", startSeconds: 90 })).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=90");
+});
+
+test("a mensagem que é só um link de vídeo devolve o endereço; texto em volta, outro site ou canal não", () => {
+  expect(soleYouTubeVideoLink("https://youtu.be/dQw4w9WgXcQ")).toBe("https://youtu.be/dQw4w9WgXcQ");
+  expect(soleYouTubeVideoLink("  https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90 \n")).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90");
+  for (const text of [
+    "olha isso https://youtu.be/dQw4w9WgXcQ",
+    "https://youtu.be/dQw4w9WgXcQ resuma",
+    "https://youtu.be/dQw4w9WgXcQ https://youtu.be/9bZkp7q19f0",
+    "https://www.youtube.com/@canal",
+    "https://exemplo.dev/watch?v=dQw4w9WgXcQ",
+    "",
+  ]) {
+    expect(soleYouTubeVideoLink(text), text).toBeNull();
+  }
 });

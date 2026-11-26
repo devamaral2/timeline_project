@@ -7,6 +7,7 @@ import { createArtifact, deleteArtifact, editArtifact, getArtifact, listArtifact
 import { placesRoutes, searchPlaces } from "./places";
 import { createTask, deleteTask, tasksRoutes, getTask, listAgenda, listTrackedTasks, suggestTags, updateTask } from "./tasks";
 import { cancelRequest, getRequest, listRequests, getModelOptions, requestsRoutes, sendHermesMessage, sendModelMessage, startEditRequest, startRequest, startVoiceRequest } from "./requests";
+import { requestTranscription, transcriptionRoutes } from "./transcription";
 import { createRecurrence, deleteRecurrence, editRecurrence, getRecurrence, listRecurrences, recurrencesRoutes } from "./recurrences";
 
 /**
@@ -36,6 +37,7 @@ const declaredRoutes: string[] = [
   ...Object.values(placesRoutes),
   ...Object.values(recurrencesRoutes),
   ...Object.values(requestsRoutes),
+  ...Object.values(transcriptionRoutes),
 ];
 
 /**
@@ -148,6 +150,9 @@ const cases: Case[] = [
     getRequest: () => getRequest("ID"),
     listRequests: () => listRequests(),
     cancelRequest: () => cancelRequest("ID"),
+  }),
+  ...casesOf("transcrição", transcriptionRoutes, {
+    requestTranscription: () => requestTranscription("https://youtu.be/dQw4w9WgXcQ"),
   }),
   ...casesOf("arquivos do agente", agentFilesRoutes, {
     listAgentFiles: () => listAgentFiles(),
