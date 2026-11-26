@@ -10,7 +10,7 @@ import type {
   RequestOutcome, RequestRecord, RequestStore, StepRecord, StepThought,
 } from "../request-store";
 
-const OPEN = new Set(["queued", "running", "waiting"]);
+const OPEN = new Set(["queued", "running", "waiting", "awaiting_transcription"]);
 
 /**
  * O `RequestStore` em memoria: o que o Postgres grava na mesma transacao aqui fica em listas conferiveis. O

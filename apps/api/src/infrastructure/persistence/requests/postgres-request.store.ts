@@ -57,7 +57,7 @@ export const REQUEST_IDEMPOTENCY_SCOPE = "request";
 
 const TITLE_CHARS = 80;
 const TEXT_PREVIEW_CHARS = 200;
-const OPEN_REQUEST = sql`('queued', 'running', 'waiting')`;
+const OPEN_REQUEST = sql`('queued', 'running', 'waiting', 'awaiting_transcription')`;
 
 const TASK_RELATION = { create: "generates", update: "updates", delete: "deletes" } as const;
 const ARTIFACT_RELATION = { create: "creates", update: "updates", delete: "deletes" } as const;

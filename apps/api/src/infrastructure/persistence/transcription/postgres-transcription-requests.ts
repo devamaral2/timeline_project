@@ -1,9 +1,11 @@
 import type { TranscriptionFailureCode, TranscriptionResult, TranscriptionStage } from "@repo/contracts";
 import { sql } from "drizzle-orm";
 import {
+  type AbandonedTranscription,
   TRANSCRIPTION_FORMAT_JOB,
   TRANSCRIPTION_JOB,
   TRANSCRIPTION_LEASE_MS,
+  TRANSCRIPTION_MAX_ATTEMPTS,
   TranscriptionLeaseLostError,
   TranscriptionNotRunningError,
   type FormattingInput,
@@ -61,7 +63,7 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
       UPDATE jobs SET status = 'queued', error = 'Worker lease expired', lease_until = NULL, available_at = now(),
         updated_at = now()
       WHERE kind = ${TRANSCRIPTION_JOB} AND user_id = ${userId} AND status = 'running'
-        AND lease_until <= clock_timestamp()`);
+        AND lease_until <= clock_timestamp() AND attempts < ${TRANSCRIPTION_MAX_ATTEMPTS}`);
     const result = await this.db.execute<{ requestId: string; url: string; leaseToken: string; leaseUntil: Date | string }>(sql`
       WITH picked AS (
         SELECT j.id FROM jobs j
@@ -80,6 +82,17 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
     const row = result.rows[0];
     if (!row) return undefined;
     return { requestId: row.requestId, url: row.url, leaseToken: row.leaseToken, leaseExpiresAt: new Date(row.leaseUntil) };
+  }
+
+  async abandoned(userId: string): Promise<AbandonedTranscription[]> {
+    const result = await this.db.execute<{ requestId: string; leaseToken: string; data: TranscriptionRequestData }>(sql`
+      SELECT j.task_id AS "requestId", j.lease_token AS "leaseToken", t.data
+      FROM jobs j JOIN tasks t ON t.id = j.task_id
+      WHERE j.kind = ${TRANSCRIPTION_JOB} AND j.user_id = ${userId} AND j.status = 'running'
+        AND j.lease_until <= clock_timestamp() AND j.attempts >= ${TRANSCRIPTION_MAX_ATTEMPTS}
+        AND t.kind = 'save_content_with_transcription' AND t.status = 'awaiting_transcription' AND t.deleted_at IS NULL
+      ORDER BY j.id`);
+    return result.rows;
   }
 
   async renew(
@@ -136,6 +149,28 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
     const transaction = tx as Tx;
     await this.close(transaction, input);
     await this.setStatus(transaction, input.requestId, "failed", { failureCode: input.code }, input.at);
+  }
+
+  async open(userId: string, requestId: string): Promise<TranscriptionRequestData | undefined> {
+    const result = await this.db.execute<{ data: TranscriptionRequestData }>(sql`
+      SELECT data FROM tasks
+      WHERE id = ${requestId} AND user_id = ${userId} AND actor = 'agent' AND kind = 'save_content_with_transcription'
+        AND status IN ('awaiting_transcription', 'running') AND deleted_at IS NULL`);
+    return result.rows[0]?.data;
+  }
+
+  async cancel(tx: unknown, input: { requestId: string; userId: string; at: Date }): Promise<void> {
+    const transaction = tx as Tx;
+    const updated = await transaction.execute(sql`
+      UPDATE tasks SET status = 'cancel', finished_at = ${input.at.toISOString()}, updated_at = now(),
+        data = data || ${JSON.stringify({ errorCode: "cancelled" })}::jsonb
+      WHERE id = ${input.requestId} AND user_id = ${input.userId} AND actor = 'agent'
+        AND kind = 'save_content_with_transcription' AND status IN ('awaiting_transcription', 'running')
+      RETURNING id`);
+    if (updated.rows.length !== 1) throw new TranscriptionNotRunningError();
+    await transaction.execute(sql`
+      UPDATE jobs SET status = 'cancelled', lease_until = NULL, progress = NULL, updated_at = now()
+      WHERE task_id = ${input.requestId} AND user_id = ${input.userId} AND status IN ('queued', 'running')`);
   }
 
   async awaitingFormat(userId: string, requestId: string): Promise<FormattingInput | undefined> {

@@ -8,9 +8,11 @@ import type { TranscriptionRequests } from "../../api-core/transcription/transcr
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
+import { JobsService } from "../../infrastructure/jobs/jobs.service";
 import { TRANSCRIPTION_REQUESTS } from "../../infrastructure/persistence";
 import { DailyReadingGate } from "../save-daily-reading/daily-reading.gate";
 import { SaveDailyReadingModule } from "../save-daily-reading/save-daily-reading.controller";
+import { CancelTranscriptionUseCase } from "./cancel-transcription.usecase";
 import { RequestTranscriptionUseCase } from "./request-transcription.usecase";
 
 /**
@@ -42,6 +44,13 @@ export class RequestTranscriptionController {
       inject: [DailyReadingGate, TRANSCRIPTION_REQUESTS],
       useFactory: (gate: DailyReadingGate, requests: TranscriptionRequests) => new RequestTranscriptionUseCase(gate, requests),
     },
+    {
+      provide: CancelTranscriptionUseCase,
+      inject: [DailyReadingGate, TRANSCRIPTION_REQUESTS, JobsService],
+      useFactory: (gate: DailyReadingGate, requests: TranscriptionRequests, jobs: JobsService) =>
+        new CancelTranscriptionUseCase(gate, requests, jobs),
+    },
   ],
+  exports: [CancelTranscriptionUseCase],
 })
 export class RequestTranscriptionModule {}

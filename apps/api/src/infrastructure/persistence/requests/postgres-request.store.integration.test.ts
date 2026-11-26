@@ -330,6 +330,18 @@ describe("PostgresRequestStore", () => {
   expect(listed.find((record) => record.id === video.id)).toMatchObject({ kind: "save_content_with_transcription", status: "awaiting_transcription" });
 });
 
+test("cancelar o pedido de transcricao que espera o servico local o leva a cancel", async () => {
+  const video = Task.create({
+    userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription",
+  });
+  await new PostgresTaskRepository(ctx.db).save(video);
+
+  expect(await store.cancel(video.id)).toEqual([video.id]);
+
+  expect(await store.find(video.id)).toMatchObject({ status: "cancel", errorCode: "cancelled" });
+  expect(await store.cancel(video.id)).toEqual([]);
+});
+
 test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao", async () => {
     const first = await start("oi");
     const second = await start("e amanhã?", { sessionId: first.requestId });

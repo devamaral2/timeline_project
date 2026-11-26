@@ -2,6 +2,7 @@ import type { TranscriptionFailureCode, TranscriptionResult, TranscriptionStage 
 import { Task } from "../../../domain";
 import type { InMemoryTaskDatabase } from "../../tasks/testing/in-memory-task-database";
 import type {
+  AbandonedTranscription,
   FormattingInput,
   OpenTranscriptionRequest,
   ReservedTranscription,
@@ -12,6 +13,7 @@ import {
   TRANSCRIPTION_FORMAT_JOB,
   TRANSCRIPTION_JOB,
   TRANSCRIPTION_LEASE_MS,
+  TRANSCRIPTION_MAX_ATTEMPTS,
   TranscriptionLeaseLostError,
   TranscriptionNotRunningError,
 } from "../transcription-requests";
@@ -19,7 +21,8 @@ import {
 interface LeasedJob {
   taskId: string;
   userId: string;
-  status: "queued" | "running" | "succeeded";
+  status: "queued" | "running" | "succeeded" | "cancelled";
+  attempts: number;
   leaseToken?: string;
   leaseUntil?: Date;
   progress?: { stage: TranscriptionStage; percent: number };
@@ -63,13 +66,15 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
   ): Promise<void> {
     this.relations.push({ fromTaskId: input.requestId, toTaskId: input.readingTaskId, relation: input.relation });
     this.jobs.push({ kind: TRANSCRIPTION_JOB, userId: input.userId, taskId: input.requestId });
-    this.queue.push({ taskId: input.requestId, userId: input.userId, status: "queued" });
+    this.queue.push({ taskId: input.requestId, userId: input.userId, status: "queued", attempts: 0 });
   }
 
   async reserve(userId: string): Promise<ReservedTranscription | undefined> {
     const now = this.clock();
     for (const job of this.queue) {
-      if (job.status === "running" && job.leaseUntil && job.leaseUntil <= now) job.status = "queued";
+      if (job.status === "running" && job.leaseUntil && job.leaseUntil <= now && job.attempts < TRANSCRIPTION_MAX_ATTEMPTS) {
+        job.status = "queued";
+      }
     }
     const job = this.queue.find((candidate) => {
       const task = this.database.tasks.find((stored) => stored.id === candidate.taskId);
@@ -77,6 +82,7 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
     });
     if (!job) return undefined;
     job.status = "running";
+    job.attempts += 1;
     job.leaseToken = `lease-${++this.tokens}`;
     job.leaseUntil = new Date(now.getTime() + TRANSCRIPTION_LEASE_MS);
     const task = this.database.tasks.find((stored) => stored.id === job.taskId) as Task;
@@ -86,6 +92,18 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
       leaseToken: job.leaseToken,
       leaseExpiresAt: job.leaseUntil,
     };
+  }
+
+  async abandoned(userId: string): Promise<AbandonedTranscription[]> {
+    const now = this.clock();
+    return this.queue.flatMap((job) => {
+      const task = this.database.tasks.find((stored) => stored.id === job.taskId);
+      if (
+        job.userId !== userId || job.status !== "running" || !job.leaseToken || !job.leaseUntil || job.leaseUntil > now ||
+        job.attempts < TRANSCRIPTION_MAX_ATTEMPTS || task?.status !== "awaiting_transcription"
+      ) return [];
+      return [{ requestId: job.taskId, leaseToken: job.leaseToken, data: task.data as unknown as TranscriptionRequestData }];
+    });
   }
 
   async renew(
@@ -132,6 +150,24 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
     this.setStatus(input.requestId, "failed", { failureCode: input.code }, input.at);
   }
 
+  async open(userId: string, requestId: string): Promise<TranscriptionRequestData | undefined> {
+    const task = this.database.tasks.find((stored) => stored.id === requestId);
+    if (task?.userId !== userId || task.kind !== "save_content_with_transcription") return undefined;
+    if (task.status !== "awaiting_transcription" && task.status !== "running") return undefined;
+    return task.data as unknown as TranscriptionRequestData;
+  }
+
+  async cancel(_tx: unknown, input: { requestId: string; userId: string; at: Date }): Promise<void> {
+    const task = this.database.tasks.find((stored) => stored.id === input.requestId);
+    if (task?.userId !== input.userId || (task.status !== "awaiting_transcription" && task.status !== "running")) {
+      throw new TranscriptionNotRunningError();
+    }
+    this.setStatus(input.requestId, "cancel", { errorCode: "cancelled" }, input.at);
+    for (const job of this.queue) {
+      if (job.taskId === input.requestId && (job.status === "queued" || job.status === "running")) job.status = "cancelled";
+    }
+  }
+
   async awaitingFormat(userId: string, requestId: string): Promise<FormattingInput | undefined> {
     const task = this.database.tasks.find((stored) => stored.id === requestId);
     if (task?.userId !== userId || task.kind !== "save_content_with_transcription" || task.status !== "running") return undefined;
@@ -172,12 +208,12 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
 
   /** Os jobs do servico local que ainda nao terminaram. */
   openJobs(): LeasedJob[] {
-    return this.queue.filter((job) => job.status !== "succeeded");
+    return this.queue.filter((job) => job.status === "queued" || job.status === "running");
   }
 
   private holder(userId: string, requestId: string, leaseToken: string): LeasedJob | undefined {
     return this.queue.find(
-      (job) => job.taskId === requestId && job.userId === userId && job.leaseToken === leaseToken && job.status !== "succeeded",
+      (job) => job.taskId === requestId && job.userId === userId && job.leaseToken === leaseToken && (job.status === "queued" || job.status === "running"),
     );
   }
 

@@ -18,6 +18,12 @@ export const TRANSCRIPTION_FORMAT_JOB = "video-transcription-format";
 export const TRANSCRIPTION_LEASE_MS = 5 * 60 * 1000;
 
 /**
+ * Quantas vezes o pedido pode ser reservado. Depois da quinta reserva cujo lease venceu sem entrega, o pedido
+ * falha com o código `failed` em vez de voltar à fila: um vídeo que derruba o serviço local não o derruba para sempre.
+ */
+export const TRANSCRIPTION_MAX_ATTEMPTS = 5;
+
+/**
  * O teto da entrega, medido no JSON do resultado. Acima dele o pedido falha com
  * `too_large`. O corpo da rota aceita mais que isto (`TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES`)
  * para que a recusa seja uma resposta, e não um corte da conexão.
@@ -59,9 +65,14 @@ export interface TranscriptionRequests {
 
   /**
    * O pedido mais antigo da pessoa que espera o serviço local, com o lease novo. Antes, o job cujo lease
-   * venceu volta para a fila. Sem pedido esperando, nada.
+   * venceu volta para a fila, desde que ainda caiba em `TRANSCRIPTION_MAX_ATTEMPTS`. Sem pedido esperando, nada.
    */
   reserve(userId: string): Promise<ReservedTranscription | undefined>;
+  /**
+   * Os pedidos da pessoa cuja reserva venceu pela última vez permitida (`TRANSCRIPTION_MAX_ATTEMPTS`), cada um com o
+   * lease que o segurava: eles não voltam à fila, e quem chama os leva a `failed` por `reject`.
+   */
+  abandoned(userId: string): Promise<AbandonedTranscription[]>;
   /** Estende o lease do pedido e guarda o progresso. `undefined` quando o lease não vale mais (vencido, trocado ou cancelado). */
   renew(
     userId: string,
@@ -79,6 +90,17 @@ export interface TranscriptionRequests {
   accept(tx: unknown, input: { requestId: string; userId: string; leaseToken: string; result: TranscriptionResult }): Promise<void>;
   /** A falha entra: leva o pedido a `failed` com o código e fecha o job do serviço local. Mesma transação e mesma regra do lease. */
   reject(tx: unknown, input: { requestId: string; userId: string; leaseToken: string; code: TranscriptionFailureCode; at: Date }): Promise<void>;
+
+  /**
+   * Os dados do pedido da pessoa que ainda não terminou: esperando o serviço local (`awaiting_transcription`) ou a
+   * formatação (`running`). `undefined` em qualquer outro caso.
+   */
+  open(userId: string, requestId: string): Promise<TranscriptionRequestData | undefined>;
+  /**
+   * A pessoa cancela o pedido: leva-o a `cancel`, com `errorCode: "cancelled"`, e cancela o job do serviço local e o
+   * de formatação, se houver. Roda na transação do escritor em lote; se o pedido já terminou, desfaz tudo.
+   */
+  cancel(tx: unknown, input: { requestId: string; userId: string; at: Date }): Promise<void>;
 
   /**
    * O pedido que espera a formatação (da pessoa, em `running`, com o resultado cru entregue), com o que a formatação
@@ -107,6 +129,13 @@ export interface TranscriptionRequests {
 export interface FormattingInput {
   data: TranscriptionRequestData;
   result: TranscriptionResult;
+}
+
+/** O pedido que esgotou as reservas: o lease que o segurava, para fechá-lo, e os dados para o documento dizer o motivo. */
+export interface AbandonedTranscription {
+  requestId: string;
+  leaseToken: string;
+  data: TranscriptionRequestData;
 }
 
 /** O pedido que o serviço local acabou de reservar. */

@@ -48,6 +48,10 @@ export class TranscriptionWorkerUseCase {
 
   /** O próximo pedido da pessoa que espera o serviço local, ou nada. */
   async reserve(actor: AuthenticatedUser): Promise<TranscriptionReservation | undefined> {
+    // O pedido que já gastou as reservas falha antes de a fila procurar o próximo: ele não volta mais.
+    for (const abandoned of await this.requests.abandoned(actor.userId)) {
+      await this.fail(abandoned, abandoned.data, "failed", actor);
+    }
     const reserved = await this.requests.reserve(actor.userId);
     if (!reserved) return undefined;
     return {
