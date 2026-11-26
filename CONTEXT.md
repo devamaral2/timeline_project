@@ -63,7 +63,7 @@ Tarefa de pessoa, sempre com status, que fica fora da agenda, como um projeto. P
 _Avoid_: projeto, épico, registro longo, tarefa sem data
 
 **Agenda**:
-A grade de horários. Mostra as tarefas de pessoa e de agente que têm início e não são longas, juntas ou cada executor em separado. Passos não aparecem nela.
+A grade de horários. Mostra as tarefas de pessoa e de agente que têm início e não são longas, juntas ou cada executor em separado. Passos e conteúdo guardado não aparecem nela.
 _Avoid_: calendário, timeline, linha do tempo
 
 **Fim planejado**:
@@ -91,8 +91,12 @@ Artefato sem dono, que todos leem e ninguém edita pelo app. Só existe para ali
 _Avoid_: catálogo, item de sistema
 
 **Pedido**:
-Tarefa executada por um agente a partir de algo que o usuário pediu, ainda sem classificação.
+Tarefa executada por um agente a partir de algo que o usuário pediu no chat ou por voz, ainda sem classificação. Na tela, o tipo aparece escrito como `request`.
 _Avoid_: prompt, comando, tarefa do agente
+
+**Conteúdo guardado**:
+Tarefa de agente que registra o que o botão da extensão ou o botão "Adicionar vídeo" guardou, em vez de um pedido de conversa. Tem dois tipos: `save_content`, a página de texto guardada (nasce e termina feita), e `save_content_with_transcription`, o vídeo do YouTube guardado para transcrever (nasce no status `awaiting_transcription`, à espera do serviço local). Aparece na lista de pedidos e na lista de tarefas, nunca na agenda (ADR 0021).
+_Avoid_: pedido de página, favorito, clipe
 
 **Pedido de pesquisa**:
 Pedido para o agente descobrir algo que o usuário ainda não sabe: pesquisa de conceitos e de tudo o que for novo.

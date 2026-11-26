@@ -72,6 +72,33 @@ class TaskListRulesTest {
     }
 
     @Test
+    fun `saved content falls into the web's groups and reads as the web writes its when`() {
+        val saved = Fixtures.json("task-list-saved-content").jsonObject
+        val savedNow = Instant.parse(saved.getValue("now").jsonPrimitive.content)
+        val savedCards =
+            BraidJson
+                .decodeFromJsonElement(ListSerializer(TaskCardDto.serializer()), saved.getValue("cards"))
+                .map(TaskCardDto::toDomain)
+
+        val groups = groupTrackedTasks(savedCards)
+        val expected = saved.getValue("groups").jsonArray.map { it.jsonObject }
+
+        assertEquals(expected.map { strings(it.getValue("ids")) }, groups.map { group -> group.cards.map { it.id } })
+        assertEquals(
+            expected.map { it.getValue("key").jsonPrimitive.content },
+            groups.map { it.key.name.replaceFirstChar(Char::lowercase) },
+        )
+        for (entry in saved.getValue("whens").jsonArray) {
+            val case = entry.jsonObject
+            val card = savedCards.first { it.id == case.getValue("id").jsonPrimitive.content }
+            assertEquals(case.getValue("when").jsonPrimitive.content, cardWhenLabel(card, savedNow))
+        }
+        assertEquals(TaskKind.SaveContent, savedCards[0].kind)
+        assertEquals(TaskKind.SaveContentWithTranscription, savedCards[1].kind)
+        assertEquals(TaskStatus.AwaitingTranscription, savedCards[1].status)
+    }
+
+    @Test
     fun `every recurrence rule reads as the web writes it`() {
         for (entry in fixture.getValue("rules").jsonArray) {
             val case = entry.jsonObject

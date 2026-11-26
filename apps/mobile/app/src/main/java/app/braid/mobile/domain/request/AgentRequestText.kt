@@ -9,8 +9,10 @@ import app.braid.mobile.domain.task.TaskStatus
  * contra as fixtures geradas pelo web (`AgentRequestTextTest`).
  */
 
-/** Fila, execução ou espera do usuário: a tela continua relendo. */
-fun isOpenRequest(status: TaskStatus): Boolean = status == TaskStatus.Queued || status == TaskStatus.Running || status == TaskStatus.Waiting
+private val OPEN_REQUEST_STATUSES = setOf(TaskStatus.Queued, TaskStatus.Running, TaskStatus.Waiting, TaskStatus.AwaitingTranscription)
+
+/** Fila, execução, espera do usuário ou da transcrição: a tela continua relendo. */
+fun isOpenRequest(status: TaskStatus): Boolean = status in OPEN_REQUEST_STATUSES
 
 data class StepProgress(
     val done: Int,
