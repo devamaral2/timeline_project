@@ -8,6 +8,7 @@ import { RecordingAuthLogger } from "../common/logger";
 import { getRuntimeEnv, type EnvSource } from "../config/env";
 import { HttpPwnedPasswordsGateway } from "../auth-core/password/http-pwned-passwords.gateway";
 import type { PwnedPasswordsGateway } from "../auth-core/password/pwned-passwords.gateway";
+import { PostgresDeviceKeyRepository, type DeviceKeyRepository } from "../auth-core/persistence/postgres-device-key.repository";
 import { configureHttpShell } from "../http/request-context.middleware";
 import { configureApiDocumentation } from "../http/openapi";
 
@@ -60,6 +61,8 @@ export interface TestAppOptions {
    * de falha (503), ou do gateway real contra um servidor fake, passa o seu.
    */
   pwnedPasswords?: PwnedPasswordsGateway;
+  /** Troca o repositorio de chaves de dispositivo, que iria ao Postgres. */
+  deviceKeys?: DeviceKeyRepository;
 }
 
 function testEnv(overrides: EnvSource = {}) {
@@ -76,13 +79,14 @@ function testEnv(overrides: EnvSource = {}) {
 }
 
 export async function createTestApp(overrides: EnvSource = {}, options: TestAppOptions = {}): Promise<TestApp> {
-  const module = await Test.createTestingModule({
+  const builder = Test.createTestingModule({
     imports: [AppModule.forRoot(testEnv(overrides))],
     controllers: [TestContextController],
   })
     .overrideProvider(HttpPwnedPasswordsGateway)
-    .useValue(options.pwnedPasswords ?? { isCompromised: async () => false })
-    .compile();
+    .useValue(options.pwnedPasswords ?? { isCompromised: async () => false });
+  if (options.deviceKeys) builder.overrideProvider(PostgresDeviceKeyRepository).useValue(options.deviceKeys);
+  const module = await builder.compile();
   const app = module.createNestApplication({ bodyParser: false });
   // O logger do filtro guarda o evento em memoria em vez de imprimir: o Logger
   // do Nest escapa do `silent` do Vitest e sujaria a saida do `test:ai`.

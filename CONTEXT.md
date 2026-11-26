@@ -134,6 +134,12 @@ _Avoid_: sequência, filha, etapa, passo, bloqueio, dependência
 A tarefa de que uma subtarefa é parte.
 _Avoid_: tarefa pai, tarefa mãe, antecessora, projeto (como nome da relação)
 
+### Acesso
+
+**Chave de dispositivo**:
+Credencial de vida longa e revogável que um serviço fora da VPS (o serviço local de transcrição) usa no lugar de uma sessão. Emitida para um usuário, tem uma única permissão (trabalhar em transcrições) e só vale nas três operações desse serviço; nenhuma outra rota a aceita. Emitida e revogada por comando, sem tela. O banco guarda só o hash.
+_Avoid_: token de serviço, API key, sessão do serviço
+
 ### Marca
 
 **Candeia**:

@@ -14,23 +14,37 @@ export interface GatewayRequest extends Request {
   actor?: AuthenticatedUser;
 }
 
-/** Aceita somente identidades encaminhadas pelo gateway Auth interno. */
+/** Cabecalho com que o gateway encaminha as permissoes de uma chave de dispositivo (nunca de uma sessao). */
+export const DEVICE_PERMISSIONS_HEADER = "x-auth-permissions";
+
+/** Confere que a requisicao veio do gateway Auth interno e devolve o id do usuario encaminhado. */
+export function assertFromGateway(request: Request): string {
+  const configuredKey = getServerEnv().AUTH_INTERNAL_SERVICE_KEY;
+  const presentedKey = request.header("x-auth-gateway-key");
+  if (!configuredKey || !presentedKey) throw new UnauthorizedException();
+
+  const expected = Buffer.from(configuredKey);
+  const received = Buffer.from(presentedKey);
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
+    throw new ForbiddenException();
+  }
+
+  const userId = request.header("x-auth-user-id");
+  if (!userId) throw new UnauthorizedException();
+  return userId;
+}
+
+/**
+ * Aceita somente identidades encaminhadas pelo gateway Auth interno. Recusa a
+ * chave de dispositivo: ela so vale na guarda do servico local de transcricao.
+ */
 @Injectable()
 export class GatewayIdentityGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<GatewayRequest>();
-    const configuredKey = getServerEnv().AUTH_INTERNAL_SERVICE_KEY;
-    const presentedKey = request.header("x-auth-gateway-key");
-    if (!configuredKey || !presentedKey) throw new UnauthorizedException();
+    const userId = assertFromGateway(request);
+    if (request.header(DEVICE_PERMISSIONS_HEADER)) throw new ForbiddenException();
 
-    const expected = Buffer.from(configuredKey);
-    const received = Buffer.from(presentedKey);
-    if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
-      throw new ForbiddenException();
-    }
-
-    const userId = request.header("x-auth-user-id");
-    if (!userId) throw new UnauthorizedException();
     const sessionId = request.header("x-auth-session-id") || undefined;
     request.actor = { userId, sessionId };
     return true;

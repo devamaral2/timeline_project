@@ -15,6 +15,7 @@ import type { AuthenticatedActor } from "../../domain/users/user";
 import type { RuntimeEnv } from "../../config/env";
 import { RUNTIME_ENV } from "../../config/tokens";
 import { Inject } from "@nestjs/common";
+import { forwardToApi } from "./api-gateway.forward";
 
 const bodyWithUser = z.object({ userId: z.string().min(1).max(128).optional() }).passthrough();
 
@@ -44,30 +45,10 @@ export class ApiGatewayController {
       targetUserId,
     });
 
-    const headers = new Headers();
-    for (const [name, value] of Object.entries(request.headers)) {
-      if (["host", "content-length", "authorization", "transfer-encoding", "connection"].includes(name)) continue;
-      if (typeof value === "string") headers.set(name, value);
-      else if (Array.isArray(value)) headers.set(name, value.join(", "));
-    }
-    const gatewayKey = this.env.internalServiceKey;
-    if (!gatewayKey) throw new Error("AUTH_INTERNAL_SERVICE_KEY is not configured");
-    headers.set("x-auth-gateway-key", gatewayKey);
-    headers.set("x-auth-user-id", actor.userId);
-    headers.set("x-auth-session-id", actor.sessionId);
-
-    const upstreamUrl = new URL(request.originalUrl, this.env.apiServiceUrl);
-    const upstream = await fetch(upstreamUrl, {
-      method: request.method,
-      headers,
-      body: request.method === "GET" || request.method === "HEAD" ? undefined : JSON.stringify(body ?? {}),
+    await forwardToApi(this.env, request, response, body, {
+      "x-auth-user-id": actor.userId,
+      "x-auth-session-id": actor.sessionId,
     });
-    response.status(upstream.status);
-    upstream.headers.forEach((value, name) => {
-      if (name !== "content-length" && name !== "transfer-encoding") response.setHeader(name, value);
-    });
-    const buffer = Buffer.from(await upstream.arrayBuffer());
-    response.send(buffer);
   }
 }
 
