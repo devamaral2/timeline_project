@@ -44,7 +44,7 @@ function task(id: string, startedAt: string, overrides: Partial<Parameters<typeo
 /** As tarefas que não são o registro `save_content` de uma gravação. */
 const withoutSaves = (tasks: Task[]) => tasks.filter((candidate) => candidate.kind !== "save_content");
 
-const bodyOf = (artifact: Artifact | null) => (artifact?.data as { body: string }).body;
+const bodyOf = (artifact: Artifact | null) => (artifact?.data as { body?: string } | undefined)?.body;
 
 test("sem a leitura do dia, a tarefa nasce a fazer às 18h com a página como artefato, numa gravação só", async () => {
   const { useCase, taskRepository, artifactRepository, batchWriter } = setup();

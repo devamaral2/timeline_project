@@ -201,7 +201,7 @@ test("a message that could not reach the API can be retried, with the same id: n
   fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
 
   await waitFor(() => expect(requestPosts()).toHaveLength(2));
-  const firstClientId = (requestPosts()[0]?.body as { clientMessageId: string }).clientMessageId;
+  const firstClientId = (requestPosts()[0]?.body as { clientMessageId: string } | undefined)?.clientMessageId;
   expect(requestPosts()[1]?.body).toMatchObject({ text: "crie a tarefa", clientMessageId: firstClientId });
   expect(screen.queryByText(/Não consegui conectar ao assistente/)).not.toBeInTheDocument();
   expect(within(screen.getByRole("log")).getAllByText("crie a tarefa")).toHaveLength(1);
