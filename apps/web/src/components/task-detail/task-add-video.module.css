@@ -1,0 +1,17 @@
+/*
+ * "Adicionar vídeo" no detalhe da Leitura diária: o botão no mesmo desenho de "Adicionar documento" e, aberto, o campo
+ * do link com o foco do restante dos campos (borda `--brand`). Cor só por token, para o tema trocar junto.
+ */
+
+.root { display: flex; flex-direction: column; gap: 8px; }
+
+.form { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.label { font-size: 13px; line-height: 20px; color: var(--muted); }
+.input { box-sizing: border-box; width: 100%; height: 48px; padding: 0 16px; border: 1px solid var(--input); border-radius: 24px; background: transparent; color: var(--ink); font: inherit; font-size: 15px; transition: border-color var(--duration-fast); }
+.input::placeholder { color: var(--faint); opacity: 1; }
+.input:focus-visible { outline: 0; border-color: var(--brand); }
+.input[aria-invalid="true"] { border-color: var(--destructive); }
+.error { margin: 0; font-size: 13px; line-height: 20px; color: var(--destructive); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.notice { margin: 0; font-size: 13px; line-height: 20px; color: var(--muted); }
