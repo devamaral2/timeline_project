@@ -15,6 +15,11 @@ describe("saída do whisper.cpp", () => {
     expect(parseWhisperJson(json).map((item) => item.text)).toEqual(["Falou."]);
   });
 
+  it("ignora as entradas malformadas em vez de quebrar", () => {
+    const json = { transcription: [null, "texto", { text: "sem tempo" }, { offsets: { from: "0", to: 1000 }, text: "tempo em texto" }, { offsets: { from: 0, to: 1000 }, text: 42 }, { offsets: { from: 0, to: 1000 }, text: " Ok." }] };
+    expect(parseWhisperJson(json)).toEqual([{ startSeconds: 0, endSeconds: 1, text: "Ok." }]);
+  });
+
   it("recusa uma saída que não é a esperada", () => {
     expect(() => parseWhisperJson({ result: [] })).toThrow();
     expect(() => parseWhisperJson(null)).toThrow();

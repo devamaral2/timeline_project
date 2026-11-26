@@ -6,6 +6,7 @@ import { checkAudioSize, checkDuration } from "./pipeline/limits";
 import { matchSpeakers } from "./pipeline/speakers";
 import { chooseTextSource } from "./pipeline/text-source";
 import { parseVtt } from "./pipeline/vtt";
+import { errorMessage } from "./error-message";
 import type { Logger } from "./logger";
 import { AbortedError, type AudioFile, type AudioStore, type Diarizer, type Whisper, type YtDlp } from "./ports";
 import { RequestFailure, type TimedText, type VideoMetadata } from "./types";
@@ -34,6 +35,21 @@ export type ProcessOutcome =
   /** Interrompido de fora: nada se entrega, e o lease vencido devolve o pedido à fila. */
   | { kind: "abandoned" };
 
+/** O motivo de recusa quando não sobra fala: nem legenda, nem Whisper, nem falantes com texto. */
+const NO_SPEECH = "o vídeo não tem fala para transcrever";
+
+/**
+ * Espera um trabalho que pode falhar sem derrubar o pedido: se falhou por interrupção de fora, a interrupção segue
+ * (`AbortedError`); do contrário, avisa no log e continua com a lista vazia.
+ */
+function orEmpty<T>(work: Promise<T[]>, deps: ProcessDeps, signal: AbortSignal, warning: string): Promise<T[]> {
+  return work.catch((cause) => {
+    if (signal.aborted) throw new AbortedError();
+    deps.log.warn(`${warning}: ${errorMessage(cause)}`);
+    return [];
+  });
+}
+
 /** A porcentagem em que cada etapa começa. O Whisper é a etapa longa, então ocupa o meio. */
 const STAGE_PERCENT: Record<TranscriptionStage, number> = { metadata: 0, download: 10, transcription: 25, speakers: 75, comments: 90 };
 
@@ -53,31 +69,25 @@ export async function processRequest(url: string, deps: ProcessDeps, signal: Abo
     deps.log.info("lendo os metadados");
     const meta = await deps.ytdlp.metadata(url, signal);
     deps.log.info(`"${meta.title}", ${Math.round(meta.durationSeconds)} s, canal ${meta.channel || "desconhecido"}`);
-    refuse(checkDuration(meta.durationSeconds, deps.limits.maxDurationSeconds));
-    refuse(checkAudioSize(meta.audioBytesEstimate, deps.limits.maxAudioBytes));
+    throwIfRefused(checkDuration(meta.durationSeconds, deps.limits.maxDurationSeconds));
+    throwIfRefused(checkAudioSize(meta.audioBytesEstimate, deps.limits.maxAudioBytes));
 
     await step("download");
     const audio = await obtainAudio(url, meta, deps, signal);
 
     await step("transcription");
     const { texts, source } = await obtainText(url, meta, audio, deps, signal);
-    if (texts.length === 0) throw new RequestFailure("no_audio", "o vídeo não tem fala para transcrever");
+    if (texts.length === 0) throw new RequestFailure("no_audio", NO_SPEECH);
 
     await step("speakers");
-    const turns = await deps.diarizer.diarize(audio, signal).catch((cause) => {
-      if (signal.aborted) throw new AbortedError();
-      deps.log.warn(`não foi possível separar os falantes, tudo vai como Falante 1: ${describe(cause)}`);
-      return [];
-    });
+    const turns = await orEmpty(
+      deps.diarizer.diarize(audio, signal), deps, signal, "não foi possível separar os falantes, tudo vai como Falante 1",
+    );
     const segments = matchSpeakers(texts, turns);
-    if (segments.length === 0) throw new RequestFailure("no_audio", "o vídeo não tem fala para transcrever");
+    if (segments.length === 0) throw new RequestFailure("no_audio", NO_SPEECH);
 
     await step("comments");
-    const comments = await deps.ytdlp.comments(url, signal).catch((cause) => {
-      if (signal.aborted) throw new AbortedError();
-      deps.log.warn(`sem os comentários: ${describe(cause)}`);
-      return [];
-    });
+    const comments = await orEmpty(deps.ytdlp.comments(url, signal), deps, signal, "sem os comentários");
     if (signal.aborted) throw new AbortedError();
 
     return {
@@ -103,7 +113,7 @@ export async function processRequest(url: string, deps: ProcessDeps, signal: Abo
   }
 }
 
-const refuse = (failure: RequestFailure | null) => {
+const throwIfRefused = (failure: RequestFailure | null) => {
   if (failure) throw failure;
 };
 
@@ -113,7 +123,7 @@ async function obtainAudio(url: string, meta: VideoMetadata, deps: ProcessDeps, 
     cached ??
     (await deps.ytdlp.downloadAudio({ url, videoId: meta.id, dir: deps.audio.dir, maxBytes: deps.limits.maxAudioBytes }, signal));
   deps.log.info(cached ? "áudio já estava no cache" : `áudio baixado (${audio.bytes} bytes)`);
-  refuse(checkAudioSize(audio.bytes, deps.limits.maxAudioBytes));
+  throwIfRefused(checkAudioSize(audio.bytes, deps.limits.maxAudioBytes));
   return audio;
 }
 
@@ -127,14 +137,10 @@ async function obtainText(
   const choice = chooseTextSource(meta);
   if (choice.kind === "subtitles") {
     deps.log.info(`usando a legenda feita por alguém (${choice.language})`);
-    const texts = await deps.ytdlp
-      .downloadSubtitles({ url, language: choice.language }, signal)
-      .then(parseVtt)
-      .catch((cause) => {
-        if (signal.aborted) throw new AbortedError();
-        deps.log.warn(`legenda inutilizável, vai para o Whisper: ${describe(cause)}`);
-        return [];
-      });
+    const texts = await orEmpty(
+      deps.ytdlp.downloadSubtitles({ url, language: choice.language }, signal).then(parseVtt),
+      deps, signal, "legenda inutilizável, vai para o Whisper",
+    );
     if (texts.length > 0) return { texts, source: "subtitles" };
     deps.log.warn("a legenda não trouxe falas, vai para o Whisper");
   }
@@ -142,5 +148,3 @@ async function obtainText(
   const language = choice.kind === "whisper" ? choice.language : meta.language;
   return { texts: await deps.whisper.transcribe(audio, language, signal), source: "whisper" };
 }
-
-const describe = (cause: unknown) => (cause instanceof Error ? cause.message : String(cause));

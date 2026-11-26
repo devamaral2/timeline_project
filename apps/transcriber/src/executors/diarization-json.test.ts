@@ -13,6 +13,11 @@ describe("saída do script do pyannote", () => {
     expect(parseDiarization('aviso qualquer\n[{"start":0,"end":1,"speaker":"A"}]')).toHaveLength(1);
   });
 
+  it("ignora os turnos malformados em vez de quebrar", () => {
+    const list = [null, 7, { start: 0, end: 1 }, { start: "0", end: 1, speaker: "A" }, { start: 0, end: 1, speaker: "" }, { start: 1, end: 2, speaker: "B" }];
+    expect(parseDiarization(JSON.stringify(list))).toEqual([{ startSeconds: 1, endSeconds: 2, speaker: "B" }]);
+  });
+
   it("recusa o que não é uma lista de turnos", () => {
     expect(() => parseDiarization("{}")).toThrow();
     expect(() => parseDiarization("nada")).toThrow();
