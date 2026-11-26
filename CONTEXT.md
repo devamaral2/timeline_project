@@ -98,6 +98,10 @@ _Avoid_: prompt, comando, tarefa do agente
 Tarefa de agente que registra o que o botão da extensão ou o botão "Adicionar vídeo" guardou, em vez de um pedido de conversa. Tem dois tipos: `save_content`, a página de texto guardada (nasce e termina feita), e `save_content_with_transcription`, o vídeo do YouTube guardado para transcrever (nasce no status `awaiting_transcription`, à espera do serviço local). Aparece na lista de pedidos e na lista de tarefas, nunca na agenda (ADR 0021).
 _Avoid_: pedido de página, favorito, clipe
 
+**Leitura diária**:
+Tarefa de pessoa, uma por dia, em que as páginas e os vídeos guardados no dia se juntam, cada um como um documento de texto. Nasce a fazer, às 18h do dia, quando ainda não existe, e toda gravação nela a devolve para a fazer, mesmo que já estivesse concluída. O conteúdo só entra por uma porta (`DailyReadingGate`), que reconhece o mesmo conteúdo pelo endereço canônico da linha da fonte. O dia é o do pedido, no fuso das tarefas.
+_Avoid_: leitura do dia, inbox, clipping
+
 **Pedido de pesquisa**:
 Pedido para o agente descobrir algo que o usuário ainda não sabe: pesquisa de conceitos e de tudo o que for novo.
 _Avoid_: busca, consulta

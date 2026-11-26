@@ -69,6 +69,11 @@ export class DailyReadingGate {
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
+  /** O instante de agora, pelo relógio da porta. */
+  now(): Date {
+    return this.clock();
+  }
+
   /** O dia de hoje, no fuso das tarefas. */
   today(): string {
     return dayKeyOf(this.clock(), TASK_TIME_ZONE);

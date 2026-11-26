@@ -245,6 +245,15 @@ export const dailyReadingResultSchema = z.object({
   taskId: z.string(), artifactId: z.string(), taskCreated: z.boolean(), artifactCreated: z.boolean(),
 }).strict();
 
+/** `POST /api/tasks/transcription-requests`: o link de um video do YouTube a transcrever. */
+export const transcriptionRequestInputSchema = z.object({
+  url: z.string().max(2048).regex(/^https?:\/\/\S+$/i),
+}).strict();
+
+export const transcriptionRequestResultSchema = z.object({
+  requestId: z.string(), taskId: z.string(), artifactId: z.string(), created: z.boolean(),
+}).strict();
+
 /** `POST /api/artifacts`: o artefato e as tarefas em que ele ja nasce aparecendo. */
 export const createArtifactRequestSchema = z.union(createArtifactVariants({ taskIds: z.array(z.string()).optional() }));
 
