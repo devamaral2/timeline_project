@@ -57,7 +57,9 @@ export const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 export const ENTRY_KINDS = ["message", "thought", "trace", "result", "input"] as const;
 export const ENTRY_ROLES = ["user", "agent"] as const;
 
-export const ARTIFACT_TYPES = ["text", "food", "sleep", "training", "workout", "skill", "agent", "router"] as const;
+export const ARTIFACT_TYPES = [
+  "text", "news", "email_summary", "youtube_transcript", "food", "sleep", "training", "workout", "skill", "agent", "router",
+] as const;
 /** Os unicos tipos que podem nao ter dono. */
 export const GLOBAL_ARTIFACT_TYPES = ["food", "workout"] as const;
 

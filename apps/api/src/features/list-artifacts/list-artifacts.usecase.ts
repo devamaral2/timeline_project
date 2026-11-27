@@ -2,6 +2,7 @@ import type { AuthenticatedUser } from "../../http/request-identity/authenticate
 import type { ArtifactType } from "../../domain";
 import type { ArtifactTaskLinkQuery, ArtifactRepository } from "../../domain/ports";
 import type { ArtifactDto } from "@repo/contracts";
+import { hasTextBody } from "@repo/contracts/artifact-types";
 import { toArtifactDto } from "../../api-core/dto/artifact.dto";
 
 export interface ListArtifactsFilter {
@@ -20,7 +21,7 @@ export function filterArtifacts(artifacts: ArtifactDto[], filter: ListArtifactsF
   const matching = artifacts.filter((artifact) => {
     if (filter.tag && !artifact.tags.includes(filter.tag)) return false;
     if (filter.q) {
-      const body = artifact.type === "text" || artifact.type === "router" ? artifact.data.body : "";
+      const body = hasTextBody(artifact) ? artifact.data.body : "";
       if (!`${artifact.name}\n${body}`.toLowerCase().includes(filter.q)) return false;
     }
     if (filter.taskId && !(artifact.tasks ?? []).some((link) => link.taskId === filter.taskId)) return false;

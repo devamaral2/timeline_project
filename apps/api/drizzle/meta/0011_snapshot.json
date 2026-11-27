@@ -1,6 +1,6 @@
 {
-  "id": "fdc956e5-ad11-4aeb-9c58-5cc5917c01cc",
-  "prevId": "36669b79-5971-49ee-997c-0a3b3018b4a2",
+  "id": "36669b79-5971-49ee-997c-0a3b3018b4a2",
+  "prevId": "5b00e94d-2c91-49b9-a83e-409f93b4c784",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -835,7 +835,7 @@
         },
         "tasks_status_matches_actor": {
           "name": "tasks_status_matches_actor",
-          "value": "(\"tasks\".\"actor\" = 'human' AND (\"tasks\".\"status\" IS NULL OR \"tasks\".\"status\" IN ('todo', 'toDefine', 'doing', 'inHold', 'done', 'cancel', 'missed'))) OR (\"tasks\".\"actor\" = 'agent' AND \"tasks\".\"status\" IS NOT NULL AND \"tasks\".\"status\" IN ('preparing', 'queued', 'starting', 'running', 'waiting', 'awaiting_transcription', 'completed', 'interrupted', 'failed', 'cancelled', 'rolled_back'))"
+          "value": "(\"tasks\".\"actor\" = 'human' AND (\"tasks\".\"status\" IS NULL OR \"tasks\".\"status\" IN ('todo', 'toDefine', 'doing', 'inHold', 'done', 'cancel', 'missed'))) OR (\"tasks\".\"actor\" = 'agent' AND \"tasks\".\"status\" IS NOT NULL AND \"tasks\".\"status\" IN ('queued', 'running', 'waiting', 'awaiting_transcription', 'done', 'failed', 'cancel'))"
         },
         "tasks_long_running_shape": {
           "name": "tasks_long_running_shape",
@@ -1064,7 +1064,7 @@
         },
         "artifacts_type_valid": {
           "name": "artifacts_type_valid",
-          "value": "\"artifacts\".\"type\" IN ('text', 'food', 'sleep', 'training', 'workout', 'skill', 'agent', 'router')"
+          "value": "\"artifacts\".\"type\" IN ('text', 'news', 'email_summary', 'youtube_transcript', 'food', 'sleep', 'training', 'workout', 'skill', 'agent', 'router')"
         },
         "artifacts_data_object": {
           "name": "artifacts_data_object",

@@ -58,6 +58,10 @@ export class ArtifactTypeRegistry {
 
 export const defaultArtifactTypeRegistry = new ArtifactTypeRegistry([
   { type: "text", currentSchemaVersion: 1, parse: parseTextData },
+  // Notícias, resumo de e-mail e transcrição guardam o mesmo dado da nota.
+  { type: "news", currentSchemaVersion: 1, parse: parseTextData },
+  { type: "email_summary", currentSchemaVersion: 1, parse: parseTextData },
+  { type: "youtube_transcript", currentSchemaVersion: 1, parse: parseTextData },
   { type: "food", currentSchemaVersion: 1, parse: parseFoodData },
   { type: "sleep", currentSchemaVersion: 1, parse: parseSleepData },
   { type: "training", currentSchemaVersion: 1, parse: parseTrainingData },

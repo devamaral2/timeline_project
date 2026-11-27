@@ -4,6 +4,7 @@ import { Bot, ChevronDown, FileCode, FileText, type LucideIcon, Plus } from "luc
 import Link from "next/link";
 import { useId, useState } from "react";
 import type { ArtifactDto, ArtifactType, HumanTaskKind, TaskArtifactDto, TaskDto } from "@repo/contracts";
+import { TEXT_BODY_ARTIFACT_TYPES } from "@repo/contracts/artifact-types";
 import { DetailSection } from "@/components/detail/detail-parts";
 import { ArtifactContent } from "@/components/notes/ArtifactContent";
 import { ICON_STROKE_WIDTH } from "@/components/tasks/task-visuals";
@@ -35,6 +36,10 @@ interface TaskArtifactsSectionProps {
 
 const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
   text: FileText,
+  // Os desenhos próprios destes três entram com a lista e o detalhe (issue #74); até lá, a folha de texto.
+  news: FileText,
+  email_summary: FileText,
+  youtube_transcript: FileText,
   food: PlateIcon,
   sleep: MoonStarIcon,
   training: BarbellIcon,
@@ -49,7 +54,7 @@ const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
  * roteador, alimento, treino e sono. Skill e agente ficam só na linha (o arquivo do Hermes tem
  * leitura, backups e edição próprios, no detalhe do artefato), e o exercício do catálogo também.
  */
-const INLINE_TYPES: ReadonlySet<ArtifactType> = new Set(["text", "router", "food", "training", "sleep"]);
+const INLINE_TYPES: ReadonlySet<ArtifactType> = new Set([...TEXT_BODY_ARTIFACT_TYPES, "food", "training", "sleep"]);
 
 /**
  * A seção Artefatos do detalhe: os artefatos da tarefa, na ordem em que vieram

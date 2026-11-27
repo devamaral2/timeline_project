@@ -40,6 +40,7 @@ import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.domain.artifact.Artifact
 import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.FoodData
+import app.braid.mobile.domain.artifact.TEXT_BODY_ARTIFACT_TYPES
 import app.braid.mobile.domain.task.ArtifactSource
 import app.braid.mobile.domain.task.TaskArtifact
 import app.braid.mobile.domain.task.TaskKind
@@ -55,7 +56,7 @@ import app.braid.mobile.ui.taskedit.AddButton
  * ficam só no cabeçalho (o arquivo do Hermes tem leitura e edição no detalhe do artefato), e o exercício do catálogo
  * também.
  */
-private val INLINE_TYPES = setOf(ArtifactType.Text, ArtifactType.Router, ArtifactType.Food, ArtifactType.Training, ArtifactType.Sleep)
+private val INLINE_TYPES = TEXT_BODY_ARTIFACT_TYPES + setOf(ArtifactType.Food, ArtifactType.Training, ArtifactType.Sleep)
 
 /**
  * A seção Artefatos do detalhe: os artefatos da tarefa, na ordem da API. Cada um é um cartão com o ícone do tipo, o

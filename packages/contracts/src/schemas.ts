@@ -20,7 +20,11 @@ const taskSituationSchema = z.enum(["to_review", "reviewed", "bookmarked"]);
 const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, ...agentTaskStatusSchema.options]);
 const taskPrioritySchema = z.enum(["urgent", "high", "medium", "low"]);
 const taskArtifactRelationSchema = z.enum(["creates", "updates", "uses", "deletes"]);
-const artifactTypeSchema = z.enum(["text", "food", "sleep", "training", "workout", "skill", "agent", "router"]);
+const artifactTypeSchema = z.enum([
+  "text", "news", "email_summary", "youtube_transcript", "food", "sleep", "training", "workout", "skill", "agent", "router",
+]);
+/** Os tipos de texto livre que precisam ser ditos na criacao (sem `type`, o artefato nasce `text`). */
+const namedFreeTextTypeSchema = z.enum(["news", "email_summary", "youtube_transcript"]);
 const notificationOffsetsSchema = z.array(z.number());
 
 const textDataSchema = z.object({ body: z.string() }).strict();
@@ -147,6 +151,7 @@ const artifactBase = {
 
 export const artifactSchema = z.discriminatedUnion("type", [
   z.object({ ...artifactBase, type: z.literal("text"), data: textDataSchema }).strict(),
+  z.object({ ...artifactBase, type: namedFreeTextTypeSchema, data: textDataSchema }).strict(),
   z.object({ ...artifactBase, type: z.literal("food"), data: foodDataSchema }).strict(),
   z.object({ ...artifactBase, type: z.literal("sleep"), data: sleepDataSchema }).strict(),
   z.object({ ...artifactBase, type: z.literal("training"), data: trainingDataSchema }).strict(),
@@ -160,6 +165,7 @@ const artifactInputBase = { name: z.string().optional(), tags: z.array(z.string(
 
 const createArtifactVariants = <TExtra extends z.ZodRawShape>(extra: TExtra) => [
   z.object({ ...artifactInputBase, ...extra, type: z.literal("text").optional(), data: textDataSchema }).strict(),
+  z.object({ ...artifactInputBase, ...extra, type: namedFreeTextTypeSchema, data: textDataSchema }).strict(),
   z.object({ ...artifactInputBase, ...extra, type: z.literal("food"), data: z.object({ inputText: z.string() }).strict() }).strict(),
   z.object({
     ...artifactInputBase, ...extra, type: z.literal("sleep"),
@@ -173,6 +179,7 @@ const createTaskArtifactSchema = z.union([...createArtifactVariants({}), foodCop
 
 const artifactDataVariants = <TExtra extends z.ZodRawShape>(extra: TExtra) => [
   z.object({ ...artifactInputBase, ...extra, schemaVersion: z.number().int().optional(), type: z.literal("text"), data: textDataSchema }).strict(),
+  z.object({ ...artifactInputBase, ...extra, schemaVersion: z.number().int().optional(), type: namedFreeTextTypeSchema, data: textDataSchema }).strict(),
   z.object({ ...artifactInputBase, ...extra, schemaVersion: z.number().int().optional(), type: z.literal("food"), data: foodDataSchema }).strict(),
   z.object({ ...artifactInputBase, ...extra, schemaVersion: z.number().int().optional(), type: z.literal("sleep"), data: sleepDataSchema }).strict(),
   z.object({ ...artifactInputBase, ...extra, schemaVersion: z.number().int().optional(), type: z.literal("training"), data: trainingDataSchema }).strict(),

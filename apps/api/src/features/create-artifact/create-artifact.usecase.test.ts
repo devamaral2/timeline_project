@@ -91,3 +91,30 @@ test("refuses invalid content before touching any task", async () => {
   );
   expect(database.artifacts).toEqual([]);
 });
+
+test.each([
+  ["news", "Manchetes de hoje"],
+  ["email_summary", "Três mensagens pedem resposta"],
+  ["youtube_transcript", "Como montar um jardim"],
+] as const)("a %s artifact is born with the type asked and the data of a text", async (type, title) => {
+  const { useCase, artifactRepository } = setup();
+
+  const { artifactId } = await useCase.execute({ type, data: { body: `${title}\n\nresto do texto` }, tags: ["Leitura"] }, actor);
+
+  expect(await artifactRepository.findById(artifactId)).toMatchObject({
+    userId: "auth-user-1",
+    type,
+    schemaVersion: 1,
+    name: title,
+    tags: ["leitura"],
+    data: { body: `${title}\n\nresto do texto` },
+    isGlobal: false,
+  });
+});
+
+test.each(["news", "email_summary", "youtube_transcript"] as const)("an empty %s is refused like an empty text", async (type) => {
+  const { useCase, database } = setup();
+
+  await expect(useCase.execute({ type, data: { body: "  " } }, actor)).rejects.toThrow("Text artifact requires a body");
+  expect(database.artifacts).toEqual([]);
+});

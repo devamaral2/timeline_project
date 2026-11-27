@@ -177,7 +177,10 @@ describe("assertArtifactRequest", () => {
   const editing = (body: Record<string, unknown>) => () => assertArtifactRequest(body, false);
 
   test("only the types the user creates and edits are accepted", () => {
-    for (const type of ["text", "food", "sleep", "training"]) expect(creating({ type, data: {} }), type).not.toThrow();
+    for (const type of ["text", "news", "email_summary", "youtube_transcript", "food", "sleep", "training"]) {
+      expect(creating({ type, data: {} }), type).not.toThrow();
+      expect(editing({ type, data: {} }), type).not.toThrow();
+    }
     for (const type of ["workout", "skill", "agent", "router", "meal"]) {
       expect(creating({ type, data: {} }), type).toThrow("Invalid type");
       expect(editing({ type, data: {} }), type).toThrow("Invalid type");
@@ -187,6 +190,7 @@ describe("assertArtifactRequest", () => {
   test("creating a text requires data; sleep and training may come without", () => {
     expect(creating({})).toThrow("Invalid data");
     expect(creating({ type: "text" })).toThrow("Invalid data");
+    for (const type of ["news", "email_summary", "youtube_transcript"]) expect(creating({ type }), type).toThrow("Invalid data");
     expect(creating({ data: { body: "nota" } })).not.toThrow();
     expect(creating({ type: "sleep" })).not.toThrow();
     expect(creating({ type: "training" })).not.toThrow();

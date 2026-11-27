@@ -11,7 +11,7 @@ declare module "vitest" {
 }
 
 const DRIZZLE_DIR = resolve(__dirname, "../../../../drizzle");
-const MIGRATION = "0010_projeto_em_toda_tarefa";
+const MIGRATION = "0011_projeto_em_toda_tarefa";
 
 interface JournalEntry { tag: string; when: number }
 

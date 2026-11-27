@@ -12,7 +12,7 @@ declare module "vitest" {
 
 const DRIZZLE_DIR = resolve(__dirname, "../../../../drizzle");
 const PROJECT = ulid();
-const MIGRATION = "0011_status_de_agente_proprios";
+const MIGRATION = "0012_status_de_agente_proprios";
 
 interface JournalEntry { tag: string }
 

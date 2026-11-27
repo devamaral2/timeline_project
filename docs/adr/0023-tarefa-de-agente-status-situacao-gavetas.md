@@ -40,7 +40,7 @@ trabalha, nem a execução que parou no meio da que falhou.
    status de tarefa.
 4. **Onde a API gravava `done` e `cancel` de uma tarefa de agente, grava `completed` e `cancelled`.** Os momentos em que
    cada status é gravado estão na tabela "Significado e quem grava", abaixo.
-5. **Uma migration** (`0011_status_de_agente_proprios`; a 0009 é a do conteúdo guardado e a 0010 a dos projetos) tira o
+5. **Uma migration** (`0012_status_de_agente_proprios`; a 0009 é a do conteúdo guardado e a 0011 a dos projetos) tira o
    check, troca os valores nas tarefas de agente (pedidos, passos e conteúdo guardado) e recoloca o check, com os onze, tudo na mesma transação. As tarefas de pessoa não são tocadas. Os pedidos que já existem
    continuam na lista: os concluídos como "Concluído" e os cancelados como "Cancelado".
 6. **Os contratos recusam o status de um executor no outro:** o esquema do cartão da tarefa rejeita um cartão de agente
@@ -121,7 +121,7 @@ vez de trocá-lo por `queued`, porque a fila dele é a do serviço local, não a
   check `tasks_situation_shape`). Um que terminou cai em Finalizadas; um `awaiting_transcription` ou `running` aparece na
   gaveta de execução, que só deixa de fora o passo e a execução agendada.
 - Tudo que a transcrição gravava como `done` e `cancel` de agente passou a `completed` e `cancelled`, pelos grupos e pelo
-  mesmo SQL de fechamento do store de pedidos (`agent-status-sql.ts`); a migration 0011 converte também essas linhas.
+  mesmo SQL de fechamento do store de pedidos (`agent-status-sql.ts`); a migration 0012 converte também essas linhas.
 
 ## Situação
 
@@ -152,13 +152,13 @@ não tem onde marcar.
    casos iguais) e 409 quando a tarefa não aceita situação (de pessoa, passo, execução agendada ou ainda aberta). A
    gravação confere o critério de novo no próprio `UPDATE`, porque o status pode ter mudado desde a leitura. A mudança
    sobe a `revision` e o `updated_at` da tarefa. A rota está no catálogo de rotas da API.
-5. **A migration** `0012_situacao_da_tarefa_de_agente` acrescenta a coluna e os dois checks e grava `reviewed` nas tarefas
+5. **A migration** `0013_situacao_da_tarefa_de_agente` acrescenta a coluna e os dois checks e grava `reviewed` nas tarefas
    de agente que já estão num status final e não são passo, execução agendada nem conteúdo guardado: o que terminou antes desta mudança
    nunca foi mostrado ao usuário como "para revisar", então não entra na fila de revisão. As abertas e os passos ficam
    sem situação.
 
-   Esta mudança chega em três migrations (0010 para o projeto, 0011 e 0012 para os status e a situação), e não em uma; a 0009,
-   do conteúdo guardado, veio da `main` e já está aplicada nos ambientes compartilhados, por isso as nossas ficam depois dela.
+   Esta mudança chega em três migrations (0011 para o projeto, 0012 e 0013 para os status e a situação), e não em uma; as 0009 e 0010,
+   do conteúdo guardado e dos tipos de texto livre, vieram da `main` e já estão aplicadas nos ambientes compartilhados, por isso as nossas ficam depois delas.
    A entrega continua atômica: o migrador do Drizzle aplica todas as pendentes dentro de uma transação só, então ou
    entram as três, ou nenhuma.
 6. **No web:** na linha da tarefa de agente que tem situação, o glifo da esquerda mostra a situação (Para revisar é o

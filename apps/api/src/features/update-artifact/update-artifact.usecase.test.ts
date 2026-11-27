@@ -83,6 +83,23 @@ describe("content", () => {
     expect(await artifactRepository.findById("note-1")).toMatchObject({ data: { body: "itens revisados" }, name: "Pauta", revision: 2 });
   });
 
+  test.each(["news", "email_summary", "youtube_transcript"] as const)("rewriting the text of a %s artifact keeps its type", async (type) => {
+    const artifact = Artifact.create({ id: "free-1", userId: actor.userId, type, name: "Resumo", data: { body: "primeira versão" } });
+    const { useCase, artifactRepository } = setup([artifact]);
+
+    await useCase.execute({ artifactId: "free-1", expectedRevision: 1, type, data: { body: "versão corrigida" } }, actor);
+    await useCase.execute({ artifactId: "free-1", expectedRevision: 2, name: "Resumo da manhã", tags: ["Trabalho"] }, actor);
+
+    expect(await artifactRepository.findById("free-1")).toMatchObject({
+      type,
+      schemaVersion: 1,
+      name: "Resumo da manhã",
+      tags: ["trabalho"],
+      data: { body: "versão corrigida" },
+      revision: 3,
+    });
+  });
+
   test("recalculates what is derived: the totals of a food with items", async () => {
     const food = Artifact.create({ id: "food-1", userId: actor.userId, type: "food", name: "Arroz", data: { description: "arroz", items: [], totals: zeroTotals } });
     const { useCase, artifactRepository } = setup([food]);

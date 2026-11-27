@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import type { ArtifactDto, TaskCardDto, TaskKind } from "@repo/contracts";
+import { isFreeTextArtifact } from "@repo/contracts/artifact-types";
 import { DetailFrame, DetailMessage, DetailSection, detailStyles } from "@/components/detail/detail-parts";
 import { AddButton, EditBar, EditCaret, EditFieldSection, EditFooter, EditSelect, RemoveButton, editStyles as edit } from "@/components/edit/edit-parts";
 import { EditTagSection } from "@/components/edit/EditTagSection";
@@ -67,7 +68,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
   const contentId = useId();
   const [kind, setKind] = useState<CreateKind>("text");
   const [name, setName] = useState(existing?.name ?? initialName ?? "");
-  const [content, setContent] = useState(existing?.type === "text" ? existing.data.body : "");
+  const [content, setContent] = useState(existing && isFreeTextArtifact(existing) ? existing.data.body : "");
   const [foodText, setFoodText] = useState("");
   const [tags, setTags] = useState<string[]>(existing?.tags ?? []);
   const [initialTasks] = useState(() => linkedTasksOf(existing));

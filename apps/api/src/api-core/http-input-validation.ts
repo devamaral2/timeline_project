@@ -7,12 +7,13 @@ import {
   updateArtifactRequestSchema,
   updateTaskInputSchema,
 } from "@repo/contracts/schemas";
+import { FREE_TEXT_ARTIFACT_TYPES, isFreeTextArtifactType } from "@repo/contracts/artifact-types";
 import type { ZodType } from "zod";
 import { HUMAN_KINDS, HUMAN_STATUSES, PRIORITIES, SITUATIONS, isNotificationOffsetMinutes } from "../domain";
 import { decodeAgendaCursor } from "../infrastructure/persistence";
 
 /** Os tipos de artefato que o usuario cria e edita. Os demais sao do servidor. */
-const EDITABLE_ARTIFACT_TYPES = ["text", "food", "sleep", "training"];
+const EDITABLE_ARTIFACT_TYPES: readonly string[] = [...FREE_TEXT_ARTIFACT_TYPES, "food", "sleep", "training"];
 
 /**
  * Os campos de um esquema do contrato: as chaves do objeto ou, numa uniao de
@@ -148,7 +149,7 @@ export function assertArtifactRequest(
   if (body?.type !== undefined && !EDITABLE_ARTIFACT_TYPES.includes(body.type as string)) {
     throw new BadRequestException("Invalid type");
   }
-  if (creating ? body?.data === undefined && (body?.type === undefined || body?.type === "text") : (body?.type === undefined) !== (body?.data === undefined)) {
+  if (creating ? body?.data === undefined && (body?.type === undefined || isFreeTextArtifactType(body.type)) : (body?.type === undefined) !== (body?.data === undefined)) {
     throw new BadRequestException("Invalid data");
   }
   if (body?.data !== undefined && (typeof body.data !== "object" || body.data === null || Array.isArray(body.data))) {
