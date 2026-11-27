@@ -32,8 +32,8 @@ test("o esquema do contrato recusa um cartao com status inventado", () => {
 
 const agentCard: TaskCardDto = { ...card, actor: "agent", kind: "request", status: "completed", artifactTypes: [], tags: [] };
 
-test("o esquema do contrato aceita um cartao de agente com cada um dos dez status", () => {
-  for (const status of ["preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back"] as const) {
+test("o esquema do contrato aceita um cartao de agente com cada um dos onze status", () => {
+  for (const status of ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back"] as const) {
     expect(taskCardSchema.safeParse({ ...agentCard, status }).success, status).toBe(true);
   }
 });

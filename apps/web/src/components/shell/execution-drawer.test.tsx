@@ -103,7 +103,7 @@ test("lê a lista acompanhada pedindo só o executor agente e os status em andam
   await drawerReady();
   const call = api.calls.find((entry) => entry.pathname === "/api/tasks/tracked");
   expect(call?.query.actor).toBe("agent");
-  expect(call?.query.status?.split(",").sort()).toEqual(["preparing", "queued", "running", "starting"]);
+  expect(call?.query.status?.split(",").sort()).toEqual(["awaiting_transcription", "preparing", "queued", "running", "starting"]);
 });
 
 test("com cinco execuções mostra o cabeçalho com a contagem, três linhas e +2, da mais recente para a mais antiga", async () => {

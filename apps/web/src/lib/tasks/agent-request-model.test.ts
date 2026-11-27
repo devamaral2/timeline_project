@@ -8,7 +8,7 @@ function agentCard(status: TaskCardDto["status"]): TaskCardDto {
 }
 
 describe("hasOpenAgentTask", () => {
-  it.each(["preparing", "queued", "starting", "running", "waiting"] as const)("uma tarefa de agente em %s deixa a lista aberta", (status) => {
+  it.each(["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription"] as const)("uma tarefa de agente em %s deixa a lista aberta", (status) => {
     expect(hasOpenAgentTask([agentCard(status)])).toBe(true);
   });
 
