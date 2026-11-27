@@ -303,3 +303,51 @@ test("treino não mostra total de calorias", async () => {
   const section = await screen.findByRole("region", { name: "Artefatos" });
   expect(within(section).queryByText("Total de calorias")).not.toBeInTheDocument();
 });
+
+test.each([
+  ["news", "Notícias da manhã", "lucide-newspaper", "# Manchetes\n\nChuva no fim de semana."],
+  ["email_summary", "Resumo da caixa de entrada", "lucide-letter", "A fatura vence amanhã."],
+  ["youtube_transcript", "Aula de jardinagem", "lucide-youtube", "00:00 Como podar roseiras."],
+] as const)("um artefato %s aparece na tarefa com o ícone do tipo, o código e o texto inteiro, que recolhe e estende", async (type, name, glyph, body) => {
+  install([COMUM], [artifactFixture({ id: "art-livre", name, type, data: { body }, links: [{ taskId: "ev-1", relation: "uses" }] })]);
+  renderPage();
+  await loaded();
+
+  const section = await screen.findByRole("region", { name: "Artefatos" });
+  const link = within(section).getByRole("link", { name: new RegExp(name) });
+  expect(link).toHaveAttribute("href", "/user-1/notas/art-livre");
+  const card = link.closest("li") as HTMLElement;
+  expect(card.querySelector(`.${glyph}`)).not.toBeNull();
+  expect(within(link).getByText(type)).toBeInTheDocument();
+  expect(within(link).getByText("uses")).toBeInTheDocument();
+  const lastLine = body.split("\n").at(-1) as string;
+  expect(within(card).getByText(lastLine)).toBeVisible();
+
+  fireEvent.click(within(card).getByRole("button", { name: `Recolher o conteúdo de ${name}` }));
+  expect(within(card).queryByText(lastLine)).not.toBeVisible();
+  fireEvent.click(within(card).getByRole("button", { name: `Estender o conteúdo de ${name}` }));
+  expect(within(card).getByText(lastLine)).toBeVisible();
+});
+
+test("“Adicionar artefato” oferece notícias, resumo de e-mail e transcrição e liga o escolhido com a relação uses", async () => {
+  install(
+    [COMUM],
+    [
+      artifactFixture({ id: "art-noticias", name: "Notícias da manhã", type: "news", data: { body: "Manchetes" } }),
+      artifactFixture({ id: "art-email", name: "Resumo da caixa de entrada", type: "email_summary", data: { body: "Fatura" } }),
+      artifactFixture({ id: "art-video", name: "Aula de jardinagem", type: "youtube_transcript", data: { body: "Roseiras" } }),
+    ],
+  );
+  renderPage();
+  await loaded();
+
+  const section = await screen.findByRole("region", { name: "Artefatos" });
+  fireEvent.click(within(section).getByRole("button", { name: "Adicionar artefato" }));
+  for (const name of ["Notícias da manhã", "Resumo da caixa de entrada", "Aula de jardinagem"]) {
+    expect(await screen.findByRole("button", { name: `Escolher “${name}”` })).toBeInTheDocument();
+  }
+  fireEvent.click(screen.getByRole("button", { name: "Escolher “Aula de jardinagem”" }));
+
+  expect(await within(section).findByRole("link", { name: /Aula de jardinagem/ })).toHaveAttribute("href", "/user-1/notas/art-video");
+  expect(api.calls.find((call) => call.method === "PATCH")?.body).toMatchObject({ artifacts: [{ id: "art-video", relation: "uses" }] });
+});
