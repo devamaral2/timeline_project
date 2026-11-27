@@ -41,6 +41,36 @@
       "entityType": null
     },
     {
+      "type": "news",
+      "global": false,
+      "entityType": "artifact"
+    },
+    {
+      "type": "news",
+      "global": true,
+      "entityType": null
+    },
+    {
+      "type": "email_summary",
+      "global": false,
+      "entityType": "artifact"
+    },
+    {
+      "type": "email_summary",
+      "global": true,
+      "entityType": null
+    },
+    {
+      "type": "youtube_transcript",
+      "global": false,
+      "entityType": "artifact"
+    },
+    {
+      "type": "youtube_transcript",
+      "global": true,
+      "entityType": null
+    },
+    {
       "type": "food",
       "global": false,
       "entityType": "food_artifact"

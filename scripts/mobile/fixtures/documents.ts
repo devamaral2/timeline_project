@@ -180,6 +180,7 @@ export function documentsFixtures(): Record<string, unknown> {
     "documents-detail-text-single-task": { ...documents[0], tasks: [DETAIL_TASKS[0]] },
     "documents-detail-text-global": { ...documents[0], id: "doc-text-global", global: true, tasks: DETAIL_TASKS },
     "documents-detail-news": documentOf("news"),
+    "documents-detail-news-global": { ...documentOf("news"), id: "doc-news-global", global: true },
     "documents-detail-email-summary": documentOf("email_summary"),
     "documents-detail-youtube-transcript": documentOf("youtube_transcript"),
     "documents-detail-food": documentOf("food"),

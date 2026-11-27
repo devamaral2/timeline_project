@@ -1,0 +1,11 @@
+{
+  "name": "Notícias da manhã",
+  "tags": [
+    "leitura"
+  ],
+  "expectedRevision": 7,
+  "type": "news",
+  "data": {
+    "body": "Texto corrigido"
+  }
+}

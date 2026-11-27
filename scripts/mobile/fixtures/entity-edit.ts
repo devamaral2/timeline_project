@@ -7,7 +7,7 @@ import { requestSchema } from "../../../packages/contracts/src/schemas";
 import { EDIT_TARGET_LABELS, editEntityTypeOfArtifact, isModelCommand } from "../../../apps/web/src/lib/entity-edit/entity-edit-target";
 import { pendingMealEditMessage } from "../../../apps/web/src/lib/notes/meal-generation";
 
-const ARTIFACT_TYPES = ["text", "food", "sleep", "training", "workout", "skill", "agent", "router"] as const;
+const ARTIFACT_TYPES = ["text", "news", "email_summary", "youtube_transcript", "food", "sleep", "training", "workout", "skill", "agent", "router"] as const;
 const MODEL_COMMAND_TEXTS = ["/model", "/MODEL", "  /Model  ", "/modelo", "/models", "/model haiku", "model", "/", "mude o /model", ""];
 
 function edit(input: Record<string, unknown> & { id: string }) {
