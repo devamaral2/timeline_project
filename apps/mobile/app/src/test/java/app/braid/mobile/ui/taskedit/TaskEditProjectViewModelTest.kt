@@ -32,10 +32,14 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.put
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
@@ -246,6 +250,43 @@ class TaskEditProjectViewModelTest {
 
             assertEquals(JsonNull, body(backend.requestsTo("PATCH", "/api/tasks/task-p").single())["projectId"])
         }
+
+    @Test
+    fun `choosing personal on an occurrence of a series in a project moves the series back, with the personal id in the template`() =
+        runTest {
+            backend.route("GET", "/api/tasks/task-occ-p", json(Fixtures.json("task-edit-tasks").jsonObject.getValue("occurrenceInProject")))
+            backend.route("GET", "/api/recurrences/rec-1", json(Fixtures.json("recurrence-series").jsonObject.getValue("weeklyInProject")))
+            backend.route("PATCH", "/api/tasks/task-occ-p", MockResponse().setResponseCode(204))
+            backend.route("PATCH", "/api/recurrences/rec-1", MockResponse().setResponseCode(204))
+            val viewModel = newViewModel(taskId = "task-occ-p")
+            viewModel.state.first { (it as? TaskEditUiState.Form)?.recurrence?.series is SeriesLoad.Ready }
+            viewModel.openProjectPicker()
+            viewModel.listed()
+
+            viewModel.projectPicker.pick(personal)
+            viewModel.save()
+            viewModel.state.first { (it as TaskEditUiState.Form).done }
+
+            val patch = body(backend.requestsTo("PATCH", "/api/recurrences/rec-1").single())
+            // O modelo troca inteiro: o que a série já levava continua, e o projeto vira o id do personal.
+            assertEquals(
+                buildJsonObject {
+                    put("kind", "common")
+                    put("name", "Treino")
+                    put("description", "")
+                    put("priority", "medium")
+                    put("tags", JsonArray(listOf(JsonPrimitive("saúde"))))
+                    put("projectId", "project-personal")
+                },
+                patch.getValue("template"),
+            )
+            assertEquals(JsonNull, body(backend.requestsTo("PATCH", "/api/tasks/task-occ-p").single())["projectId"])
+            // A série regera as ocorrências que ninguém editou: a tarefa vai antes e deixa de ser regerada.
+            val writes = backend.requests.filter { it.method == "PATCH" }.map { it.path }
+            assertEquals(listOf("/api/tasks/task-occ-p", "/api/recurrences/rec-1"), writes)
+        }
+
+    private fun json(element: JsonElement) = MockResponse().setHeader("Content-Type", "application/json").setBody(element.toString())
 
     @Test
     fun `closing the picker keeps the project of the draft`() =

@@ -1,9 +1,12 @@
 package app.braid.mobile.domain.task
 
+import app.braid.mobile.domain.project.Project
 import app.braid.mobile.domain.timeline.shiftDayKey
 import app.braid.mobile.domain.timeline.shortDate
 import java.time.LocalDate
 import kotlin.math.roundToInt
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A regra da série como texto do formulário, o espelho do `RecurrenceDraft` do web (`task-recurrence-draft.ts`). Fica
@@ -44,11 +47,15 @@ data class RecurrenceSchedule(
 
 fun TaskDraft.schedule(): RecurrenceSchedule = RecurrenceSchedule(startDate, startTime, endDate, endTime)
 
-/** A série lida (`GET /api/recurrences/{id}`): a regra e a revisão que o `PATCH` precisa. */
+/**
+ * A série lida (`GET /api/recurrences/{id}`): a regra, a revisão que o `PATCH` precisa e o modelo, que o `PATCH` troca
+ * inteiro quando o projeto muda.
+ */
 data class RecurrenceSeries(
     val id: String,
     val revision: Int,
     val rule: RecurrenceRule,
+    val template: JsonObject = JsonObject(emptyMap()),
 )
 
 /** O que cada ocorrência copia (`RecurrenceTemplate`): a tarefa sem as datas, que vêm da regra. */
@@ -59,7 +66,7 @@ data class SeriesTemplate(
     val priority: TaskPriority,
     val tags: List<String>? = null,
     val notifyOffsetsMinutes: List<Int>? = null,
-    /** O projeto da série: cada ocorrência nasce nele. Ausente (ou `personal`), nada vai. */
+    /** O projeto da série: cada ocorrência nasce nele. O `personal` leva o id dele, como qualquer outro. Ausente, ninguém escolheu. */
     val projectId: String? = null,
 )
 
@@ -92,7 +99,10 @@ data class NewSeries(
             )
 }
 
-/** O `PATCH` da série: só a regra que mudou, com a revisão lida. Campo `null` não muda. */
+/**
+ * O `PATCH` da série: só a regra que mudou, com a revisão lida. Campo `null` não muda. `template` troca o modelo inteiro:
+ * o que a série já tem, com o `projectId` novo.
+ */
 data class SeriesPatch(
     val expectedRevision: Int,
     val frequency: RecurrenceFrequency? = null,
@@ -101,6 +111,7 @@ data class SeriesPatch(
     val byMonthDay: Int? = null,
     val byMonth: Int? = null,
     val endsOn: String? = null,
+    val template: JsonObject? = null,
 )
 
 const val START_DATE_MESSAGE = "Informe a data de início: a série começa nela."
@@ -241,7 +252,7 @@ fun buildNewSeries(
                 priority = form.priority,
                 tags = form.tags.ifEmpty { null },
                 notifyOffsetsMinutes = form.reminders.ifEmpty { null },
-                projectId = form.project?.takeUnless { it.personal }?.id,
+                projectId = form.project?.id,
             ),
     )
 }
@@ -253,6 +264,7 @@ fun buildNewSeries(
 fun planSeriesEdit(
     series: RecurrenceSeries,
     draft: RecurrenceDraft,
+    project: Project? = null,
 ): SeriesPatch? {
     val rule = series.rule
     val weekly = draft.frequency == RecurrenceFrequency.Weekly
@@ -266,6 +278,7 @@ fun planSeriesEdit(
             byMonthDay = draft.monthDay.takeIf { monthly && it != rule.byMonthDay },
             byMonth = draft.month.takeIf { draft.frequency == RecurrenceFrequency.Yearly && it != rule.byMonth },
             endsOn = draft.endsOn.takeIf { it.isNotEmpty() && it != rule.endsOn },
+            template = project?.let { JsonObject(series.template + ("projectId" to JsonPrimitive(it.id))) },
         )
     return patch.takeUnless { it == SeriesPatch(expectedRevision = series.revision) }
 }
