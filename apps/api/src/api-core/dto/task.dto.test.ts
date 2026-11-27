@@ -54,6 +54,7 @@ describe("toTaskCardDto", () => {
       priority: "medium",
       name: "Reunião",
       description: "Semanal",
+      project,
       location: "Sala 3, Av. Paulista, São Paulo",
       startedAt: "2026-08-17T15:00:00.000Z",
       estimatedFinishAt: "2026-08-17T16:00:00.000Z",
