@@ -16,13 +16,13 @@ describe("passo de consulta", () => {
     expect(ctx.gateway.calls[0]?.user).toContain("Esquema:");
     expect(ctx.sql.calls).toEqual([{ userId: "user-1", sql: "SELECT name, started_at FROM tasks LIMIT 20" }]);
     expect(ctx.store.stepRecords[0]).toMatchObject({
-      status: "done", result: { columns: ["name", "started_at"], rows: [["Reunião", "2026-10-25T13:00:00Z"]], truncated: false },
+      status: "completed", result: { columns: ["name", "started_at"], rows: [["Reunião", "2026-10-25T13:00:00Z"]], truncated: false },
     });
     expect(ctx.store.jobs.at(-1)).toMatchObject({ kind: "request-finalize", stepId: "s1" });
     expect(ctx.batchWriter.commits).toHaveLength(0);
 
     const view = toRequestDto(ctx.store.require("r1"), ctx.store.stepRecords, []);
-    expect(view.steps[0]).toMatchObject({ label: "Consultando dados", status: "done", result: { columns: ["name", "started_at"] } });
+    expect(view.steps[0]).toMatchObject({ label: "Consultando dados", status: "completed", result: { columns: ["name", "started_at"] } });
   });
 
   test("limita as linhas devolvidas", async () => {

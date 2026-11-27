@@ -124,7 +124,7 @@ describe("fluxo da edicao pela tela de detalhe, ponta a ponta (em memoria)", () 
 
     await ctx.finalizer().run({ requestId: "r1", stepId: step?.id as string });
 
-    expect(ctx.store.require("r1")).toMatchObject({ status: "done", failedSteps: [] });
+    expect(ctx.store.require("r1")).toMatchObject({ status: "completed", failedSteps: [] });
     expect((await ctx.artifactRepository.findById(artifact.id))?.data).toEqual({ trackedSleepTime: 480, score: 70 });
   });
 });

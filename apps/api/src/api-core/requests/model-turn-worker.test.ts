@@ -21,11 +21,11 @@ const NOW = new Date("2026-11-18T17:30:00.000Z");
 
 function setup(chat?: (input: ModelChatInput) => Promise<{ text: string; trace: AgentTraceDto }>) {
   const store = new InMemoryRequestStore();
-  const first = store.seed({ id: "01FIRST", prompt: "oi", route: "steps", status: "done", answer: "Olá! Em que posso ajudar?" });
+  const first = store.seed({ id: "01FIRST", prompt: "oi", route: "steps", status: "completed", answer: "Olá! Em que posso ajudar?" });
   store.seed({ id: "01LOST", prompt: "isso falhou", route: "model", status: "failed", sessionId: first.id });
   const request = store.seed({ id: "01NEXT", prompt: "crie uma tarefa", route: "model", status: "queued", sessionId: first.id, model: SELECTION });
   // Outro usuario na mesma sessao nao entra na conversa.
-  store.seed({ id: "01ALIEN", prompt: "segredo", route: "model", status: "done", answer: "x", userId: "outro", sessionId: first.id });
+  store.seed({ id: "01ALIEN", prompt: "segredo", route: "model", status: "completed", answer: "x", userId: "outro", sessionId: first.id });
   const agent = chat ? { chat: vi.fn(chat) } : undefined;
   const progress = vi.fn(async () => {});
   const signal = new AbortController().signal;
@@ -50,10 +50,10 @@ test("as trocas anteriores da sessao vao junto, so as respondidas; a resposta e 
     context: expect.stringContaining("2026-11-18T14:30:00-03:00"),
   }));
   expect(progress).toHaveBeenCalledWith({ trace: trace("running", "running") });
-  expect(store.require("01NEXT")).toMatchObject({ status: "done", answer: "Feito.", trace: trace("done") });
+  expect(store.require("01NEXT")).toMatchObject({ status: "completed", answer: "Feito.", trace: trace("done") });
   // Sem passos gravados: a lista do chat sai do rastro.
   expect(toRequestDto(store.require("01NEXT"), [], []).steps).toEqual([
-    { id: "toolu_1", agent: "create_task", label: "Criou uma tarefa", status: "done" },
+    { id: "toolu_1", agent: "create_task", label: "Criou uma tarefa", status: "completed" },
   ]);
 });
 

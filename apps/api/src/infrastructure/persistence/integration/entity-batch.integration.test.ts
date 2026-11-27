@@ -413,7 +413,7 @@ describe("PostgresEntityBatchWriter", () => {
             const tx = transaction as Tx;
             seenInsideTransaction = (await tx.execute(sql`SELECT 1 FROM tasks WHERE id = ${created.id}`)).rows.length;
             seenOutsideTransaction = await countRows(ctx.pool, "tasks");
-            await insertAgentTask(tx, { id: stepId, userId: USER, kind: "step", status: "done", name: "Passo", data: {} });
+            await insertAgentTask(tx, { id: stepId, userId: USER, kind: "step", status: "completed", name: "Passo", data: {} });
             await tx.insert(schema.taskTaskRelation).values({ fromTaskId: stepId, toTaskId: created.id, relation: "generates" });
           },
         }),

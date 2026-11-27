@@ -24,7 +24,18 @@ export type TaskKind = HumanTaskKind | AgentTaskKind;
  */
 export type HumanTaskStatus = "todo" | "toDefine" | "doing" | "inHold" | "done" | "cancel" | "missed";
 
-export type AgentTaskStatus = "queued" | "running" | "waiting" | "done" | "failed" | "cancel";
+/** Nenhum deles e igual a um status de pessoa: lendo so o status, sabe-se quem executou. */
+export type AgentTaskStatus =
+  | "preparing"
+  | "queued"
+  | "starting"
+  | "running"
+  | "waiting"
+  | "completed"
+  | "interrupted"
+  | "failed"
+  | "cancelled"
+  | "rolled_back";
 
 export type TaskStatus = HumanTaskStatus | AgentTaskStatus;
 

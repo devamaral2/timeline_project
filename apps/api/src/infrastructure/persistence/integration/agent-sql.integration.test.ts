@@ -51,8 +51,8 @@ describe("PostgresScopedSqlQuery", () => {
         ('${A_TRAINING}', 'user-a', 'human', 'training', NULL, 'Treino', '2026-09-15T12:00:00Z'),
         ('${A_DELETED}', 'user-a', 'human', 'common', NULL, 'Apagado', '2026-09-15T13:00:00Z'),
         ('${A_TRACKED}', 'user-a', 'human', 'common', 'todo', 'Tarefa do A', NULL),
-        ('${A_REQUEST}', 'user-a', 'agent', 'request', 'done', 'Pedido do A', '2026-09-15T14:00:00Z'),
-        ('${A_STEP}', 'user-a', 'agent', 'step', 'done', 'Passo do A', '2026-09-15T14:00:01Z');
+        ('${A_REQUEST}', 'user-a', 'agent', 'request', 'completed', 'Pedido do A', '2026-09-15T14:00:00Z'),
+        ('${A_STEP}', 'user-a', 'agent', 'step', 'completed', 'Passo do A', '2026-09-15T14:00:01Z');
       UPDATE tasks SET deleted_at = now() WHERE id = '${A_DELETED}';
 
       INSERT INTO task_entries (id, task_id, user_id, kind, role, content) VALUES
@@ -125,7 +125,7 @@ describe("PostgresScopedSqlQuery", () => {
     expect(await rows("SELECT name FROM tasks ORDER BY name", "user-b")).toEqual([["Segredo do B"], ["Tarefa do B"]]);
     expect(await rows("SELECT name FROM tasks ORDER BY name", "user-sem-dados")).toEqual([]);
     // Os pedidos e os passos do agente nao sao tarefas para a consulta, nem os do proprio usuario.
-    expect(await rows("SELECT count(*)::int FROM tasks WHERE kind IN ('request', 'step') OR status = 'done'")).toEqual([[0]]);
+    expect(await rows("SELECT count(*)::int FROM tasks WHERE kind IN ('request', 'step') OR status = 'completed'")).toEqual([[0]]);
   });
 
   test("artifacts mostra os artefatos vivos do usuario e os globais, sem os arquivos de agente", async () => {

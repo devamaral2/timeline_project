@@ -20,8 +20,19 @@ export const AGENT_KINDS = [
 export const TASK_KINDS = [...HUMAN_KINDS, ...AGENT_KINDS] as const;
 
 export const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
-export const AGENT_STATUSES = ["queued", "running", "waiting", "done", "failed", "cancel"] as const;
-// `done` e `cancel` existem nos dois conjuntos; a coluna guarda a uniao.
+export const AGENT_STATUSES = [
+  "preparing",
+  "queued",
+  "starting",
+  "running",
+  "waiting",
+  "completed",
+  "interrupted",
+  "failed",
+  "cancelled",
+  "rolled_back",
+] as const;
+// Os dois conjuntos nao tem valor em comum; a coluna guarda a uniao.
 export const TASK_STATUSES = [...new Set([...HUMAN_STATUSES, ...AGENT_STATUSES])] as [
   (typeof HUMAN_STATUSES)[number] | (typeof AGENT_STATUSES)[number],
   ...((typeof HUMAN_STATUSES)[number] | (typeof AGENT_STATUSES)[number])[],

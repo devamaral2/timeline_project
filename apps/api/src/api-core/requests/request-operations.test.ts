@@ -193,7 +193,7 @@ describe("iniciar um pedido", () => {
 
   test("a mensagem ao modelo vira um pedido da rota dele, com a escolha, na sessao da conversa", async () => {
     const { store, operations } = setup();
-    store.seed({ id: "01FIRST", prompt: "oi", status: "done" });
+    store.seed({ id: "01FIRST", prompt: "oi", status: "completed" });
     const claude = await operations.startModel({ userId: "user-1", text: "o que tenho amanhã?", sessionId: "01FIRST", clientMessageId: "m1", model: SELECTION }, actor);
 
     expect(claude).toMatchObject({ route: "model", status: "queued", text: "o que tenho amanhã?", sessionId: "01FIRST", steps: [], model: SELECTION });
@@ -232,11 +232,11 @@ describe("acompanhar e cancelar", () => {
     expect(running).toMatchObject({ trace: live, progress: "Listou a agenda", steps: [{ id: "c1", label: "Listou a agenda", status: "running" }] });
 
     const final = { ...live, status: "done" as const, entries: [{ ...live.entries[0], status: "done" as const }] };
-    await store.finish("h1", "done", { message: "Pronto.", trace: final });
+    await store.finish("h1", "completed", { message: "Pronto.", trace: final });
     jobs.progressOfTask.mockClear();
     const done = await operations.view("h1", actor);
     expect(jobs.progressOfTask).not.toHaveBeenCalled();
-    expect(done).toMatchObject({ status: "done", message: "Pronto.", trace: final });
+    expect(done).toMatchObject({ status: "completed", message: "Pronto.", trace: final });
     expect(done.progress).toBeUndefined();
   });
 
@@ -262,8 +262,8 @@ describe("acompanhar e cancelar", () => {
     const cancelled = await operations.cancel("r1", actor);
 
     expect(jobs.cancelOfTasks).toHaveBeenCalledWith(["r1", "s1", "s2"], "user-1");
-    expect(cancelled).toMatchObject({ status: "cancel", errorCode: "cancelled" });
-    expect(cancelled.steps.map((step) => step.status)).toEqual(["cancel", "done"]);
+    expect(cancelled).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
+    expect(cancelled.steps.map((step) => step.status)).toEqual(["cancelled", "completed"]);
 
     // Cancelar de novo, ou um pedido que ja terminou, nao muda nada.
     await operations.cancel("r1", actor);

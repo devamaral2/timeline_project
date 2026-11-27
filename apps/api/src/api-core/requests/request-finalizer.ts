@@ -40,7 +40,7 @@ export class RequestFinalizer {
     const failed = steps.filter((step) => step.status === "failed");
     const failedSteps = failed.map((step) => ({ agent: step.agent, errorCode: step.errorCode ?? "internal" }));
     const explained = failed.length > 0 ? await this.explain(request, steps) : undefined;
-    await store.finish(request.id, failed.length === steps.length ? "failed" : "done", {
+    await store.finish(request.id, failed.length === steps.length ? "failed" : "completed", {
       failedSteps,
       ...(explained ? { message: explained.message } : {}),
       ...(explained?.reasoning ? { thought: explained.reasoning } : {}),
@@ -61,8 +61,8 @@ export class RequestFinalizer {
         user: [
           "Pedido:", request.prompt, "",
           "Passos que falharam:", ...steps.filter((step) => step.status === "failed").map(line), "",
-          "Passos que deram certo:", ...(steps.some((step) => step.status === "done")
-            ? steps.filter((step) => step.status === "done").map(line)
+          "Passos que deram certo:", ...(steps.some((step) => step.status === "completed")
+            ? steps.filter((step) => step.status === "completed").map(line)
             : ["- nenhum"]),
         ].join("\n"),
       });

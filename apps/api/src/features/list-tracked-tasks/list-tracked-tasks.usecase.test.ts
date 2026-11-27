@@ -24,7 +24,7 @@ describe("what the tracked list shows", () => {
       task("project", { longRunning: true }),
       task("request", { actor: "agent", kind: "request", status: "running" }),
       Task.create({ id: "reference", userId: actor.userId, name: "Reunião", startedAt: at("2026-08-17T15:00:00.000Z") }),
-      task("step", { actor: "agent", kind: "step", status: "done" }),
+      task("step", { actor: "agent", kind: "step", status: "completed" }),
       Task.create({ id: "theirs", userId: "someone-else", name: "Deles", status: "todo" }),
     ]);
 

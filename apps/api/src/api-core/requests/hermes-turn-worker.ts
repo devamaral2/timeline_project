@@ -55,7 +55,7 @@ export class HermesTurnWorker {
         },
       });
       await writes;
-      await this.store.finish(request.id, "done", { message: reply.text, trace: reply.trace });
+      await this.store.finish(request.id, "completed", { message: reply.text, trace: reply.trace });
     } catch (error) {
       await writes;
       // Cancelado ou ainda com tentativa na fila: quem decide o fim do pedido nao e esta execucao.

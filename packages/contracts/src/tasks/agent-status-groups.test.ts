@@ -16,16 +16,23 @@ import {
   isSuccessAgentStatus,
 } from "./agent-status-groups";
 
-const AGENT_STATUSES: readonly AgentTaskStatus[] = ["queued", "running", "waiting", "done", "failed", "cancel"];
+const AGENT_STATUSES: readonly AgentTaskStatus[] = [
+  "preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+];
 const HUMAN_STATUSES: readonly HumanTaskStatus[] = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"];
 
 describe("grupos de status de agente", () => {
-  test("os grupos têm os valores de hoje", () => {
-    expect([...OPEN_AGENT_STATUSES]).toEqual(["queued", "running", "waiting"]);
-    expect([...IN_PROGRESS_AGENT_STATUSES]).toEqual(["queued", "running"]);
-    expect([...FINAL_AGENT_STATUSES]).toEqual(["done", "failed", "cancel"]);
-    expect([...SUCCESS_AGENT_STATUSES]).toEqual(["done"]);
-    expect([...CANCELLED_AGENT_STATUSES]).toEqual(["cancel"]);
+  test("os grupos têm os valores da spec", () => {
+    expect([...OPEN_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running", "waiting"]);
+    expect([...IN_PROGRESS_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running"]);
+    expect([...FINAL_AGENT_STATUSES]).toEqual(["completed", "interrupted", "failed", "cancelled", "rolled_back"]);
+    expect([...SUCCESS_AGENT_STATUSES]).toEqual(["completed"]);
+    expect([...CANCELLED_AGENT_STATUSES]).toEqual(["cancelled"]);
+  });
+
+  test("nenhum status de agente é igual a um de pessoa", () => {
+    const human: readonly string[] = HUMAN_STATUSES;
+    expect(AGENT_STATUSES.filter((status) => human.includes(status))).toEqual([]);
   });
 
   test("um status final não é aberto e todo status cai em aberto ou final", () => {
@@ -46,16 +53,18 @@ describe("perguntas que servem aos dois executores", () => {
     ...AGENT_STATUSES.map((status): [TaskActor, TaskStatus] => ["agent", status]),
   ];
 
-  test.each(all)("%s em %s: o lembrete se cala só em done e cancel", (actor, status) => {
-    expect(endsReminders(actor, status)).toBe(status === "done" || status === "cancel");
+  test.each(all)("%s em %s: o lembrete se cala em done e cancel de pessoa e em qualquer status final de agente", (actor, status) => {
+    const expected = actor === "human" ? status === "done" || status === "cancel" : FINAL_AGENT_STATUSES.includes(status as AgentTaskStatus);
+    expect(endsReminders(actor, status)).toBe(expected);
   });
 
-  test.each(all)("%s em %s: fechada é done, cancel, missed ou failed", (actor, status) => {
-    expect(isClosedStatus(actor, status)).toBe(["done", "cancel", "missed", "failed"].includes(status));
+  test.each(all)("%s em %s: fechada é done, cancel ou missed de pessoa e o grupo final de agente", (actor, status) => {
+    const expected = actor === "human" ? ["done", "cancel", "missed"].includes(status) : FINAL_AGENT_STATUSES.includes(status as AgentTaskStatus);
+    expect(isClosedStatus(actor, status)).toBe(expected);
   });
 
-  test.each(all)("%s em %s: só done conta como feita na fração", (actor, status) => {
-    expect(countsAsDone(actor, status)).toBe(status === "done");
+  test.each(all)("%s em %s: só done de pessoa e completed de agente contam como feita na fração", (actor, status) => {
+    expect(countsAsDone(actor, status)).toBe(actor === "human" ? status === "done" : status === "completed");
   });
 
   test("sem status nada se cala, fecha ou conta", () => {

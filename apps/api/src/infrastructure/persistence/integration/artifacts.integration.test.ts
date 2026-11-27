@@ -355,7 +355,7 @@ describe("PostgresArtifactRepository", () => {
         totals: { totalCaloriesKcal: 640 },
       });
       const request = await requestOf(requestId);
-      expect(request.status).toBe("done");
+      expect(request.status).toBe("completed");
       expect(request.finished_at).toBeInstanceOf(Date);
       expect(await resultsOf(requestId)).toEqual([
         { kind: "result", role: null, content: null, data: { outcome: "completed", artifactId: food.id } },
@@ -388,7 +388,7 @@ describe("PostgresArtifactRepository", () => {
         expect(applied, what).toBe(false);
         expect(await found(food.id), what).toMatchObject({ revision: 1, data: { generation: { status: "pending" } } });
         // O pedido termina mesmo assim: ninguem fica esperando, e o resultado diz que foi pulado.
-        expect((await requestOf(requestId)).status, what).toBe("done");
+        expect((await requestOf(requestId)).status, what).toBe("completed");
         expect((await resultsOf(requestId)).map((entry) => entry.data), what).toEqual([
           { outcome: "skipped", artifactId: food.id },
         ]);
@@ -401,7 +401,7 @@ describe("PostgresArtifactRepository", () => {
       expect(await artifacts.finishFoodGeneration(payload, null, "skipped")).toBe(false);
 
       expect((await found(food.id)).revision).toBe(1);
-      expect((await requestOf(requestId)).status).toBe("done");
+      expect((await requestOf(requestId)).status).toBe("completed");
       expect((await resultsOf(requestId)).map((entry) => entry.data)).toEqual([{ outcome: "skipped", artifactId: food.id }]);
     });
 
@@ -456,7 +456,7 @@ describe("PostgresArtifactRepository", () => {
       const noStart = trackedTask(USER, "Sem hora", { artifactLinks: [link(note.id)] });
       const removed = referenceTask(USER, "Apagado", "2026-11-10T09:00:00Z", { artifactLinks: [link(note.id)] });
       const request = agentTask(USER, "Pedido", { artifactLinks: [link(note.id, "updates")] });
-      const step = agentTask(USER, "Passo", { kind: "step", status: "done", artifactLinks: [link(note.id, "updates")] });
+      const step = agentTask(USER, "Passo", { kind: "step", status: "completed", artifactLinks: [link(note.id, "updates")] });
       for (const task of [late, early, noStart, removed, request, step]) await tasks.save(task);
       await tasks.delete(removed.id, USER);
 

@@ -5,7 +5,7 @@ import type { RequestEntityRecord, RequestRecord, StepRecord, StepStatus } from 
 import { toRequestTrace } from "./request-trace";
 
 const TRACE_STEP_STATUS: Record<AgentTraceStatus, StepStatus> = {
-  pending: "queued", running: "running", done: "done", failed: "failed",
+  pending: "queued", running: "running", done: "completed", failed: "failed",
 };
 
 /** O que o job vivo do pedido publica enquanto trabalha; some com ele. */

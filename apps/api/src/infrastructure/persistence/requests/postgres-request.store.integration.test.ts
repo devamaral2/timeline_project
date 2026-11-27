@@ -141,11 +141,11 @@ describe("PostgresRequestStore", () => {
     expect(entries[3]).toEqual({ kind: "trace", role: null, content: null, data: { timings: { total: 850 } } });
     expect(entries[4]?.data).toEqual({ type: "query", columns: ["name"], rows: [["Almoço"]], truncated: false });
     expect(await rows("SELECT revision, status, finished_at IS NOT NULL AS finished FROM tasks WHERE id = $1", [stepId]))
-      .toEqual([{ revision: 1, status: "done", finished: true }]);
+      .toEqual([{ revision: 1, status: "completed", finished: true }]);
 
     const [step] = await store.steps(requestId);
     expect(step).toMatchObject({
-      status: "done", timings: { total: 850 }, result: { columns: ["name"], rows: [["Almoço"]], truncated: false },
+      status: "completed", timings: { total: 850 }, result: { columns: ["name"], rows: [["Almoço"]], truncated: false },
       thoughts: [
         { text: "Preciso das tarefas de hoje.", at: "2026-10-25T15:00:01.000Z", model: "m" },
         { text: "Monto a consulta.", at: "2026-10-25T15:00:02.000Z" },
@@ -245,7 +245,7 @@ describe("PostgresRequestStore", () => {
     })).rejects.toThrow("no longer open");
 
     expect(await rows("SELECT id FROM tasks WHERE id = $1", [task.id])).toEqual([]);
-    expect((await store.steps(requestId))[0]?.status).toBe("cancel");
+    expect((await store.steps(requestId))[0]?.status).toBe("cancelled");
   });
 
   test("um passo que falha guarda o codigo e enfileira a finalizacao; fechar duas vezes nao muda nada", async () => {
@@ -264,7 +264,7 @@ describe("PostgresRequestStore", () => {
 
   test("o fim do pedido: a resposta e a ultima entrada, o raciocinio e um pensamento, e so fecha uma vez", async () => {
     const { requestId } = await start();
-    await store.finish(requestId, "done", {
+    await store.finish(requestId, "completed", {
       failedSteps: [{ agent: "artifact-create", errorCode: "internal" }], message: "Criei a tarefa, mas não o alimento.",
       thought: "O passo de artefatos falhou.",
     });
@@ -276,7 +276,7 @@ describe("PostgresRequestStore", () => {
     ]);
     const request = await store.find(requestId);
     expect(request).toMatchObject({
-      status: "done", answer: "Criei a tarefa, mas não o alimento.", answerThought: "O passo de artefatos falhou.",
+      status: "completed", answer: "Criei a tarefa, mas não o alimento.", answerThought: "O passo de artefatos falhou.",
       failedSteps: [{ agent: "artifact-create", errorCode: "internal" }],
     });
     expect(request?.finishedAt).toBeInstanceOf(Date);
@@ -297,7 +297,7 @@ describe("PostgresRequestStore", () => {
       ],
     };
 
-    await store.finish(requestId, "done", { message: "Feito.", trace });
+    await store.finish(requestId, "completed", { message: "Feito.", trace });
 
     const entries = await rows("SELECT kind, content, data FROM task_entries WHERE task_id = $1 ORDER BY id", [requestId]);
     expect(entries.map((entry) => entry.kind)).toEqual(["message", "thought", "thought", "thought", "trace", "message"]);
@@ -306,11 +306,11 @@ describe("PostgresRequestStore", () => {
       data: { stage: "turn", route: "hermes", status: "done", startedAt: trace.startedAt, durationMs: 1200, fields: trace.fields },
     });
     const request = await store.find(requestId);
-    expect(request).toMatchObject({ route: "hermes", status: "done", answer: "Feito.", trace });
+    expect(request).toMatchObject({ route: "hermes", status: "completed", answer: "Feito.", trace });
     expect(request?.answerThought).toBeUndefined();
     if (!request) throw new Error("request not found");
     expect(toRequestDto(request, [], [])).toMatchObject({
-      message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_task", label: "Criou uma tarefa", status: "done" }],
+      message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_task", label: "Criou uma tarefa", status: "completed" }],
     });
   });
 
@@ -340,13 +340,13 @@ describe("PostgresRequestStore", () => {
     expect(await store.cancel(requestId)).toEqual([requestId, open, done]);
     expect(await store.cancel(requestId)).toEqual([]);
 
-    expect(await store.find(requestId)).toMatchObject({ status: "cancel", errorCode: "cancelled" });
-    expect((await store.steps(requestId)).map((step) => step.status)).toEqual(["cancel", "done"]);
+    expect(await store.find(requestId)).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
+    expect((await store.steps(requestId)).map((step) => step.status)).toEqual(["cancelled", "completed"]);
     // O que chega depois do cancelamento nao reabre nada.
     await store.failStep({ requestId, stepId: open, errorCode: "internal" });
-    await store.finish(requestId, "done", { message: "x" });
+    await store.finish(requestId, "completed", { message: "x" });
     await store.beginSteps(requestId, [{ id: newOrderedId(), agent: "query", expected: "one" }]);
-    expect(await store.find(requestId)).toMatchObject({ status: "cancel" });
+    expect(await store.find(requestId)).toMatchObject({ status: "cancelled" });
     expect(await store.steps(requestId)).toHaveLength(2);
   });
 
@@ -364,7 +364,7 @@ describe("PostgresRequestStore", () => {
       .toEqual([{ data: { stage: "dispatch", model: "jev-test", latencyMs: 9, steps: 0 } }]);
 
     // Pedido que ja terminou nao volta a andar.
-    await store.finish(requestId, "done", { message: "Oi." });
+    await store.finish(requestId, "completed", { message: "Oi." });
     await store.handToHermes(requestId, dispatch);
     expect(await jobs()).toHaveLength(2);
   });
@@ -382,7 +382,7 @@ describe("PostgresRequestStore", () => {
     ]);
 
     // Pedido que ja terminou nao volta a andar.
-    await store.finish(requestId, "done", { message: "Opus 5.5." });
+    await store.finish(requestId, "completed", { message: "Opus 5.5." });
     await store.handToModel(requestId, dispatch, model);
     expect(await jobs()).toHaveLength(2);
   });
@@ -397,7 +397,7 @@ describe("PostgresRequestStore", () => {
 
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1", [requestId]))
       .toEqual([{ to_task_id: task.id, relation: "generates" }]);
-    expect(await store.find(requestId)).toMatchObject({ route: "voice", status: "done" });
+    expect(await store.find(requestId)).toMatchObject({ route: "voice", status: "completed" });
     expect(await store.entities(requestId)).toMatchObject([
       { kind: "task", id: task.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
     ]);

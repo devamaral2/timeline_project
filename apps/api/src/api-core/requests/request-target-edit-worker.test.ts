@@ -40,7 +40,7 @@ describe("food-edit", () => {
 
     await ctx.targetEditWorker.run("food-edit", await stepFor(ctx, "food-edit", target));
 
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     const stored = await ctx.artifactRepository.findById(food.id);
     const data = stored?.data as FoodData;
     expect(data.description).toBe("Arroz e 2 ovos");
@@ -79,7 +79,7 @@ describe("sleep-edit", () => {
     ctx.gateway.outputs.set("sleep_edit", { edits: [{ id: sleep.id, name: null, trackedSleepTime: 450, score: null, tags: null }] });
     await ctx.targetEditWorker.run("sleep-edit", await stepFor(ctx, "sleep-edit", { entityType: "sleep_artifact", id: sleep.id, snapshot: {} }));
     expect((await ctx.artifactRepository.findById(sleep.id))?.data).toEqual({ trackedSleepTime: 450, score: 70 });
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
   });
 
   test("valor fora do formato (score acima de 100) e recusado pelo schema do agente", async () => {
@@ -107,7 +107,7 @@ describe("training-edit", () => {
     ] }] });
     await ctx.targetEditWorker.run("training-edit", await stepFor(ctx, "training-edit", { entityType: "training_artifact", id: training.id, snapshot: {} }));
 
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     const data = (await ctx.artifactRepository.findById(training.id))?.data as TrainingData;
     expect(data.workouts).toHaveLength(2);
     expect(data.workouts[0]).toMatchObject({ id: "w1", calories: 300, duration: 40 });
@@ -139,7 +139,7 @@ describe("agent-file-edit", () => {
     await ctx.targetEditWorker.run("agent-file-edit", await stepFor(ctx, "agent-file-edit", target()));
 
     expect(ctx.files.written).toEqual([{ path: SKILL_PATH, text }]);
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     expect(ctx.store.touched).toMatchObject([{ kind: "artifact", id: "a1", operation: "update", stepId: "s1" }]);
   });
 
@@ -201,7 +201,7 @@ describe("task-edit e artifact-edit com alvo (sem JEV e sem consulta)", () => {
     await ctx.taskRepository.save(task);
     ctx.gateway.outputs.set("task_edit", { edits: [{ ...noTask, id: task.id, estimatedFinishAt: "2026-10-25T18:00:00-03:00" }], query: { sql: "SELECT 1" } });
     await ctx.editWorker.run("task-edit", await stepFor(ctx, "task-edit", { entityType: "task", id: task.id, snapshot: { name: "Reunião" } }));
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     expect((await ctx.taskRepository.findById(task.id))?.estimatedFinishAt?.toISOString()).toBe("2026-10-25T21:00:00.000Z");
     expect(ctx.gateway.calls).toHaveLength(1);
     expect(ctx.sql.calls).toHaveLength(0);

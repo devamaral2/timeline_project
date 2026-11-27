@@ -10,8 +10,10 @@ const humanTaskKindSchema = z.enum(["common", "meal", "sleep", "training"]);
 const agentRequestKindSchema = z.enum(["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"]);
 const taskKindSchema = z.enum([...humanTaskKindSchema.options, ...agentRequestKindSchema.options, "step"]);
 const humanTaskStatusSchema = z.enum(["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]);
-const agentTaskStatusSchema = z.enum(["queued", "running", "waiting", "done", "failed", "cancel"]);
-const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, "queued", "running", "waiting", "failed"]);
+const agentTaskStatusSchema = z.enum([
+  "preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+]);
+const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, ...agentTaskStatusSchema.options]);
 const taskPrioritySchema = z.enum(["urgent", "high", "medium", "low"]);
 const taskArtifactRelationSchema = z.enum(["creates", "updates", "uses", "deletes"]);
 const artifactTypeSchema = z.enum(["text", "food", "sleep", "training", "workout", "skill", "agent", "router"]);
@@ -190,7 +192,16 @@ const taskCardShape = {
   createdAt: z.string(), updatedAt: z.string(),
 };
 
-export const taskCardSchema = z.object(taskCardShape).strict();
+/** O status de um cartao pertence ao executor dele: pessoa so tem os seus e agente so tem os seus. */
+function statusMatchesActor(card: { actor: "human" | "agent"; status?: string | undefined }): boolean {
+  if (card.status === undefined) return card.actor === "human";
+  const own: readonly string[] = card.actor === "agent" ? agentTaskStatusSchema.options : humanTaskStatusSchema.options;
+  return own.includes(card.status);
+}
+
+const STATUS_MATCHES_ACTOR = { message: "O status nao e do executor da tarefa", path: ["status"] };
+
+export const taskCardSchema = z.object(taskCardShape).strict().refine(statusMatchesActor, STATUS_MATCHES_ACTOR);
 
 export const agendaPageSchema = z.object({ items: z.array(taskCardSchema), nextCursor: z.string().optional() }).strict();
 
@@ -203,7 +214,7 @@ export const taskSchema = z.object({
   artifacts: z.array(z.object({ relation: taskArtifactRelationSchema, fromRecurrence: z.boolean(), artifact: artifactSchema }).strict()),
   subtaskIds: z.array(z.string()),
   requests: z.array(taskRequestSchema),
-}).strict();
+}).strict().refine(statusMatchesActor, STATUS_MATCHES_ACTOR);
 
 const taskFieldsShape = {
   name: z.string().optional(), description: z.string().optional(),
