@@ -206,7 +206,7 @@ não tem onde marcar.
 
 ### Contexto
 
-O que o agente está fazendo agora só aparecia dentro da lista de tarefas. Na Agenda e nos Documentos não havia sinal de
+O que o agente está fazendo agora só aparecia dentro da lista de tarefas. Na Agenda e nos Artefatos não havia sinal de
 que algo rodava, e a execução em andamento não pertence a nenhuma gaveta da lista (ela ainda não pede ação).
 
 ### Decisão
@@ -228,7 +228,7 @@ que algo rodava, e a execução em andamento não pertence a nenhuma gaveta da l
    Com `prefers-reduced-motion` a altura muda de uma vez. As linhas escondidas ficam `inert` e `aria-hidden`; o cabeçalho
    diz `aria-expanded`.
 5. **A tela por baixo reserva o fim:** um espaçador no fluxo, depois do conteúdo, tem a mesma altura da gaveta e anima
-   com as mesmas curvas, de modo que a última linha da lista, da agenda ou dos documentos nunca fica coberta. A altura é
+   com as mesmas curvas, de modo que a última linha da lista, da agenda ou dos artefatos nunca fica coberta. A altura é
    calculada em CSS a partir do número de linhas à mostra (`--exec-rows`) e do modo.
 6. **Leitura:** `GET /api/tasks/tracked` com `actor=agent` e os status em andamento, a cada 3 s (o intervalo das listas,
    `useOpenAgentRefresh`) enquanto houver alguma. Parada, relê quando a janela volta ao foco, logo depois de o próprio

@@ -1,0 +1,90 @@
+[
+  {
+    "id": "video-waiting",
+    "actor": "agent",
+    "kind": "save_content_with_transcription",
+    "status": "awaiting_transcription",
+    "priority": "medium",
+    "name": "Vídeo na fila de transcrição",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:20:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "page-running",
+    "actor": "agent",
+    "kind": "save_content",
+    "status": "running",
+    "priority": "medium",
+    "name": "Página guardando",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:30:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "page-done",
+    "actor": "agent",
+    "kind": "save_content",
+    "status": "completed",
+    "priority": "medium",
+    "name": "Página guardada",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:40:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "step-saved",
+    "actor": "agent",
+    "kind": "step",
+    "status": "running",
+    "priority": "medium",
+    "name": "Passo",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:50:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  }
+]

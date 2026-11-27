@@ -13,6 +13,7 @@ import {
 import { soleYouTubeVideoLink } from "../../../apps/web/src/lib/notes/youtube";
 import { TRANSCRIPTION_TEXTS } from "../../../apps/web/src/lib/transcription/texts";
 import { isDailyReading } from "../../../apps/web/src/lib/tasks/daily-reading";
+import { PERSONAL_PROJECT } from "./project";
 
 const VIDEO = "https://youtu.be/dQw4w9WgXcQ";
 
@@ -46,6 +47,7 @@ const dailyReading = taskSchema.parse({
   status: "todo",
   priority: "medium",
   description: "",
+  project: PERSONAL_PROJECT,
   longRunning: false,
   startedAt: "2026-09-14T21:00:00.000Z",
   notifyOffsetsMinutes: [],

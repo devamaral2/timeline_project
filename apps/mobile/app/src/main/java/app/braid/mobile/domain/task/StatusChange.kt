@@ -1,6 +1,5 @@
 package app.braid.mobile.domain.task
 
-import app.braid.mobile.domain.request.isOpenRequest
 import java.time.Instant
 
 /** O que o `PATCH` faz com `finishedAt`: não toca, grava a conclusão ou a apaga. */

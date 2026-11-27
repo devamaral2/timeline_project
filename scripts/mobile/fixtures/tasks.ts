@@ -60,7 +60,7 @@ const cards = [
 
 /** O conteúdo guardado: a página da extensão e o vídeo à espera do serviço local. Têm horário e nunca entram na agenda (ADR 0021). */
 const SAVED_CONTENT_CARDS = [
-  card({ id: "task-21", name: "Página guardada", actor: "agent", kind: "save_content", status: "done", startedAt: "2026-09-14T13:30:00.000Z" }),
+  card({ id: "task-21", name: "Página guardada", actor: "agent", kind: "save_content", status: "completed", startedAt: "2026-09-14T13:30:00.000Z" }),
   card({ id: "task-22", name: "Vídeo guardado", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription", startedAt: "2026-09-14T14:10:00.000Z" }),
 ];
 const GROUPING_CARDS = [...cards, ...SAVED_CONTENT_CARDS];

@@ -135,7 +135,7 @@ Tarefa de agente em que um pedido se desdobra, executada por um agente interno. 
 _Avoid_: etapa, step do processo, processo
 
 **Gaveta de execução**:
-Gaveta presa acima da barra de navegação, em Tarefas, Agenda e Documentos, que mostra o que os agentes estão fazendo agora: as tarefas de agente em andamento (`preparing`, `queued`, `starting`, `running`) que não são passo nem execução agendada, da mais recente para a mais antiga. Tem três alturas (uma linha, três linhas e todas) e não existe quando nada está em andamento.
+Gaveta presa acima da barra de navegação, em Tarefas, Agenda e Artefatos, que mostra o que os agentes estão fazendo agora: as tarefas de agente em andamento (`preparing`, `queued`, `starting`, `running`) que não são passo nem execução agendada, da mais recente para a mais antiga. Tem três alturas (uma linha, três linhas e todas) e não existe quando nada está em andamento.
 _Avoid_: gaveta (sozinha), barra de progresso, fila de execução
 
 **Gaveta da lista**:

@@ -51,6 +51,17 @@ const afterFinish = mixed.map((item) => (item.id === "run-newest" ? card({ ...it
 /** Só uma execução em andamento. */
 const single = [card({ id: "run-only", name: "Buscar passagens", kind: "search_request", status: "running", startedAt: "2026-09-14T14:58:00.000Z" })];
 
+/**
+ * O conteúdo guardado (ADR 0021) não tem situação e entra na gaveta enquanto anda: o vídeo esperando a transcrição e a
+ * página que ainda grava; a página guardada já pronta e o passo ficam de fora.
+ */
+const saved = [
+  card({ id: "video-waiting", name: "Vídeo na fila de transcrição", kind: "save_content_with_transcription", status: "awaiting_transcription", startedAt: "2026-09-14T14:20:00.000Z" }),
+  card({ id: "page-running", name: "Página guardando", kind: "save_content", status: "running", startedAt: "2026-09-14T14:30:00.000Z" }),
+  card({ id: "page-done", name: "Página guardada", kind: "save_content", status: "completed", startedAt: "2026-09-14T14:40:00.000Z" }),
+  card({ id: "step-saved", name: "Passo", kind: "step", status: "running", startedAt: "2026-09-14T14:50:00.000Z" }),
+];
+
 const MODES: ExecutionDrawerMode[] = ["one", "three", "all"];
 
 export function executionFixtures(): Record<string, unknown> {
@@ -59,6 +70,7 @@ export function executionFixtures(): Record<string, unknown> {
     "execution-list-finished": afterFinish,
     "execution-list-single": single,
     "execution-list-empty": [],
+    "execution-list-saved": saved,
     /** As regras da gaveta, calculadas pelas funções do web sobre as listas acima. */
     "execution-rules": {
       peek: EXECUTION_PEEK,
@@ -67,6 +79,7 @@ export function executionFixtures(): Record<string, unknown> {
         finished: { input: "execution-list-finished", runs: executionRunsOf(afterFinish).map((item) => item.id) },
         single: { input: "execution-list-single", runs: executionRunsOf(single).map((item) => item.id) },
         empty: { input: "execution-list-empty", runs: executionRunsOf([]).map((item) => item.id) },
+        saved: { input: "execution-list-saved", runs: executionRunsOf(saved).map((item) => item.id) },
       },
       shown: [0, 1, 2, 3, 4, 5, 9].flatMap((total) => MODES.map((mode) => ({ mode, total, shown: shownRowCount(mode, total) }))),
       grows: MODES.flatMap((from) => MODES.map((to) => ({ from, to, grows: drawerGrows(from, to) }))),

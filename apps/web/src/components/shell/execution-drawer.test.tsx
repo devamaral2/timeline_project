@@ -247,7 +247,7 @@ test("relê a cada 3 s enquanto há execução; parada, relê ao voltar ao foco,
   await waitFor(() => expect(reads()).toBe(idle + 3));
 });
 
-test("aparece em Tarefas, Agenda e Documentos com a mesma altura escolhida e não aparece no detalhe, na edição nem no chat", async () => {
+test("aparece em Tarefas, Agenda e Artefatos com a mesma altura escolhida e não aparece no detalhe, na edição nem no chat", async () => {
   serve(FIVE);
   const { rerender } = mount();
   const region = await drawerReady();

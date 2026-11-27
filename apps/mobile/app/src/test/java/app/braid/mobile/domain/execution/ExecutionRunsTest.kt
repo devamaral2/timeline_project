@@ -32,7 +32,7 @@ class ExecutionRunsTest {
     @Test
     fun `the runs match the web for every list, in the web's order`() {
         val cases = rules.getValue("cases").jsonObject
-        assertEquals(4, cases.size)
+        assertEquals(5, cases.size)
         for ((name, case) in cases) {
             val input =
                 case.jsonObject
@@ -54,6 +54,14 @@ class ExecutionRunsTest {
         assertEquals(
             listOf("run-newest", "run-preparing", "run-mid", "run-old", "run-nostart"),
             executionRunsOf(cards("execution-list-mixed")).map { it.id },
+        )
+    }
+
+    @Test
+    fun `saved content enters the drawer while it runs or waits for the transcription`() {
+        assertEquals(
+            listOf("page-running", "video-waiting"),
+            executionRunsOf(cards("execution-list-saved")).map { it.id },
         )
     }
 
@@ -95,7 +103,7 @@ class ExecutionRunsTest {
     @Test
     fun `the query asks for the in-progress group, not a loose list`() {
         assertEquals(
-            setOf("preparing", "queued", "starting", "running"),
+            setOf("preparing", "queued", "starting", "running", "awaiting_transcription"),
             EXECUTION_STATUS_FILTER.map { it.code }.toSet(),
         )
     }
