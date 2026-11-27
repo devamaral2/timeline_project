@@ -38,25 +38,18 @@ import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.domain.artifact.Artifact
-import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.FoodData
-import app.braid.mobile.domain.artifact.TEXT_BODY_ARTIFACT_TYPES
 import app.braid.mobile.domain.task.ArtifactSource
 import app.braid.mobile.domain.task.TaskArtifact
 import app.braid.mobile.domain.task.TaskKind
+import app.braid.mobile.domain.task.artifactMetaLine
 import app.braid.mobile.domain.task.artifactPositions
+import app.braid.mobile.domain.task.hasInlineContent
 import app.braid.mobile.domain.task.mealCaloriesKcal
 import app.braid.mobile.ui.documents.ArtifactContent
 import app.braid.mobile.ui.documents.DocumentIcons
 import app.braid.mobile.ui.taskdetail.Section
 import app.braid.mobile.ui.taskedit.AddButton
-
-/**
- * Os tipos cujo conteúdo aparece inteiro dentro da tarefa: texto, roteador, alimento, treino e sono. Skill e agente
- * ficam só no cabeçalho (o arquivo do Hermes tem leitura e edição no detalhe do artefato), e o exercício do catálogo
- * também.
- */
-private val INLINE_TYPES = TEXT_BODY_ARTIFACT_TYPES + setOf(ArtifactType.Food, ArtifactType.Training, ArtifactType.Sleep)
 
 /**
  * A seção Artefatos do detalhe: os artefatos da tarefa, na ordem da API. Cada um é um cartão com o ícone do tipo, o
@@ -118,7 +111,7 @@ private fun ArtifactCard(
     onOpenArtifact: (String) -> Unit,
 ) {
     val artifact = link.artifact
-    val hasContent = artifact.type in INLINE_TYPES
+    val hasContent = hasInlineContent(artifact)
     var open by rememberSaveable(artifact.id) { mutableStateOf(true) }
     val outline = MaterialTheme.colorScheme.outline
     Column(Modifier.fillMaxWidth().border(1.dp, outline, RoundedCornerShape(CARD_RADIUS.dp)).clip(RoundedCornerShape(CARD_RADIUS.dp))) {
@@ -146,7 +139,7 @@ private fun ArtifactCard(
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        listOfNotNull(position?.toString(), artifact.type.code, link.relation.code).joinToString(" · "),
+                        artifactMetaLine(position, link),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontFamily = BraidMonoFont,
                         fontSize = 12.sp,

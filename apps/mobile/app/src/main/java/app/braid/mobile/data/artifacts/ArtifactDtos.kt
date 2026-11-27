@@ -15,6 +15,7 @@ import app.braid.mobile.domain.artifact.RecipeIngredient
 import app.braid.mobile.domain.artifact.SleepData
 import app.braid.mobile.domain.artifact.TextData
 import app.braid.mobile.domain.artifact.TrainingData
+import app.braid.mobile.domain.artifact.UnknownData
 import app.braid.mobile.domain.artifact.WorkoutCatalogData
 import app.braid.mobile.domain.artifact.WorkoutCategory
 import app.braid.mobile.domain.artifact.WorkoutSet
@@ -23,6 +24,8 @@ import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskKind
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import java.time.Instant
 import java.time.OffsetDateTime
 
@@ -166,6 +169,7 @@ fun ArtifactDto.toDomain(): Artifact {
         id = id,
         name = name,
         type = artifactType,
+        typeCode = type,
         data = decodeData(artifactType, data),
         global = global,
         tags = tags,
@@ -212,7 +216,14 @@ private fun decodeData(
             }
         ArtifactType.Training -> BraidJson.decodeFromJsonElement(TrainingDataDto.serializer(), data).toDomain()
         ArtifactType.Food -> BraidJson.decodeFromJsonElement(FoodDataDto.serializer(), data).toDomain()
+        ArtifactType.Unknown -> unknownData(data)
     }
+
+/** O dado de um tipo que o app não conhece: um `body` em texto vira [TextData]; qualquer outra forma, [UnknownData]. */
+private fun unknownData(data: JsonElement): ArtifactData {
+    val body = (data as? JsonObject)?.get("body") as? JsonPrimitive
+    return if (body != null && body.isString) TextData(body.content) else UnknownData
+}
 
 private fun TrainingDataDto.toDomain() = TrainingData(workouts = workouts.map { it.toDomain() }, caloriesBurned = caloriesBurned)
 

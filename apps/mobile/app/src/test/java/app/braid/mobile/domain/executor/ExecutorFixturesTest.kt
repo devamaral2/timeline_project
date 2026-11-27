@@ -55,7 +55,7 @@ class ExecutorFixturesTest {
                 .getValue("cases")
                 .jsonArray
         assertEquals(
-            ArtifactType.entries.map { it.code },
+            ArtifactType.known.map { it.code },
             cases.map {
                 it.jsonObject
                     .getValue("type")

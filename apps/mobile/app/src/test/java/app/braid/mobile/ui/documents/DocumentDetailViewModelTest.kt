@@ -3,8 +3,12 @@ package app.braid.mobile.ui.documents
 import androidx.lifecycle.SavedStateHandle
 import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
+import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.FoodData
 import app.braid.mobile.domain.artifact.FoodGeneration
+import app.braid.mobile.domain.artifact.UnknownData
+import app.braid.mobile.domain.artifact.artifactTypeLabel
+import app.braid.mobile.domain.artifact.markdownBodyOf
 import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.TestBackend
@@ -84,6 +88,69 @@ class DocumentDetailViewModelTest {
             assertTrue(ready.showsTasks)
             assertEquals(now, ready.now)
         }
+
+    @Test
+    fun `the new types open with label, markdown, tags and tasks, and are edited as text`() =
+        runTest {
+            for (
+            (id, fixtureName, type, label) in
+            listOf(
+                NewTypeCase("doc-news", "documents-detail-news", ArtifactType.News, "Notícias"),
+                NewTypeCase("doc-email", "documents-detail-email-summary", ArtifactType.EmailSummary, "Resumo de e-mail"),
+                NewTypeCase("doc-youtube", "documents-detail-youtube-transcript", ArtifactType.YoutubeTranscript, "Transcrição"),
+            )
+            ) {
+                backend.route("GET", "/api/artifacts/$id", fixture(fixtureName))
+                val ready = newViewModel(id).settled() as DocumentDetailUiState.Ready
+
+                assertEquals(type, ready.artifact.type)
+                assertEquals(label, artifactTypeLabel(ready.artifact.type))
+                assertTrue(markdownBodyOf(ready.artifact).isNotEmpty())
+                assertTrue(ready.canEdit)
+                assertEquals(EditEntityType.Text, ready.editType)
+            }
+            backend.route("GET", "/api/artifacts/doc-news", fixture("documents-detail-news"))
+            val news = (newViewModel("doc-news").settled() as DocumentDetailUiState.Ready).artifact
+            assertEquals(listOf("leitura"), news.tags)
+            assertEquals("- [Chuva no fim de semana](https://example.com/chuva)", markdownBodyOf(news))
+        }
+
+    @Test
+    fun `an unknown type with a body shows it as text but cannot be edited, by hand or by AI`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-future", fixture("documents-detail-unknown"))
+
+            val ready = newViewModel("doc-future").settled() as DocumentDetailUiState.Ready
+
+            assertEquals(ArtifactType.Unknown, ready.artifact.type)
+            assertEquals("Artefato", artifactTypeLabel(ready.artifact.type))
+            assertEquals("Texto de um tipo que este app não conhece.", markdownBodyOf(ready.artifact))
+            assertEquals(listOf("novo"), ready.artifact.tags)
+            assertTrue(ready.showsTasks)
+            assertFalse(ready.canEdit)
+            assertNull(ready.editType)
+        }
+
+    @Test
+    fun `an unknown type without a body shows only the name`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-future-bare", fixture("documents-detail-unknown-no-body"))
+
+            val ready = newViewModel("doc-future-bare").settled() as DocumentDetailUiState.Ready
+
+            assertEquals("Projeção sem texto", ready.artifact.name)
+            assertEquals(UnknownData, ready.artifact.data)
+            assertEquals("", markdownBodyOf(ready.artifact))
+            assertFalse(ready.canEdit)
+            assertNull(ready.editType)
+        }
+
+    private data class NewTypeCase(
+        val id: String,
+        val fixture: String,
+        val type: ArtifactType,
+        val label: String,
+    )
 
     @Test
     fun `a global document hides its tasks and has no actions`() =

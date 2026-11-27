@@ -115,6 +115,21 @@ const documents = [
   artifact({ id: "doc-router", name: "Roteador", type: "router", data: { body: "Roteia pedidos" } }),
 ];
 
+/**
+ * Artefatos de um tipo que o contrato de hoje não tem (o de uma versão mais nova): o contrato recusa o tipo, então o
+ * artefato é montado como um texto válido e o tipo é trocado depois. Um traz `body`, o outro um dado de outra forma.
+ */
+const FUTURE_TYPE = "hologram";
+const futureWithBody = {
+  ...artifact({ id: "doc-future", name: "Mapa do futuro", type: "text", tags: ["novo"], data: { body: "# Mapa do futuro\n\nTexto de um tipo que este app não conhece." } }),
+  type: FUTURE_TYPE,
+};
+const futureWithoutBody = {
+  ...artifact({ id: "doc-future-bare", name: "Projeção sem texto", type: "text", data: { body: "" } }),
+  type: FUTURE_TYPE,
+  data: { frames: 3 },
+};
+
 /** O artefato de exemplo de um tipo: pelo tipo, e não pela posição, para a lista poder crescer. */
 function documentOf(type: string) {
   const found = documents.find((document) => document.type === type);
@@ -158,6 +173,9 @@ export function documentsFixtures(): Record<string, unknown> {
     "documents-global-foods": [
       food("doc-global-food", "Banana", { global: true, tags: [] }, { description: "Banana", items: [], recipe: undefined }),
     ],
+    "documents-list-unknown": [textNote, futureWithBody, futureWithoutBody, documentOf("news")],
+    "documents-detail-unknown": { ...futureWithBody, tasks: DETAIL_TASKS },
+    "documents-detail-unknown-no-body": futureWithoutBody,
     "documents-detail-text": withTasks,
     "documents-detail-text-single-task": { ...documents[0], tasks: [DETAIL_TASKS[0]] },
     "documents-detail-text-global": { ...documents[0], id: "doc-text-global", global: true, tasks: DETAIL_TASKS },

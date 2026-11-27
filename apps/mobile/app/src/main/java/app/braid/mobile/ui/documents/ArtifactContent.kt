@@ -59,6 +59,7 @@ import app.braid.mobile.domain.artifact.FoodTotals
 import app.braid.mobile.domain.artifact.SleepData
 import app.braid.mobile.domain.artifact.TextData
 import app.braid.mobile.domain.artifact.TrainingData
+import app.braid.mobile.domain.artifact.UnknownData
 import app.braid.mobile.domain.artifact.WorkoutCatalogData
 import app.braid.mobile.domain.artifact.WorkoutSnapshot
 import app.braid.mobile.domain.artifact.formatDecimal
@@ -117,6 +118,7 @@ fun ArtifactContent(
                 FactRow("Situação", if (data.active) "Ativo" else "Inativo")
             }
         is AgentFileData -> AgentFileSection(data, modifier)
+        UnknownData -> Unit
     }
 }
 

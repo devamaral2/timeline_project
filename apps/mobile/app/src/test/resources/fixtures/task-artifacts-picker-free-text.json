@@ -1,0 +1,49 @@
+[
+  {
+    "id": "doc-news",
+    "name": "Notícias da manhã",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [
+      "leitura"
+    ],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "news",
+    "data": {
+      "body": "# Notícias da manhã\n\n- [Chuva no fim de semana](https://example.com/chuva)"
+    }
+  },
+  {
+    "id": "doc-email",
+    "name": "Resumo da caixa de entrada",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "email_summary",
+    "data": {
+      "body": "Três mensagens pedem resposta.\n\n- A fatura vence amanhã"
+    }
+  },
+  {
+    "id": "doc-youtube",
+    "name": "Aula de jardinagem",
+    "schemaVersion": 1,
+    "global": false,
+    "derived": false,
+    "tags": [],
+    "revision": 1,
+    "createdAt": "2026-09-10T12:00:00.000Z",
+    "updatedAt": "2026-09-14T12:12:00.000Z",
+    "type": "youtube_transcript",
+    "data": {
+      "body": "# Aula de jardinagem\n\n00:00 Como podar roseiras"
+    }
+  }
+]

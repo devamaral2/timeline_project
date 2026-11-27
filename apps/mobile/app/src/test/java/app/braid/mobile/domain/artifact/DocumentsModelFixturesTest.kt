@@ -28,7 +28,7 @@ class DocumentsModelFixturesTest {
 
     @Test
     fun `the types keep the web order, label and visual type`() {
-        assertEquals(model.getValue("typeOrder").jsonArray.map { it.text() }, ArtifactType.entries.map { it.code })
+        assertEquals(model.getValue("typeOrder").jsonArray.map { it.text() }, ArtifactType.known.map { it.code })
         for (case in cases("labels")) {
             val type = ArtifactType.fromCode(case.getValue("type").text())
             assertEquals(case.getValue("label").text(), artifactTypeLabel(type))

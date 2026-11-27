@@ -1,0 +1,35 @@
+{
+  "id": "doc-future",
+  "name": "Mapa do futuro",
+  "schemaVersion": 1,
+  "global": false,
+  "derived": false,
+  "tags": [
+    "novo"
+  ],
+  "revision": 1,
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-14T12:12:00.000Z",
+  "type": "hologram",
+  "data": {
+    "body": "# Mapa do futuro\n\nTexto de um tipo que este app não conhece."
+  },
+  "tasks": [
+    {
+      "taskId": "task-1",
+      "relation": "creates",
+      "name": "Reunião de planejamento",
+      "actor": "human",
+      "kind": "common",
+      "startedAt": "2026-09-14T12:00:00.000Z"
+    },
+    {
+      "taskId": "task-3",
+      "relation": "uses",
+      "name": "Buscar passagens",
+      "actor": "human",
+      "kind": "search_request",
+      "startedAt": "2026-09-12T12:00:00.000Z"
+    }
+  ]
+}
