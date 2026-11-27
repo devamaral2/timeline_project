@@ -19,11 +19,13 @@ interface TaskRepository {
     /**
      * As tarefas acompanhadas, as que têm status, de pessoa e de agente (`GET /api/tasks/tracked`), na ordem do
      * servidor. [filters] vão como parâmetros da consulta e [actor] pede só um dos executores; `null` traz os dois.
-     * A rota não pagina: o servidor devolve no máximo 100 cartões, como o web lê.
+     * A rota não pagina: o servidor devolve no máximo 100 cartões, como o web lê. [statuses] restringe a consulta a
+     * esses status (a gaveta de execução pede os de agente em andamento); vazio traz todos.
      */
     suspend fun tracked(
         filters: TaskFilters,
         actor: TaskActor? = null,
+        statuses: Set<TaskStatus> = emptySet(),
     ): List<TaskCard>
 
     /**

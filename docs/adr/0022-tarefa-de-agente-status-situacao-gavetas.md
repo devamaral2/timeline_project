@@ -223,7 +223,9 @@ que algo rodava, e a execução em andamento não pertence a nenhuma gaveta da l
   publica `--execution-clearance` na raiz do documento (da borda de cima da gaveta até o pé da janela, acompanhando a
   altura enquanto ela anima) e o CSS usa `max(base, var(--execution-clearance, 0px) + 12px)`. Sem gaveta à vista a
   variável não existe e vale a base de sempre (24 px, ou 90 px no celular, acima da barra).
-- O Android ganha a mesma gaveta em ticket próprio (spec 51).
+- O Android tem a mesma gaveta (ticket 67), no `AppNavHost`: a altura fica no DataStore, o aviso de pedido aberto é o
+  `RequestStarted` (emitido pelos repositórios de pedido e de chat) e cada tela reserva o fim da rolagem com o
+  `ExecutionReserveSpacer`, que lê a altura animada da gaveta na fase de layout.
 
 ## As quatro gavetas da lista
 

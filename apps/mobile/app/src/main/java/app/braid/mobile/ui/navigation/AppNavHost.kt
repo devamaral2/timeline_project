@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -55,11 +57,17 @@ import app.braid.mobile.ui.search.SearchViewModel
 import app.braid.mobile.ui.settings.SettingsScreen
 import app.braid.mobile.ui.settings.SettingsViewModel
 import app.braid.mobile.ui.shell.BraidBottomBar
+import app.braid.mobile.ui.shell.ExecutionDrawer
+import app.braid.mobile.ui.shell.ExecutionDrawerLayout
+import app.braid.mobile.ui.shell.ExecutionDrawerViewModel
+import app.braid.mobile.ui.shell.ExecutionReserve
+import app.braid.mobile.ui.shell.LocalExecutionReserve
 import app.braid.mobile.ui.shell.LocalSectionMenus
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.SectionMenuBody
 import app.braid.mobile.ui.shell.SectionMenuViewModel
 import app.braid.mobile.ui.shell.SectionMenus
+import app.braid.mobile.ui.shell.executionDrawerShown
 import app.braid.mobile.ui.taskdetail.TaskDetailPage
 import app.braid.mobile.ui.taskedit.TaskEditPage
 import app.braid.mobile.ui.tasks.TasksScreen
@@ -76,6 +84,7 @@ fun AppNavHost(
     chat: ChatViewModel = hiltViewModel(),
     settings: SettingsViewModel = hiltViewModel(),
     search: SearchViewModel = hiltViewModel(),
+    execution: ExecutionDrawerViewModel = hiltViewModel(),
 ) {
     val session by gate.state.collectAsStateWithLifecycle()
     val mode by sectionMenu.mode.collectAsStateWithLifecycle()
@@ -85,6 +94,14 @@ fun AppNavHost(
         chat.setVisible(true)
         onPauseOrDispose { chat.setVisible(false) }
     }
+    val executionState by execution.state.collectAsStateWithLifecycle()
+    // A gaveta de execução só relê com o app à vista; a tela dela é a das três abas (abaixo).
+    LifecycleResumeEffect(execution) {
+        execution.setForeground(true)
+        onPauseOrDispose { execution.setForeground(false) }
+    }
+    // Cada tela reserva no fim da rolagem a altura que a gaveta ocupa agora.
+    val executionReserve = remember { ExecutionReserve() }
     val menus = remember { SectionMenus() }
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     // "Configurações" do `/configuracoes`: abre dentro do painel do chat, como no web, e o voltar leva ao chat.
@@ -108,6 +125,10 @@ fun AppNavHost(
             destination?.hasRoute(DocumentsRoute::class) == true -> MainTab.Documents
             else -> null
         }
+
+    LaunchedEffect(currentTab != null && session is SessionState.SignedIn) {
+        execution.setActive(currentTab != null && session is SessionState.SignedIn)
+    }
 
     // Trocar de seção, ou sair delas, fecha o menu; o voltar do sistema o fecha antes de qualquer outra coisa.
     LaunchedEffect(currentTab) { menuOpen = false }
@@ -236,6 +257,7 @@ fun AppNavHost(
         LocalSectionMenus provides menus,
         LocalEntitiesChanged provides chat.entitiesChanged,
         LocalHermesFlight provides flight,
+        LocalExecutionReserve provides executionReserve,
     ) {
         Box(Modifier.fillMaxSize()) {
             NavHost(navController = navController, startDestination = LoginRoute) {
@@ -376,6 +398,20 @@ fun AppNavHost(
                     },
                 )
             }
+            // A gaveta de execução, acima da barra e por cima do degradê dela; nas três abas, com a mesma altura.
+            ExecutionDrawer(
+                state = executionState,
+                shown = executionDrawerShown(barTab, executionState.runs.isNotEmpty(), chatState.open, menuOpen),
+                reserve = executionReserve,
+                onSetMode = execution::setMode,
+                onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = ExecutionDrawerLayout.NavigationHeight)
+                        .graphicsLayer { alpha = barAlpha.value },
+            )
             // Por cima de tudo, o disco que voa entre a barra e o ícone de status.
             HermesFlyer(flight, chatState.bot)
         }
