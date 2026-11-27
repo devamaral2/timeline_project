@@ -257,9 +257,11 @@ execução são outras coisas.
    (`listedCards`), então a subtarefa cuja principal está em andamento continua como linha. A fração conta como feita a
    tarefa de pessoa `done` e a de agente `completed` (`countsAsDone`).
 5. **O filtro por executor e os modos de visualização** seguem como estavam: são parâmetros da consulta.
-6. **O Android** mantém a função antiga (`groupTrackedTasks`, seis grupos por status) e o fixture que confere, sem uso no
-   web, até portar a regra nova. O fixture novo é `task-list-drawers` (a tabela da regra, a lista em gavetas, o resumo e as
-   mudanças de situação), gerado pelas mesmas funções do web; o ticket do Android porta a regra e apaga a função antiga.
+6. **O Android** porta a regra em `domain/task/TaskDrawers.kt` (`drawerOf`, `listedCards`, `drawersOf`, `toNowLabel`), sobre
+   os grupos de `AgentStatusGroups.kt`, e a confere contra o fixture `task-list-drawers` (a tabela da regra, a lista em
+   gavetas, o resumo e as mudanças de situação), gerado pelas mesmas funções do web (`TaskDrawersTest`). A troca de situação
+   no `TasksViewModel` muda a linha de gaveta na hora. A função antiga (`groupTrackedTasks`, seis grupos por status) saiu do
+   web e do Android, e o fixture de grupos com ela (`task-list-pipeline` virou `task-list-rules`, sem os grupos).
 
 ### Alternativas rejeitadas
 

@@ -1,7 +1,7 @@
 import type { TaskCardDto } from "@repo/contracts";
 import { taskCardSchema } from "@repo/contracts/schemas";
 import { expect, test } from "vitest";
-import { groupTrackedTasks, nestSubtasks, oneRowPerSeries, showsSeriesRule } from "./task-groups";
+import { nestSubtasks, oneRowPerSeries, showsSeriesRule } from "./task-groups";
 
 /** Um cartão válido do contrato: o que o teste não diz fica com o padrão de uma tarefa de pessoa. */
 function card(overrides: { id: string } & Record<string, unknown>): TaskCardDto {
@@ -23,47 +23,6 @@ function card(overrides: { id: string } & Record<string, unknown>): TaskCardDto 
     ...overrides,
   });
 }
-
-test("junta os dois executores nos seis grupos, na ordem do canvas, e tira os grupos vazios", () => {
-  const groups = groupTrackedTasks([
-    card({ id: "feita-agente", actor: "agent", kind: "request", status: "completed" }),
-    card({ id: "pneu", status: "inHold" }),
-    card({ id: "falhou", actor: "agent", kind: "request", status: "failed" }),
-    card({ id: "rodando", actor: "agent", kind: "request", status: "running" }),
-    card({ id: "fotos", status: "toDefine" }),
-    card({ id: "cancelada", status: "cancel" }),
-    card({ id: "luz", status: "todo" }),
-    card({ id: "treino", status: "doing" }),
-    card({ id: "esperando", actor: "agent", kind: "request", status: "waiting" }),
-    card({ id: "fila", actor: "agent", kind: "cron", status: "queued" }),
-    card({ id: "perdida", status: "missed" }),
-    card({ id: "feita", status: "done" }),
-  ]);
-
-  expect(groups.map((group) => [group.title, group.collapsedByDefault, group.cards.map((c) => c.id)])).toEqual([
-    ["Em curso", false, ["rodando", "treino"]],
-    ["A fazer", false, ["luz", "fila"]],
-    ["Sem data", false, ["fotos"]],
-    ["Em espera", false, ["pneu", "esperando"]],
-    ["Feitas", true, ["feita-agente", "feita"]],
-    ["Encerradas", true, ["falhou", "cancelada", "perdida"]],
-  ]);
-});
-
-test("sem nenhuma tarefa em um grupo, o grupo não aparece", () => {
-  const groups = groupTrackedTasks([card({ id: "luz", status: "todo" })]);
-
-  expect(groups.map((group) => group.title)).toEqual(["A fazer"]);
-});
-
-test("mantém a ordem recebida dentro de cada grupo", () => {
-  const groups = groupTrackedTasks([
-    card({ id: "depois", status: "todo", startedAt: "2026-09-20T00:00:00-03:00" }),
-    card({ id: "antes", status: "todo", startedAt: "2026-09-15T00:00:00-03:00" }),
-  ]);
-
-  expect(groups[0].cards.map((c) => c.id)).toEqual(["depois", "antes"]);
-});
 
 test("a subtarefa cuja principal está na lista vai para dentro dela, na ordem recebida, e não vira linha", () => {
   const tree = nestSubtasks([
@@ -104,12 +63,6 @@ test("um ciclo vindo da rede não some com as tarefas: elas continuam linhas", (
 
   expect(tree.roots.map((c) => c.id)).toEqual(["a", "b"]);
   expect(tree.subtasksOf("a")).toEqual([]);
-});
-
-test("tarefa sem status (de referência) não entra em nenhum grupo", () => {
-  const groups = groupTrackedTasks([card({ id: "consulta", status: undefined, startedAt: "2026-09-15T10:00:00-03:00" })]);
-
-  expect(groups).toEqual([]);
 });
 
 const serieRule = {

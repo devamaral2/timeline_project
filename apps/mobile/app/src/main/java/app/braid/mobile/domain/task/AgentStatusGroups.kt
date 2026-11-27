@@ -44,11 +44,17 @@ fun silencesReminder(
     status: TaskStatus?,
 ): Boolean = status in (if (actor == TaskActor.Agent) FINAL_AGENT_STATUSES else HUMAN_SILENCING_STATUSES)
 
+/** O executor terminou com a tarefa, bem ou mal: pessoa feita, cancelada ou perdida; agente em qualquer status final. */
+fun isClosedStatus(
+    actor: TaskActor,
+    status: TaskStatus?,
+): Boolean = status in (if (actor == TaskActor.Agent) FINAL_AGENT_STATUSES else HUMAN_CLOSED_STATUSES)
+
 /** A subtarefa já não pede nada: o executor terminou com ela, bem ou mal. */
 fun isSubtaskClosed(
     actor: TaskActor,
     status: TaskStatus?,
-): Boolean = status in (if (actor == TaskActor.Agent) FINAL_AGENT_STATUSES else HUMAN_CLOSED_STATUSES)
+): Boolean = isClosedStatus(actor, status)
 
 /** A subtarefa conta na fração "n de m feitas". */
 fun isSubtaskDone(

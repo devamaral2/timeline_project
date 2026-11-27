@@ -1,64 +1,9 @@
 import type { TaskCardDto, TaskStatus } from "@repo/contracts";
 
 /**
- * Agrupamento antigo da lista de tarefas: pessoa e agente nos seis grupos por status. O web não o usa mais (a lista
- * tem as quatro gavetas de `task-drawers.ts`); fica só para o fixture que o Android confere hoje (`task-list-pipeline`)
- * e sai junto com ele quando o Android portar a regra nova (ticket 68). `nestSubtasks` e `oneRowPerSeries`, daqui, seguem
- * em uso. Função pura, sem rede.
+ * A hierarquia da lista de tarefas (`nestSubtasks`) e a regra de uma linha por série (`oneRowPerSeries`). Funções puras,
+ * sem rede. As gavetas da lista moram em `task-drawers.ts`.
  */
-
-export type TaskGroupKey = "doing" | "todo" | "toDefine" | "waiting" | "done" | "closed";
-
-export interface TaskGroup {
-  key: TaskGroupKey;
-  title: string;
-  /** Feitas e Encerradas vêm recolhidos; abrem ao toque. */
-  collapsedByDefault: boolean;
-  /** Os cartões do grupo, na ordem em que a API os devolveu. */
-  cards: TaskCardDto[];
-}
-
-/** Cada status (de pessoa ou de agente) cai em exatamente um grupo. */
-const groupOfStatus: Record<TaskStatus, TaskGroupKey> = {
-  doing: "doing",
-  starting: "doing",
-  running: "doing",
-  todo: "todo",
-  preparing: "todo",
-  queued: "todo",
-  toDefine: "toDefine",
-  inHold: "waiting",
-  waiting: "waiting",
-  done: "done",
-  completed: "done",
-  cancel: "closed",
-  missed: "closed",
-  failed: "closed",
-  cancelled: "closed",
-  interrupted: "closed",
-  rolled_back: "closed",
-};
-
-const GROUPS: readonly Omit<TaskGroup, "cards">[] = [
-  { key: "doing", title: "Em curso", collapsedByDefault: false },
-  { key: "todo", title: "A fazer", collapsedByDefault: false },
-  { key: "toDefine", title: "Sem data", collapsedByDefault: false },
-  { key: "waiting", title: "Em espera", collapsedByDefault: false },
-  { key: "done", title: "Feitas", collapsedByDefault: true },
-  { key: "closed", title: "Encerradas", collapsedByDefault: true },
-];
-
-/**
- * Agrupa os cartões da lista: cada cartão com status recebido vira uma linha do
- * seu grupo. Quem tira as subtarefas antes é `nestSubtasks`. Cartão sem status
- * (de referência) fica de fora. Grupo vazio não é devolvido.
- */
-export function groupTrackedTasks(cards: readonly TaskCardDto[]): TaskGroup[] {
-  return GROUPS.map((group) => ({
-    ...group,
-    cards: cards.filter((card) => card.status !== undefined && groupOfStatus[card.status] === group.key),
-  })).filter((group) => group.cards.length > 0);
-}
 
 export interface SubtaskTree {
   /** Os cartões que viram linha da lista, na ordem recebida. */

@@ -4,51 +4,10 @@ import java.text.Collator
 import java.util.Locale
 
 /*
- * Port de `apps/web/src/lib/tasks/task-groups.ts` (grupos e uma linha por série) e de `task-filters.ts` (filtros da
- * lista) e de `nestSubtasks` (a gaveta de subtarefas, ADR 0017): funções puras conferidas contra as fixtures geradas
- * pelas funções TS (`TaskListRulesTest`, `SubtaskNestingTest`).
+ * Port de `apps/web/src/lib/tasks/task-groups.ts` (uma linha por série e `nestSubtasks`, a gaveta de subtarefas, ADR 0017)
+ * e de `task-filters.ts` (filtros da lista): funções puras conferidas contra as fixtures geradas pelas funções TS
+ * (`TaskListRulesTest`, `SubtaskNestingTest`). As gavetas da lista moram em `TaskDrawers.kt`.
  */
-
-enum class TaskGroupKey(
-    val title: String,
-    /** Feitas e Encerradas vêm recolhidos; abrem ao toque. */
-    val collapsedByDefault: Boolean,
-) {
-    Doing("Em curso", false),
-    Todo("A fazer", false),
-    ToDefine("Sem data", false),
-    Waiting("Em espera", false),
-    Done("Feitas", true),
-    Closed("Encerradas", true),
-}
-
-class TaskGroup(
-    val key: TaskGroupKey,
-    /** Os cartões do grupo, na ordem em que a API os devolveu. */
-    val cards: List<TaskCard>,
-) {
-    val title: String get() = key.title
-    val collapsedByDefault: Boolean get() = key.collapsedByDefault
-}
-
-/** Cada status, de pessoa ou de agente, cai em exatamente um grupo; o desconhecido fica à vista, em "A fazer". */
-private fun groupOf(status: TaskStatus): TaskGroupKey =
-    when (status) {
-        TaskStatus.Doing, TaskStatus.Starting, TaskStatus.Running -> TaskGroupKey.Doing
-        TaskStatus.Todo, TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Unknown -> TaskGroupKey.Todo
-        TaskStatus.ToDefine -> TaskGroupKey.ToDefine
-        TaskStatus.InHold, TaskStatus.Waiting -> TaskGroupKey.Waiting
-        TaskStatus.Done, TaskStatus.Completed -> TaskGroupKey.Done
-        TaskStatus.Cancel, TaskStatus.Missed, TaskStatus.Failed, TaskStatus.Cancelled, TaskStatus.Interrupted,
-        TaskStatus.RolledBack,
-        -> TaskGroupKey.Closed
-    }
-
-/** Agrupa as linhas da lista; cartão sem status (de referência) fica de fora e grupo vazio não é devolvido. */
-fun groupTrackedTasks(cards: List<TaskCard>): List<TaskGroup> =
-    TaskGroupKey.entries
-        .map { key -> TaskGroup(key, cards.filter { card -> card.status?.let(::groupOf) == key }) }
-        .filter { it.cards.isNotEmpty() }
 
 /** A hierarquia da lista: as linhas e, para cada uma, as subtarefas diretas que vão para a gaveta. */
 class SubtaskTree(

@@ -16,9 +16,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.Instant
 
-/** Os grupos, as séries e os filtros da lista de Tarefas, conferidos contra as funções do web rodando sobre os mesmos cartões. */
+/** As séries, os quandos e os filtros da lista de Tarefas, conferidos contra as funções do web rodando sobre os mesmos cartões. */
 class TaskListRulesTest {
-    private val fixture = Fixtures.json("task-list-pipeline").jsonObject
+    private val fixture = Fixtures.json("task-list-rules").jsonObject
     private val now = Instant.parse(fixture.getValue("now").jsonPrimitive.content)
     private val cards =
         BraidJson
@@ -30,27 +30,6 @@ class TaskListRulesTest {
     @Test
     fun `a series is one row at the position of the chosen occurrence`() {
         assertEquals(strings(fixture.getValue("rowIds")), oneRowPerSeries(cards).map { it.id })
-    }
-
-    @Test
-    fun `rows fall into the web's groups, in the API order, with Feitas and Encerradas collapsed`() {
-        val groups = groupTrackedTasks(oneRowPerSeries(cards))
-        val expected = fixture.getValue("groups").jsonArray.map { it.jsonObject }
-
-        assertEquals(expected.map { it.getValue("title").jsonPrimitive.content }, groups.map { it.title })
-        assertEquals(expected.map { strings(it.getValue("ids")) }, groups.map { group -> group.cards.map { it.id } })
-        assertEquals(expected.map { it.getValue("collapsedByDefault").jsonPrimitive.boolean }, groups.map { it.collapsedByDefault })
-        assertEquals(
-            expected.map { it.getValue("key").jsonPrimitive.content },
-            groups.map { it.key.name.replaceFirstChar(Char::lowercase) },
-        )
-    }
-
-    @Test
-    fun `a group with no card is left out and a reference task has no group`() {
-        val reference = cards.first { it.id == "task-1" }.copy(status = null)
-
-        assertEquals(emptyList<TaskGroup>(), groupTrackedTasks(listOf(reference)))
     }
 
     @Test

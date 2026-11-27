@@ -598,67 +598,6 @@
     "series-b-2",
     "series-c-2"
   ],
-  "groups": [
-    {
-      "key": "doing",
-      "title": "Em curso",
-      "collapsedByDefault": false,
-      "ids": [
-        "task-2",
-        "task-3",
-        "task-13"
-      ]
-    },
-    {
-      "key": "todo",
-      "title": "A fazer",
-      "collapsedByDefault": false,
-      "ids": [
-        "task-1",
-        "task-4",
-        "series-a-2",
-        "series-a-4"
-      ]
-    },
-    {
-      "key": "toDefine",
-      "title": "Sem data",
-      "collapsedByDefault": false,
-      "ids": [
-        "task-6"
-      ]
-    },
-    {
-      "key": "waiting",
-      "title": "Em espera",
-      "collapsedByDefault": false,
-      "ids": [
-        "task-5",
-        "task-7",
-        "series-c-2"
-      ]
-    },
-    {
-      "key": "done",
-      "title": "Feitas",
-      "collapsedByDefault": true,
-      "ids": [
-        "task-8",
-        "task-9",
-        "series-b-2"
-      ]
-    },
-    {
-      "key": "closed",
-      "title": "Encerradas",
-      "collapsedByDefault": true,
-      "ids": [
-        "task-10",
-        "task-11",
-        "task-12"
-      ]
-    }
-  ],
   "whens": [
     {
       "id": "task-1",
