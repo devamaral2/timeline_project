@@ -34,8 +34,15 @@ class ExecutionRunsTest {
         val cases = rules.getValue("cases").jsonObject
         assertEquals(4, cases.size)
         for ((name, case) in cases) {
-            val input = case.jsonObject.getValue("input").jsonPrimitive.content
-            val expected = case.jsonObject.getValue("runs").jsonArray.map { it.jsonPrimitive.content }
+            val input =
+                case.jsonObject
+                    .getValue("input")
+                    .jsonPrimitive.content
+            val expected =
+                case.jsonObject
+                    .getValue("runs")
+                    .jsonArray
+                    .map { it.jsonPrimitive.content }
 
             assertEquals("case $name", expected, executionRunsOf(cards(input)).map { it.id })
         }

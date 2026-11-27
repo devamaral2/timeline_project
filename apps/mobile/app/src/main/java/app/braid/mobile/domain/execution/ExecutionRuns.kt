@@ -48,8 +48,14 @@ val EXECUTION_STATUS_FILTER = IN_PROGRESS_AGENT_STATUSES
  */
 fun executionRunsOf(cards: List<TaskCard>): List<TaskCard> =
     cards
-        .filter { it.actor == TaskActor.Agent && isInProgressAgentStatus(it.status) && it.kind != TaskKind.Step && it.kind != TaskKind.Cron }
-        .sortedWith(
+        .filter {
+            it.actor == TaskActor.Agent &&
+                isInProgressAgentStatus(
+                    it.status,
+                ) &&
+                it.kind != TaskKind.Step &&
+                it.kind != TaskKind.Cron
+        }.sortedWith(
             compareByDescending<TaskCard> { it.startedAt ?: Instant.MIN }.thenByDescending { it.id },
         )
 

@@ -220,4 +220,6 @@ que algo rodava, e a execução em andamento não pertence a nenhuma gaveta da l
 
 - Enquanto as quatro gavetas da lista não entram, a execução em andamento aparece na gaveta de execução e também na
   lista de tarefas. É esperado.
-- O Android ganha a mesma gaveta em ticket próprio (spec 51).
+- O Android tem a mesma gaveta (ticket 67), no `AppNavHost`: a altura fica no DataStore, o aviso de pedido aberto é o
+  `RequestStarted` (emitido pelos repositórios de pedido e de chat) e cada tela reserva o fim da rolagem com o
+  `ExecutionReserveSpacer`, que lê a altura animada da gaveta na fase de layout.

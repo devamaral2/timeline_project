@@ -60,6 +60,7 @@ import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.showsSeriesRule
 import app.braid.mobile.ui.agenda.ListSkeleton
 import app.braid.mobile.ui.chat.OnEntitiesChanged
+import app.braid.mobile.ui.shell.ExecutionReserveSpacer
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.PublishSectionMenu
 import app.braid.mobile.ui.shell.SectionChoice
@@ -231,6 +232,8 @@ fun TasksContent(
                         )
                     }
             }
+            // A gaveta de execução, quando há, ocupa o pé da tela: a última linha continua alcançável acima dela.
+            ExecutionReserveSpacer()
         }
     }
 }

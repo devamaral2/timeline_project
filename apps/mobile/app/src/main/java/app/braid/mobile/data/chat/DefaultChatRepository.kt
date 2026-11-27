@@ -47,7 +47,12 @@ class DefaultChatRepository
             clientMessageId: String,
         ): AgentRequest =
             try {
-                call { api.startHermes(StartHermesBody(userId, text, sessionId, clientMessageId)).toDomain() }.also { started.notifyStarted() }
+                call {
+                    api
+                        .startHermes(
+                            StartHermesBody(userId, text, sessionId, clientMessageId),
+                        ).toDomain()
+                }.also { started.notifyStarted() }
             } catch (failure: ChatRequestException) {
                 // Desligado, a API responde 404 antes de ler o corpo.
                 if ((failure.cause as? HttpException)?.code() == HTTP_NOT_FOUND) throw HermesOffException(failure.cause)

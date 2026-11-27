@@ -94,7 +94,10 @@ class ExecutionDrawerViewModelTest {
             awaitReads(1)
             withContext(Dispatchers.Default) { delay(100) }
 
-            assertTrue(viewModel.state.value.runs.isEmpty())
+            assertTrue(
+                viewModel.state.value.runs
+                    .isEmpty(),
+            )
         }
 
     @Test
@@ -203,7 +206,10 @@ class ExecutionDrawerViewModelTest {
             withContext(Dispatchers.Default) { delay(100) }
 
             assertEquals(0, reads())
-            assertFalse(viewModel.state.value.runs.isNotEmpty())
+            assertFalse(
+                viewModel.state.value.runs
+                    .isNotEmpty(),
+            )
         }
 
     @Test
@@ -222,7 +228,11 @@ class ExecutionDrawerViewModelTest {
             awaitReads(before + 1)
             withContext(Dispatchers.Default) { delay(100) }
 
-            assertEquals(listOf("run-only"), viewModel.state.value.runs.map { it.id })
+            assertEquals(
+                listOf("run-only"),
+                viewModel.state.value.runs
+                    .map { it.id },
+            )
         }
 
     @Test
@@ -237,7 +247,15 @@ class ExecutionDrawerViewModelTest {
             assertTrue("three to all grows", viewModel.state.value.grow)
             viewModel.setMode(ExecutionDrawerMode.One)
             assertFalse("all to one shrinks", viewModel.state.value.grow)
-            withContext(Dispatchers.Default) { withTimeout(5_000) { while (viewModes.executionDrawer.mode.first() != ExecutionDrawerMode.One) delay(5) } }
+            withContext(Dispatchers.Default) {
+                withTimeout(5_000) {
+                    while (viewModes.executionDrawer.mode.first() !=
+                        ExecutionDrawerMode.One
+                    ) {
+                        delay(5)
+                    }
+                }
+            }
         }
 
     @Test
@@ -247,7 +265,15 @@ class ExecutionDrawerViewModelTest {
             val first = newViewModel()
             first.state.first { it.ready }
             first.setMode(ExecutionDrawerMode.All)
-            withContext(Dispatchers.Default) { withTimeout(5_000) { while (viewModes.executionDrawer.mode.first() != ExecutionDrawerMode.All) delay(5) } }
+            withContext(Dispatchers.Default) {
+                withTimeout(5_000) {
+                    while (viewModes.executionDrawer.mode.first() !=
+                        ExecutionDrawerMode.All
+                    ) {
+                        delay(5)
+                    }
+                }
+            }
 
             // Trocar de aba é só a tela atual mudar: o mesmo ViewModel segue com a mesma altura.
             first.show()

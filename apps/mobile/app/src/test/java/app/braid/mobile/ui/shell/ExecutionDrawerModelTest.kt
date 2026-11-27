@@ -17,7 +17,11 @@ import org.junit.Test
 class ExecutionDrawerModelTest {
     private val runs =
         executionRunsOf(
-            BraidJson.decodeFromString(ListSerializer(TaskCardDto.serializer()), Fixtures.text("execution-list-mixed")).map(TaskCardDto::toDomain),
+            BraidJson
+                .decodeFromString(
+                    ListSerializer(TaskCardDto.serializer()),
+                    Fixtures.text("execution-list-mixed"),
+                ).map(TaskCardDto::toDomain),
         )
 
     private fun model(mode: ExecutionDrawerMode) = checkNotNull(executionDrawerModel(runs, mode))
@@ -101,6 +105,9 @@ class ExecutionDrawerModelTest {
         assertFalse("detail, edit, login", executionDrawerShown(null, hasRuns = true, chatOpen = false, menuOpen = false))
         assertFalse("no runs", executionDrawerShown(MainTab.Agenda, hasRuns = false, chatOpen = false, menuOpen = false))
         assertFalse("chat covers the screen", executionDrawerShown(MainTab.Tasks, hasRuns = true, chatOpen = true, menuOpen = false))
-        assertFalse("the section menu opens over it", executionDrawerShown(MainTab.Documents, hasRuns = true, chatOpen = false, menuOpen = true))
+        assertFalse(
+            "the section menu opens over it",
+            executionDrawerShown(MainTab.Documents, hasRuns = true, chatOpen = false, menuOpen = true),
+        )
     }
 }

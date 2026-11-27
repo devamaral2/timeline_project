@@ -33,6 +33,7 @@ object BraidIcons {
     val chevronLeft = listOf(SvgPart("m15 18-6-6 6-6"))
     val chevronRight = listOf(SvgPart("m9 18 6-6-6-6"))
     val chevronUp = listOf(SvgPart("m18 15-6-6-6 6"))
+    val chevronsDown = listOf(SvgPart("m7 6 5 5 5-5"), SvgPart("m7 13 5 5 5-5"))
 
     val arrowLeft = listOf(SvgPart("m12 19-7-7 7-7"), SvgPart("M19 12H5"))
     val search = listOf(SvgPart(svgCircle(11f, 11f, 8f)), SvgPart("m21 21-4.3-4.3"))
