@@ -122,6 +122,10 @@ _Avoid_: etapa, step do processo, processo
 Gaveta presa acima da barra de navegação, em Tarefas, Agenda e Documentos, que mostra o que os agentes estão fazendo agora: as tarefas de agente em andamento (`preparing`, `queued`, `starting`, `running`) que não são passo nem execução agendada, da mais recente para a mais antiga. Tem três alturas (uma linha, três linhas e todas) e não existe quando nada está em andamento.
 _Avoid_: gaveta (sozinha), barra de progresso, fila de execução
 
+**Gaveta da lista**:
+Cada uma das quatro divisões da lista de tarefas, pela ação que a tarefa pede: **Para agora**, **Contínuas**, **Para depois** e **Finalizadas**. O cabeçalho é o divisor em mono com a contagem e abre e fecha a gaveta (Para agora e Contínuas começam abertas); gaveta vazia não é desenhada. Pedido de agente em andamento não está em nenhuma: mora só na gaveta de execução. A tarefa de agente que terminou cai pela situação (Para revisar: Para agora; Guardada: Para depois; Revisada: Finalizadas), a execução agendada e a tarefa longa de pessoa em Contínuas.
+_Avoid_: gaveta (sozinha, que também nomeia a gaveta de subtarefas e a de execução), grupo, seção, categoria
+
 **Sessão**:
 O primeiro pedido e todos os pedidos que continuam a mesma conversa. Não é uma entidade: é a relação que parte do primeiro pedido para cada continuação.
 _Avoid_: conversa (como entidade), thread, chat
