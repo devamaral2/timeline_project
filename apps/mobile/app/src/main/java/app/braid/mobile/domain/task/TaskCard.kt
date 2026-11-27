@@ -33,7 +33,10 @@ enum class TaskKind(
     }
 }
 
-/** Os status das duas pontas; `Done` e `Cancel` valem para pessoa e agente, o resto para uma só. */
+/**
+ * Os status das duas pontas; `Done` e `Cancel` valem para pessoa e agente, o resto para uma só. [Unknown] é o valor
+ * que a API mandou e este app não conhece: lê-se sem erro e se desenha neutro, sem nome próprio.
+ */
 enum class TaskStatus(
     val code: String,
 ) {
@@ -48,10 +51,12 @@ enum class TaskStatus(
     Running("running"),
     Waiting("waiting"),
     Failed("failed"),
+    Unknown("unknown"),
     ;
 
     companion object {
-        fun fromCode(code: String): TaskStatus = entries.firstOrNull { it.code == code } ?: error("Status de tarefa desconhecido: $code")
+        /** Um código fora do enum (um status novo da API) vira [Unknown] em vez de derrubar a leitura. */
+        fun fromCode(code: String): TaskStatus = entries.firstOrNull { it.code == code } ?: Unknown
     }
 }
 

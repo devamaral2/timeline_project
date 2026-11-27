@@ -31,11 +31,11 @@ class TaskGroup(
     val collapsedByDefault: Boolean get() = key.collapsedByDefault
 }
 
-/** Cada status, de pessoa ou de agente, cai em exatamente um grupo. */
+/** Cada status, de pessoa ou de agente, cai em exatamente um grupo; o desconhecido fica à vista, em "A fazer". */
 private fun groupOf(status: TaskStatus): TaskGroupKey =
     when (status) {
         TaskStatus.Doing, TaskStatus.Running -> TaskGroupKey.Doing
-        TaskStatus.Todo, TaskStatus.Queued -> TaskGroupKey.Todo
+        TaskStatus.Todo, TaskStatus.Queued, TaskStatus.Unknown -> TaskGroupKey.Todo
         TaskStatus.ToDefine -> TaskGroupKey.ToDefine
         TaskStatus.InHold, TaskStatus.Waiting -> TaskGroupKey.Waiting
         TaskStatus.Done -> TaskGroupKey.Done
