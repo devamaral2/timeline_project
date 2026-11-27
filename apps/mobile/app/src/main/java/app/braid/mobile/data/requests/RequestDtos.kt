@@ -24,6 +24,7 @@ import app.braid.mobile.domain.request.TraceRunStatus
 import app.braid.mobile.domain.request.TraceSection
 import app.braid.mobile.domain.request.TraceStatus
 import app.braid.mobile.domain.task.TaskKind
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -42,6 +43,8 @@ data class RequestDto(
     val status: String,
     val title: String,
     val project: ProjectDto,
+    /** A situação do pedido que terminou; ausente enquanto ele está aberto. */
+    val situation: String? = null,
     /** O que o usuário escreveu ou falou. */
     val text: String? = null,
     val sessionId: String? = null,
@@ -235,6 +238,7 @@ fun RequestDto.toDomain(): AgentRequest =
         trace = trace?.toDomain(),
         model = model?.toDomain(),
         project = project.toDomain(),
+        situation = TaskSituation.fromCode(situation),
     )
 
 fun ModelSelection.toDto() = ModelSelectionDto(provider.code, model, effort.code)

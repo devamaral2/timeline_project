@@ -114,6 +114,8 @@ export function agentRequestFixtures(): Record<string, unknown> {
   return {
     "request-running": running,
     "request-done": done,
+    /** O pedido que terminou, com a situação com que nasce, e as respostas do `PUT` que a muda. */
+    "request-done-to-review": request({ ...done, situation: "to_review" }),
     "request-failed": request({ ...running, status: "failed", errorCode: "limit_reached", progress: undefined }),
     "request-failed-bare": request({ ...running, status: "failed", progress: undefined }),
     "request-cancelled": request({ ...running, status: "cancelled", progress: undefined }),

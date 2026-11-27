@@ -54,6 +54,11 @@ fun TaskRow(
     onClick: (() -> Unit)? = null,
     /** Quando a tela deixa o glifo de status ser tocado, o que acontece com o toque; sem isso o glifo é só leitura. */
     onStatusClick: (() -> Unit)? = null,
+    /**
+     * Na tarefa de agente que terminou, o toque no glifo da esquerda, que mostra a situação; sem isso (a Agenda) ou sem
+     * situação (esperando você, execução agendada) o glifo é o ponto inerte.
+     */
+    onSituationClick: (() -> Unit)? = null,
     /** A lista pede a regra da série no lugar do horário, quando a ocorrência segue uma. */
     ruleInPlaceOfTime: Boolean = false,
     /** Um controle na ponta da linha, fora da linha tocável: a fração das subtarefas. */
@@ -65,6 +70,7 @@ fun TaskRow(
             now = now,
             onClick = onClick,
             onStatusClick = onStatusClick,
+            onSituationClick = onSituationClick,
             ruleInPlaceOfTime = ruleInPlaceOfTime,
             modifier = Modifier.weight(1f),
         )
@@ -79,6 +85,7 @@ private fun TaskRowBody(
     now: Instant,
     onClick: (() -> Unit)?,
     onStatusClick: (() -> Unit)?,
+    onSituationClick: (() -> Unit)?,
     ruleInPlaceOfTime: Boolean,
     modifier: Modifier,
 ) {
@@ -98,7 +105,7 @@ private fun TaskRowBody(
         verticalAlignment = Alignment.Top,
     ) {
         if (isAgent) {
-            AgentLead()
+            AgentLead(card, onSituationClick)
         } else {
             val glyphBox =
                 if (onStatusClick ==
@@ -144,10 +151,19 @@ private fun TaskRowBody(
     }
 }
 
-/** O ponto inerte do glifo da esquerda de [GLYPH_SLOT] (22 dp, a 40%), no lugar do status que agora fica à direita. */
+/** O que ocupa a esquerda da tarefa de agente: o glifo de situação que abre as três opções (tarefa que terminou, na lista) ou o ponto inerte de [GLYPH_SLOT] (22 dp, a 40%). */
 @Composable
-private fun AgentLead() {
-    // O controle de situação entra neste lugar (ticket 58): troque só esta função.
+private fun AgentLead(
+    card: TaskCard,
+    onSituationClick: (() -> Unit)?,
+) {
+    val situation = card.situation
+    if (situation != null && onSituationClick != null) {
+        Box(Modifier.size(GLYPH_SLOT).clickable(role = Role.Button, onClick = onSituationClick), contentAlignment = Alignment.Center) {
+            TaskSituationGlyph(situation, description = "${situationName(situation)}. Mudar situação de “${card.name}”")
+        }
+        return
+    }
     Box(Modifier.size(GLYPH_SLOT).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
         SvgIcon(
             listOf(SvgPart("M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z", fill = true)),

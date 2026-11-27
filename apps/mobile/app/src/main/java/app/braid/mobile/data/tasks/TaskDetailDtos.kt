@@ -13,6 +13,7 @@ import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.TaskRequest
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import kotlinx.serialization.Serializable
 import java.time.Instant
@@ -29,6 +30,7 @@ data class TaskDetailDto(
     val name: String,
     val description: String,
     val project: ProjectDto,
+    val situation: String? = null,
     val location: String? = null,
     val startedAt: String? = null,
     val estimatedFinishAt: String? = null,
@@ -77,6 +79,7 @@ fun TaskDetailDto.toDomain(): TaskDetail =
                 tags = tags,
                 revision = revision,
                 project = project.toDomain(),
+                situation = TaskSituation.fromCode(situation),
             ),
         priority = TaskPriority.fromCode(priority),
         description = description,
