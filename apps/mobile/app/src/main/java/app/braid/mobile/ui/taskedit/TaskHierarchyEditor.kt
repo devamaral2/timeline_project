@@ -258,9 +258,15 @@ class TaskHierarchyEditor(
         close()
     }
 
+    /**
+     * O texto do campo vem da própria busca, não do espelho dela em [state]: o espelho é atualizado por quem coleta a
+     * busca, que pode estar noutra thread terminando de gravar o resultado anterior. Lido do espelho, um toque em "Criar"
+     * ou "Pedir ao Hermes" logo depois de digitar às vezes via o campo ainda vazio e não fazia nada.
+     */
     private fun typedText(): String? =
-        mutableState.value.picker
-            ?.search
+        controller
+            ?.state
+            ?.value
             ?.typed
             ?.trim()
             ?.takeIf { it.isNotEmpty() }

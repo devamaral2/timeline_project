@@ -98,7 +98,14 @@ class TaskProjectPicker(
     /** "Criar “texto”": cria o projeto com o texto da busca e o escolhe. Sem texto, ou já criando, não faz nada. */
     fun create() {
         val picker = mutableState.value ?: return
-        val name = picker.search.typed.trim()
+        // O texto vem da própria busca: o espelho dela em [state] pode ainda não ter o que acabou de ser digitado.
+        val name =
+            controller
+                ?.state
+                ?.value
+                ?.typed
+                ?.trim()
+                .orEmpty()
         if (name.isEmpty() || picker.footer is ProjectFooter.Creating) return
         mutableState.update { it?.copy(footer = ProjectFooter.Creating) }
         createJob =
