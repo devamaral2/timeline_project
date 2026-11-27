@@ -12,7 +12,7 @@ import styles from "./task-add-video.module.css";
 
 
 interface TaskAddVideoProps {
-  /** O pedido foi gravado: a tela relê a tarefa (o documento do vídeo já está nela). */
+  /** O pedido foi gravado: a tela relê a tarefa (o artefato do vídeo já está nela). */
   onRequested: () => void;
 }
 

@@ -245,7 +245,7 @@ test("typing a slash lists the commands and Enter runs the highlighted one, noth
   expect(within(commands).getAllByRole("button").map((button) => button.textContent)).toEqual([
     "Criar tarefaTipo, status, início e término/tarefa",
     "Criar notaA primeira linha vira o título/nota",
-    "PesquisarTarefas e documentos/buscar",
+    "PesquisarTarefas e artefatos/buscar",
     "NotificaçõesAvisos recentes e próximos/notificacoes",
     "ConfiguraçõesTema e conta/configuracoes",
   ]);

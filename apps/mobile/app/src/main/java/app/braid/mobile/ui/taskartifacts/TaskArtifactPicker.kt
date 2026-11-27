@@ -24,9 +24,9 @@ data class ArtifactPicker(
 )
 
 /**
- * O seletor de documentos da tarefa, que serve à edição (a escolha vai para o rascunho) e ao detalhe (a escolha grava na
- * hora): abre com a fonte do tipo da tarefa, busca pelo texto e entrega o documento escolhido a quem abriu. Na refeição
- * as duas consultas (catálogo global e documentos próprios) saem juntas e as respostas se somam nessa ordem.
+ * O seletor de artefatos da tarefa, que serve à edição (a escolha vai para o rascunho) e ao detalhe (a escolha grava na
+ * hora): abre com a fonte do tipo da tarefa, busca pelo texto e entrega o artefato escolhido a quem abriu. Na refeição
+ * as duas consultas (catálogo global e artefatos próprios) saem juntas e as respostas se somam nessa ordem.
  */
 class TaskArtifactPicker(
     private val scope: CoroutineScope,
@@ -72,7 +72,7 @@ class TaskArtifactPicker(
         mutableState.value = null
     }
 
-    /** Entrega o documento escolhido a quem abriu a folha e a fecha. */
+    /** Entrega o artefato escolhido a quem abriu a folha e a fecha. */
     fun pick(artifact: Artifact) {
         val deliver = onPick
         close()

@@ -10,10 +10,10 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 
 const noop = () => undefined;
 
-test("o detalhe da Leitura diária tem o botão 'Adicionar vídeo' na seção Documentos", () => {
+test("o detalhe da Leitura diária tem o botão 'Adicionar vídeo' na seção Artefatos", () => {
   render(<TaskArtifactsSection userId="u1" task={taskFixture({ id: "t1", name: "Leitura diária" })} onAddArtifact={noop} onVideoRequested={noop} />);
 
-  expect(screen.getByRole("region", { name: "Documentos" })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Artefatos" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Adicionar vídeo" })).toBeInTheDocument();
 });
 

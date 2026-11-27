@@ -61,16 +61,16 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     setArtifact(await getArtifact(noteId));
   });
 
-  const frame = { leadLabel: "Resumo do documento", bodyLabel: "Conteúdo do documento" };
-  const backOnly = <DetailNav label="Navegação do registro" back={<BackLink href={listHref} label="Voltar para Documentos" />} title="Documento" />;
+  const frame = { leadLabel: "Resumo do artefato", bodyLabel: "Conteúdo do artefato" };
+  const backOnly = <DetailNav label="Navegação do registro" back={<BackLink href={listHref} label="Voltar para Artefatos" />} title="Artefato" />;
   if (state === "missing") {
-    return <DetailFrame {...frame} lead={backOnly}><DetailMessage alert>Documento não encontrado.</DetailMessage></DetailFrame>;
+    return <DetailFrame {...frame} lead={backOnly}><DetailMessage alert>Artefato não encontrado.</DetailMessage></DetailFrame>;
   }
   if (state === "error") {
-    return <DetailFrame {...frame} lead={backOnly}><DetailMessage alert>Não foi possível carregar o documento. Tente novamente.</DetailMessage></DetailFrame>;
+    return <DetailFrame {...frame} lead={backOnly}><DetailMessage alert>Não foi possível carregar o artefato. Tente novamente.</DetailMessage></DetailFrame>;
   }
   if (state !== "ready" || !artifact) {
-    return <DetailFrame {...frame} lead={backOnly}><DetailMessage>Carregando documento…</DetailMessage></DetailFrame>;
+    return <DetailFrame {...frame} lead={backOnly}><DetailMessage>Carregando artefato…</DetailMessage></DetailFrame>;
   }
 
   const tasks = artifact.tasks ?? [];
@@ -118,13 +118,13 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
       {...frame}
       lead={
         <>
-          <DetailNav label="Navegação do registro" back={<BackLink href={listHref} label="Voltar para Documentos" />} title="Documento">{menu}</DetailNav>
+          <DetailNav label="Navegação do registro" back={<BackLink href={listHref} label="Voltar para Artefatos" />} title="Artefato">{menu}</DetailNav>
 
           <DetailHeading eyebrow={artifactTypeLabel(artifact.type)}>{artifact.name}</DetailHeading>
 
           {artifact.tags.length || artifact.global ? (
             <DetailFacts label="Informações">
-              {artifact.tags.length ? <DetailFact label="Tags"><TagPills tags={artifact.tags} label="Tags do documento" /></DetailFact> : null}
+              {artifact.tags.length ? <DetailFact label="Tags"><TagPills tags={artifact.tags} label="Tags do artefato" /></DetailFact> : null}
               {artifact.global ? <DetailFact label="Origem">Catálogo global</DetailFact> : null}
             </DetailFacts>
           ) : null}

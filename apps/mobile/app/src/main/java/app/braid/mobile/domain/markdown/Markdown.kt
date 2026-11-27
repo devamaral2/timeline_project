@@ -1,14 +1,14 @@
 package app.braid.mobile.domain.markdown
 
 /*
- * O markdown dos documentos de texto, no subconjunto que o web mostra: títulos, parágrafos, listas (com marcadores,
+ * O markdown dos artefatos de texto, no subconjunto que o web mostra: títulos, parágrafos, listas (com marcadores,
  * numeradas e de tarefas), citações, código, régua, tabelas, ênfase, código em linha, riscado e links. HTML cru nunca
  * é interpretado (vira texto). A imagem só é lida como imagem (`MarkdownInline.Image`) quando quem chama pede, e só se o
- * endereço for `http(s)`: o leitor de documentos pede; o chat e o assistente não, e ali ela vira o texto alternativo.
+ * endereço for `http(s)`: o leitor de artefatos pede; o chat e o assistente não, e ali ela vira o texto alternativo.
  */
 
 sealed interface MarkdownBlock {
-    /** [level] é o do markdown (1 a 6); a tela desce o título `#` para o tamanho de seção, porque o `h1` é o nome do documento. */
+    /** [level] é o do markdown (1 a 6); a tela desce o título `#` para o tamanho de seção, porque o `h1` é o nome do artefato. */
     data class Heading(
         val level: Int,
         val content: List<MarkdownInline>,

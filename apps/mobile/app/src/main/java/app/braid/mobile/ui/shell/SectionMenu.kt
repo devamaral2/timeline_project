@@ -96,8 +96,8 @@ private data class ModeRow(
 private val ModeRows =
     listOf(
         ModeRow(ViewMode.All, "Todos", "você e agentes", "você e agentes", Layers),
-        ModeRow(ViewMode.Human, "Você", "só as suas tarefas", "só os seus documentos", User),
-        ModeRow(ViewMode.Agent, "Agentes", "só tarefas de agentes", "só documentos de agentes", BraidIcons.bot),
+        ModeRow(ViewMode.Human, "Você", "só as suas tarefas", "só os seus artefatos", User),
+        ModeRow(ViewMode.Agent, "Agentes", "só tarefas de agentes", "só artefatos de agentes", BraidIcons.bot),
     )
 
 /**

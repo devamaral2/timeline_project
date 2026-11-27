@@ -6,7 +6,7 @@ data class TranscriptionRequest(
     val requestId: String,
     /** A Leitura diária do dia do pedido. */
     val taskId: String,
-    /** O documento do vídeo, com "Transcrição na fila" até a transcrição chegar. */
+    /** O artefato do vídeo, com "Transcrição na fila" até a transcrição chegar. */
     val artifactId: String,
     /** `false` quando o mesmo vídeo já esperava ou rodava no dia: devolve o pedido que existia, sem gravar nada. */
     val created: Boolean,

@@ -43,7 +43,7 @@ async function loaded() {
 
 const TREINO = taskFixture({ id: "ev-1", name: "Treino de força", kind: "training", status: "doing", startedAt: "2026-11-14T18:30:00-03:00" });
 
-test("a seção Documentos mostra a contagem e, em cada cartão, a posição, o tipo e a relação; “catálogo global” só no do catálogo", async () => {
+test("a seção Artefatos mostra a contagem e, em cada cartão, a posição, o tipo e a relação; “catálogo global” só no do catálogo", async () => {
   install(
     [TREINO],
     [
@@ -63,7 +63,7 @@ test("a seção Documentos mostra a contagem e, em cada cartão, a posição, o 
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   expect(within(section).getByText("3")).toBeInTheDocument();
 
   const global = within(section).getByRole("link", { name: /Musculação/ });
@@ -73,7 +73,7 @@ test("a seção Documentos mostra a contagem e, em cada cartão, a posição, o 
   expect(within(global.closest("li") as HTMLElement).getByText("1")).toBeInTheDocument();
 
   const own = within(section).getByRole("link", { name: /Ficha A/ });
-  expect(within(own).queryByText("seu documento")).not.toBeInTheDocument();
+  expect(within(own).queryByText("seu artefato")).not.toBeInTheDocument();
   expect(within(own.closest("li") as HTMLElement).getByText("2")).toBeInTheDocument();
 
   const created = within(section).getByRole("link", { name: /Registro do treino/ });
@@ -84,16 +84,16 @@ test("a seção Documentos mostra a contagem e, em cada cartão, a posição, o 
   expect(within(createdRow).queryByText("sem posição na lista")).not.toBeInTheDocument();
 });
 
-test("tocar num documento abre o detalhe dele", async () => {
+test("tocar num artefato abre o detalhe dele", async () => {
   install([TREINO], [artifactFixture({ id: "art-own", name: "Ficha A", links: [{ taskId: "ev-1", relation: "uses" }] })]);
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   expect(within(section).getByRole("link", { name: /Ficha A/ })).toHaveAttribute("href", "/user-1/notas/art-own");
 });
 
-test("o conteúdo do documento aparece inteiro dentro da tarefa, embaixo da linha dele", async () => {
+test("o conteúdo do artefato aparece inteiro dentro da tarefa, embaixo da linha dele", async () => {
   install(
     [taskFixture({ id: "ev-1", name: "Almoço", kind: "meal", status: "doing", startedAt: "2026-11-14T12:00:00-03:00" })],
     [
@@ -104,7 +104,7 @@ test("o conteúdo do documento aparece inteiro dentro da tarefa, embaixo da linh
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   const note = within(section).getByRole("link", { name: /Observação/ }).closest("li") as HTMLElement;
   expect(within(note).getByText("Comer devagar e beber água.")).toBeInTheDocument();
 
@@ -112,12 +112,12 @@ test("o conteúdo do documento aparece inteiro dentro da tarefa, embaixo da linh
   expect(within(food).getByRole("region", { name: "Informações nutricionais" })).toBeInTheDocument();
 });
 
-test("a seta recolhe e estende o conteúdo do documento", async () => {
+test("a seta recolhe e estende o conteúdo do artefato", async () => {
   install([TREINO], [artifactFixture({ id: "art-nota", name: "Observação", data: { body: "Aquecer antes." }, links: [{ taskId: "ev-1", relation: "uses" }] })]);
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   const collapse = within(section).getByRole("button", { name: "Recolher o conteúdo de Observação" });
   expect(collapse).toHaveAttribute("aria-expanded", "true");
   expect(within(section).getByText("Aquecer antes.")).toBeVisible();
@@ -131,7 +131,7 @@ test("a seta recolhe e estende o conteúdo do documento", async () => {
   expect(within(section).getByText("Aquecer antes.")).toBeVisible();
 });
 
-test("skill fica só na linha: o arquivo do Hermes abre no detalhe do documento", async () => {
+test("skill fica só na linha: o arquivo do Hermes abre no detalhe do artefato", async () => {
   install(
     [TREINO],
     [
@@ -147,26 +147,26 @@ test("skill fica só na linha: o arquivo do Hermes abre no detalhe do documento"
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   const row = within(section).getByRole("link", { name: /Planejar treino/ }).closest("li") as HTMLElement;
   expect(within(row).queryByText("Monta a ficha da semana")).not.toBeInTheDocument();
   expect(within(row).queryByText("hermes/skills/treino/SKILL.md")).not.toBeInTheDocument();
   expect(within(row).queryByRole("button", { name: /conteúdo de Planejar treino/ })).not.toBeInTheDocument();
 });
 
-test("tarefa sem documentos mostra a seção só com a ação de adicionar", async () => {
+test("tarefa sem artefatos mostra a seção só com a ação de adicionar", async () => {
   install([TREINO], [artifactFixture({ id: "art-other", name: "De outra tarefa", links: [{ taskId: "ev-2", relation: "uses" }] })]);
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   expect(within(section).queryByRole("list")).not.toBeInTheDocument();
   expect(within(section).getByRole("button", { name: "Adicionar exercício ao treino" })).toBeInTheDocument();
 });
 
 const COMUM = taskFixture({ id: "ev-1", name: "Preparar a viagem", kind: "common", status: "doing", startedAt: "2026-11-14T09:00:00-03:00" });
 
-test("“Adicionar documento” liga um documento seu no fim da lista, com a relação uses, e grava na hora", async () => {
+test("“Adicionar artefato” liga um artefato seu no fim da lista, com a relação uses, e grava na hora", async () => {
   install(
     [COMUM],
     [
@@ -177,8 +177,8 @@ test("“Adicionar documento” liga um documento seu no fim da lista, com a rel
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
-  fireEvent.click(within(section).getByRole("button", { name: "Adicionar documento" }));
+  const section = await screen.findByRole("region", { name: "Artefatos" });
+  fireEvent.click(within(section).getByRole("button", { name: "Adicionar artefato" }));
   expect(await screen.findByRole("button", { name: "Escolher “Lista de malas”" })).toBeInTheDocument();
   // O que já está ligado não é oferecido de novo.
   expect(screen.queryByRole("button", { name: "Escolher “Roteiro”" })).not.toBeInTheDocument();
@@ -203,7 +203,7 @@ test("na refeição, o alimento escolhido no detalhe entra como cópia nova", as
   renderPage();
   await loaded();
 
-  fireEvent.click(within(await screen.findByRole("region", { name: "Documentos" })).getByRole("button", { name: "Adicionar alimento à refeição" }));
+  fireEvent.click(within(await screen.findByRole("region", { name: "Artefatos" })).getByRole("button", { name: "Adicionar alimento à refeição" }));
   fireEvent.click(await screen.findByRole("button", { name: "Escolher “Arroz”" }));
 
   await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
@@ -248,7 +248,7 @@ test("no cartão do alimento, as calorias, os macros, os alimentos que recolhem 
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   const card = within(section).getByRole("link", { name: /Refeição/ }).closest("li") as HTMLElement;
   const summary = within(card).getByRole("region", { name: "Informações nutricionais" });
   expect(within(summary).getByRole("img", { name: "270 quilocalorias consumidas" })).toBeInTheDocument();
@@ -278,7 +278,7 @@ test("refeição mostra o total de calorias: a soma dos alimentos ligados, cópi
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   expect(within(section).getByText("Total de calorias")).toBeInTheDocument();
   expect(within(section).getByText("550 kcal")).toBeInTheDocument();
 });
@@ -291,7 +291,7 @@ test("refeição sem alimento ligado mostra zero kcal", async () => {
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   expect(within(section).getByText("0 kcal")).toBeInTheDocument();
 });
 
@@ -300,6 +300,6 @@ test("treino não mostra total de calorias", async () => {
   renderPage();
   await loaded();
 
-  const section = await screen.findByRole("region", { name: "Documentos" });
+  const section = await screen.findByRole("region", { name: "Artefatos" });
   expect(within(section).queryByText("Total de calorias")).not.toBeInTheDocument();
 });

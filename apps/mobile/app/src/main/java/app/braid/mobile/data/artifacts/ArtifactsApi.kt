@@ -11,7 +11,7 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface ArtifactsApi {
-    /** Os documentos do usuário, sem as cópias; com `scope=global` e `type`, o catálogo global do tipo. Parâmetro nulo não vai na consulta. */
+    /** Os artefatos do usuário, sem as cópias; com `scope=global` e `type`, o catálogo global do tipo. Parâmetro nulo não vai na consulta. */
     @GET("api/artifacts")
     suspend fun list(
         @Query("type") type: String?,
@@ -26,7 +26,7 @@ interface ArtifactsApi {
         @Path("id") id: String,
     ): ArtifactDto
 
-    /** Responde 201 `{ artifactId }`; a chave evita criar duas vezes o mesmo documento. */
+    /** Responde 201 `{ artifactId }`; a chave evita criar duas vezes o mesmo artefato. */
     @POST("api/artifacts")
     suspend fun create(
         @Header("Idempotency-Key") idempotencyKey: String,

@@ -153,11 +153,11 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
   return (
     <DetailFrame
       edit
-      leadLabel="Resumo do documento"
-      bodyLabel="Conteúdo do documento"
+      leadLabel="Resumo do artefato"
+      bodyLabel="Conteúdo do artefato"
       lead={
         <>
-          <EditBar>{existing ? "Editar documento" : "Novo documento"}</EditBar>
+          <EditBar>{existing ? "Editar artefato" : "Novo artefato"}</EditBar>
           <div className={edit.summary}>
             <div className={edit.summaryRow}>
               {existing ? (
@@ -181,7 +181,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
             {food ? null : (
               <input
                 type="text"
-                aria-label="Nome do documento"
+                aria-label="Nome do artefato"
                 placeholder="Nome (opcional)"
                 autoComplete="off"
                 className={edit.titleInput}
@@ -195,7 +195,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
     >
       <form
         className={edit.form}
-        aria-label="Campos do documento"
+        aria-label="Campos do artefato"
         noValidate
         onSubmit={(submit) => {
           submit.preventDefault();
@@ -229,7 +229,7 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
                 />
               </div>
             </DetailSection>
-            <EditTagSection tags={tags} labelId="artifact-edit-tags" listLabel="Tags do documento" onChange={setTags} />
+            <EditTagSection tags={tags} labelId="artifact-edit-tags" listLabel="Tags do artefato" onChange={setTags} />
           </>
         )}
 

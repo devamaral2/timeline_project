@@ -18,7 +18,7 @@ const SITE_MAX = 120;
 const BYLINE_MAX = 200;
 /** Abaixo disto o que o leitor achou não é um texto: é menu, rodapé ou aviso de cookies. */
 const ARTICLE_MIN_CHARS = 200;
-const CUT_NOTE = "\n\n*Texto cortado: a página passa do tamanho que cabe em um documento.*";
+const CUT_NOTE = "\n\n*Texto cortado: a página passa do tamanho que cabe em um artefato.*";
 
 function oneLine(text: string | null | undefined, max: number): string | undefined {
   const value = text?.replace(/\s+/g, " ").trim().slice(0, max).trim();

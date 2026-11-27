@@ -188,7 +188,7 @@ test("o aviso da transcrição diz que o vídeo entrou na fila e leva à Leitura
   expect(transcriptionToast(queued, `${BASE}/u1/tarefas/t1`)).toEqual({
     tone: "success",
     title: "Vídeo na fila de transcrição",
-    detail: "O texto aparece no documento da Leitura diária quando o seu computador terminar.",
+    detail: "O texto aparece no artefato da Leitura diária quando o seu computador terminar.",
     link: { href: "https://candeia.example/u1/tarefas/t1", label: "Abrir a Leitura diária" },
   });
   expect(transcriptionToast({ ...queued, created: false }, undefined)).toEqual({

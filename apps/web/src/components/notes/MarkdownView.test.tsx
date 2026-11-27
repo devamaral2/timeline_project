@@ -71,12 +71,12 @@ test("um bloco que começa com {#t-segundos} vira a âncora do trecho, sem mostr
   expect(block).toHaveTextContent("02:05 Bia: O ponto central é este.");
   expect(block?.textContent).not.toContain("{#");
   expect(container.querySelector("#t-0")).toHaveTextContent("00:00 Ana: Bem-vindos.");
-  // Só a convenção t-<segundos> vira âncora; outro id continua texto, para um documento não tomar ids da página.
+  // Só a convenção t-<segundos> vira âncora; outro id continua texto, para um artefato não tomar ids da página.
   expect(container.querySelector("#outro")).toBeNull();
   expect(screen.getByText("{#outro} fica como texto")).toBeInTheDocument();
 });
 
-test("tocar num link interno rola até o trecho dentro do mesmo documento", () => {
+test("tocar num link interno rola até o trecho dentro do mesmo artefato", () => {
   const { container } = render(<MarkdownView source={SOURCE} />);
 
   fireEvent.click(screen.getByRole("link", { name: "O ponto central" }));

@@ -18,7 +18,7 @@ test("a structured note carries the glyph of its type inside the front page of t
   expect(sheet?.getAttribute("data-note-type")).toBe("meal");
   expect(sheet?.getAttribute("data-size")).toBe("list");
   expect(strokesOf(container)).toBe(2);
-  expect(glyphOf(container)?.getAttribute("class")).toContain("lucide-apple");
+  expect(glyphOf(container)?.getAttribute("class")).toContain("lucide-plate");
 });
 
 test("a text note has no type icon, so it carries the letter A in its place", () => {
@@ -39,4 +39,16 @@ test("the sheet is decoration: the row around it already names the note", () => 
   const { container } = render(<NoteSheet type="agent" />);
 
   expect(container.querySelector("span")?.getAttribute("aria-hidden")).toBe("true");
+});
+
+test("an exercise has its own glyph, not the training one", () => {
+  const { container } = render(<NoteSheet type="workout" />);
+
+  expect(glyphOf(container)?.getAttribute("class")).toContain("lucide-movement");
+});
+
+test("a router carries the compass", () => {
+  const { container } = render(<NoteSheet type="router" />);
+
+  expect(glyphOf(container)?.getAttribute("class")).toContain("lucide-compass");
 });

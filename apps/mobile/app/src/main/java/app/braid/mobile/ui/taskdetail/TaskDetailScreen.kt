@@ -173,7 +173,7 @@ fun TaskDetailScreen(
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
     onOpenArtifact: (String) -> Unit = {},
-    /** O "+" da seção Documentos: abre o seletor do tipo da tarefa e grava a escolha na hora. */
+    /** O "+" da seção Artefatos: abre o seletor do tipo da tarefa e grava a escolha na hora. */
     onAddArtifact: () -> Unit = {},
     /** O "Adicionar vídeo" da Leitura diária: o estado do campo do link e as ações dele. */
     addVideo: AddVideoState = AddVideoState(),

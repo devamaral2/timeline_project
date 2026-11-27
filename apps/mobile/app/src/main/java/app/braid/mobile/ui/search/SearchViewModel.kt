@@ -15,7 +15,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 
-/** Um resultado da pesquisa: uma tarefa ou um documento, que abre o próprio detalhe. */
+/** Um resultado da pesquisa: uma tarefa ou um artefato, que abre o próprio detalhe. */
 sealed interface SearchResult {
     val id: String
 
@@ -36,7 +36,7 @@ sealed interface SearchResult {
 private const val SEARCH_LIMIT = 50
 
 /**
- * A pesquisa do chat (`/buscar`, "Pesquisar"): as tarefas acompanhadas e os documentos cujo nome combina com o texto,
+ * A pesquisa do chat (`/buscar`, "Pesquisar"): as tarefas acompanhadas e os artefatos cujo nome combina com o texto,
  * as tarefas primeiro, como no web. Sem texto, os primeiros de cada lista ("No seu espaço"). A busca espera 250 ms depois
  * da última tecla e descarta a resposta de uma busca já trocada. O web filtra uma lista de exemplo; aqui a busca é na API.
  */

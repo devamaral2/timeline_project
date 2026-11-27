@@ -64,8 +64,8 @@ import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.core.designsystem.tagColors
 
 /**
- * O formulário do documento: criação (o `/nota` do chat, com o nome já digitado) e edição da nota de texto própria.
- * [onSaved] recebe o id do documento salvo ou criado e abre a leitura dele; [onDiscard] volta de onde a pessoa veio.
+ * O formulário do artefato: criação (o `/nota` do chat, com o nome já digitado) e edição da nota de texto própria.
+ * [onSaved] recebe o id do artefato salvo ou criado e abre a leitura dele; [onDiscard] volta de onde a pessoa veio.
  */
 @Composable
 fun DocumentEditPage(
@@ -97,7 +97,7 @@ fun DocumentEditScreen(
             .navigationBarsPadding(),
     ) {
         Text(
-            text = (if (form?.existing == false) "Novo documento" else "Editar documento").uppercase(),
+            text = (if (form?.existing == false) "Novo artefato" else "Editar artefato").uppercase(),
             modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp).semantics { heading() },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontFamily = BraidMonoFont,
@@ -111,10 +111,10 @@ fun DocumentEditScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             when (state) {
-                DocumentEditUiState.Loading -> Message("Carregando documento…", alert = false)
-                DocumentEditUiState.NotEditable -> Message("Este documento não se edita aqui.", alert = true)
+                DocumentEditUiState.Loading -> Message("Carregando artefato…", alert = false)
+                DocumentEditUiState.NotEditable -> Message("Este artefato não se edita aqui.", alert = true)
                 DocumentEditUiState.Failed -> {
-                    Message("Não foi possível carregar o documento. Tente novamente.", alert = true)
+                    Message("Não foi possível carregar o artefato. Tente novamente.", alert = true)
                     BraidPill(text = "Tentar de novo", onClick = actions::retry)
                 }
                 is DocumentEditUiState.Form -> FormBody(state, actions)
@@ -176,7 +176,7 @@ private fun FormBody(
             TextBox(
                 value = form.name,
                 onValueChange = actions::setName,
-                description = "Nome do documento",
+                description = "Nome do artefato",
                 placeholder = "Nome (opcional)",
                 singleLine = true,
                 enabled = !form.saving,

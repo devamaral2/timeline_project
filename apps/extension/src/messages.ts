@@ -33,7 +33,7 @@ export function transcriptionToast(result: TranscriptionRequestResult, taskUrl: 
   return {
     tone: "success",
     title: "Vídeo na fila de transcrição",
-    detail: "O texto aparece no documento da Leitura diária quando o seu computador terminar.",
+    detail: "O texto aparece no artefato da Leitura diária quando o seu computador terminar.",
     ...link,
   };
 }

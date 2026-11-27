@@ -13,7 +13,7 @@ object TranscriptionText {
 
     /** A resposta do chat quando o vídeo entrou na fila. */
     const val CHAT_QUEUED =
-        "O vídeo entrou na fila de transcrição. O documento já está na Leitura diária de hoje e o texto chega quando a transcrição terminar."
+        "O vídeo entrou na fila de transcrição. O artefato já está na Leitura diária de hoje e o texto chega quando a transcrição terminar."
 
     /** Quando o mesmo vídeo já esperava no dia: a resposta do chat e o aviso sob o botão "Adicionar vídeo". */
     const val ALREADY_QUEUED = "Esse vídeo já estava na fila de transcrição. Nada foi duplicado."

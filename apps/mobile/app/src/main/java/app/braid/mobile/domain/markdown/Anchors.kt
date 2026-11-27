@@ -1,13 +1,13 @@
 package app.braid.mobile.domain.markdown
 
 /*
- * A convenção de âncora dos documentos (a do documento de transcrição de um vídeo, spec #39). Vale igual no web
+ * A convenção de âncora dos artefatos (a do artefato de transcrição de um vídeo, spec #39). Vale igual no web
  * (`apps/web/src/lib/notes/anchors.ts`).
  *
  * - O id é `t-<segundos>`: o instante, em segundos inteiros desde o começo.
  * - Um parágrafo que abre com `{#t-<segundos>}` é o trecho daquele instante. A marca é texto comum de markdown (HTML cru
  *   nunca é interpretado) e some da tela.
- * - Um link `[tópico](#t-<segundos>)` rola até o trecho, dentro do mesmo documento.
+ * - Um link `[tópico](#t-<segundos>)` rola até o trecho, dentro do mesmo artefato.
  * - Só essa forma vira âncora: qualquer outro `{#id}` segue como texto.
  */
 
@@ -21,7 +21,7 @@ internal fun splitAnchorMark(text: String): Pair<String, String>? =
 /** O id de uma âncora quando o link é interno (`#t-125`), ou `null`. */
 fun internalAnchorOf(href: String): String? = href.removePrefix("#").takeIf { href.startsWith("#") && ANCHOR_ID.matches(it) }
 
-/** O id para onde rolar ao tocar em [href], ou `null` quando o link não é interno ou o documento não tem o trecho. */
+/** O id para onde rolar ao tocar em [href], ou `null` quando o link não é interno ou o artefato não tem o trecho. */
 fun scrollTargetOf(
     blocks: List<MarkdownBlock>,
     href: String,

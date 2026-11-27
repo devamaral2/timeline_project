@@ -11,7 +11,7 @@ import { CalendarPicker, type DateField, TaskScheduleFields } from "@/components
 import { NotificationFeed, useNotificationFeed } from "./notification-bell";
 import { type Box, boxOf, canFly, FLIGHT_BACK_MS, FLIGHT_OUT_MS, flightKeyframes, type HermesDockDetail, hermesDockEvent, hermesMarkIn } from "@/components/ui/hermes-flight";
 import { HermesBot, useHermesBotState } from "@/components/ui/hermes-bot";
-import { AgendaNavIcon, DocumentsNavIcon, TasksNavIcon } from "@/components/ui/nav-icons";
+import { AgendaNavIcon, ArtifactsNavIcon, TasksNavIcon } from "@/components/ui/nav-icons";
 import { SettingsView } from "./settings-view";
 import styles from "./shell.module.css";
 import type { HubCommandId } from "@/components/hub/hub-commands";
@@ -103,7 +103,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   const menuTabRef = useRef<HTMLElement | null>(null);
   const menuId = useId();
   const section: SectionId = onTasks ? "tasks" : onNotes ? "notes" : "agenda";
-  const sectionTitle = onTasks ? "Tarefas" : onNotes ? "Documentos" : "Agenda";
+  const sectionTitle = onTasks ? "Tarefas" : onNotes ? "Artefatos" : "Agenda";
   const sectionMenu = useSectionMenu(section);
   // De que lado a pílula sai na frente ao trocar de tela.
   const navIndex = onTasks ? 0 : onNotes ? 2 : 1;
@@ -411,9 +411,9 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
           )}
           <Link href={userId ? `/${userId}` : "/mockups/tarefas"} aria-label="Agenda" aria-current={onAgenda ? "page" : undefined} aria-expanded={onAgenda ? menuOpen : undefined} aria-controls={onAgenda ? menuId : undefined} data-no-motion={onAgenda ? "" : undefined} onClick={event => tabClick(event, onAgenda)}><NavFace label="Agenda" dot={onAgenda && sectionMenu?.filtered}><AgendaNavIcon /></NavFace></Link>
           {notesHref ? (
-            <Link href={notesHref} aria-label="Documentos" aria-current={onNotes ? "page" : undefined} aria-expanded={onNotes ? menuOpen : undefined} aria-controls={onNotes ? menuId : undefined} data-no-motion={onNotes ? "" : undefined} onClick={event => tabClick(event, onNotes)}><NavFace label="Documentos" dot={onNotes && sectionMenu?.filtered}><DocumentsNavIcon /></NavFace></Link>
+            <Link href={notesHref} aria-label="Artefatos" aria-current={onNotes ? "page" : undefined} aria-expanded={onNotes ? menuOpen : undefined} aria-controls={onNotes ? menuId : undefined} data-no-motion={onNotes ? "" : undefined} onClick={event => tabClick(event, onNotes)}><NavFace label="Artefatos" dot={onNotes && sectionMenu?.filtered}><ArtifactsNavIcon /></NavFace></Link>
           ) : (
-            <button type="button" aria-label="Documentos" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><NavFace label="Documentos"><DocumentsNavIcon /></NavFace></button>
+            <button type="button" aria-label="Artefatos" onClick={() => openPanel("Nota")} aria-haspopup="dialog" aria-expanded={panel === "Nota"} aria-controls={dialogId}><NavFace label="Artefatos"><ArtifactsNavIcon /></NavFace></button>
           )}
         </div>
         </div>
@@ -438,7 +438,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
           <button type="button" className={styles.hubBack} onClick={backToChat} aria-label="Voltar para o chat"><ArrowLeft aria-hidden /></button>
           {hubView === "notifications" || hubView === "settings" ? null
             : hubView === "create" ? <fieldset className={styles.creationToggle} aria-label="Tipo de criação">{(["Tarefa", "Nota"] as Kind[]).map(value => { const Icon = icons[value]; return <button type="button" key={value} aria-pressed={kind === value} onClick={() => { if (userId) { openCreation(value === "Tarefa" ? "tarefas/nova" : "notas/nova", ""); return; } setKind(value); setActivePicker(null); setNotice(""); setFormPicker(false); }}><Icon aria-hidden /><span>{value}</span></button>; })}</fieldset>
-            : <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar tarefas e documentos" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar tarefas e documentos" autoFocus /></label>}
+            : <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Pesquisar tarefas e artefatos" value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar tarefas e artefatos" autoFocus /></label>}
         </div>}
         <div className={styles.hubContent}>
         {panel === "hub" && hubView === "create" && activePicker ? <div className={styles.pickerView}>
@@ -528,7 +528,7 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
             <label>{kind === "Tarefa" ? taskDetailCopy[taskType].label : kind === "Nota" ? "Conteúdo da nota" : category === "Alimentação" ? "Refeição e preparo" : category === "Exercício" ? "Treino e objetivo" : "Detalhes"}<textarea className={styles.entityControl} rows={2} value={draft.details ?? ""} onChange={event => updateDraft("details", event.target.value)} placeholder={kind === "Tarefa" ? taskDetailCopy[taskType].placeholder : kind === "Nota" ? `Suas anotações sobre ${category.toLocaleLowerCase("pt-BR")}…` : category === "Alimentação" ? "Ingredientes, porções ou modo de preparo…" : category === "Exercício" ? "Exercícios, séries ou duração…" : "Acrescente o que for importante…"} /></label>
           </div> : <div className={styles.manualPanel}>
           {panel !== "hub" && <>
-          <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Buscar tarefas e documentos" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Buscar ${panel === "Tarefa" ? "tarefas" : "notas"}`} /></label>
+          <label className={styles.hubSearch}><Search aria-hidden /><input aria-label="Buscar tarefas e artefatos" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Buscar ${panel === "Tarefa" ? "tarefas" : "notas"}`} /></label>
           <div className={styles.manualHeading}><h3>{query ? "Resultados" : "No seu espaço"}</h3><button type="button" onClick={() => { setCreating(!creating); setNotice(""); }}><Plus aria-hidden />Criar novo</button></div>
           {creating && <form className={styles.quickCreate} onSubmit={event => {
             event.preventDefault();

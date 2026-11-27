@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 /**
  * De quem são as tarefas que as seções mostram: as suas, as dos agentes ou as
  * duas. [actor] é o filtro que vai às consultas; `null` deixa a API devolver os
- * dois. A escolha é uma só para Agenda, Tarefas e Documentos.
+ * dois. A escolha é uma só para Agenda, Tarefas e Artefatos.
  */
 enum class ViewMode(
     val code: String,

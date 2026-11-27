@@ -5,7 +5,7 @@ import app.braid.mobile.domain.task.TaskKind
 import java.time.Instant
 
 /**
- * Um documento (o artefato do contrato). [data] tem a forma que o [type] diz; o texto e o roteador
+ * Um artefato (o artefato do contrato). [data] tem a forma que o [type] diz; o texto e o roteador
  * guardam um [TextData], o alimento um [FoodData], e assim por diante.
  */
 data class Artifact(
@@ -13,17 +13,17 @@ data class Artifact(
     val name: String,
     val type: ArtifactType,
     val data: ArtifactData,
-    /** Documento global: sem dono, todos leem e ninguém edita pelo app. */
+    /** Artefato global: sem dono, todos leem e ninguém edita pelo app. */
     val global: Boolean,
     val tags: List<String>,
     val revision: Int,
     val createdAt: Instant,
     val updatedAt: Instant,
-    /** As tarefas em que o documento aparece; vazio no que uma lista devolve sem elas. */
+    /** As tarefas em que o artefato aparece; vazio no que uma lista devolve sem elas. */
     val tasks: List<ArtifactTaskLink> = emptyList(),
 )
 
-/** Uma tarefa em que o documento aparece. [relation] é o código do contrato (`creates`, `updates`, `uses`, `deletes`), que a tela mostra como está. */
+/** Uma tarefa em que o artefato aparece. [relation] é o código do contrato (`creates`, `updates`, `uses`, `deletes`), que a tela mostra como está. */
 data class ArtifactTaskLink(
     val taskId: String,
     val relation: String,
@@ -40,7 +40,7 @@ data class TextData(
     val body: String,
 ) : ArtifactData
 
-/** O arquivo de skill ou agente do Hermes que o documento aponta (o ticket 18 o lê). */
+/** O arquivo de skill ou agente do Hermes que o artefato aponta (o ticket 18 o lê). */
 data class AgentFileData(
     val path: String,
     val hash: String,
@@ -82,7 +82,7 @@ data class WorkoutSet(
     val weight: Double,
 )
 
-/** O treino que um documento de treino guarda: corrida e caminhada têm ritmo e distância, musculação tem séries. */
+/** O treino que um artefato de treino guarda: corrida e caminhada têm ritmo e distância, musculação tem séries. */
 sealed interface WorkoutSnapshot {
     val id: String
     val name: String

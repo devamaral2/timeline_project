@@ -35,7 +35,7 @@ import javax.inject.Inject
 const val STALE_TASK_NOTICE = "Esta tarefa mudou em outro lugar. Carregamos a versão atual; confira e tente de novo."
 const val FAILED_STATUS_NOTICE = "Não foi possível trocar o status. Tente novamente."
 const val FAILED_PRIORITY_NOTICE = "Não foi possível trocar a prioridade. Tente novamente."
-const val FAILED_ARTIFACT_NOTICE = "Não foi possível ligar o documento. Tente novamente."
+const val FAILED_ARTIFACT_NOTICE = "Não foi possível ligar o artefato. Tente novamente."
 const val GONE_TASK_NOTICE = "Esta tarefa já não existe. Ela foi apagada em outro lugar."
 const val FAILED_DELETE_NOTICE = "Não foi possível excluir a tarefa. Tente novamente."
 
@@ -97,10 +97,10 @@ class TaskDetailViewModel
         val state: StateFlow<TaskDetailUiState> = mutableState.asStateFlow()
         private var linkedJob: Job? = null
 
-        /** O seletor do "+" da seção Documentos: a escolha liga o documento e grava na hora. */
+        /** O seletor do "+" da seção Artefatos: a escolha liga o artefato e grava na hora. */
         val artifactPicker = TaskArtifactPicker(viewModelScope, artifacts)
 
-        /** O "Adicionar vídeo" da Leitura diária: com o pedido gravado, a tarefa é relida (o documento do vídeo já está nela). */
+        /** O "Adicionar vídeo" da Leitura diária: com o pedido gravado, a tarefa é relida (o artefato do vídeo já está nela). */
         val addVideo = AddVideoForm(viewModelScope, transcription, onRequested = ::reload)
 
         init {
@@ -187,14 +187,14 @@ class TaskDetailViewModel
             change(FAILED_PRIORITY_NOTICE) { task -> tasks.changePriority(task.id, task.card.revision, priority) }
         }
 
-        /** O "+" da seção Documentos: abre o seletor da fonte do tipo da tarefa. */
+        /** O "+" da seção Artefatos: abre o seletor da fonte do tipo da tarefa. */
         fun openArtifactPicker() {
             val task = (mutableState.value as? TaskDetailUiState.Content)?.task ?: return
             artifactPicker.open(task.card.kind, task.artifacts.map { it.artifact.id }, ::linkArtifact)
         }
 
         /**
-         * O documento escolhido entra no fim da lista e a lista inteira vai com a revisão lida; na refeição o alimento
+         * O artefato escolhido entra no fim da lista e a lista inteira vai com a revisão lida; na refeição o alimento
          * entra como cópia nova, sem quantidade.
          */
         private fun linkArtifact(artifact: Artifact) {

@@ -1,14 +1,14 @@
 /**
- * A convenção de âncora dos documentos (a do documento de transcrição de um
+ * A convenção de âncora dos artefatos (a do artefato de transcrição de um
  * vídeo, spec #39). Vale igual no web e no Android (`domain/markdown/Anchors.kt`).
  *
  * - O id é `t-<segundos>`: o instante, em segundos inteiros desde o começo.
  * - Um parágrafo que abre com `{#t-<segundos>}` é o trecho daquele instante. A
  *   marca é texto comum de markdown, então sobrevive ao saneamento (HTML cru
  *   nunca é interpretado) e some da tela.
- * - Um link `[tópico](#t-<segundos>)` rola até o trecho, dentro do mesmo documento.
+ * - Um link `[tópico](#t-<segundos>)` rola até o trecho, dentro do mesmo artefato.
  * - Só essa forma vira âncora: qualquer outro `{#id}` segue como texto, para o
- *   documento não tomar um id da página.
+ *   artefato não tomar um id da página.
  */
 const ANCHOR_ID = /^t-\d+$/;
 const MARK = /^\{#(t-\d+)\}[ \t]*/;

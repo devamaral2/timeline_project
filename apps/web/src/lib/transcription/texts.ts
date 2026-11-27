@@ -7,7 +7,7 @@ export const TRANSCRIPTION_TEXTS = {
   chatPending: "Pedindo a transcrição",
   /** A resposta do chat quando o vídeo entrou na fila. */
   chatQueued:
-    "O vídeo entrou na fila de transcrição. O documento já está na Leitura diária de hoje e o texto chega quando a transcrição terminar.",
+    "O vídeo entrou na fila de transcrição. O artefato já está na Leitura diária de hoje e o texto chega quando a transcrição terminar.",
   /** Quando o mesmo vídeo já esperava no dia: a resposta do chat e o aviso sob o botão "Adicionar vídeo". */
   alreadyQueued: "Esse vídeo já estava na fila de transcrição. Nada foi duplicado.",
   /** Link que não é de vídeo do YouTube (canal, playlist, busca), no chat e no campo do botão. */

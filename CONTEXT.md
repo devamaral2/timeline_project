@@ -75,8 +75,8 @@ Quem realiza a tarefa: uma pessoa ou um agente. Cada um tem o seu próprio conju
 _Avoid_: bot, responsável, dono
 
 **Artefato**:
-Objeto que guarda conteúdo e não é um fluxo: não tem status, horário nem executor. É editável. Quem registra que ele foi criado, alterado ou usado é uma tarefa. Substitui a nota. Na tela ele se chama **documento** (a lista “Documentos”, “Novo documento”); no código, nos contratos, na API e no banco o nome continua artefato (`artifact`).
-_Avoid_: nota (como entidade; fica só como rótulo de tela do artefato de texto), anexo, documento (fora da tela)
+Objeto que guarda conteúdo e não é um fluxo: não tem status, horário nem executor. É editável. Quem registra que ele foi criado, alterado ou usado é uma tarefa. Substitui a nota. Na tela ele tem o mesmo nome: **artefato** (a lista “Artefatos”, “Novo artefato”), como no código, nos contratos, na API e no banco (`artifact`). Entre 2026-11 e a volta a este nome a tela dizia “documento”.
+_Avoid_: nota (como entidade; fica só como rótulo de tela do artefato de texto), anexo, documento
 
 **Relação**:
 Ligação com sentido entre tarefas e artefatos. Vai de quem produz para o que foi produzido: a tarefa de origem cria o artefato ou gera a tarefa de destino. Entre tarefa e artefato, parte sempre da tarefa, que cria, altera, usa ou apaga o artefato.

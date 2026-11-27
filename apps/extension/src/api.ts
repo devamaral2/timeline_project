@@ -78,7 +78,7 @@ export function saveReading(baseUrl: string, page: DailyReadingInput, fetchImpl:
 
 /**
  * `POST /api/tasks/transcription-requests`: pede a transcrição de um vídeo do
- * YouTube. O pedido nasce na hora, na fila do serviço local, e o documento do
+ * YouTube. O pedido nasce na hora, na fila do serviço local, e o artefato do
  * vídeo entra na Leitura diária do dia.
  */
 export function requestTranscription(baseUrl: string, videoUrl: string, fetchImpl: Fetch = fetch): Promise<TranscriptionRequestResult> {

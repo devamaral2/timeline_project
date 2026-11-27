@@ -1,20 +1,24 @@
-import { Bot, FileText, Route, Wrench, type LucideIcon } from "lucide-react";
+import { Bot, FileText, Wrench, type LucideIcon } from "lucide-react";
 import { visualForItemType } from "@/components/tasks/task-visuals";
+import { CompassIcon, MovementIcon } from "@/components/ui/type-icons";
 import styles from "./note-sheet.module.css";
 
-const HERMES_ICONS: Record<string, LucideIcon> = { skill: Wrench, agent: Bot, router: Route };
+/** Os tipos de artefato sem tarefa de mesmo nome: o exercício e os arquivos do Hermes. */
+const OWN_ICONS: Record<string, LucideIcon> = { workout: MovementIcon, skill: Wrench, agent: Bot, router: CompassIcon };
 
-/** O ícone de um tipo de nota: o do tipo de tarefa nas estruturadas, o do arquivo nas do Hermes, a folha do Lucide no texto. */
+/**
+ * O ícone de um tipo de artefato, pelo tipo visual (`artifactVisualType`): o do tipo de tarefa na refeição, no
+ * treino e no sono, o desenho próprio no exercício e nos arquivos do Hermes, a folha do Lucide no texto.
+ */
 export function noteTypeIcon(type: string): LucideIcon {
   if (type === "meal" || type === "training" || type === "sleep") return visualForItemType(type).Icon;
-  return HERMES_ICONS[type] ?? FileText;
+  return OWN_ICONS[type] ?? FileText;
 }
 
 /**
  * O desenho das páginas em cada tamanho, na caixa quadrada em que elas ficam
  * centradas: a página da frente inteira e, atrás dela, a borda de cima e a da
- * direita de uma segunda página. É o mesmo símbolo da aba Documentos da barra
- * inferior (`components/ui/nav-icons.tsx`), ampliado. Os cantos são bem menos
+ * direita de uma segunda página. Os cantos são bem menos
  * arredondados que os do quadrado da tarefa (4 contra 13), para a forma ler
  * como papel. O ícone do tipo é centrado na página da frente pelo CSS.
  */
@@ -42,11 +46,11 @@ function LetterGlyph() {
 }
 
 /**
- * O documento como páginas empilhadas: onde a tarefa é um quadrado com o ícone
- * no meio, o documento é o símbolo da aba Documentos com o ícone do tipo no
- * meio da página da frente. A nota de texto, que não tem ícone de tipo, leva a
- * letra A no lugar dele. `list` é a da lista de documentos, do tamanho do
- * quadrado da tarefa; `cite` é a compacta, para o documento citado dentro de
+ * O artefato como páginas empilhadas: onde a tarefa é um quadrado com o ícone
+ * no meio, o artefato são duas páginas com o ícone do tipo no meio da página
+ * da frente. A nota de texto, que não tem ícone de tipo, leva a
+ * letra A no lugar dele. `list` é a da lista de artefatos, do tamanho do
+ * quadrado da tarefa; `cite` é a compacta, para o artefato citado dentro de
  * uma tarefa.
  */
 export function NoteSheet({ type, size = "list", className }: { type: string; size?: keyof typeof SHEETS; className?: string }) {

@@ -28,7 +28,7 @@ val MONTHS_LONG: List<String> =
 /** "Janeiro"... com a inicial maiúscula, como abre um título ("Setembro de 2026"). */
 val MONTHS_TITLE: List<String> = MONTHS_LONG.map { it.replaceFirstChar(Char::uppercaseChar) }
 
-/** "jan.", "fev."... a forma curta com ponto, das listas de documentos. */
+/** "jan.", "fev."... a forma curta com ponto, das listas de artefatos. */
 val MONTHS_ABBREVIATED: List<String> = MONTHS_SHORT.map { "$it." }
 
 /** De domingo a sábado (índice 0 = domingo, como a máscara da recorrência): "Domingo", "Segunda-feira"... "Sábado". */

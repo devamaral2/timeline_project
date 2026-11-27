@@ -27,7 +27,7 @@ class AssistantRecordsViewModel(
     /** Cada tarefa lida, pelo id. */
     val cards: StateFlow<Map<String, TaskCard>> = mutableCards.asStateFlow()
 
-    /** Lê as tarefas de [entities]. Documentos e tarefas apagadas não têm o que ler. */
+    /** Lê as tarefas de [entities]. Artefatos e tarefas apagadas não têm o que ler. */
     fun show(entities: List<RequestEntity>) {
         for (entity in entities) {
             if (entity.kind != EntityKind.Task || entity.operation == RequestOperation.Delete) continue

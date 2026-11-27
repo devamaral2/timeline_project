@@ -117,7 +117,7 @@ class TaskEditActions(
     val save: () -> Unit,
     /** A hierarquia (ticket 15): só a edição a mostra. */
     val hierarchy: TaskHierarchyEditor? = null,
-    /** Os documentos (ticket 16): só a edição os mostra. */
+    /** Os artefatos (ticket 16): só a edição os mostra. */
     val artifacts: ArtifactEditActions? = null,
 )
 
@@ -221,7 +221,7 @@ private fun ColumnScope.FormBody(
         LocationSection(draft.location, form, actions)
         TagsSection(draft.tags, form.tagSuggestions, actions)
         DescriptionSection(draft.description) { value -> actions.update { it.copy(description = value) } }
-        // A hierarquia (tarefa principal e subtarefas, ticket 15) e os documentos (ticket 16) entram aqui, só na edição.
+        // A hierarquia (tarefa principal e subtarefas, ticket 15) e os artefatos (ticket 16) entram aqui, só na edição.
         if (!creating) actions.hierarchy?.let { HierarchySections(it, draft) }
         if (!creating) actions.artifacts?.let { TaskEditArtifactsSection(draft, it) }
         form.failure?.let { failure ->

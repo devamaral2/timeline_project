@@ -37,7 +37,7 @@ private const val LINK_LABEL = "Link do vídeo do YouTube"
 private const val BUTTON_LABEL = "Adicionar vídeo"
 
 /**
- * "Adicionar vídeo" na seção Documentos da Leitura diária: o botão e, aberto, o campo do link com "Pedir transcrição" e
+ * "Adicionar vídeo" na seção Artefatos da Leitura diária: o botão e, aberto, o campo do link com "Pedir transcrição" e
  * "Cancelar"; o aviso de link recusado fica sob o campo e o de pedido gravado, sob o botão (o `TaskAddVideo` do web).
  */
 @Composable

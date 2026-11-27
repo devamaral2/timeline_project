@@ -60,7 +60,7 @@ fun TaskPatch.toBody(): JsonObject =
         artifacts?.let { put("artifacts", JsonArray(it.map(ArtifactLink::json))) }
     }
 
-/** Um documento ligado vai com `id` e `relation`; a cópia nova de alimento, com `copyOf` e a quantidade, se houver. */
+/** Um artefato ligado vai com `id` e `relation`; a cópia nova de alimento, com `copyOf` e a quantidade, se houver. */
 private fun ArtifactLink.json(): JsonElement =
     when (this) {
         is ArtifactLink.Linked ->

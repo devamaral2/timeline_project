@@ -22,7 +22,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Instant
 
-/** A lista de documentos da tarefa, conferida contra as funções do web (`task-artifact-draft.ts`, `task-draft.ts`, `mealCaloriesKcal`). */
+/** A lista de artefatos da tarefa, conferida contra as funções do web (`task-artifact-draft.ts`, `task-draft.ts`, `mealCaloriesKcal`). */
 class TaskArtifactDraftFixturesTest {
     private fun name(case: JsonObject) = case.getValue("name").jsonPrimitive.content
 

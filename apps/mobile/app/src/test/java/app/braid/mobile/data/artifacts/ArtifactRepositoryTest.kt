@@ -28,7 +28,7 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 
-/** O repositório de documentos contra a fronteira de rede: consulta, contratos de cada tipo e erros. */
+/** O repositório de artefatos contra a fronteira de rede: consulta, contratos de cada tipo e erros. */
 class ArtifactRepositoryTest {
     private lateinit var backend: TestBackend
     private lateinit var repository: DefaultArtifactRepository
@@ -151,7 +151,7 @@ class ArtifactRepositoryTest {
                     repository.get(id)
                     fail("$id should not be found")
                 } catch (expected: ArtifactNotFoundException) {
-                    assertEquals("Documento não encontrado.", expected.message)
+                    assertEquals("Artefato não encontrado.", expected.message)
                 }
             }
             try {
