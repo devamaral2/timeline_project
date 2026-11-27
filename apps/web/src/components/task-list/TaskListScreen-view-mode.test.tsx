@@ -19,7 +19,7 @@ const { TaskListScreen } = await import("./TaskListScreen");
 
 const tasks: TaskDto[] = [
   taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", startedAt: "2026-09-13T00:00:00-03:00" }),
-  taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" }),
+  taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "waiting" }),
 ];
 
 beforeEach(() => {

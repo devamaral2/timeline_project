@@ -43,50 +43,98 @@ const tasks: TaskDto[] = [
   taskFixture({ id: "assinatura", name: "Renovar assinatura", status: "cancel" }),
 ];
 
-test("agrupa pessoa e agente nos grupos do canvas, com a contagem e a linha de cada tarefa", async () => {
-  serve(tasks);
+/** As quatro gavetas com uma tarefa de pessoa e uma de agente em cada, mais o que o agente ainda faz. */
+const drawerTasks: TaskDto[] = [
+  taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", startedAt: "2026-09-13T00:00:00-03:00", tags: ["casa"] }),
+  taskFixture({ id: "resposta", name: "Qual hotel prefere?", actor: "agent", kind: "inquiry_request", status: "waiting" }),
+  taskFixture({ id: "mestrado", name: "Projeto longo", status: "doing", longRunning: true }),
+  taskFixture({ id: "backup", name: "Backup da noite", actor: "agent", kind: "cron", status: "failed" }),
+  taskFixture({ id: "pneu", name: "Trocar o pneu", status: "inHold" }),
+  taskFixture({ id: "guardada", name: "Resumo guardado", actor: "agent", kind: "request", status: "completed", situation: "bookmarked" }),
+  taskFixture({ id: "relatorio", name: "Enviar relatório", status: "done" }),
+  taskFixture({ id: "revisada", name: "Resumo revisado", actor: "agent", kind: "request", status: "completed", situation: "reviewed" }),
+  taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" }),
+  taskFixture({ id: "fila", name: "Montar relatório", actor: "agent", kind: "build_request", status: "queued" }),
+];
+
+test("as quatro gavetas aparecem na ordem, com a contagem, as duas primeiras abertas e as outras fechadas", async () => {
+  serve(drawerTasks);
   render(<TaskListScreen userId="user-1" />);
 
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("4 tarefas abertas");
   expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
-    "Em curso1",
-    "A fazer1",
-    "Sem data1",
-    "Em espera1",
-    "Feitas1",
-    "Encerradas1",
+    "Para agora2",
+    "Contínuas2",
+    "Para depois2",
+    "Finalizadas2",
   ]);
+  expect(screen.getByRole("button", { name: /Para agora/ })).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("button", { name: /Contínuas/ })).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("button", { name: /Para depois/ })).toHaveAttribute("aria-expanded", "false");
+  expect(screen.getByRole("button", { name: /Finalizadas/ })).toHaveAttribute("aria-expanded", "false");
 
-  const doing = screen.getByRole("region", { name: /Em curso/ });
-  const agent = within(doing).getByRole("link", { name: /Pesquisar voos/ }).closest("li") as HTMLElement;
-  expect(agent).toHaveAttribute("data-actor", "agent");
-
-  const todo = screen.getByRole("region", { name: /A fazer/ });
-  const luz = within(todo).getByRole("link", { name: /Pagar conta de luz/ });
+  // Em cada gaveta a pessoa vem antes do agente.
+  const now = screen.getByRole("region", { name: /Para agora/ });
+  expect(within(now).getAllByRole("link").map((link) => link.textContent)).toEqual([expect.stringContaining("Pagar conta de luz"), expect.stringContaining("Qual hotel prefere?")]);
+  expect(within(screen.getByRole("region", { name: /Contínuas/ })).getAllByRole("link").map((link) => link.textContent)).toEqual([
+    expect.stringContaining("Projeto longo"),
+    expect.stringContaining("Backup da noite"),
+  ]);
+  const luz = within(now).getByRole("link", { name: /Pagar conta de luz/ });
   expect(luz).toHaveAttribute("href", "/user-1/tarefas/luz");
-  expect(within(todo).getByText("Era ontem")).toBeInTheDocument();
-  expect(within(todo).getByText("#casa")).toBeInTheDocument();
-
-  expect(within(screen.getByRole("region", { name: /Sem data/ })).getByRole("link", { name: /Organizar fotos da viagem/ })).toBeInTheDocument();
-  expect(within(screen.getByRole("region", { name: /Em espera/ })).getByRole("link", { name: /Trocar o pneu/ })).toBeInTheDocument();
+  expect(within(now).getByText("Era ontem")).toBeInTheDocument();
+  expect(within(now).getByText("#casa")).toBeInTheDocument();
 });
 
-test("Feitas e Encerradas vêm recolhidas e abrem ao toque", async () => {
-  serve(tasks);
+test("as gavetas fechadas abrem ao toque e fecham de novo, e as abertas também fecham", async () => {
+  serve(drawerTasks);
   render(<TaskListScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
 
-  const closed = screen.getByRole("button", { name: /Feitas/ });
-  expect(closed).toHaveAttribute("aria-expanded", "false");
-  expect(screen.queryByRole("link", { name: /Enviar relatório/ })).not.toBeInTheDocument();
+  const later = screen.getByRole("button", { name: /Para depois/ });
+  expect(screen.queryByRole("link", { name: /Trocar o pneu/ })).not.toBeInTheDocument();
+  fireEvent.click(later);
+  expect(later).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("link", { name: /Trocar o pneu/ })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Resumo guardado/ })).toBeInTheDocument();
+  fireEvent.click(later);
+  expect(screen.queryByRole("link", { name: /Trocar o pneu/ })).not.toBeInTheDocument();
 
-  fireEvent.click(closed);
-  expect(closed).toHaveAttribute("aria-expanded", "true");
+  fireEvent.click(screen.getByRole("button", { name: /Finalizadas/ }));
   expect(screen.getByRole("link", { name: /Enviar relatório/ })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Resumo revisado/ })).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: /Encerradas/ }));
-  expect(screen.getByRole("link", { name: /Renovar assinatura/ })).toBeInTheDocument();
+  const now = screen.getByRole("button", { name: /Para agora/ });
+  fireEvent.click(now);
+  expect(now).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("link", { name: /Pagar conta de luz/ })).not.toBeInTheDocument();
+});
+
+test("a gaveta vazia não é desenhada", async () => {
+  serve([taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo" })]);
+  render(<TaskListScreen userId="user-1" />);
+
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+  expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(["Para agora1"]);
+});
+
+test("o resumo conta as tarefas para agora", async () => {
+  serve(drawerTasks);
+  render(<TaskListScreen userId="user-1" />);
+
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("2 tarefas para agora");
+});
+
+test("nenhuma tarefa em andamento aparece na lista", async () => {
+  serve(drawerTasks);
+  render(<TaskListScreen userId="user-1" />);
+
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+  fireEvent.click(screen.getByRole("button", { name: /Para depois/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Finalizadas/ }));
+  expect(screen.queryByRole("link", { name: /Pesquisar voos/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Montar relatório/ })).not.toBeInTheDocument();
 });
 
 const hierarchy = [
@@ -104,14 +152,14 @@ test("a subtarefa só aparece dentro da principal: a principal mostra a fração
   // Nenhuma subtarefa é linha de grupo: as duas só existem dentro da gaveta da principal.
   const drawer = screen.getByRole("list", { name: "Subtarefas de “Revisar proposta”" });
   expect(screen.getAllByRole("link", { name: /Ler a proposta|Anotar as dúvidas/ }).every((link) => drawer.contains(link))).toBe(true);
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("2 tarefas abertas");
-  expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(["Em curso1", "A fazer1"]);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("2 tarefas para agora");
+  expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual(["Para agora2"]);
 
   const toggle = screen.getByRole("button", { name: "Subtarefas de “Revisar proposta”: 1 de 2 feitas" });
   expect(toggle).toHaveAttribute("aria-expanded", "true");
   expect(toggle).toHaveTextContent("1/2");
   // A principal fora da lista não segura a subtarefa: ela continua linha.
-  expect(within(screen.getByRole("region", { name: /A fazer/ })).getByRole("link", { name: /Escrever o rascunho/ })).toBeInTheDocument();
+  expect(within(screen.getByRole("region", { name: /Para agora/ })).getByRole("link", { name: /Escrever o rascunho/ })).toBeInTheDocument();
 });
 
 test("a gaveta vem aberta com as subtarefas, cada uma levando ao seu detalhe, e a fração fecha e reabre", async () => {
@@ -190,7 +238,7 @@ test("uma série aparece uma vez, pela ocorrência em aberto mais próxima, com 
   const links = await screen.findAllByRole("link", { name: /Pagar fatura/ });
   expect(links).toHaveLength(1);
   expect(links[0]).toHaveAttribute("href", "/user-1/tarefas/dia-14");
-  expect(within(screen.getByRole("region", { name: /A fazer/ })).getByText("Todo dia, 18:00")).toBeInTheDocument();
+  expect(within(screen.getByRole("region", { name: /Para agora/ })).getByText("Todo dia, 18:00")).toBeInTheDocument();
 });
 
 const glyphOf = (name: string) => new RegExp(`Mudar status de “${name}”`);
@@ -226,7 +274,7 @@ test("escolher o status que a tarefa já tem, ou fechar com Esc, não grava nada
   expect(api.calls.some((call) => call.method === "PATCH")).toBe(false);
 });
 
-test("escolher um status em aberto grava com a revisão lida e a linha muda de grupo", async () => {
+test("escolher um status em aberto grava com a revisão lida e a linha muda de gaveta", async () => {
   const api = serve([taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
   render(<TaskListScreen userId="user-1" />);
 
@@ -239,12 +287,14 @@ test("escolher um status em aberto grava com a revisão lida e a linha muda de g
     body: { expectedRevision: 3, status: "inHold" },
   });
   expect(api.calls.find((call) => call.method === "PATCH")?.body).not.toHaveProperty("finishedAt");
-  await waitFor(() => expect(within(screen.getByRole("region", { name: /Em espera/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument());
-  expect(screen.queryByRole("region", { name: /A fazer/ })).not.toBeInTheDocument();
+  // Em espera cai em Para depois, que vem fechada.
+  fireEvent.click(await screen.findByRole("button", { name: /Para depois/ }));
+  expect(within(screen.getByRole("region", { name: /Para depois/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: /Para agora/ })).not.toBeInTheDocument();
   expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
 });
 
-test("escolher Feito envia a conclusão com a revisão lida e a linha vai para Feitas", async () => {
+test("escolher Feito envia a conclusão com a revisão lida e a linha vai para Finalizadas", async () => {
   const api = serve([taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 3 })]);
   render(<TaskListScreen userId="user-1" />);
 
@@ -259,9 +309,9 @@ test("escolher Feito envia a conclusão com a revisão lida e a linha vai para F
   expect(patch?.body).toMatchObject({ expectedRevision: 3, status: "done" });
   expect((patch?.body as { finishedAt: string }).finishedAt).toMatch(/^2026-09-14T13:00:00/);
 
-  await waitFor(() => expect(screen.queryByRole("region", { name: /A fazer/ })).not.toBeInTheDocument());
-  fireEvent.click(screen.getByRole("button", { name: /Feitas/ }));
-  expect(within(screen.getByRole("region", { name: /Feitas/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("region", { name: /Para agora/ })).not.toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: /Finalizadas/ }));
+  expect(within(screen.getByRole("region", { name: /Finalizadas/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
 
 test("tirar uma tarefa de Feito limpa a conclusão; reabrir um cancelado só troca o status", async () => {
@@ -271,15 +321,14 @@ test("tirar uma tarefa de Feito limpa a conclusão; reabrir um cancelado só tro
   ]);
   render(<TaskListScreen userId="user-1" />);
 
-  fireEvent.click(await screen.findByRole("button", { name: /Feitas/ }));
+  fireEvent.click(await screen.findByRole("button", { name: /Finalizadas/ }));
   fireEvent.click(screen.getByRole("button", { name: glyphOf("Enviar relatório") }));
   fireEvent.click(screen.getByRole("option", { name: "A fazer" }));
 
   await waitFor(() => expect(api.calls.some((call) => call.method === "PATCH")).toBe(true));
   expect(api.calls.find((call) => call.method === "PATCH")?.body).toEqual({ expectedRevision: 4, status: "todo", finishedAt: null });
-  await waitFor(() => expect(within(screen.getByRole("region", { name: /A fazer/ })).getByRole("link", { name: /Enviar relatório/ })).toBeInTheDocument());
+  await waitFor(() => expect(within(screen.getByRole("region", { name: /Para agora/ })).getByRole("link", { name: /Enviar relatório/ })).toBeInTheDocument());
 
-  fireEvent.click(screen.getByRole("button", { name: /Encerradas/ }));
   fireEvent.click(screen.getByRole("button", { name: glyphOf("Renovar assinatura") }));
   fireEvent.click(screen.getByRole("option", { name: "Em curso" }));
   await waitFor(() => expect(api.calls.filter((call) => call.method === "PATCH")).toHaveLength(2));
@@ -287,7 +336,7 @@ test("tirar uma tarefa de Feito limpa a conclusão; reabrir um cancelado só tro
 });
 
 test("o glifo de uma tarefa de agente não aparece como botão e não muda status", async () => {
-  const api = serve([taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" })]);
+  const api = serve([taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "waiting" })]);
   render(<TaskListScreen userId="user-1" />);
 
   const row = (await screen.findByRole("link", { name: /Pesquisar voos/ })).closest("li") as HTMLElement;
@@ -302,35 +351,36 @@ const reviewable = [
 
 /** O glifo da esquerda de uma tarefa de agente final: abre as três situações. */
 const situationButton = (name: string) => screen.findByRole("button", { name: new RegExp(`Mudar situação de “${name}”`) });
+const drawerNames = () => screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent);
 
-async function openFinished(): Promise<HTMLElement> {
-  fireEvent.click(await screen.findByRole("button", { name: /Feitas/ }));
-  return within(screen.getByRole("region", { name: /Feitas/ })).getByRole("link", { name: /Pesquisar voos/ }).closest("li") as HTMLElement;
-}
-
-test("tocar no glifo de uma tarefa de agente final e escolher Revisada muda o glifo, grava e continua assim ao recarregar", async () => {
+test("tocar no glifo de uma tarefa de agente final e escolher Revisada a leva para Finalizadas, grava e continua assim ao recarregar", async () => {
   const api = serve(reviewable);
   const { unmount } = render(<TaskListScreen userId="user-1" />);
-  await openFinished();
 
+  // Para revisar fica em Para agora, com a tarefa de pessoa.
   expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Para revisar. Mudar situação de “Pesquisar voos”");
+  expect(within(screen.getByRole("region", { name: /Para agora/ })).getByRole("link", { name: /Pesquisar voos/ })).toBeInTheDocument();
   fireEvent.click(await situationButton("Pesquisar voos"));
   const menu = screen.getByRole("group", { name: "Situação da tarefa" });
   expect(within(menu).getAllByRole("button").map((button) => button.textContent)).toEqual(["Para revisar", "Revisada", "Guardada"]);
   fireEvent.click(within(menu).getByRole("button", { name: "Revisada" }));
 
+  // Na hora, sem reler: a linha sai de Para agora e entra em Finalizadas (fechada).
+  expect(screen.queryByRole("link", { name: /Pesquisar voos/ })).not.toBeInTheDocument();
+  expect(drawerNames()).toEqual(["Para agora1", "Finalizadas1"]);
+  fireEvent.click(screen.getByRole("button", { name: /Finalizadas/ }));
   expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Revisada. Mudar situação de “Pesquisar voos”");
-  expect(screen.queryByRole("group", { name: "Situação da tarefa" })).not.toBeInTheDocument();
   await waitFor(() => expect(api.calls.filter((call) => call.method === "PUT")).toHaveLength(1));
   expect(api.calls.find((call) => call.method === "PUT")).toMatchObject({ pathname: "/api/tasks/voos/situation", body: { situation: "reviewed" } });
+  expect(api.calls.filter((call) => call.pathname === "/api/tasks/tracked")).toHaveLength(1);
 
   unmount();
   render(<TaskListScreen userId="user-1" />);
-  await openFinished();
+  fireEvent.click(await screen.findByRole("button", { name: /Finalizadas/ }));
   expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Revisada. Mudar situação de “Pesquisar voos”");
 });
 
-test("a mudança aparece na hora, antes de a API responder", async () => {
+test("escolher Guardada leva a tarefa de agente para Para depois, antes de a API responder", async () => {
   const api = serve(reviewable);
   let release: () => void = () => {};
   const held = new Promise<void>((resolve) => { release = resolve; });
@@ -339,21 +389,23 @@ test("a mudança aparece na hora, antes de a API responder", async () => {
     return api.authedFetch(path, init);
   });
   render(<TaskListScreen userId="user-1" />);
-  await openFinished();
 
   fireEvent.click(await situationButton("Pesquisar voos"));
   fireEvent.click(screen.getByRole("button", { name: "Guardada" }));
 
+  expect(screen.queryByRole("link", { name: /Pesquisar voos/ })).not.toBeInTheDocument();
+  expect(drawerNames()).toEqual(["Para agora1", "Para depois1"]);
+  fireEvent.click(screen.getByRole("button", { name: /Para depois/ }));
   expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Guardada. Mudar situação de “Pesquisar voos”");
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("1 tarefa para agora");
   expect(api.calls.some((call) => call.method === "PUT")).toBe(false);
   release();
   await waitFor(() => expect(api.calls.some((call) => call.method === "PUT")).toBe(true));
 });
 
-test("com a API falhando, a mudança é desfeita e a tela avisa", async () => {
+test("com a API falhando, a tarefa volta para a gaveta de antes e a tela avisa", async () => {
   const api = serve(reviewable);
   render(<TaskListScreen userId="user-1" />);
-  await openFinished();
   api.failNext("PUT", "/api/tasks/voos/situation", 500);
 
   fireEvent.click(await situationButton("Pesquisar voos"));
@@ -361,6 +413,7 @@ test("com a API falhando, a mudança é desfeita e a tela avisa", async () => {
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível mudar a situação");
   expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Para revisar. Mudar situação de “Pesquisar voos”");
+  expect(drawerNames()).toEqual(["Para agora2"]);
 });
 
 test("a tarefa de agente esperando você e a execução agendada têm ponto inerte, sem botão", async () => {
@@ -373,7 +426,6 @@ test("a tarefa de agente esperando você e a execução agendada têm ponto iner
   const waiting = (await screen.findByRole("link", { name: /Aguardando resposta/ })).closest("li") as HTMLElement;
   expect(within(waiting).queryByRole("button")).not.toBeInTheDocument();
   expect(waiting.querySelector("[data-row-lead]")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /Feitas/ }));
   const cron = screen.getByRole("link", { name: /Rotina da manhã/ }).closest("li") as HTMLElement;
   expect(within(cron).queryByRole("button")).not.toBeInTheDocument();
   expect(cron.querySelector("[data-row-lead]")).toBeInTheDocument();
@@ -394,7 +446,7 @@ test("revisão desatualizada: a tela avisa, relê a lista e não grava nada", as
   expect(await screen.findByRole("alert")).toHaveTextContent("Esta tarefa mudou em outro lugar");
   expect(api.calls.filter((call) => call.method === "PATCH")).toHaveLength(1);
   expect(api.calls.find((call) => call.method === "PATCH")?.body).toMatchObject({ expectedRevision: 1 });
-  expect(within(screen.getByRole("region", { name: /A fazer/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+  expect(within(screen.getByRole("region", { name: /Para agora/ })).getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
 
 /** Os parâmetros da última consulta à lista de tarefas, como saíram na rede. */
@@ -447,6 +499,8 @@ test("a busca por texto espera a digitação parar, tira os espaços das pontas 
   fireEvent.change(screen.getByRole("searchbox", { name: "Buscar tarefas" }), { target: { value: "  viagem " } });
 
   await waitFor(() => expect(lastTrackedQuery(api)).toMatchObject({ q: "viagem" }));
+  // Sem data cai em Para depois, que vem fechada.
+  fireEvent.click(await screen.findByRole("button", { name: /Para depois/ }));
   expect(await screen.findByRole("link", { name: /Organizar fotos da viagem/ })).toBeInTheDocument();
   await waitFor(() => expect(screen.queryByRole("link", { name: /Pagar conta de luz/ })).not.toBeInTheDocument());
 });
@@ -487,18 +541,19 @@ function trackedReads(api: ReturnType<typeof serve>) {
   return () => api.calls.filter((call) => call.pathname === "/api/tasks/tracked").length;
 }
 
-test("com tarefa de agente em aberto, a lista se relê sozinha e a linha vai para Feitas", async () => {
+test("com tarefa de agente em aberto, a lista se relê sozinha e a tarefa que terminou vai para Finalizadas", async () => {
   const api = serve(tasks);
   render(<TaskListScreen userId="user-1" />);
-  await screen.findByRole("link", { name: /Pesquisar voos/ });
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+  // Em andamento: fica fora da lista (só a gaveta de execução a mostra).
+  expect(screen.queryByRole("link", { name: /Pesquisar voos/ })).not.toBeInTheDocument();
 
   const table = api.store.table<TaskDto>("tasks");
   table.set("pesquisa", { ...(table.get("pesquisa") as TaskDto), status: "completed" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
-  await waitFor(() => expect(screen.queryByRole("region", { name: /Em curso/ })).not.toBeInTheDocument());
-  fireEvent.click(screen.getByRole("button", { name: /Feitas/ }));
-  expect(within(screen.getByRole("region", { name: /Feitas/ })).getByRole("link", { name: /Pesquisar voos/ })).toBeInTheDocument();
+  fireEvent.click(await screen.findByRole("button", { name: /Finalizadas/ }));
+  expect(within(screen.getByRole("region", { name: /Finalizadas/ })).getByRole("link", { name: /Pesquisar voos/ })).toBeInTheDocument();
 });
 
 test("sem tarefa de agente em aberto, a lista não se relê em intervalo", async () => {
@@ -516,20 +571,20 @@ test("sem tarefa de agente em aberto, a lista não se relê em intervalo", async
 test("uma releitura que falha mantém a lista na tela, sem o aviso de erro", async () => {
   const api = serve(tasks);
   render(<TaskListScreen userId="user-1" />);
-  await screen.findByRole("link", { name: /Pesquisar voos/ });
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
 
   api.failNext("GET", "/api/tasks/tracked", 503);
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Pesquisar voos/ })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
 
 test("cada linha mostra a marca e o nome do projeto, o personal inclusive", async () => {
   serve([
     taskFixture({ id: "braid", name: "Revisar o PR", status: "todo", project: { id: "p-tp", name: "timeline_project", personal: false } }),
     taskFixture({ id: "casa", name: "Pagar a luz", status: "todo" }),
-    taskFixture({ id: "voos", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running", project: { id: "p-as", name: "agent-skills", personal: false } }),
+    taskFixture({ id: "voos", name: "Pesquisar voos", actor: "agent", kind: "request", status: "waiting", project: { id: "p-as", name: "agent-skills", personal: false } }),
   ]);
   const { container } = render(<TaskListScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Revisar o PR/ });
@@ -539,4 +594,27 @@ test("cada linha mostra a marca e o nome do projeto, o personal inclusive", asyn
   expect(lineOf(/Pagar a luz/)).toHaveTextContent("PEpersonal");
   expect(lineOf(/Pesquisar voos/)).toHaveTextContent("ASagent-skills");
   expect(container.querySelectorAll("[data-project-line]")).toHaveLength(3);
+});
+
+test("a subtarefa cuja principal está em andamento continua como linha, e a principal não aparece", async () => {
+  serve([
+    taskFixture({ id: "pedido", name: "Montar a viagem", actor: "agent", kind: "request", status: "running", subtaskIds: ["reservar"] }),
+    taskFixture({ id: "reservar", name: "Reservar o hotel", status: "todo", parentTaskId: "pedido" }),
+  ]);
+  render(<TaskListScreen userId="user-1" />);
+
+  const row = (await screen.findByRole("link", { name: /Reservar o hotel/ })).closest("li") as HTMLElement;
+  expect(within(screen.getByRole("region", { name: /Para agora/ })).getByRole("link", { name: /Reservar o hotel/ })).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: /Montar a viagem/ })).not.toBeInTheDocument();
+  expect(row.parentElement?.closest("li")).toBeNull();
+});
+
+test("sem nada na lista mas com o agente trabalhando, diz que nada pede atenção e não convida a criar tarefa", async () => {
+  serve([taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" })]);
+  render(<TaskListScreen userId="user-1" />);
+
+  expect(await screen.findByText("Nada pede a sua atenção agora.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Nenhuma tarefa para agora");
+  expect(screen.queryByRole("heading", { name: "Nenhuma tarefa por aqui" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Nova tarefa" })).not.toBeInTheDocument();
 });

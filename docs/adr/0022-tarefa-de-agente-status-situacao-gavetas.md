@@ -218,6 +218,54 @@ que algo rodava, e a execução em andamento não pertence a nenhuma gaveta da l
 
 ### Consequências
 
-- Enquanto as quatro gavetas da lista não entram, a execução em andamento aparece na gaveta de execução e também na
-  lista de tarefas. É esperado.
+- A execução em andamento aparece só na gaveta de execução: a lista de tarefas a tira (seção seguinte).
+- O que fica fixo no pé da tela (a escolha de status da lista) sobe a altura que a gaveta cobre: `ExecutionDrawer`
+  publica `--execution-clearance` na raiz do documento (da borda de cima da gaveta até o pé da janela, acompanhando a
+  altura enquanto ela anima) e o CSS usa `max(base, var(--execution-clearance, 0px) + 12px)`. Sem gaveta à vista a
+  variável não existe e vale a base de sempre (24 px, ou 90 px no celular, acima da barra).
 - O Android ganha a mesma gaveta em ticket próprio (spec 51).
+
+## As quatro gavetas da lista
+
+### Contexto
+
+A lista de tarefas agrupava por status em seis grupos (Em curso, A fazer, Sem data, Em espera, Feitas, Encerradas). Com
+os status e a situação do agente, o que importa na lista é a ação que a tarefa pede, e o trabalho que o agente ainda faz
+já tem a gaveta de execução. "Gaveta" aqui é a **gaveta da lista**; a gaveta de subtarefas (ADR 0017) e a gaveta de
+execução são outras coisas.
+
+### Decisão
+
+1. **Quatro gavetas, nesta ordem:** Para agora, Contínuas, Para depois e Finalizadas. O cabeçalho é o divisor em mono que a
+   lista já usa (seta, título, contagem e o fio) e abre e fecha a gaveta; Para agora e Contínuas começam abertas, as
+   outras fechadas, e a gaveta vazia não é desenhada. O resumo no alto é "N tarefas para agora".
+2. **A regra** é uma função pura, `drawerOf` em `lib/tasks/task-drawers.ts`:
+   - Execução agendada (`cron`): Contínuas, com qualquer status.
+   - Pedido de agente em andamento (`IN_PROGRESS_AGENT_STATUSES` dos contratos): fora da lista (`execution`), só na gaveta
+     de execução. Esperando você (aberto e não em andamento): Para agora.
+   - Pedido de agente que terminou: pela situação (Para revisar: Para agora; Guardada: Para depois; Revisada:
+     Finalizadas); sem situação (passo, ou dado de antes da situação): Finalizadas.
+   - Tarefa longa de pessoa que não acabou (`isClosedStatus`): Contínuas. Os demais status de pessoa: A fazer e Em curso em
+     Para agora; Sem data e Em espera em Para depois; Feito, Cancelado e Não realizado em Finalizadas.
+   - Sem status (referência): sem gaveta.
+3. **A ordem:** em cada gaveta vêm primeiro as tarefas de pessoa e depois as de agente, cada grupo na ordem em que a API
+   devolve. Mudar a situação de uma tarefa de agente a leva para a outra gaveta na hora, sem reler (a lista é derivada
+   do cartão, e a troca otimista da situação já muda o cartão).
+4. **Subtarefas** continuam dentro da principal (ADR 0017). O que está em andamento sai da lista antes do aninhamento
+   (`listedCards`), então a subtarefa cuja principal está em andamento continua como linha. A fração conta como feita a
+   tarefa de pessoa `done` e a de agente `completed` (`countsAsDone`).
+5. **O filtro por executor e os modos de visualização** seguem como estavam: são parâmetros da consulta.
+6. **O Android** mantém a função antiga (`groupTrackedTasks`, seis grupos por status) e o fixture que confere, sem uso no
+   web, até portar a regra nova. O fixture novo é `task-list-drawers` (a tabela da regra, a lista em gavetas, o resumo e as
+   mudanças de situação), gerado pelas mesmas funções do web; o ticket do Android porta a regra e apaga a função antiga.
+
+### Alternativas rejeitadas
+
+- Manter os seis grupos e acrescentar a execução como grupo: o estado "rodando" pertence à gaveta de execução, não à
+  lista, e o grupo antigo misturava o que pede ação com o que já passou.
+- Uma gaveta por situação: Para revisar já é trabalho para agora, e Guardada e Para depois pedem a mesma coisa (nada agora).
+
+### Consequências
+
+- A tela só mostra as gavetas com tarefa; uma lista em que tudo está em andamento mostra o aviso de lista vazia, e o
+  trabalho aparece na gaveta de execução.
