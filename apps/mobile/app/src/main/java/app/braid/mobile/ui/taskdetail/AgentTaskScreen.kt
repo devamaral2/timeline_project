@@ -51,7 +51,6 @@ import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
 import app.braid.mobile.core.designsystem.ProjectLine
 import app.braid.mobile.core.designsystem.SvgIcon
-import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
 import app.braid.mobile.domain.request.EntityKind
@@ -88,6 +87,7 @@ import app.braid.mobile.ui.tasks.SituationMenu
 import app.braid.mobile.ui.tasks.TaskKindMark
 import app.braid.mobile.ui.tasks.TaskSituationGlyph
 import app.braid.mobile.ui.tasks.TaskStatusGlyph
+import app.braid.mobile.ui.tasks.agentStatusLabel
 import app.braid.mobile.ui.tasks.situationName
 import app.braid.mobile.ui.tasks.taskStatusName
 import java.time.Instant
@@ -193,8 +193,7 @@ private fun Body(
 }
 
 /**
- * O topo: o código do tipo, o título e o status do agente, solto na linha, com o projeto (só leitura) e o robô na ponta como
- * assinatura. O pedido que terminou ganha o controle de situação ao lado do status: o toque abre as três opções logo abaixo.
+ * O topo: o código do tipo, o título e o status do agente, solto na ponta direita da linha e só com o nome dele ("Concluído"). O pedido que terminou ganha o controle de situação na ponta esquerda: o toque abre as três opções logo abaixo.
  */
 @Composable
 private fun Header(
@@ -213,16 +212,7 @@ private fun Header(
             style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Normal, lineHeight = 36.sp),
         )
         Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 40.dp), verticalAlignment = Alignment.CenterVertically) {
-            TaskStatusGlyph(actor = TaskActor.Agent, status = request.status, size = 16.dp)
-            Spacer(Modifier.width(8.dp))
-            Text(
-                taskStatusName(TaskActor.Agent, request.status),
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-            )
             if (situation != null) {
-                Spacer(Modifier.width(16.dp))
                 Row(
                     Modifier
                         .defaultMinSize(minHeight = 40.dp)
@@ -234,18 +224,16 @@ private fun Header(
                     Spacer(Modifier.width(8.dp))
                     Text(situationName(situation), color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, lineHeight = 20.sp)
                 }
+                Spacer(Modifier.width(12.dp))
             }
-            // Só leitura: o projeto de uma tarefa de agente não muda depois que ela nasce.
-            Spacer(Modifier.width(16.dp))
-            ProjectLine(task.card.project, Modifier.weight(1f, fill = false))
             Spacer(Modifier.weight(1f))
+            TaskStatusGlyph(actor = TaskActor.Agent, status = request.status, size = 16.dp)
             Spacer(Modifier.width(8.dp))
-            SvgIcon(
-                BraidIcons.bot,
-                size = 20.dp,
-                color = braidTokens().brand,
-                strokeWidth = 1.9f,
-                modifier = Modifier.clearAndSetSemantics {},
+            Text(
+                agentStatusLabel(request.status) ?: "Agente",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
             )
         }
         if (menuOpen && situation != null) {
@@ -261,7 +249,7 @@ private fun Header(
     }
 }
 
-/** "Informações": o início, com o tempo decorrido, e a conclusão, ou "ainda não concluído". */
+/** "Informações": o projeto, o início, com o tempo decorrido, e a conclusão, ou "ainda não concluído". */
 @Composable
 private fun InfoSection(
     task: TaskDetail,
@@ -270,6 +258,8 @@ private fun InfoSection(
     Section("Informações") {
         Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            // Só leitura: o projeto de uma tarefa de agente não muda depois que ela nasce.
+            FactRow("Projeto") { ProjectLine(task.card.project) }
             FactRow("Início") {
                 val startedAt = task.card.startedAt
                 if (startedAt == null) {
