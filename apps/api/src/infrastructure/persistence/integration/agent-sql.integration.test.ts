@@ -46,8 +46,8 @@ describe("PostgresScopedSqlQuery", () => {
   async function seed(pool: Pool): Promise<void> {
     await pool.query(`
       INSERT INTO projects (id, user_id, name, personal) VALUES
-        ('${id("PB", 1)}', 'user-b', 'personal', true),
-        ('${id("PA", 1)}', 'user-a', 'personal', true);
+        ('${id("PB", 1)}', 'user-b', 'diario', true),
+        ('${id("PA", 1)}', 'user-a', 'diario', true);
       INSERT INTO tasks (id, project_id, user_id, actor, kind, status, name, started_at) VALUES
         ('${B_TASK}', '${id("PB", 1)}', 'user-b', 'human', 'common', NULL, 'Segredo do B', '2026-09-15T12:00:00Z'),
         ('${B_TRACKED}', '${id("PB", 1)}', 'user-b', 'human', 'common', 'todo', 'Tarefa do B', NULL),
@@ -140,10 +140,10 @@ describe("PostgresScopedSqlQuery", () => {
 
     expect(await rows("SELECT name, project FROM tasks ORDER BY name")).toEqual([
       ["Tarefa do A", "braid"],
-      ["Treino", "personal"],
+      ["Treino", "diario"],
     ]);
     expect(await rows("SELECT name FROM tasks WHERE project = 'braid'")).toEqual([["Tarefa do A"]]);
-    expect(await rows("SELECT project FROM tasks WHERE project <> 'personal'", "user-b")).toEqual([["segredo-do-b"]]);
+    expect(await rows("SELECT project FROM tasks WHERE project <> 'diario'", "user-b")).toEqual([["segredo-do-b"]]);
     // Os pedidos do agente, que tambem tem projeto, continuam fora.
     expect(await rows("SELECT count(*)::int FROM tasks WHERE kind IN ('request', 'step')")).toEqual([[0]]);
   });

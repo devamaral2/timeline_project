@@ -10,7 +10,7 @@ const card: TaskCardDto = {
   priority: "medium",
   name: "Caminhada",
   description: "",
-  project: { id: "project-1", name: "personal", personal: true },
+  project: { id: "project-1", name: "diario", personal: true },
   startedAt: "2026-11-14T08:00:00-03:00",
   estimatedFinishAt: "2026-11-14T08:30:00-03:00",
   longRunning: false,

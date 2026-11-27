@@ -28,12 +28,12 @@ describe("banco novo: checks, restricoes e indices", () => {
     );
   }
 
-  /** O `personal` do usuario, criado na primeira necessidade: toda tarefa e serie precisa de um projeto. */
+  /** O `diario` do usuario, criado na primeira necessidade: toda tarefa e serie precisa de um projeto. */
   async function personalProject(userId: string): Promise<string> {
     const found = await ctx.pool.query("SELECT id FROM projects WHERE user_id = $1 AND personal", [userId]);
     if (found.rows[0]) return found.rows[0].id as string;
     const id = ulid();
-    await insert("projects", { id, user_id: userId, name: "personal", personal: true });
+    await insert("projects", { id, user_id: userId, name: "diario", personal: true });
     return id;
   }
 
@@ -115,12 +115,12 @@ describe("banco novo: checks, restricoes e indices", () => {
       await project({ name: "braid", user_id: "user-2" });
     });
 
-    test("cada usuario tem no maximo um personal, e o nome dele e personal", async () => {
-      await project({ name: "personal", personal: true });
+    test("cada usuario tem no maximo um personal, e o nome dele e diario", async () => {
+      await project({ name: "diario", personal: true });
 
-      await expect(project({ name: "personal", personal: true })).rejects.toThrow(/projects_user_name_unique|projects_user_personal_unique/);
+      await expect(project({ name: "diario", personal: true })).rejects.toThrow(/projects_user_name_unique|projects_user_personal_unique/);
       await expect(project({ name: "outro", personal: true, user_id: "user-2" })).rejects.toThrow(/projects_personal_name/);
-      await project({ name: "personal", personal: true, user_id: "user-2" });
+      await project({ name: "diario", personal: true, user_id: "user-2" });
     });
 
     test("a tarefa e a serie exigem projeto, e um projeto com tarefa nao se apaga", async () => {

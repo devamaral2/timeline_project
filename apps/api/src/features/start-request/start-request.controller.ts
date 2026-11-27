@@ -19,7 +19,7 @@ export const startRequestBody = z.object({
   clientMessageId: clientMessageIdSchema.optional(),
   /** O provedor, o modelo e o esforco que o campo do chat mostra: os agentes do pedido rodam com ele. */
   model: modelSelectionSchema.optional(),
-  /** O projeto do pedido; vale sobre a sessao. Sem ele, o pedido fica no projeto do primeiro da sessao ou em `personal`. */
+  /** O projeto do pedido; vale sobre a sessao. Sem ele, o pedido fica no projeto do primeiro da sessao ou em `diario`. */
   projectId: projectIdSchema.optional(),
 });
 

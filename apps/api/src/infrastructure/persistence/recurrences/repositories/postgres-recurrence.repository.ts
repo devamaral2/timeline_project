@@ -34,7 +34,7 @@ function projectOfTemplate(recurrence: Recurrence): string | undefined {
 
 /** A regra. Os artefatos que o template aponta ja precisam estar gravados. */
 export async function insertRecurrenceAggregate(tx: Tx, recurrence: Recurrence, scope?: ProjectScope): Promise<void> {
-  // O projeto que o modelo escolheu vale antes das regras do pedido (`scope`); sem escolha, valem elas e depois `personal`.
+  // O projeto que o modelo escolheu vale antes das regras do pedido (`scope`); sem escolha, valem elas e depois `diario`.
   const projectId = await resolveProjectId(tx, { ...scope, userId: recurrence.userId, projectId: projectOfTemplate(recurrence) });
   await tx.insert(schema.recurrences).values({ ...recurrenceColumnsOf(recurrence), projectId });
 }
@@ -56,7 +56,7 @@ export async function updateRecurrenceAggregate(
 
   const { id: _id, userId: _userId, createdAt: _createdAt, ...columns } = recurrenceColumnsOf(recurrence);
   // O modelo escolheu um projeto: a serie passa a ele. Sem `projectId` no modelo o projeto da serie nao muda (ela pode
-  // ter nascido no projeto de um pedido, que o modelo nao guarda); para voltar a `personal`, o modelo leva o id dele.
+  // ter nascido no projeto de um pedido, que o modelo nao guarda); para voltar a `diario`, o modelo leva o id dele.
   const chosen = projectOfTemplate(recurrence);
   const projectId = chosen === undefined ? undefined : await resolveProjectId(tx, { userId: actorUserId, projectId: chosen });
   const updated = await tx

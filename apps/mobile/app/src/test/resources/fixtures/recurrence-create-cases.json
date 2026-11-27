@@ -414,7 +414,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     },

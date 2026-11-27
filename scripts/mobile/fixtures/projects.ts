@@ -5,7 +5,7 @@
 import { createProjectInputSchema, projectSchema } from "../../../packages/contracts/src/schemas";
 import { ACAI_PROJECT, AGENT_SKILLS_PROJECT, PERSONAL_PROJECT, TIMELINE_PROJECT } from "./project";
 
-/** A lista como a API a devolve: `personal` primeiro e os outros por nome. */
+/** A lista como a API a devolve: `diario` primeiro e os outros por nome. */
 const list = [PERSONAL_PROJECT, ACAI_PROJECT, AGENT_SKILLS_PROJECT, TIMELINE_PROJECT];
 
 export function projectsFixtures(): Record<string, unknown> {

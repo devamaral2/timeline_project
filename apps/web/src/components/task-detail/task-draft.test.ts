@@ -457,19 +457,19 @@ describe("rebaseDraft", () => {
 describe("projeto", () => {
   it("a edição começa no projeto que a tarefa tem", () => {
     expect(draftFromTask(training({ project: BRAID })).project).toEqual(BRAID);
-    expect(draftFromTask(training()).project).toMatchObject({ personal: true, name: "personal" });
+    expect(draftFromTask(training()).project).toMatchObject({ personal: true, name: "diario" });
   });
 
   it("a criação só manda projectId quando a pessoa escolheu um projeto que não é o personal", () => {
     expect(buildCreateTaskInput({ ...emptyTaskDraft("Treino"), project: BRAID }, NOW)).toMatchObject({ projectId: "project-braid" });
     expect(buildCreateTaskInput(emptyTaskDraft("Treino"), NOW)).not.toHaveProperty("projectId");
-    const personal: ProjectDto = { id: "project-personal", name: "personal", personal: true };
+    const personal: ProjectDto = { id: "project-personal", name: "diario", personal: true };
     expect(buildCreateTaskInput({ ...emptyTaskDraft("Treino"), project: personal }, NOW)).not.toHaveProperty("projectId");
   });
 
   it("trocar de projeto manda o id, voltar ao personal manda null e deixar como está não manda nada", () => {
     const inBraid = training({ project: BRAID });
-    const personal: ProjectDto = { id: "project-personal", name: "personal", personal: true };
+    const personal: ProjectDto = { id: "project-personal", name: "diario", personal: true };
     const other: ProjectDto = { id: "project-other", name: "outro", personal: false };
 
     expect(buildTaskPatch(inBraid, { ...draftFromTask(inBraid), project: other }, NOW)).toEqual({ expectedRevision: 3, projectId: "project-other" });

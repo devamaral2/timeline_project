@@ -106,7 +106,7 @@ export async function updateTaskAggregate(
   expectedRevision: number,
   artifacts?: ArtifactWrites,
 ): Promise<void> {
-  // A tarefa lida sempre traz o projeto; `null` e a edicao que a devolve a `personal`. Quem nao tem projeto no
+  // A tarefa lida sempre traz o projeto; `null` e a edicao que a devolve a `diario`. Quem nao tem projeto no
   // agregado (testes que montam a tarefa a mao) deixa a coluna como esta.
   const projectId =
     task.projectId === undefined ? undefined : await resolveProjectId(tx, { userId: actorUserId, projectId: task.projectId });

@@ -8,7 +8,7 @@
   "description": "Pauta do trimestre.",
   "project": {
     "id": "project-personal",
-    "name": "personal",
+    "name": "diario",
     "personal": true
   },
   "location": "Novo endereço",

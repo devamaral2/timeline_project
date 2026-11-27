@@ -20,7 +20,7 @@ class ProjectSearchTest {
 
     @Test
     fun `the list is personal first and the others by name`() {
-        assertEquals(listOf("personal", "Açaí", "agent-skills", "timeline_project"), found(""))
+        assertEquals(listOf("diario", "Açaí", "agent-skills", "timeline_project"), found(""))
         assertTrue(projects.first().personal)
     }
 
@@ -33,7 +33,7 @@ class ProjectSearchTest {
 
     @Test
     fun `a search matches any part of the name`() {
-        assertEquals(listOf("personal", "agent-skills", "timeline_project"), found("e"))
+        assertEquals(listOf("agent-skills", "timeline_project"), found("e"))
         assertEquals(listOf("agent-skills"), found("-sk"))
         assertEquals(emptyList<String>(), found("zzz"))
     }

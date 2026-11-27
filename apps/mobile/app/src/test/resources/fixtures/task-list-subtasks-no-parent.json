@@ -9,7 +9,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "startedAt": "2026-09-15T12:00:00.000Z",
@@ -32,7 +32,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "startedAt": "2026-09-12T12:00:00.000Z",
@@ -55,7 +55,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "startedAt": "2026-09-13T12:00:00.000Z",
@@ -78,7 +78,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "startedAt": "2026-09-14T14:48:00.000Z",
@@ -101,7 +101,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "longRunning": false,
@@ -123,7 +123,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "longRunning": false,
@@ -145,7 +145,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "startedAt": "2026-09-16T12:00:00.000Z",
@@ -168,7 +168,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "startedAt": "2026-09-10T12:00:00.000Z",
@@ -190,7 +190,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "startedAt": "2026-09-11T12:00:00.000Z",
@@ -213,7 +213,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "startedAt": "2026-09-14T18:00:00.000Z",
@@ -236,7 +236,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "longRunning": false,
@@ -258,7 +258,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "longRunning": false,
@@ -280,7 +280,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "longRunning": false,
@@ -302,7 +302,7 @@
     "description": "",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "longRunning": false,

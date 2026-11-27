@@ -7,7 +7,7 @@
     "title": "Criar nota de compras",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "createdAt": "2026-09-14T14:48:00.000Z",
@@ -31,7 +31,7 @@
     "title": "Resumir meu e-mail",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "createdAt": "2026-09-14T14:48:00.000Z",
@@ -48,7 +48,7 @@
     "title": "Já terminou",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "createdAt": "2026-09-14T14:48:00.000Z",
@@ -65,7 +65,7 @@
     "title": "Voz aberta",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "createdAt": "2026-09-14T14:48:00.000Z",
@@ -81,7 +81,7 @@
     "title": "Sem texto",
     "project": {
       "id": "project-personal",
-      "name": "personal",
+      "name": "diario",
       "personal": true
     },
     "createdAt": "2026-09-14T14:48:00.000Z",

@@ -40,7 +40,7 @@ data class ProjectPicker(
 )
 
 /**
- * A escolha do projeto da tarefa (o `ProjectPickerDialog` do web): a folha de seleção com a lista (`personal` primeiro, os
+ * A escolha do projeto da tarefa (o `ProjectPickerDialog` do web): a folha de seleção com a lista (`diario` primeiro, os
  * outros por nome), a busca pelo nome e, embaixo, a criação de um projeto com o texto digitado. Escolher ou criar entrega
  * o projeto a quem abriu a folha e a fecha; um nome repetido mostra a mensagem e deixa a folha aberta.
  */

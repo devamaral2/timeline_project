@@ -155,7 +155,7 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
   // A hierarquia que a API recusa (ponta que não existe, ciclo) é recusada antes de criar qualquer coisa.
   const plan = planHierarchy(store, NEW_TASK, [], { parentTaskId: input.parentTaskId, subtaskIds: input.subtaskIds });
   if ("status" in plan) return plan;
-  // O projeto escolhido tem de existir (e ser do usuário: a API falsa só tem um usuário); sem escolha, é o `personal`.
+  // O projeto escolhido tem de existir (e ser do usuário: a API falsa só tem um usuário); sem escolha, é o `diario`.
   const project = input.projectId === undefined ? FAKE_PERSONAL_PROJECT : fakeProjectById(store, input.projectId);
   if (!project) return { status: 404 };
   // O contador não sabe das tarefas semeadas: pula os ids já usados, para a nova não sobrescrever uma delas.
@@ -220,7 +220,7 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
     if (!relinkTaskArtifacts(store, task.id, entries as TaskArtifactEntry[])) return { status: 404 };
   }
 
-  // Ausente não muda o projeto; `null` devolve a tarefa a `personal`; um id precisa existir.
+  // Ausente não muda o projeto; `null` devolve a tarefa a `diario`; um id precisa existir.
   const projectId = input.projectId as string | null | undefined;
   const project = projectId === undefined ? task.project : projectId === null ? FAKE_PERSONAL_PROJECT : fakeProjectById(store, projectId);
   if (!project) return { status: 404 };

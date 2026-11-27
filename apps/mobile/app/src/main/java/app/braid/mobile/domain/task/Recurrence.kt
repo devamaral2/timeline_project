@@ -60,7 +60,7 @@ data class SeriesTemplate(
     val tags: List<String>? = null,
     val notifyOffsetsMinutes: List<Int>? = null,
     /**
-     * O projeto da série: o da tarefa que a cria, e cada ocorrência nasce nele. O `personal` leva o id dele, como qualquer
+     * O projeto da série: o da tarefa que a cria, e cada ocorrência nasce nele. O `diario` leva o id dele, como qualquer
      * outro. Ausente, ninguém escolheu.
      */
     val projectId: String? = null,

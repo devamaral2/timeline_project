@@ -103,7 +103,7 @@ export async function mergeTaskUpdate(
     tags: input.tags,
     longRunning: input.longRunning,
     artifactLinks: merged.links,
-    // Ausente nao muda; `null` devolve a tarefa a `personal`. Quem grava confere que o projeto e do usuario.
+    // Ausente nao muda; `null` devolve a tarefa a `diario`. Quem grava confere que o projeto e do usuario.
     projectId: input.projectId,
   });
 

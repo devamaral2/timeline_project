@@ -12,7 +12,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -33,7 +33,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": true,
@@ -54,7 +54,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -75,7 +75,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": true,
@@ -96,7 +96,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -117,7 +117,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": true,
@@ -138,7 +138,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -159,7 +159,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": true,
@@ -180,7 +180,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -201,7 +201,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": true,
@@ -222,7 +222,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -243,7 +243,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": true,
@@ -264,7 +264,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -285,7 +285,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": true,
@@ -306,7 +306,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -327,7 +327,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -348,7 +348,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -369,7 +369,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -390,7 +390,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -411,7 +411,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -432,7 +432,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -453,7 +453,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "to_review",
@@ -475,7 +475,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "bookmarked",
@@ -497,7 +497,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "reviewed",
@@ -519,7 +519,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -540,7 +540,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "to_review",
@@ -562,7 +562,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "bookmarked",
@@ -584,7 +584,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "reviewed",
@@ -606,7 +606,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -627,7 +627,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "to_review",
@@ -649,7 +649,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "bookmarked",
@@ -671,7 +671,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "reviewed",
@@ -693,7 +693,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -714,7 +714,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "to_review",
@@ -736,7 +736,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "bookmarked",
@@ -758,7 +758,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "reviewed",
@@ -780,7 +780,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -801,7 +801,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "to_review",
@@ -823,7 +823,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "bookmarked",
@@ -845,7 +845,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "reviewed",
@@ -867,7 +867,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -888,7 +888,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -909,7 +909,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -930,7 +930,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -951,7 +951,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -972,7 +972,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -993,7 +993,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1014,7 +1014,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1035,7 +1035,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1056,7 +1056,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1077,7 +1077,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1098,7 +1098,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1119,7 +1119,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1140,7 +1140,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1161,7 +1161,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1182,7 +1182,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1203,7 +1203,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1224,7 +1224,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1245,7 +1245,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1266,7 +1266,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1287,7 +1287,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1308,7 +1308,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1329,7 +1329,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1350,7 +1350,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1371,7 +1371,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1392,7 +1392,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1413,7 +1413,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1434,7 +1434,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1455,7 +1455,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1476,7 +1476,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1497,7 +1497,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1518,7 +1518,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1539,7 +1539,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1559,7 +1559,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1882,7 +1882,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "to_review",
@@ -1904,7 +1904,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "startedAt": "2026-09-14T12:00:00.000Z",
@@ -1926,7 +1926,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1947,7 +1947,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -1968,7 +1968,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": true,
@@ -1989,7 +1989,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "startedAt": "2026-09-14T14:48:00.000Z",
@@ -2011,7 +2011,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -2033,7 +2033,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -2054,7 +2054,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -2075,7 +2075,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "bookmarked",
@@ -2097,7 +2097,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -2118,7 +2118,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -2140,7 +2140,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -2161,7 +2161,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "situation": "reviewed",
@@ -2183,7 +2183,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -2204,7 +2204,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
@@ -2323,7 +2323,7 @@
         "description": "",
         "project": {
           "id": "project-personal",
-          "name": "personal",
+          "name": "diario",
           "personal": true
         },
         "longRunning": false,
