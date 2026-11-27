@@ -94,8 +94,7 @@ class RecurrenceFixturesTest {
     @Test
     fun `the series patch holds only the rule that changed, as the web builds it`() {
         for (case in cases("recurrence-plan-cases")) {
-            val project = case["project"]?.let { TaskEditFixtures.project(it) }
-            val patch = planSeriesEdit(series(case.getValue("series")), draft(case.getValue("draft")), project)
+            val patch = planSeriesEdit(series(case.getValue("series")), draft(case.getValue("draft")))
             val expected = case.getValue("patch")
             if (expected is JsonNull) {
                 assertNull(name(case), patch)

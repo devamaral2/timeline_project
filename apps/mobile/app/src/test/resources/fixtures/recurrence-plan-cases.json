@@ -397,7 +397,7 @@
     }
   },
   {
-    "name": "project back to personal",
+    "name": "series in a project, unchanged",
     "series": {
       "frequency": "weekly",
       "interval": 1,
@@ -429,27 +429,10 @@
       "month": 1,
       "endsOn": ""
     },
-    "project": {
-      "id": "project-personal",
-      "name": "personal",
-      "personal": true
-    },
-    "patch": {
-      "expectedRevision": 3,
-      "template": {
-        "kind": "common",
-        "name": "Treino",
-        "description": "",
-        "priority": "medium",
-        "tags": [
-          "saúde"
-        ],
-        "projectId": "project-personal"
-      }
-    }
+    "patch": null
   },
   {
-    "name": "project swapped and rule changed",
+    "name": "series in a project, rule changed",
     "series": {
       "frequency": "weekly",
       "interval": 1,
@@ -481,24 +464,9 @@
       "month": 1,
       "endsOn": ""
     },
-    "project": {
-      "id": "project-skills",
-      "name": "agent-skills",
-      "personal": false
-    },
     "patch": {
       "expectedRevision": 3,
-      "interval": 2,
-      "template": {
-        "kind": "common",
-        "name": "Treino",
-        "description": "",
-        "priority": "medium",
-        "tags": [
-          "saúde"
-        ],
-        "projectId": "project-skills"
-      }
+      "interval": 2
     }
   }
 ]

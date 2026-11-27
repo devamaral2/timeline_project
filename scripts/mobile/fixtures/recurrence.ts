@@ -123,7 +123,7 @@ const createCases = [
 });
 
 const planDrafts = (value: ReturnType<typeof series>, changes: Partial<RecurrenceDraft>): RecurrenceDraft => ({ ...recurrenceDraftFromRule(value), ...changes });
-const planCases: { name: string; series: ReturnType<typeof series>; draft: RecurrenceDraft; project?: typeof PERSONAL_PROJECT | typeof AGENT_SKILLS_PROJECT }[] = [
+const planCases = [
   { name: "unchanged weekly", series: weekly, draft: planDrafts(weekly, {}) },
   { name: "unchanged daily", series: daily, draft: planDrafts(daily, {}) },
   { name: "unchanged yearly", series: yearly, draft: planDrafts(yearly, {}) },
@@ -136,10 +136,11 @@ const planCases: { name: string; series: ReturnType<typeof series>; draft: Recur
   { name: "monthly to yearly", series: monthly, draft: planDrafts(monthly, { frequency: "yearly", month: 7 }) },
   { name: "monthly day", series: monthly, draft: planDrafts(monthly, { monthDay: 6 }) },
   { name: "yearly month", series: yearly, draft: planDrafts(yearly, { month: 4 }) },
-  { name: "project back to personal", series: weeklyInProject, draft: planDrafts(weeklyInProject, {}), project: PERSONAL_PROJECT },
-  { name: "project swapped and rule changed", series: weeklyInProject, draft: planDrafts(weeklyInProject, { interval: 2 }), project: AGENT_SKILLS_PROJECT },
+  // A série que mora num projeto: o `PATCH` leva só a regra, nunca o modelo nem o projeto.
+  { name: "series in a project, unchanged", series: weeklyInProject, draft: planDrafts(weeklyInProject, {}) },
+  { name: "series in a project, rule changed", series: weeklyInProject, draft: planDrafts(weeklyInProject, { interval: 2 }) },
 ].map((item) => {
-  const patch = planSeriesEdit(item.series, item.draft, item.project);
+  const patch = planSeriesEdit(item.series, item.draft);
   if (patch) updateRecurrenceInputSchema.parse({ recurrenceId: item.series.id, ...patch });
   return { ...item, patch };
 });
