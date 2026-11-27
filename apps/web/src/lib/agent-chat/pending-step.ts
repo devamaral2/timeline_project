@@ -1,3 +1,4 @@
+import { isOpenAgentStatus } from "@repo/contracts";
 import type { AgentChatMessage, AgentChatPending } from "./use-agent-chat";
 
 /** O que a linha de status diz de um pedido por passos antes de o servidor desdobrá-lo. */
@@ -14,7 +15,7 @@ export function pendingStepLabel(messages: readonly AgentChatMessage[], pending:
     if (message.role === "process" && message.id === `${pending.id}-process`) {
       const steps = message.request?.steps ?? [];
       const current = steps.find((step) => step.status === "running")
-        ?? steps.find((step) => step.status === "queued" || step.status === "waiting")
+        ?? steps.find((step) => isOpenAgentStatus(step.status))
         ?? steps.at(-1);
       return current?.label ?? UNDERSTANDING;
     }

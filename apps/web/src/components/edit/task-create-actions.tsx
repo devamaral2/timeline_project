@@ -1,5 +1,6 @@
 "use client";
 
+import { isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto, TaskDto } from "@repo/contracts";
 import { LoaderCircle, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -84,7 +85,7 @@ export function TaskCreateActions({ text, userId, onCreated, close, pollMs = AGE
         if (!alive.current) return;
         request = await getRequest(requestId);
       }
-      if (request.status !== "done") {
+      if (!isSuccessAgentStatus(request.status)) {
         if (alive.current) setPhase({ kind: "failed", message: request.message ?? ASK_FAILED });
         return;
       }

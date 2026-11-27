@@ -25,6 +25,7 @@ import { briefDate } from "@/lib/dates/day-labels";
 import { modelFooter } from "@/lib/agent-chat/model-selection";
 import { pendingStepLabel } from "@/lib/agent-chat/pending-step";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
+import { isSuccessAgentStatus } from "@repo/contracts";
 import type { ModelOptionsDto, RequestScreenContext } from "@repo/contracts";
 import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { useSessionState } from "@/lib/session/use-session";
@@ -207,7 +208,7 @@ export function AgentChatPanel({
   const progressLabel = chat.pending ? pendingStepLabel(chat.messages, chat.pending) : undefined;
   // A última fala do assistente, quando é ela que fecha a conversa: é dela que se copia o texto.
   const lastAnswer = lastMessage?.role === "assistant" ? lastMessage.text
-    : lastMessage?.role === "process" && lastMessage.request?.status === "done" ? lastMessage.request.message ?? ""
+    : lastMessage?.role === "process" && lastMessage.request && isSuccessAgentStatus(lastMessage.request.status) ? lastMessage.request.message ?? ""
     : "";
   // O nome sobre cada fala é o de quem responde agora, o mesmo do topo do chat.
   const agentName = chat.agentMode ? AGENT_NAMES[chat.agentMode] : "Assistente";

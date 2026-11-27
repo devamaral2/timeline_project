@@ -1,9 +1,12 @@
 /**
  * Shapes que a API HTTP fala. E o unico subpath que os clientes consomem,
- * sempre com `import type`: o JS emitido aqui e vazio de proposito, para que
- * nenhum cliente carregue classe de dominio.
+ * com `import type`: o JS emitido aqui e vazio de proposito, para que nenhum
+ * cliente carregue classe de dominio. A excecao sao os grupos de status de
+ * agente (`agent-status-groups`): valores sem dependencia, que todo cliente
+ * pergunta em vez de repetir listas de status.
  */
 export type * from "./tasks/task-types";
+export * from "./tasks/agent-status-groups";
 export type * from "./tasks/task.dto";
 export type * from "./tasks/task.input";
 export type * from "./tasks/daily-reading";
