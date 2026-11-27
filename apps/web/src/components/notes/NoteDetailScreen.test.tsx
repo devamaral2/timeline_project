@@ -325,3 +325,26 @@ test.each([
   expect(screen.getByRole("heading", { level: 2, name: "Fontes" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "A notícia completa" })).toHaveAttribute("href", "https://example.com/noticia");
 });
+
+test.each(["news", "email_summary", "youtube_transcript"] as const)("um artefato %s próprio tem Editar, Excluir e a barra de edição por IA, como a nota", async (type) => {
+  install({ artifacts: [artifactFixture({ id: "art-livre", name: "Resumo do dia", type, data: { body: "Resumo" } })] });
+  renderArtifact("art-livre");
+
+  fireEvent.click(await screen.findByRole("button", { name: "Editar" }));
+  expect(push).toHaveBeenCalledWith("/user-1/notas/art-livre/editar");
+
+  fireEvent.change(screen.getByRole("textbox", { name: "Pedir à IA para editar esta nota" }), { target: { value: "encurte" } });
+  fireEvent.click(screen.getByRole("button", { name: "Enviar pedido" }));
+  await waitFor(() => expect(api.calls.find((call) => call.pathname === "/api/requests/edit")?.body).toEqual({
+    userId: "user-1",
+    text: "encurte",
+    entityType: "artifact",
+    entityId: "art-livre",
+  }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
+  const dialog = await screen.findByRole("alertdialog");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }));
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas"));
+  expect(api.calls.at(-1)).toMatchObject({ method: "DELETE", pathname: "/api/artifacts/art-livre" });
+});

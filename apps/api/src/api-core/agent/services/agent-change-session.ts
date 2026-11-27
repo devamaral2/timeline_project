@@ -20,6 +20,7 @@ import type { CreateTaskUseCase, PrepareTaskOptions } from "../../tasks/create-t
 import { prepareRecurrence } from "../../recurrences/prepare-recurrence";
 import { buildOccurrence, storedTemplateOf } from "../../recurrences/recurrence-templates";
 import { reviseRecurrence, type RecurrenceRevision } from "../../recurrences/revise-recurrence";
+import { isFreeTextArtifactType } from "@repo/contracts/artifact-types";
 
 /** Quatro anos a frente cobrem ate o 29 de fevereiro: a primeira ocorrencia de qualquer regra valida cai ali. */
 function firstSearchLimit(from: string): string {
@@ -221,8 +222,9 @@ export class AgentChangeSession {
   updateArtifact(id: string, fields: ArtifactFields): Promise<StageResult> {
     return this.attempt(async () => {
       await this.reviseArtifactById(id, (current) => {
-        if (fields.content !== undefined && current.type !== "text") {
-          throw new StagingError(`O artefato ${id} é do tipo ${current.type}: só artefatos de texto têm content.`);
+        // O texto novo fica no tipo que o artefato já tem (nota, notícias, resumo de e-mail ou transcrição).
+        if (fields.content !== undefined && !isFreeTextArtifactType(current.type)) {
+          throw new StagingError(`O artefato ${id} é do tipo ${current.type}: só artefatos de texto livre têm content.`);
         }
         return current.revise({
           name: fields.name,

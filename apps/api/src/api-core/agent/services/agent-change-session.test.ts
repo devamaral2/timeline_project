@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { Task } from "../../../domain";
+import { Artifact, Task } from "../../../domain";
 import { createTasksKit } from "../../tasks/testing/in-memory-tasks-kit";
 import { AgentChangeSession } from "./agent-change-session";
 
@@ -97,5 +97,30 @@ describe("addSubtask", () => {
     expect((await taskRepository.findById("a"))?.subtaskIds).toEqual(["b"]);
     expect((await taskRepository.findById("a"))?.revision).toBe(1);
     expect((await taskRepository.findById("b"))?.revision).toBe(1);
+  });
+});
+
+describe("updateArtifact", () => {
+  test.each(["text", "news", "email_summary", "youtube_transcript"] as const)("rewrites the text of a %s artifact and keeps its type", async (type) => {
+    const artifact = Artifact.create({ id: "art-1", userId, type, name: "Resumo", data: { body: "primeira versão" } });
+    const kit = createTasksKit({ artifacts: [artifact] });
+    const session = new AgentChangeSession(userId, { tasks: kit.taskRepository, artifacts: kit.artifactRepository }, kit.createTask);
+
+    const result = await session.updateArtifact("art-1", { content: "versão corrigida", tags: ["leitura"] });
+
+    expect(result).toEqual({ ok: true, kind: "artifact", op: "update", id: "art-1" });
+    expect(session.toBatch().artifacts).toMatchObject([{ op: "update", expectedRevision: 1, entity: { id: "art-1", type, data: { body: "versão corrigida" }, tags: ["leitura"] } }]);
+  });
+
+  test("an artifact that is not free text does not take a new text", async () => {
+    const sleep = Artifact.create({ id: "art-2", userId, type: "sleep", name: "Noite", data: { trackedSleepTime: 420, score: 80 } });
+    const kit = createTasksKit({ artifacts: [sleep] });
+    const session = new AgentChangeSession(userId, { tasks: kit.taskRepository, artifacts: kit.artifactRepository }, kit.createTask);
+
+    const result = await session.updateArtifact("art-2", { content: "texto" });
+
+    expect(result).toMatchObject({ ok: false });
+    expect(JSON.stringify(result)).toContain("só artefatos de texto livre têm content");
+    expect(session.toBatch().artifacts).toEqual([]);
   });
 });

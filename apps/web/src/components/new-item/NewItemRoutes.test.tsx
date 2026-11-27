@@ -244,3 +244,34 @@ test("um artefato que não é nota de texto própria não se edita aqui", async 
   expect(await screen.findByRole("alert")).toHaveTextContent("Este artefato não se edita aqui.");
   expect(screen.queryByRole("button", { name: "Salvar" })).not.toBeInTheDocument();
 });
+
+test.each(["news", "email_summary", "youtube_transcript"] as const)("editar um artefato %s usa o editor da nota e salva com o tipo dele", async (type) => {
+  install({ artifacts: [artifactFixture({ id: "art-livre", name: "Resumo do dia", type, data: { body: "Resumo do dia\nPrimeira versão" }, tags: ["leitura"], revision: 4 })] });
+  render(<EditNoteRoute userId="user-1" noteId="art-livre" />);
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Editar artefato" })).toBeInTheDocument();
+  // O tipo aparece só como leitura: não há seletor de tipo na edição.
+  expect(screen.getByText(type)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Tipo/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("combobox", { name: /Tipo/ })).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("Nome do artefato"), { target: { value: "Resumo da manhã" } });
+  fireEvent.change(screen.getByLabelText("Conteúdo da nota"), { target: { value: "Versão corrigida" } });
+  save();
+
+  await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas/art-livre"));
+  expect(api.calls.find((call) => call.method === "PATCH")?.body).toMatchObject({
+    expectedRevision: 4,
+    name: "Resumo da manhã",
+    type,
+    data: { body: "Versão corrigida" },
+  });
+});
+
+test("criar pela tela continua criando nota ou alimento: os tipos novos não são oferecidos", async () => {
+  install({});
+  render(<NewNoteRoute userId="user-1" />);
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Novo artefato" })).toBeInTheDocument();
+  for (const label of ["Notícias", "Resumo de e-mail", "Transcrição"]) expect(screen.queryByText(label)).not.toBeInTheDocument();
+});
