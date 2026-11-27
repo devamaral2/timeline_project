@@ -71,13 +71,33 @@ describe("TaskRow", () => {
     expect(within(container.querySelector("[data-row-side]") as HTMLElement).getByRole("img", { name: "personal" })).toHaveTextContent("PE");
   });
 
-  it("a linha de pessoa leva a prioridade no alto da ponta direita, acima da marca do projeto", () => {
-    const { container } = render(<TaskRow card={cardOf({ status: "todo", priority: "high" })} userId="user-1" now={NOW} />);
+  it("a linha de pessoa leva a duração no alto da ponta direita e, embaixo, a prioridade à esquerda da marca do projeto", () => {
+    const { container } = render(
+      <TaskRow
+        card={cardOf({ status: "todo", priority: "high", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" })}
+        userId="user-1"
+        now={NOW}
+      />,
+    );
 
     const side = container.querySelector("[data-row-side]") as HTMLElement;
-    const priority = within(side).getByRole("img", { name: "Prioridade: Alta" });
-    const project = within(side).getByRole("img", { name: "personal" });
+    const top = side.querySelector("[data-row-duration]") as HTMLElement;
+    const marks = side.querySelector("[data-row-side-marks]") as HTMLElement;
+    expect(top).toHaveTextContent("1h30");
+    expect(top.compareDocumentPosition(marks) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const priority = within(marks).getByRole("img", { name: "Prioridade: Alta" });
+    const project = within(marks).getByRole("img", { name: "personal" });
     expect(priority.compareDocumentPosition(project) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // A duração não se repete na linha do tipo.
+    expect(screen.getAllByText("1h30")).toHaveLength(1);
+  });
+
+  it("a linha de pessoa sem duração guarda o lugar do alto vazio, e a prioridade e o projeto seguem embaixo", () => {
+    const { container } = render(<TaskRow card={cardOf({ status: "todo", startedAt: undefined, estimatedFinishAt: undefined })} userId="user-1" now={NOW} />);
+
+    const side = container.querySelector("[data-row-side]") as HTMLElement;
+    expect(side.querySelector("[data-row-duration]")).toBeEmptyDOMElement();
+    expect(within(side.querySelector("[data-row-side-marks]") as HTMLElement).getAllByRole("img")).toHaveLength(2);
   });
 
   it("a linha de agente não mostra prioridade, e o provedor fica à esquerda da marca do projeto", () => {
@@ -86,23 +106,19 @@ describe("TaskRow", () => {
 
     const marks = container.querySelector("[data-row-side-marks]") as HTMLElement;
     expect(screen.queryByRole("img", { name: /Prioridade/ })).not.toBeInTheDocument();
+    expect(container.querySelector("[data-row-duration]")).not.toBeInTheDocument();
     const provider = within(marks).getByRole("img", { name: "Anthropic" });
     const project = within(marks).getByRole("img", { name: "personal" });
     expect(provider.compareDocumentPosition(project) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("as tags ficam numa linha própria, abaixo da linha do tipo e do quando, e a duração vai junto do quando", () => {
+  it("as tags ficam numa linha própria, abaixo da linha do tipo e do quando", () => {
     const { container } = render(
-      <TaskRow
-        card={cardOf({ status: "todo", tags: ["trabalho"], startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" })}
-        userId="user-1"
-        now={NOW}
-      />,
+      <TaskRow card={cardOf({ status: "todo", tags: ["trabalho"], startedAt: "2026-09-14T09:00:00-03:00" })} userId="user-1" now={NOW} />,
     );
 
     const meta = screen.getByText("Hoje, 09:00").parentElement as HTMLElement;
     const tags = container.querySelector("[data-row-tags]") as HTMLElement;
-    expect(within(meta).getByText("1h30")).toBeInTheDocument();
     expect(within(meta).queryByText("#trabalho")).not.toBeInTheDocument();
     expect(within(tags).getByText("#trabalho")).toBeInTheDocument();
     expect(meta.compareDocumentPosition(tags) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

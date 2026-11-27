@@ -39,9 +39,10 @@ import java.time.Instant
 
 /**
  * A linha única das listas. À esquerda, o glifo (um ponto inerte ou o glifo de situação na tarefa de agente); no meio,
- * o título, a linha do tipo com o "quando" e a duração e, quando há, a linha das tags; à direita, duas linhas alinhadas
- * na ponta: no alto a prioridade (pessoa) ou o nome e o ícone quadrado do status (agente), na altura do título; embaixo
- * a marca do projeto, com o provedor à esquerda dela na tarefa de agente (quando o cartão traz a escolha). O que a
+ * o título, a linha do tipo com o "quando" e, quando há, a linha das tags; à direita, duas linhas alinhadas na ponta:
+ * no alto a duração (pessoa, quando tem) ou o nome e o ícone quadrado do status (agente, cuja duração fica junto do
+ * "quando"), na altura do título; embaixo a marca do projeto, com a prioridade (pessoa) ou o provedor (agente, quando
+ * o cartão traz a escolha) à esquerda dela. O que a
  * linha mostra sai de [taskRowLayout], a partir do cartão e de [now].
  */
 @Composable
@@ -193,17 +194,29 @@ private fun AgentStatusEnd(status: TaskStatus?) {
 }
 
 /**
- * A ponta direita, alinhada à borda direita, a 16 dp do texto, em duas linhas com [ROW_LINE_GAP] entre elas. No alto, na altura do título (22 dp):
- * a prioridade (pessoa) ou o nome do status à esquerda do ícone quadrado (agente). Embaixo, a marca do projeto sozinha
- * (o nome é só a descrição dela) e, na tarefa de agente com a escolha do pedido, o símbolo do provedor à esquerda dela.
+ * A ponta direita, alinhada à borda direita, a 16 dp do texto, em duas linhas com [ROW_LINE_GAP] entre elas. No alto,
+ * na altura do título (22 dp): a duração (pessoa, quando tem) ou o nome do status à esquerda do ícone quadrado (agente).
+ * Embaixo, a marca do projeto sozinha (o nome é só a descrição dela) e, à esquerda dela, a prioridade (pessoa) ou o
+ * símbolo do provedor (agente com a escolha do pedido).
  */
 @Composable
 private fun RowSide(side: TaskRowSide) {
     // A linha já afasta os três blocos 14 dp; os 2 dp a mais dão os 16 dp do web entre o texto e a ponta.
     Column(Modifier.padding(start = 2.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(ROW_LINE_GAP)) {
-        Box(Modifier.height(22.dp), contentAlignment = Alignment.Center) {
+        // O lugar do alto fica mesmo sem duração, para a linha de baixo cair na altura da linha do tipo.
+        Box(Modifier.height(22.dp), contentAlignment = Alignment.CenterEnd) {
             when (val top = side.top) {
-                is TaskRowTop.Priority -> TaskPriorityMark(top.priority)
+                is TaskRowTop.Duration ->
+                    top.duration?.let { duration ->
+                        Text(
+                            text = duration,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = BraidMonoFont,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp,
+                            maxLines = 1,
+                        )
+                    }
                 is TaskRowTop.AgentStatus -> AgentStatusEnd(top.status)
             }
         }
@@ -212,6 +225,7 @@ private fun RowSide(side: TaskRowSide) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            side.marks.priority?.let { priority -> TaskPriorityMark(priority) }
             side.marks.provider?.let { provider ->
                 Box(
                     Modifier.size(width = 20.dp, height = 16.dp).semantics {

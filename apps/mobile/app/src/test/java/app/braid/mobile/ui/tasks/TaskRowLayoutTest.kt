@@ -54,7 +54,9 @@ class TaskRowLayoutTest {
         priority: TaskPriority = TaskPriority.Medium,
         project: Project = Project.Personal,
         model: ModelSelection? = null,
+        withTimes: Boolean = false,
     ) = card(
+        withTimes = withTimes,
         actor = TaskActor.Agent,
         kind = TaskKind.Request,
         status = status,
@@ -82,12 +84,23 @@ class TaskRowLayoutTest {
     }
 
     @Test
-    fun `a person's row carries the priority at the top of the right end, above the project mark, and no provider`() {
-        val layout = taskRowLayout(card(priority = TaskPriority.High, model = chosenModel), now)
+    fun `a person's row carries the duration at the top of the right end and the priority beside the project mark, with no provider`() {
+        val layout = taskRowLayout(card(priority = TaskPriority.High, model = chosenModel, withTimes = true), now)
 
-        assertEquals(TaskRowTop.Priority(TaskPriority.High), layout.side.top)
+        assertEquals(TaskRowTop.Duration("1h30"), layout.side.top)
+        assertEquals(TaskPriority.High, layout.side.marks.priority)
         assertEquals("personal", layout.side.marks.project.name)
         assertNull(layout.side.marks.provider)
+        // A duração não se repete na linha do tipo.
+        assertNull(layout.meta.duration)
+    }
+
+    @Test
+    fun `a person's row without a duration keeps the top place empty`() {
+        val layout = taskRowLayout(card(priority = TaskPriority.Low), now)
+
+        assertEquals(TaskRowTop.Duration(null), layout.side.top)
+        assertEquals(TaskPriority.Low, layout.side.marks.priority)
     }
 
     @Test
@@ -95,6 +108,7 @@ class TaskRowLayoutTest {
         val layout = taskRowLayout(agentCard(priority = TaskPriority.Urgent, model = chosenModel), now)
 
         assertEquals(TaskRowTop.AgentStatus(TaskStatus.Completed), layout.side.top)
+        assertNull(layout.side.marks.priority)
         assertEquals(ModelProvider.Anthropic, layout.side.marks.provider)
         assertEquals("personal", layout.side.marks.project.name)
     }
@@ -107,12 +121,18 @@ class TaskRowLayoutTest {
     }
 
     @Test
-    fun `the tags sit in a line of their own and the duration goes next to the when`() {
+    fun `the tags sit in a line of their own, below the kind and the when`() {
         val layout = taskRowLayout(card(tags = listOf("trabalho"), withTimes = true), now)
 
         assertEquals("Hoje, 09:00", layout.meta.whenText)
-        assertEquals("1h30", layout.meta.duration)
         assertEquals(listOf("trabalho"), layout.tags)
+    }
+
+    @Test
+    fun `an agent's duration stays next to the when, since the status takes the top of the right end`() {
+        val layout = taskRowLayout(agentCard(withTimes = true), now)
+
+        assertEquals("1h30", layout.meta.duration)
     }
 
     @Test
@@ -122,6 +142,6 @@ class TaskRowLayoutTest {
 
     @Test
     fun `without a start and an end there is no duration`() {
-        assertNull(taskRowLayout(card(), now).meta.duration)
+        assertNull(taskRowLayout(agentCard(), now).meta.duration)
     }
 }

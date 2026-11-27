@@ -1,6 +1,6 @@
 /* Linha única das listas (agenda e lista de tarefas). Pessoa e agente usam a
    mesma grade, soltos no fundo: texto à esquerda (título, tipo e quando, tags) e
-   duas linhas na ponta direita (prioridade ou status; provedor e projeto).
+   duas linhas na ponta direita (duração ou status; prioridade ou provedor, e projeto).
    Cores só por token. */
 
 /* Quebra a linha só para o que vem embaixo (a gaveta das subtarefas, com largura toda). */
@@ -123,8 +123,8 @@
   opacity: 0.4;
 }
 
-/* A ponta direita: no alto a prioridade (pessoa) ou o nome do status à esquerda do ícone quadrado
-   (agente), na altura do título; embaixo a marca do projeto, com o provedor à esquerda dela no agente. */
+/* A ponta direita: no alto a duração (pessoa) ou o nome do status à esquerda do ícone quadrado (agente),
+   na altura do título; embaixo a marca do projeto, com a prioridade (pessoa) ou o provedor (agente) à esquerda dela. */
 .side {
   flex: none;
   display: flex;
@@ -132,9 +132,9 @@
   align-items: flex-end;
   gap: var(--row-line-gap);
 }
-.priority {
+.sideTop {
   display: grid;
-  place-items: center;
+  place-items: center end;
   height: 22px;
 }
 .marks {

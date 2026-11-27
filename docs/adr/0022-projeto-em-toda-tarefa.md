@@ -47,8 +47,8 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
    primeiros caracteres de uma palavra só. O matiz vem do nome pela função que dá o matiz das tags, com a luminosidade e
    o croma das tags de cada tema, e o texto usa a cor do fundo da tela. `personal` não tem cor: fundo suave, texto
    apagado e um fio de contorno.
-7. **Na linha da tarefa, o projeto é só a marca**, na ponta direita, na segunda linha (abaixo da prioridade, na tarefa
-   de pessoa, ou do status, na de agente, onde o símbolo do provedor fica à esquerda dela), igual para pessoa e agente,
+7. **Na linha da tarefa, o projeto é só a marca**, na ponta direita, na segunda linha (abaixo da duração, na tarefa
+   de pessoa, com a prioridade à esquerda dela; ou abaixo do status, na de agente, com o símbolo do provedor à esquerda), igual para pessoa e agente,
    também quando é o `personal`. O nome não é escrito na linha: é a descrição da marca para o leitor de tela. No começo
    o projeto era uma linha própria (marca e nome) abaixo do título; em 2026-11-27 o dono do produto redesenhou a linha.
    Os detalhes da tarefa e do pedido mostram a marca e o nome, só para leitura.

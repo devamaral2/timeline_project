@@ -240,8 +240,8 @@ fun TasksContent(
     }
 }
 
-/** O hairline entre as linhas começa depois do glifo, como no web. */
-private val ROW_DIVIDER_INSET = 58.dp
+/** O hairline entre as linhas começa onde começa o texto (glifo de 24 dp e 14 dp de respiro), como no web. */
+private val ROW_DIVIDER_INSET = 38.dp
 
 @Composable
 private fun DrawerSection(

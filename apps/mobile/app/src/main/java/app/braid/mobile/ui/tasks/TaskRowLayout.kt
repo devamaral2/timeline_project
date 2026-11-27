@@ -24,7 +24,7 @@ data class TaskRowLayout(
     val side: TaskRowSide,
 )
 
-/** A linha do tipo: o tipo, o "quando" e, logo depois dele, a duração (que já não fica na ponta direita). */
+/** A linha do tipo: o tipo, o "quando" e, só na tarefa de agente, a duração logo depois (na de pessoa ela fica no alto da ponta direita). */
 data class TaskRowMeta(
     val kind: TaskKind,
     val whenText: String,
@@ -38,10 +38,13 @@ data class TaskRowSide(
     val marks: TaskRowMarks,
 )
 
-/** A primeira linha da ponta direita: a prioridade na tarefa de pessoa; o nome e o ícone do status na de agente (sem prioridade). */
+/**
+ * A primeira linha da ponta direita: a duração na tarefa de pessoa (o lugar fica, vazio, quando ela não tem); o nome e
+ * o ícone do status na de agente.
+ */
 sealed interface TaskRowTop {
-    data class Priority(
-        val priority: TaskPriority,
+    data class Duration(
+        val duration: String?,
     ) : TaskRowTop
 
     data class AgentStatus(
@@ -51,9 +54,11 @@ sealed interface TaskRowTop {
 
 /**
  * A segunda linha da ponta direita: a marca do projeto sozinha (o nome de [project] só serve de descrição para o leitor
- * de tela) e, à esquerda dela, o provedor, só na tarefa de agente cujo cartão traz a escolha do pedido.
+ * de tela) e, à esquerda dela, a prioridade na tarefa de pessoa ou o provedor na de agente cujo cartão traz a escolha
+ * do pedido. A tarefa de agente não mostra prioridade.
  */
 data class TaskRowMarks(
+    val priority: TaskPriority?,
     val provider: ModelProvider?,
     val project: Project,
 )
@@ -64,6 +69,7 @@ fun taskRowLayout(
     ruleInPlaceOfTime: Boolean = false,
 ): TaskRowLayout {
     val isAgent = card.actor == TaskActor.Agent
+    val duration = cardDurationLabel(card)
     return TaskRowLayout(
         title = card.name,
         meta =
@@ -71,13 +77,18 @@ fun taskRowLayout(
                 kind = card.kind,
                 whenText = cardWhenLabel(card, now, ruleInPlaceOfTime),
                 overdue = cardIsOverdue(card, now),
-                duration = cardDurationLabel(card),
+                duration = duration.takeIf { isAgent },
             ),
         tags = card.tags,
         side =
             TaskRowSide(
-                top = if (isAgent) TaskRowTop.AgentStatus(card.status) else TaskRowTop.Priority(card.priority),
-                marks = TaskRowMarks(provider = if (isAgent) card.model?.provider else null, project = card.project),
+                top = if (isAgent) TaskRowTop.AgentStatus(card.status) else TaskRowTop.Duration(duration),
+                marks =
+                    TaskRowMarks(
+                        priority = card.priority.takeIf { !isAgent },
+                        provider = if (isAgent) card.model?.provider else null,
+                        project = card.project,
+                    ),
             ),
     )
 }

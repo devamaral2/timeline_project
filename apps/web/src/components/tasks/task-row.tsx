@@ -36,10 +36,11 @@ export interface TaskRowProps {
 }
 
 /**
- * A linha única das listas. À esquerda, o glifo; no meio, o título, a linha do tipo com o "quando" e a duração e,
- * quando há, a linha das tags; à direita, duas linhas alinhadas na ponta: no alto a prioridade (pessoa) ou o nome e o
- * ícone quadrado do status (agente, que não se edita); embaixo a marca do projeto, com o símbolo do provedor à
- * esquerda dela na tarefa de agente (quando o pedido levou a escolha).
+ * A linha única das listas. À esquerda, o glifo; no meio, o título, a linha do tipo com o "quando" e, quando há, a
+ * linha das tags; à direita, duas linhas alinhadas na ponta: no alto a duração (pessoa, quando a tarefa tem) ou o nome
+ * e o ícone quadrado do status (agente, que não se edita; a duração dele fica junto do "quando"); embaixo a marca do
+ * projeto, com a prioridade à esquerda dela na tarefa de pessoa e o símbolo do provedor na de agente (quando o pedido
+ * levou a escolha).
  * O glifo de pessoa é um botão; à esquerda da tarefa de agente fica o glifo da situação, que abre as três
  * opções na própria linha, ou um ponto inerte (esperando você, execução agendada e a linha sem quem trate a situação).
  */
@@ -87,7 +88,8 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
             <span className={styles.when} data-overdue={overdue ? "true" : "false"}>
               {when}
             </span>
-            {duration ? <span className={styles.duration}>{duration}</span> : null}
+            {/* Na tarefa de agente o alto da ponta direita é do status: a duração fica junto do "quando". */}
+            {isAgent && duration ? <span className={styles.duration}>{duration}</span> : null}
           </span>
           {card.tags.length > 0 ? (
             <span className={styles.tags} data-row-tags>
@@ -107,8 +109,9 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
               <AgentStatusIcon status={agentStatus} />
             </span>
           ) : (
-            <span className={styles.priority}>
-              <TaskPriorityMark priority={card.priority} />
+            // O lugar fica mesmo sem duração, para a linha de baixo cair na altura da linha do tipo.
+            <span className={styles.sideTop} data-row-duration>
+              {duration ? <span className={styles.duration}>{duration}</span> : null}
             </span>
           )}
           <span className={styles.marks} data-row-side-marks>
@@ -117,6 +120,7 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
                 <ProviderMark provider={card.model.provider} />
               </span>
             ) : null}
+            {isAgent ? null : <TaskPriorityMark priority={card.priority} />}
             <ProjectMark project={card.project} labelled />
           </span>
         </span>
