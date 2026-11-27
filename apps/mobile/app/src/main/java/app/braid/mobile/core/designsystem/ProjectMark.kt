@@ -135,7 +135,7 @@ fun ProjectMark(
     }
 }
 
-/** A linha do projeto da tarefa: a marca e o nome em mono. Fica abaixo do título e acima da linha do tipo. */
+/** A linha do projeto: a marca e o nome em mono. Os detalhes da tarefa e o formulário a usam; a linha da lista só leva a marca. */
 @Composable
 fun ProjectLine(
     project: Project,

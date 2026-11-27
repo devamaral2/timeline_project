@@ -147,9 +147,9 @@ describe("criação", () => {
     const card = JSON.parse(JSON.stringify([...api.store.table<TaskDto>("tasks").values()][0])) as TaskCardDto;
     render(<ul><TaskRow card={card} userId="user-1" now={new Date()} /></ul>);
 
-    const line = document.querySelector("[data-project-line]");
-    expect(line).toHaveTextContent("Alfa");
-    expect(line?.querySelector("[data-project-mark]")).toHaveTextContent("AL");
+    const mark = document.querySelector("[data-row-side] [data-project-mark]");
+    expect(mark).toHaveAccessibleName("Alfa");
+    expect(mark).toHaveTextContent("AL");
   });
 
   it("a busca filtra pelo nome, sem distinguir maiúsculas nem acentos, e avisa quando nada serve", async () => {

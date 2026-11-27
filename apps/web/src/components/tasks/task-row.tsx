@@ -3,8 +3,9 @@ import { useState, type ReactNode } from "react";
 import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus, TaskSituation } from "@repo/contracts";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/tasks/card-text";
 import { ProviderMark, providerNames } from "@/components/hub/provider-marks";
-import { ProjectLine } from "@/components/projects/project-line";
+import { ProjectMark } from "@/components/projects/project-line";
 import { TaskKindMark } from "./task-kind-mark";
+import { TaskPriorityMark } from "./task-priority-mark";
 import { SituationMenu } from "./situation-menu";
 import { TaskSituationGlyph, situationNames } from "./task-situation";
 import { AgentStatusIcon } from "./agent-status-icon";
@@ -35,10 +36,10 @@ export interface TaskRowProps {
 }
 
 /**
- * A linha única das listas: glifo de status, título, a linha do projeto (marca e
- * nome), uma linha com o tipo, o "quando" e as tags, e a duração à direita. Pessoa e agente usam a
- * mesma grade. A tarefa de agente leva à direita o nome do status, o ícone quadrado dele e, abaixo,
- * o símbolo do provedor (quando o pedido levou a escolha); o status do agente não se edita.
+ * A linha única das listas. À esquerda, o glifo; no meio, o título, a linha do tipo com o "quando" e a duração e,
+ * quando há, a linha das tags; à direita, duas linhas alinhadas na ponta: no alto a prioridade (pessoa) ou o nome e o
+ * ícone quadrado do status (agente, que não se edita); embaixo a marca do projeto, com o símbolo do provedor à
+ * esquerda dela na tarefa de agente (quando o pedido levou a escolha).
  * O glifo de pessoa é um botão; à esquerda da tarefa de agente fica o glifo da situação, que abre as três
  * opções na própria linha, ou um ponto inerte (esperando você, execução agendada e a linha sem quem trate a situação).
  */
@@ -81,22 +82,44 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
       <Link href={`/${userId}/tarefas/${card.id}`} className={styles.body}>
         <span className={styles.text}>
           <span className={styles.title}>{card.name}</span>
-          {/* A mesma linha para pessoa e agente, abaixo do título e acima da linha do tipo. */}
-          <ProjectLine project={card.project} />
           <span className={styles.meta}>
             <TaskKindMark kind={card.kind} />
             <span className={styles.when} data-overdue={overdue ? "true" : "false"}>
               {when}
             </span>
-            {card.tags.map((tag) => (
-              <span key={tag} className={styles.tag}>
-                #{tag}
+            {duration ? <span className={styles.duration}>{duration}</span> : null}
+          </span>
+          {card.tags.length > 0 ? (
+            <span className={styles.tags} data-row-tags>
+              {card.tags.map((tag) => (
+                <span key={tag} className={styles.tag}>
+                  #{tag}
+                </span>
+              ))}
+            </span>
+          ) : null}
+        </span>
+        <span className={styles.side} data-row-side>
+          {isAgent ? (
+            <span className={styles.status} data-status={agentStatus}>
+              {/* O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */}
+              <span aria-hidden="true">{agentStatusNames[agentStatus]}</span>
+              <AgentStatusIcon status={agentStatus} />
+            </span>
+          ) : (
+            <span className={styles.priority}>
+              <TaskPriorityMark priority={card.priority} />
+            </span>
+          )}
+          <span className={styles.marks} data-row-side-marks>
+            {isAgent && card.model ? (
+              <span className={styles.provider} role="img" aria-label={providerNames[card.model.provider]}>
+                <ProviderMark provider={card.model.provider} />
               </span>
-            ))}
+            ) : null}
+            <ProjectMark project={card.project} labelled />
           </span>
         </span>
-        {duration ? <span className={styles.duration}>{duration}</span> : null}
-        {isAgent ? <AgentSide status={agentStatus} model={card.model} /> : null}
       </Link>
       {aside}
       {menuOpen && situation ? (
@@ -123,24 +146,6 @@ function AgentLead() {
       <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" className={styles.idleDot}>
         <path d="M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" fill="currentColor" />
       </svg>
-    </span>
-  );
-}
-
-/** A ponta direita da tarefa de agente: o nome e o ícone do status, e o provedor que rodou a tarefa embaixo. */
-function AgentSide({ status, model }: { status: AgentTaskStatus; model: TaskCardDto["model"] }) {
-  return (
-    <span className={styles.side} data-row-side>
-      <span className={styles.status} data-status={status}>
-        {/* O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */}
-        <span aria-hidden="true">{agentStatusNames[status]}</span>
-        <AgentStatusIcon status={status} />
-      </span>
-      {model ? (
-        <span className={styles.provider} role="img" aria-label={providerNames[model.provider]}>
-          <ProviderMark provider={model.provider} />
-        </span>
-      ) : null}
     </span>
   );
 }

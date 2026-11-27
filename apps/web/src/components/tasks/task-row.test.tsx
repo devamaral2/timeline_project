@@ -45,7 +45,7 @@ describe("TaskRow", () => {
     expect(screen.getByText("1h30")).toBeInTheDocument();
   });
 
-  it("mostra a linha do projeto, com a marca e o nome, entre o título e a linha do tipo, igual para pessoa e agente", () => {
+  it("põe a marca do projeto, sem o nome escrito, na segunda linha da ponta direita, igual para pessoa e agente", () => {
     const project = { id: "p-tp", name: "timeline_project", personal: false };
     for (const overrides of [
       { actor: "human" as const, status: "todo" as const, kind: "common" as const },
@@ -55,20 +55,63 @@ describe("TaskRow", () => {
         <TaskRow card={cardOf({ ...overrides, project, startedAt: "2026-09-14T09:00:00-03:00" })} userId="user-1" now={NOW} />,
       );
 
-      const line = container.querySelector("[data-project-line]");
-      expect(line).toHaveTextContent("TPtimeline_project");
-      const title = screen.getByText("Revisar proposta");
-      const kind = screen.getByText(overrides.kind);
-      expect(title.compareDocumentPosition(line as Element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      expect((line as Element).compareDocumentPosition(kind) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      const side = container.querySelector("[data-row-side]") as HTMLElement;
+      const mark = within(side).getByRole("img", { name: "timeline_project" });
+      expect(mark).toHaveTextContent("TP");
+      expect(mark.closest("[data-row-side-marks]")).toBeInTheDocument();
+      expect(container.querySelector("[data-project-line]")).not.toBeInTheDocument();
+      expect(screen.queryByText("timeline_project")).not.toBeInTheDocument();
       unmount();
     }
   });
 
-  it("mostra a linha do projeto também quando ele é o personal", () => {
+  it("mostra a marca do projeto também quando ele é o personal", () => {
     const { container } = render(<TaskRow card={cardOf({ status: "todo" })} userId="user-1" now={NOW} />);
 
-    expect(container.querySelector("[data-project-line]")).toHaveTextContent("PEpersonal");
+    expect(within(container.querySelector("[data-row-side]") as HTMLElement).getByRole("img", { name: "personal" })).toHaveTextContent("PE");
+  });
+
+  it("a linha de pessoa leva a prioridade no alto da ponta direita, acima da marca do projeto", () => {
+    const { container } = render(<TaskRow card={cardOf({ status: "todo", priority: "high" })} userId="user-1" now={NOW} />);
+
+    const side = container.querySelector("[data-row-side]") as HTMLElement;
+    const priority = within(side).getByRole("img", { name: "Prioridade: Alta" });
+    const project = within(side).getByRole("img", { name: "personal" });
+    expect(priority.compareDocumentPosition(project) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("a linha de agente não mostra prioridade, e o provedor fica à esquerda da marca do projeto", () => {
+    const card = cardOf({ actor: "agent", kind: "request", status: "completed", model: { provider: "anthropic", model: "um-modelo", effort: "high" } });
+    const { container } = render(<TaskRow card={card} userId="user-1" now={NOW} />);
+
+    const marks = container.querySelector("[data-row-side-marks]") as HTMLElement;
+    expect(screen.queryByRole("img", { name: /Prioridade/ })).not.toBeInTheDocument();
+    const provider = within(marks).getByRole("img", { name: "Anthropic" });
+    const project = within(marks).getByRole("img", { name: "personal" });
+    expect(provider.compareDocumentPosition(project) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("as tags ficam numa linha própria, abaixo da linha do tipo e do quando, e a duração vai junto do quando", () => {
+    const { container } = render(
+      <TaskRow
+        card={cardOf({ status: "todo", tags: ["trabalho"], startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:30:00-03:00" })}
+        userId="user-1"
+        now={NOW}
+      />,
+    );
+
+    const meta = screen.getByText("Hoje, 09:00").parentElement as HTMLElement;
+    const tags = container.querySelector("[data-row-tags]") as HTMLElement;
+    expect(within(meta).getByText("1h30")).toBeInTheDocument();
+    expect(within(meta).queryByText("#trabalho")).not.toBeInTheDocument();
+    expect(within(tags).getByText("#trabalho")).toBeInTheDocument();
+    expect(meta.compareDocumentPosition(tags) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("sem tags não há linha de tags", () => {
+    const { container } = render(<TaskRow card={cardOf({ status: "todo", tags: [] })} userId="user-1" now={NOW} />);
+
+    expect(container.querySelector("[data-row-tags]")).not.toBeInTheDocument();
   });
 
   it("mostra a tarefa de referência como ponto 'Só agenda', com glifo que é botão", () => {
@@ -169,13 +212,14 @@ describe("TaskRow", () => {
     const { container } = render(<TaskRow card={card} userId="user-1" now={NOW} />);
 
     const side = container.querySelector("[data-row-side]") as HTMLElement;
-    expect(within(side).getAllByRole("img")).toHaveLength(1);
+    expect(within(side).getAllByRole("img").map((img) => img.getAttribute("aria-label"))).toEqual(["Agente, concluído", "personal"]);
   });
 
-  it("a linha de pessoa não muda: sem lado direito de status e sem símbolo de provedor", () => {
+  it("a linha de pessoa não leva status de agente nem símbolo de provedor", () => {
     const { container } = render(<TaskRow card={cardOf({ status: "done" })} userId="user-1" now={NOW} />);
 
-    expect(container.querySelector("[data-row-side]")).not.toBeInTheDocument();
+    const side = container.querySelector("[data-row-side]") as HTMLElement;
+    expect(within(side).getAllByRole("img").map((img) => img.getAttribute("aria-label"))).toEqual(["Prioridade: Média", "personal"]);
     expect(container.querySelector("[data-row-lead]")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Feito. Mudar status de “Revisar proposta”" })).toBeInTheDocument();
   });

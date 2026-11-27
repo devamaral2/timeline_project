@@ -299,6 +299,6 @@ test("as linhas da agenda mostram a marca e o nome do projeto", async () => {
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
 
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(2));
-  const lines = [...dayOf(TODAY).querySelectorAll("[data-project-line]")].map((line) => line.textContent);
-  expect(lines).toEqual(["TPtimeline_project", "PEpersonal"]);
+  const marks = [...dayOf(TODAY).querySelectorAll("[data-project-mark]")].map((mark) => `${mark.textContent} ${mark.getAttribute("aria-label")}`);
+  expect(marks).toEqual(["TP timeline_project", "PE personal"]);
 });

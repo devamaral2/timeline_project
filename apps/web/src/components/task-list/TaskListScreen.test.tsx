@@ -589,11 +589,12 @@ test("cada linha mostra a marca e o nome do projeto, o personal inclusive", asyn
   const { container } = render(<TaskListScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Revisar o PR/ });
 
-  const lineOf = (title: RegExp) => (screen.getByRole("link", { name: title }).closest("li") as HTMLElement).querySelector("[data-project-line]");
-  expect(lineOf(/Revisar o PR/)).toHaveTextContent("TPtimeline_project");
-  expect(lineOf(/Pagar a luz/)).toHaveTextContent("PEpersonal");
-  expect(lineOf(/Pesquisar voos/)).toHaveTextContent("ASagent-skills");
-  expect(container.querySelectorAll("[data-project-line]")).toHaveLength(3);
+  const lineOf = (title: RegExp) => (screen.getByRole("link", { name: title }).closest("li") as HTMLElement).querySelector("[data-project-mark]");
+  expect(lineOf(/Revisar o PR/)).toHaveAccessibleName("timeline_project");
+  expect(lineOf(/Revisar o PR/)).toHaveTextContent("TP");
+  expect(lineOf(/Pagar a luz/)).toHaveAccessibleName("personal");
+  expect(lineOf(/Pesquisar voos/)).toHaveAccessibleName("agent-skills");
+  expect(container.querySelectorAll("[data-project-mark]")).toHaveLength(3);
 });
 
 test("a subtarefa cuja principal está em andamento continua como linha, e a principal não aparece", async () => {

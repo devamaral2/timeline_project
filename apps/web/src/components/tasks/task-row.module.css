@@ -1,5 +1,6 @@
 /* Linha única das listas (agenda e lista de tarefas). Pessoa e agente usam a
-   mesma grade, soltos no fundo; o agente leva à direita o status e o provedor.
+   mesma grade, soltos no fundo: texto à esquerda (título, tipo e quando, tags) e
+   duas linhas na ponta direita (prioridade ou status; provedor e projeto).
    Cores só por token. */
 
 /* Quebra a linha só para o que vem embaixo (a gaveta das subtarefas, com largura toda). */
@@ -89,6 +90,16 @@
   color: var(--destructive);
 }
 
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  min-width: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+}
+
 .tag {
   color: var(--muted-foreground);
   white-space: nowrap;
@@ -110,14 +121,25 @@
   opacity: 0.4;
 }
 
-/* A ponta direita da tarefa de agente: o nome do status à esquerda do ícone quadrado e, abaixo,
-   o símbolo do provedor, alinhados na borda direita. */
+/* A ponta direita: no alto a prioridade (pessoa) ou o nome do status à esquerda do ícone quadrado
+   (agente), na altura do título; embaixo a marca do projeto, com o provedor à esquerda dela no agente. */
 .side {
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  gap: 4px;
+}
+.priority {
+  display: grid;
+  place-items: center;
+  height: 22px;
+}
+.marks {
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
+  min-height: 18px;
 }
 .status {
   composes: tone from "./agent-status-icon.module.css";

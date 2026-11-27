@@ -47,8 +47,11 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
    primeiros caracteres de uma palavra só. O matiz vem do nome pela função que dá o matiz das tags, com a luminosidade e
    o croma das tags de cada tema, e o texto usa a cor do fundo da tela. `personal` não tem cor: fundo suave, texto
    apagado e um fio de contorno.
-7. **Na tela, o projeto é a linha da tarefa** (marca e nome), abaixo do título e acima da linha do tipo, igual para
-   pessoa e agente, também quando é o `personal`. Os detalhes da tarefa e do pedido o mostram, só para leitura.
+7. **Na linha da tarefa, o projeto é só a marca**, na ponta direita, na segunda linha (abaixo da prioridade, na tarefa
+   de pessoa, ou do status, na de agente, onde o símbolo do provedor fica à esquerda dela), igual para pessoa e agente,
+   também quando é o `personal`. O nome não é escrito na linha: é a descrição da marca para o leitor de tela. No começo
+   o projeto era uma linha própria (marca e nome) abaixo do título; em 2026-11-27 o dono do produto redesenhou a linha.
+   Os detalhes da tarefa e do pedido mostram a marca e o nome, só para leitura.
 8. **A pessoa escolhe e cria o projeto no formulário da tarefa.** `POST /api/projects`, com `{ name }`, cria um projeto
    (409 para nome repetido, sem distinguir maiúsculas nem espaços das pontas, e o `personal` conta mesmo antes de
    existir; 400 para nome vazio ou com mais de 60 caracteres). A criação e a edição de tarefa de pessoa aceitam

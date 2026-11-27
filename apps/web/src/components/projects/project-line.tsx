@@ -22,7 +22,7 @@ export function ProjectMark({ project, labelled = false }: { project: ProjectDto
   );
 }
 
-/** A linha do projeto da tarefa: a marca e o nome. Fica abaixo do título e acima da linha do tipo. */
+/** A marca e o nome do projeto, lado a lado: os detalhes da tarefa e do pedido. A linha das listas usa só a marca. */
 export function ProjectLine({ project }: { project: ProjectDto }) {
   return (
     <span className={styles.line} data-project-line>

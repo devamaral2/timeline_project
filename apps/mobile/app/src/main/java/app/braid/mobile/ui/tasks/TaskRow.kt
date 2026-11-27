@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -26,24 +28,21 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidMonoFont
-import app.braid.mobile.core.designsystem.ProjectLine
+import app.braid.mobile.core.designsystem.ProjectMark
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
-import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskStatus
-import app.braid.mobile.domain.task.cardDurationLabel
-import app.braid.mobile.domain.task.cardIsOverdue
-import app.braid.mobile.domain.task.cardWhenLabel
 import app.braid.mobile.ui.chat.ProviderMark
 import java.time.Instant
 
 /**
- * A linha única das listas: glifo de status, título, a linha do projeto, uma linha com o tipo, o
- * "quando" e as tags, e a duração à direita. Pessoa e agente usam a mesma
- * grade; a tarefa de agente leva à esquerda um ponto inerte e à direita o nome e o ícone do status e o provedor. Os
- * textos calculados saem do cartão e de [now].
+ * A linha única das listas. À esquerda, o glifo (um ponto inerte ou o glifo de situação na tarefa de agente); no meio,
+ * o título, a linha do tipo com o "quando" e a duração e, quando há, a linha das tags; à direita, duas linhas alinhadas
+ * na ponta: no alto a prioridade (pessoa) ou o nome e o ícone quadrado do status (agente), na altura do título; embaixo
+ * a marca do projeto, com o provedor à esquerda dela na tarefa de agente (quando o cartão traz a escolha). O que a
+ * linha mostra sai de [taskRowLayout], a partir do cartão e de [now].
  */
 @Composable
 fun TaskRow(
@@ -90,8 +89,7 @@ private fun TaskRowBody(
     modifier: Modifier,
 ) {
     val isAgent = card.actor == TaskActor.Agent
-    val overdue = cardIsOverdue(card, now)
-    val duration = cardDurationLabel(card)
+    val layout = taskRowLayout(card, now, ruleInPlaceOfTime)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
 
     Row(
@@ -121,33 +119,35 @@ private fun TaskRowBody(
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = card.name,
+                text = layout.title,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontSize = 16.sp,
                 lineHeight = 22.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            // Igual para tarefa de pessoa e de agente: a marca e o nome do projeto, abaixo do título e acima do tipo.
-            ProjectLine(card.project)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                TaskKindMark(card.kind)
+                TaskKindMark(layout.meta.kind)
                 Text(
-                    text = cardWhenLabel(card, now, ruleInPlaceOfTime),
-                    color = if (overdue) MaterialTheme.colorScheme.error else muted,
+                    text = layout.meta.whenText,
+                    color = if (layout.meta.overdue) MaterialTheme.colorScheme.error else muted,
                     fontSize = 13.sp,
                     lineHeight = 18.sp,
                 )
-                // No web a linha mostra as tags no cinza do texto de apoio; as cores de tag são dos filtros e da edição.
-                card.tags.forEach { tag ->
-                    Text(text = "#$tag", color = muted, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 1)
+                layout.meta.duration?.let { duration ->
+                    Text(text = duration, color = muted, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 18.sp, maxLines = 1)
+                }
+            }
+            // As tags têm linha própria (só quando há); no web têm o cinza e o estilo da linha do tipo. As cores de tag são dos filtros e da edição.
+            if (layout.tags.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    layout.tags.forEach { tag ->
+                        Text(text = "#$tag", color = muted, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 1)
+                    }
                 }
             }
         }
-        if (duration != null) {
-            Text(text = duration, color = muted, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 18.sp, maxLines = 1)
-        }
-        if (isAgent) AgentSide(status = card.status, model = card.model)
+        RowSide(layout.side)
     }
 }
 
@@ -173,42 +173,56 @@ private fun AgentLead(
     }
 }
 
+/** O nome do status à esquerda do ícone quadrado. O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */
+@Composable
+private fun AgentStatusEnd(status: TaskStatus?) {
+    val tone = agentToneColor(remember(status) { agentStatusIcon(status) }.tone)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        agentStatusLabel(status)?.let { label ->
+            Text(
+                text = label,
+                modifier = Modifier.clearAndSetSemantics {},
+                color = tone,
+                fontSize = 13.sp,
+                lineHeight = 22.sp,
+                maxLines = 1,
+            )
+        }
+        AgentStatusIcon(status = status)
+    }
+}
+
 /**
- * A ponta direita da tarefa de agente: o nome do status à esquerda do ícone quadrado e, abaixo, o símbolo do provedor,
- * alinhados na borda direita. O provedor só aparece quando o cartão traz a escolha do pedido.
+ * A ponta direita, alinhada à borda direita, em duas linhas com 4 dp entre elas. No alto, na altura do título (22 dp):
+ * a prioridade (pessoa) ou o nome do status à esquerda do ícone quadrado (agente). Embaixo, a marca do projeto sozinha
+ * (o nome é só a descrição dela) e, na tarefa de agente com a escolha do pedido, o símbolo do provedor à esquerda dela.
  */
 @Composable
-private fun AgentSide(
-    status: TaskStatus?,
-    model: ModelSelection?,
-) {
-    val spec = remember(status) { agentStatusIcon(status) }
-    val tone = agentToneColor(spec.tone)
-    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            // O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga.
-            agentStatusLabel(status)?.let { label ->
-                Text(
-                    text = label,
-                    modifier = Modifier.clearAndSetSemantics {},
-                    color = tone,
-                    fontSize = 13.sp,
-                    lineHeight = 22.sp,
-                    maxLines = 1,
-                )
+private fun RowSide(side: TaskRowSide) {
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.height(22.dp), contentAlignment = Alignment.Center) {
+            when (val top = side.top) {
+                is TaskRowTop.Priority -> TaskPriorityMark(top.priority)
+                is TaskRowTop.AgentStatus -> AgentStatusEnd(top.status)
             }
-            AgentStatusIcon(status = status)
         }
-        if (model != null) {
-            Box(
-                Modifier.size(width = 20.dp, height = 16.dp).semantics {
-                    contentDescription = model.provider.label
-                    role = Role.Image
-                },
-                contentAlignment = Alignment.Center,
-            ) {
-                ProviderMark(model.provider, MaterialTheme.colorScheme.onSurfaceVariant, fitIn = DpSize(15.dp, 13.dp))
+        Row(
+            Modifier.defaultMinSize(minHeight = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            side.marks.provider?.let { provider ->
+                Box(
+                    Modifier.size(width = 20.dp, height = 16.dp).semantics {
+                        contentDescription = provider.label
+                        role = Role.Image
+                    },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    ProviderMark(provider, MaterialTheme.colorScheme.onSurfaceVariant, fitIn = DpSize(15.dp, 13.dp))
+                }
             }
+            ProjectMark(side.marks.project, labelled = true)
         }
     }
 }
