@@ -9,7 +9,7 @@ import type {
   RequestRoute,
   RequestScreenContext,
 } from "@repo/contracts";
-import type { AgentTaskStatus } from "../../domain/sets";
+import type { AgentTaskStatus, Situation } from "../../domain/sets";
 import type { EditCandidate } from "./request-candidates";
 import type { DispatchRoute, EntityKind, Expected, RequestAgent, RequestJobKind } from "./request-steps";
 
@@ -91,6 +91,8 @@ export interface RequestRecord {
   title: string;
   /** O projeto do pedido. */
   project: ProjectDto;
+  /** O que o usuario decidiu do pedido; o fechamento grava `to_review`. Ausente enquanto o pedido esta aberto. */
+  situation?: Situation;
   /** O que o usuario escreveu ou falou, inteiro. */
   prompt: string;
   context?: RequestScreenContext;

@@ -379,6 +379,40 @@ export class Task {
   }
 
   /**
+   * O usuario decidiu o que fazer do pedido que terminou. Nao e uma edicao: nao destaca ocorrencia nem pede
+   * `expectedRevision`; vale a ultima gravacao. So o pedido de agente num status final aceita.
+   */
+  withSituation(situation: Situation, now: Date = new Date()): Task {
+    return Task.build({
+      id: this.id,
+      userId: this.userId,
+      actor: this.actor,
+      kind: this.kind,
+      status: this.status,
+      situation,
+      priority: this.priority,
+      name: this.name,
+      description: this.description,
+      location: this.location,
+      startedAt: this.startedAt,
+      estimatedFinishAt: this.estimatedFinishAt,
+      finishedAt: this.finishedAt,
+      notifyOffsetsMinutes: [...this.notifyOffsetsMinutes],
+      tags: this.tags,
+      longRunning: this.longRunning,
+      data: { ...this.data },
+      artifactLinks: [...this.artifactLinks],
+      parentId: this.parentId,
+      subtaskIds: [...this.subtaskIds],
+      occurrence: this.occurrence,
+      projectId: this.projectId,
+      revision: this.revision + 1,
+      createdAt: this.createdAt,
+      updatedAt: now.getTime() < this.createdAt.getTime() ? this.createdAt : now,
+    });
+  }
+
+  /**
    * Toda revisao e uma edicao do usuario, e por isso destaca a ocorrencia da
    * serie. So tarefas de pessoa sao revisadas: as de agente mudam pelo proprio
    * agente.

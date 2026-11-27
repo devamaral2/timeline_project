@@ -1,4 +1,5 @@
 import type { ArtifactWrites } from "../../artifacts/types/artifact-writes";
+import type { Situation } from "../../sets";
 import type { Task } from "../entities/task.entity";
 
 /**
@@ -12,6 +13,11 @@ export interface TaskRepository {
   update(task: Task, actorUserId: string, expectedRevision: number, artifacts?: ArtifactWrites): Promise<void>;
   delete(taskId: string, actorUserId: string): Promise<void>;
   findById(taskId: string): Promise<Task | null>;
+  /**
+   * Grava a situacao do pedido de agente que terminou. Vale a ultima gravacao: nao confere revisao. `false` quando
+   * a tarefa nao existe, e do outro usuario ou nao aceita situacao (a gravacao confere de novo, no mesmo comando).
+   */
+  setSituation(taskId: string, userId: string, situation: Situation): Promise<boolean>;
   /** As tarefas que existem e nao foram apagadas; ids ausentes ficam de fora, e a ordem nao e a dos ids. */
   findByIds(taskIds: readonly string[]): Promise<Task[]>;
 }

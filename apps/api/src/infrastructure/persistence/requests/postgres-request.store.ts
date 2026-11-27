@@ -12,7 +12,7 @@ import type {
   RequestScreenContext,
 } from "@repo/contracts";
 import { stepLabel } from "../../../api-core/requests/request-config";
-import { IN_PROGRESS_AGENT_STATUSES, OPEN_AGENT_STATUSES } from "../../../domain/agent-status";
+import { IN_PROGRESS_AGENT_STATUSES, OPEN_AGENT_STATUSES, REVIEW_SITUATION_ON_CLOSE } from "../../../domain/agent-status";
 import { sqlList } from "../database/schema/sets";
 import { finalizeConcurrencyKey, REQUEST_JOBS, type RequestAgent } from "../../../api-core/requests/request-steps";
 import type {
@@ -32,7 +32,7 @@ import type {
   StepRecord,
   StepThought,
 } from "../../../api-core/requests/request-store";
-import type { EntryKind, EntryRole } from "../../../domain";
+import type { EntryKind, EntryRole, Situation } from "../../../domain";
 import { enqueueJobInTransaction } from "../../jobs/job-context";
 import type { PostgresDatabase } from "../database/postgres-database";
 import type { Tx } from "../shared/tx";
@@ -61,6 +61,8 @@ const TITLE_CHARS = 80;
 const TEXT_PREVIEW_CHARS = 200;
 const OPEN_REQUEST = sql`(${sqlList(OPEN_AGENT_STATUSES)})`;
 const IN_PROGRESS = sql`(${sqlList(IN_PROGRESS_AGENT_STATUSES)})`;
+/** O fechamento do pedido grava a situacao junto com o status final: a politica de revisao esta em `agent-status`. */
+const ON_CLOSE_SITUATION = sql`${REVIEW_SITUATION_ON_CLOSE}`;
 
 const TASK_RELATION = { create: "generates", update: "updates", delete: "deletes" } as const;
 const ARTIFACT_RELATION = { create: "creates", update: "updates", delete: "deletes" } as const;
@@ -472,7 +474,8 @@ export class PostgresRequestStore implements RequestStore {
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
     };
     const closed = await tx.execute(sql`
-      UPDATE tasks SET status = ${status}, finished_at = now(), updated_at = now(), data = data || ${json(patch)}::jsonb
+      UPDATE tasks SET status = ${status}, situation = ${ON_CLOSE_SITUATION}, finished_at = now(), updated_at = now(),
+        data = data || ${json(patch)}::jsonb
       WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
       RETURNING id`);
     if (closed.rows.length === 0) return false;
@@ -494,7 +497,7 @@ export class PostgresRequestStore implements RequestStore {
   async cancel(requestId: string): Promise<string[]> {
     return this.inTransaction(undefined, async (tx) => {
       const cancelled = await tx.execute(sql`
-        UPDATE tasks SET status = 'cancelled', finished_at = now(), updated_at = now(),
+        UPDATE tasks SET status = 'cancelled', situation = ${ON_CLOSE_SITUATION}, finished_at = now(), updated_at = now(),
           data = data || ${json({ errorCode: "cancelled" satisfies RequestErrorCode })}::jsonb
         WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
         RETURNING id`);
@@ -537,7 +540,7 @@ export class PostgresRequestStore implements RequestStore {
 // `tasks_requests_idx`: pedidos do usuario, nunca passos.
 const REQUEST_FILTER = "e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL";
 const REQUEST_SELECT = `
-  SELECT e.id, e.user_id, e.kind, e.status, e.name, e.data, e.created_at, e.updated_at, e.finished_at,
+  SELECT e.id, e.user_id, e.kind, e.status, e.situation, e.name, e.data, e.created_at, e.updated_at, e.finished_at,
     s.from_task_id AS session_id, p.id AS project_id, p.name AS project_name, p.personal AS project_personal
   FROM tasks e
   JOIN projects p ON p.id = e.project_id
@@ -572,6 +575,7 @@ function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord 
     status: row.status as RequestRecord["status"],
     title: String(row.name),
     project: { id: String(row.project_id), name: String(row.project_name), personal: Boolean(row.project_personal) },
+    ...(row.situation ? { situation: row.situation as Situation } : {}),
     prompt: messages.find((entry) => entry.role === "user")?.content ?? "",
     ...(data.context ? { context: data.context } : {}),
     ...(data.target ? { target: data.target } : {}),
