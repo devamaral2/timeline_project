@@ -17,14 +17,13 @@
    ponta direita da linha. */
 .header .chip { padding: 0 4px; border-color: transparent; }
 .priority { display: flex; margin-left: auto; }
-/* Tarefa de agente: o status solto na linha, sem pílula, e o robô na ponta
-   direita, a mesma assinatura da linha da agenda. */
-.agentStatus { display: inline-flex; align-items: center; gap: 8px; min-height: var(--control-md); color: var(--ink); font-size: 14px; line-height: 20px; }
-/* O controle de situação do pedido terminado: o glifo e o nome, no tamanho de toque, ao lado do status. */
+/* Tarefa de agente: a situação abre a linha na ponta esquerda; o status, solto e sem pílula, fecha na ponta
+   direita. */
+.agentStatus { display: inline-flex; margin-left: auto; align-items: center; gap: 8px; min-height: var(--control-md); color: var(--ink); font-size: 14px; line-height: 20px; }
+/* O controle de situação do pedido terminado: o glifo e o nome, no tamanho de toque. */
 .situationControl { display: inline-flex; align-items: center; gap: 8px; min-height: var(--control-md); padding: 0 4px; border: 0; background: transparent; color: var(--ink); font-size: 14px; line-height: 20px; cursor: pointer; }
 .situationControl:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 8px; }
 .situationFailure { margin: 0; font-size: 13px; line-height: 18px; color: var(--destructive); }
-.agentMark { flex: none; margin-left: auto; color: var(--brand); }
 
 /* O ponto verde da tarefa persistente, no lugar do "Sim". */
 .persistent { composes: dot from "../ui/controls.module.css"; background: var(--brand); }

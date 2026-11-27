@@ -1,6 +1,5 @@
 "use client";
 
-import { Bot } from "lucide-react";
 import type { AgentTaskStatus, TaskDto, TaskPriority, HumanTaskStatus } from "@repo/contracts";
 import { TaskKindMark } from "@/components/tasks/task-kind-mark";
 import { TaskPriorityMark, taskPriorityLabels } from "@/components/tasks/task-priority-mark";
@@ -22,8 +21,8 @@ interface TaskDetailHeaderProps {
 /**
  * O topo da tarefa: o código do tipo, o título, e o status e a prioridade.
  * Tarefa de pessoa troca os dois aqui, sem entrar em edição. Tarefa de agente
- * só mostra o status, solto na linha, com o robô na ponta direita; não mostra
- * prioridade: quem executa é o agente, e a API recusa a edição dele. O status
+ * só mostra o status, solto na ponta direita; não mostra prioridade: quem
+ * executa é o agente, e a API recusa a edição dele. Na tarefa de pessoa o status
  * fica no começo da linha e a prioridade na ponta direita, sem a moldura da
  * pílula. Tarefa "Só agenda" (sem status) não mostra nenhum dos dois: é só um
  * compromisso; para virar tarefa, o status entra pela edição.
@@ -47,9 +46,7 @@ export function TaskDetailHeader({ task, busy, onStatusChange, onPriorityChange 
           <div className={styles.priority}>
             <PriorityChoice task={task} busy={busy} onChange={onPriorityChange} />
           </div>
-        ) : (
-          <Bot className={styles.agentMark} size={20} strokeWidth={1.9} aria-hidden="true" data-agent-mark />
-        )}
+        ) : null}
       </div>
       )}
     </header>

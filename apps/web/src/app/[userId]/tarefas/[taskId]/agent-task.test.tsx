@@ -94,8 +94,8 @@ test("uma tarefa de agente abre na forma do agente: tipo, título, status e o ro
   const top = screen.getByRole("region", { name: "Resumo da tarefa" });
   expect(within(top).getByRole("heading", { level: 1, name: "Pesquisar voos para novembro" })).toBeInTheDocument();
   expect(within(top).getByText("request")).toBeInTheDocument();
-  expect(within(top).getByText("Agente, trabalhando")).toBeInTheDocument();
-  expect(top.querySelector("[data-agent-mark]")).not.toBeNull();
+  expect(within(top).getByText("Trabalhando")).toBeInTheDocument();
+  expect(top.querySelector("[data-agent-mark]")).toBeNull();
   expect(within(top).queryByText("2 de 4 passos")).not.toBeInTheDocument();
   expect(within(top).queryByText("Média")).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Editar tarefa" })).not.toBeInTheDocument();
@@ -113,7 +113,8 @@ test("o cabeçalho do pedido terminado mostra o status, o controle de situação
   await loaded();
 
   const top = screen.getByRole("region", { name: "Resumo da tarefa" });
-  expect(within(top).getByText("Agente, concluído")).toBeInTheDocument();
+  expect(within(top).getByText("Concluído")).toBeInTheDocument();
+  expect(within(top).queryByText(/^Agente,/)).not.toBeInTheDocument();
   expect(await situationControl()).toHaveAccessibleName("Para revisar. Mudar situação");
   expect(within(top).getByRole("button", { name: /Mudar situação/ })).toHaveTextContent("Para revisar");
 });
@@ -184,18 +185,31 @@ test("Informações mostra o início com o tempo decorrido e 'ainda não conclu�
   expect(screen.queryByText("Job")).not.toBeInTheDocument();
 });
 
-test("o detalhe do pedido mostra o projeto no cabeçalho, só para leitura, e não repete nas Informações", async () => {
+test("o detalhe do pedido mostra o projeto como primeira linha das Informações, só para leitura, e não no cabeçalho", async () => {
   install([agentTask({ project: { id: "p-tp", name: "timeline_project", personal: false } })], [agentRequest()]);
   renderPage();
   await loaded();
 
-  const top = await screen.findByRole("region", { name: "Resumo da tarefa" });
-  expect(within(top).getByText("timeline_project")).toBeInTheDocument();
-  expect(within(top).getByText("TP")).toBeInTheDocument();
-  expect(within(top).queryByRole("button", { name: /timeline_project/ })).not.toBeInTheDocument();
-  const info = screen.getByRole("region", { name: "Informações" });
-  expect(within(info).queryByText("Projeto")).not.toBeInTheDocument();
-  expect(within(info).queryByText("timeline_project")).not.toBeInTheDocument();
+  const info = await screen.findByRole("region", { name: "Informações" });
+  expect(within(info).getByText("Projeto")).toBeInTheDocument();
+  expect(within(info).getByText("timeline_project")).toBeInTheDocument();
+  expect(within(info).getByText("TP")).toBeInTheDocument();
+  expect(within(info).getByText("Projeto").compareDocumentPosition(within(info).getByText("Início"))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(within(info).queryByRole("button", { name: /timeline_project/ })).not.toBeInTheDocument();
+  const top = screen.getByRole("region", { name: "Resumo da tarefa" });
+  expect(within(top).queryByText("timeline_project")).not.toBeInTheDocument();
+});
+
+test("no cabeçalho do pedido terminado a situação vem antes do status, que fica por último na linha", async () => {
+  install([finishedTask()], [finishedRequest()]);
+  renderPage();
+  await loaded();
+
+  const situation = await situationControl();
+  const status = within(screen.getByRole("region", { name: "Resumo da tarefa" })).getByText("Concluído");
+  expect(situation.compareDocumentPosition(status)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(situation.parentElement?.firstElementChild).toBe(situation);
+  expect(situation.parentElement?.lastElementChild).toContainElement(status);
 });
 
 test("a tarefa de agente mostra a tarefa principal e as subtarefas, somente leitura, com pontas de pessoa e de agente", async () => {
@@ -258,7 +272,7 @@ test("com o pedido em aberto, a tela relê o pedido e a tarefa até o estado fin
   });
 
   const top = screen.getByRole("region", { name: "Resumo da tarefa" });
-  expect(await within(top).findByText("Agente, concluído")).toBeInTheDocument();
+  expect(await within(top).findByText("Concluído")).toBeInTheDocument();
   const info = screen.getByRole("region", { name: "Informações" });
   expect(within(info).getByText(/09:58/)).toBeInTheDocument();
   expect(within(info).queryByText("ainda não concluído")).not.toBeInTheDocument();
@@ -427,7 +441,7 @@ test("Cancelar pedido chama a API, e o detalhe passa a mostrar o pedido cancelad
   fireEvent.click(within(field).getByRole("button", { name: "Cancelar pedido" }));
 
   const top = screen.getByRole("region", { name: "Resumo da tarefa" });
-  expect(await within(top).findByText("Agente, cancelado")).toBeInTheDocument();
+  expect(await within(top).findByText("Cancelado")).toBeInTheDocument();
   expect(api.calls.some((call) => call.method === "POST" && call.pathname === `/api/requests/${ID}/cancel`)).toBe(true);
   expect(within(field).queryByRole("button", { name: "Cancelar pedido" })).not.toBeInTheDocument();
 });

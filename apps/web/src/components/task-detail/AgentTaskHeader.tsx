@@ -1,13 +1,12 @@
 "use client";
 
 import type { TaskDto, RequestDto, TaskSituation } from "@repo/contracts";
-import { Bot } from "lucide-react";
 import { useState } from "react";
-import { ProjectLine } from "@/components/projects/project-line";
+import { agentStatusNames } from "@/components/tasks/agent-status-names";
 import { SituationMenu } from "@/components/tasks/situation-menu";
 import { TaskKindMark } from "@/components/tasks/task-kind-mark";
 import { TaskSituationGlyph, situationNames } from "@/components/tasks/task-situation";
-import { TaskStatusGlyph, taskStatusName } from "@/components/tasks/task-status-glyph";
+import { TaskStatusGlyph } from "@/components/tasks/task-status-glyph";
 import { setTaskSituation } from "@/lib/api/tasks";
 import styles from "./task-detail.module.css";
 
@@ -21,11 +20,10 @@ interface AgentTaskHeaderProps {
 const SITUATION_FAILURE = "Não foi possível mudar a situação. Tente novamente.";
 
 /**
- * O topo da tarefa de agente: o código do tipo, o título, o status do agente solto na linha (sem pílula), o
- * controle de situação (só quando o pedido terminou), o projeto só para leitura (o dele não muda depois que a tarefa
- * nasce) e o robô na ponta direita como assinatura, igual à linha da agenda. Prioridade e "N de M passos" não aparecem aqui (os
- * passos têm a sua seção). Não há lápis nem troca de status: quem executa é o agente. A situação é do usuário: o
- * controle abre as três opções logo abaixo e qualquer uma vale a partir de qualquer outra.
+ * O topo da tarefa de agente: o código do tipo, o título e uma linha com o controle de situação na ponta esquerda (só
+ * quando o pedido terminou) e o status do agente, solto (sem pílula) e só com o nome dele ("Concluído"), na ponta direita. O projeto fica nas Informações. Prioridade e "N de M passos" não aparecem aqui (os passos têm a sua
+ * seção). Não há lápis nem troca de status: quem executa é o agente. A situação é do usuário: o controle abre as três
+ * opções logo abaixo e qualquer uma vale a partir de qualquer outra.
  */
 export function AgentTaskHeader({ task, request, onRequestChange }: AgentTaskHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,10 +48,6 @@ export function AgentTaskHeader({ task, request, onRequestChange }: AgentTaskHea
       <TaskKindMark kind={task.kind} />
       <h1 className={styles.title}>{task.name}</h1>
       <div className={styles.chips}>
-        <span className={styles.agentStatus}>
-          <span aria-hidden className={styles.glyph}><TaskStatusGlyph actor="agent" status={request.status} size={16} /></span>
-          {taskStatusName("agent", request.status)}
-        </span>
         {situation ? (
           <button
             type="button"
@@ -66,8 +60,10 @@ export function AgentTaskHeader({ task, request, onRequestChange }: AgentTaskHea
             {situationNames[situation]}
           </button>
         ) : null}
-        <ProjectLine project={task.project} />
-        <Bot className={styles.agentMark} size={20} strokeWidth={1.9} aria-hidden="true" data-agent-mark />
+        <span className={styles.agentStatus}>
+          <span aria-hidden className={styles.glyph}><TaskStatusGlyph actor="agent" status={request.status} size={16} /></span>
+          {agentStatusNames[request.status]}
+        </span>
       </div>
       {menuOpen && situation ? <SituationMenu value={situation} onPick={(next) => void change(next)} /> : null}
       {failed ? <p role="alert" className={styles.situationFailure}>{SITUATION_FAILURE}</p> : null}
