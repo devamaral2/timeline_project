@@ -2,11 +2,12 @@
 
 import type { AgentTaskStatus, TaskCardDto } from "@repo/contracts";
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { type CSSProperties, useRef } from "react";
 import { ProjectMark } from "@/components/projects/project-line";
 import { AgentStatusIcon } from "@/components/tasks/agent-status-icon";
 import { agentStatusNames } from "@/components/tasks/agent-status-names";
 import { EXECUTION_PEEK, shownRowCount } from "@/lib/tasks/execution-runs";
+import { useExecutionClearance } from "@/lib/tasks/execution-clearance";
 import { useExecutionDrawerMode } from "@/lib/tasks/execution-drawer-mode";
 import { useExecutionRuns } from "./use-execution-runs";
 import styles from "./execution-drawer.module.css";
@@ -68,6 +69,9 @@ function RunRow({ card, index, userId, total, hidden }: { card: TaskCardDto; ind
 export function ExecutionDrawer({ userId, active, covered = false }: { userId: string; active: boolean; covered?: boolean }) {
   const runs = useExecutionRuns(active);
   const { mode, grow, setMode } = useExecutionDrawerMode();
+  const dock = useRef<HTMLDivElement>(null);
+  // O que fica fixo no pé da tela (a escolha de status da lista) sobe a altura que a gaveta cobre.
+  useExecutionClearance(dock, active && runs.length > 0 && !covered);
   if (!active || runs.length === 0) return null;
 
   const total = runs.length;
@@ -81,7 +85,7 @@ export function ExecutionDrawer({ userId, active, covered = false }: { userId: s
   return (
     <div className={styles.host} style={host} data-execution-host data-mode={mode} data-grow={grow ? "" : undefined}>
       <div className={styles.spacer} data-execution-spacer aria-hidden="true" />
-      <div className={styles.dock} hidden={covered}>
+      <div ref={dock} className={styles.dock} hidden={covered}>
         <section className={styles.bar} aria-label="Em andamento" data-execution-drawer data-mode={mode} data-grow={grow ? "" : undefined}>
           <div className={styles.headerWrap} aria-hidden={one || undefined} inert={one || undefined}>
             <h2 className={styles.heading}>

@@ -326,3 +326,54 @@ test("a gaveta não existe sem usuário (telas de mockup)", async () => {
   expect(drawer()).toBeNull();
   expect(api.calls.some((call) => call.pathname === "/api/tasks/tracked")).toBe(false);
 });
+
+/** Dá à gaveta um lugar na janela (jsdom não tem layout): ela ocupa `height` px acima do pé de 800 px. */
+function placeDock(box: { top: number; height: number }) {
+  const original = HTMLElement.prototype.getBoundingClientRect;
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {
+    return this.parentElement?.hasAttribute("data-execution-host") && this.querySelector("[data-execution-drawer]")
+      ? ({ ...box, bottom: box.top + box.height, left: 0, right: 0, width: 0, x: 0, y: box.top, toJSON: () => ({}) } as DOMRect)
+      : original.call(this);
+  });
+}
+
+test("a gaveta publica o quanto cobre do pé da tela, acompanha a altura e tira a medida ao sumir", async () => {
+  const observers: Array<() => void> = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: () => void) {
+        observers.push(callback);
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  vi.spyOn(window, "innerHeight", "get").mockReturnValue(800);
+  const box = { top: 600, height: 200 };
+  placeDock(box);
+  serve(FIVE);
+  const { unmount } = mount();
+  await drawerReady();
+
+  const clearance = () => document.documentElement.style.getPropertyValue("--execution-clearance");
+  expect(clearance()).toBe("200px");
+
+  // A gaveta cresce (de três para todas): a medida acompanha.
+  box.top = 480;
+  act(() => observers.forEach((callback) => callback()));
+  expect(clearance()).toBe("320px");
+
+  unmount();
+  expect(clearance()).toBe("");
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+test("sem execução em andamento nenhuma medida é publicada", async () => {
+  const api = serve([taskFixture({ id: "h1", name: "Minha tarefa", status: "doing" })]);
+  mount();
+  await waitFor(() => expect(api.calls.some((call) => call.pathname === "/api/tasks/tracked")).toBe(true));
+  await act(async () => {});
+  expect(document.documentElement.style.getPropertyValue("--execution-clearance")).toBe("");
+});
