@@ -1,4 +1,5 @@
 import type { AgentTraceDto, AgentTraceStatus, ArtifactType, RequestDto, RequestStepDto } from "@repo/contracts";
+import { isOpenAgentStatus } from "../../domain/agent-status";
 import { stepLabel, uiConfig } from "./request-config";
 import type { RequestEntityRecord, RequestRecord, StepRecord, StepStatus } from "./request-store";
 import { toRequestTrace } from "./request-trace";
@@ -42,7 +43,7 @@ export function toRequestDto(
   options: { progress?: RequestProgress; withTrace?: boolean } = {},
 ): RequestDto {
   const message = messageOf(request);
-  const open = request.status === "queued" || request.status === "running" || request.status === "waiting";
+  const open = isOpenAgentStatus(request.status);
   const trace = request.route === "steps"
     ? toRequestTrace(request, steps, entities, message)
     : request.trace ?? (open ? options.progress?.trace : undefined);

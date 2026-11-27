@@ -1,4 +1,5 @@
 import { EntityBatchConflictError } from "../../domain";
+import { isInProgressAgentStatus } from "../../domain/agent-status";
 import { AgentRunCancelledError, FastStageError } from "../agent/errors/agent.errors";
 import type { RequestRecord, RequestStore, StepRecord } from "./request-store";
 
@@ -28,8 +29,6 @@ export function validInstant(value: string | null | undefined): string | undefin
   return Number.isNaN(new Date(value).getTime()) ? undefined : value;
 }
 
-const OPEN = new Set(["queued", "running"]);
-
 /**
  * O ciclo comum de todo passo: ignora o que ja terminou (ou foi cancelado), marca em andamento e converte
  * qualquer falha em passo vermelho com codigo (e a finalizacao enfileirada), sem refazer nada. Cancelamento sobe.
@@ -42,7 +41,7 @@ export async function runStep(
 ): Promise<void> {
   const [request, steps] = await Promise.all([store.find(payload.requestId), store.steps(payload.requestId)]);
   const step = steps.find((candidate) => candidate.id === payload.stepId);
-  if (!request || !step || !OPEN.has(request.status) || !OPEN.has(step.status)) return;
+  if (!request || !step || !isInProgressAgentStatus(request.status) || !isInProgressAgentStatus(step.status)) return;
   await store.markStepRunning(step.id);
 
   const timings: Record<string, number> = {};

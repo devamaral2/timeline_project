@@ -1,4 +1,5 @@
 import type { AgentTraceDto } from "@repo/contracts";
+import { isInProgressAgentStatus } from "../../domain/agent-status";
 import type { ModelChat, ModelHistoryMessage } from "../../infrastructure/model-agent/model-agent";
 import { isRetryableJobError, jobErrorCode } from "../../infrastructure/jobs/jobs.service";
 import { formatNow, isoNow, TIME_ZONE } from "../agent/time";
@@ -32,7 +33,7 @@ export class ModelTurnWorker {
     context: { signal: AbortSignal; progress(value: RequestProgress): Promise<void> },
   ): Promise<void> {
     const request = await this.store.find(requestId);
-    if (request?.route !== "model" || (request.status !== "queued" && request.status !== "running")) return;
+    if (request?.route !== "model" || !isInProgressAgentStatus(request.status)) return;
     if (!this.agent || !request.model) {
       await this.store.finish(request.id, "failed", { errorCode: "unavailable", message: MODEL_OFF_MESSAGE });
       return;

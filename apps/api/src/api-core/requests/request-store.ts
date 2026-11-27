@@ -8,10 +8,11 @@ import type {
   RequestRoute,
   RequestScreenContext,
 } from "@repo/contracts";
+import type { AgentTaskStatus } from "../../domain/sets";
 import type { EditCandidate } from "./request-candidates";
 import type { DispatchRoute, EntityKind, Expected, RequestAgent, RequestJobKind } from "./request-steps";
 
-export type RequestStatus = "queued" | "running" | "waiting" | "done" | "failed" | "cancel";
+export type RequestStatus = AgentTaskStatus;
 export type StepStatus = Exclude<RequestStatus, "waiting">;
 
 /** O que o pedido mostra de cada entidade que gravou, lido da propria entidade: nunca o texto bruto do pedido. */
