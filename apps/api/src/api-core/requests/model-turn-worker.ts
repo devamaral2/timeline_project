@@ -1,5 +1,5 @@
 import type { AgentTraceDto } from "@repo/contracts";
-import { isInProgressAgentStatus } from "../../domain/agent-status";
+import { isTurnAgentStatus } from "../../domain/agent-status";
 import type { ModelChat, ModelHistoryMessage } from "../../infrastructure/model-agent/model-agent";
 import { isRetryableJobError, jobErrorCode } from "../../infrastructure/jobs/jobs.service";
 import { formatNow, isoNow, TIME_ZONE } from "../agent/time";
@@ -33,16 +33,17 @@ export class ModelTurnWorker {
     context: { signal: AbortSignal; progress(value: RequestProgress): Promise<void> },
   ): Promise<void> {
     const request = await this.store.find(requestId);
-    if (request?.route !== "model" || !isInProgressAgentStatus(request.status)) return;
+    if (request?.route !== "model" || !isTurnAgentStatus(request.status)) return;
+    await this.store.markStarting(request.id);
     if (!this.agent || !request.model) {
       await this.store.finish(request.id, "failed", { errorCode: "unavailable", message: MODEL_OFF_MESSAGE });
       return;
     }
     const agent = this.agent;
     const selection = request.model;
-    await this.store.markRunning(request.id);
     const history = await this.historyOf(request);
     const now = this.clock();
+    await this.store.markRunning(request.id);
 
     // Cada mudanca e uma escrita no banco: so uma por intervalo; o fim grava o rastro completo.
     let lastWrite = 0;

@@ -274,6 +274,8 @@ describe("PostgresArtifactRepository", () => {
       return { food, payload: job.payload, requestId: job.task_id };
     }
 
+    /** O job pegou o pedido e o handler o marcou `running`: so de la ele conclui (ticket 56). */
+    const running = (requestId: string) => ctx.pool.query("UPDATE tasks SET status = 'running' WHERE id = $1", [requestId]);
     const requestOf = async (requestId: string) =>
       (await selectRows(ctx.pool, "SELECT status, finished_at FROM tasks WHERE id = $1", [requestId]))[0];
     const resultsOf = (requestId: string) =>
@@ -343,6 +345,7 @@ describe("PostgresArtifactRepository", () => {
 
     test("concluir grava os nutrientes, encerra o pedido como done e acrescenta o resultado", async () => {
       const { food, payload, requestId } = await pendingFood();
+      await running(requestId);
 
       const applied = await artifacts.finishFoodGeneration(payload, generatedFood("feijoada completa"), "completed");
 
@@ -382,6 +385,7 @@ describe("PostgresArtifactRepository", () => {
       for (const [what, change] of stale) {
         await ctx.reset();
         const { food, payload, requestId } = await pendingFood();
+      await running(requestId);
 
         const applied = await artifacts.finishFoodGeneration(change(payload), generatedFood("feijoada completa"), "completed");
 
@@ -397,6 +401,7 @@ describe("PostgresArtifactRepository", () => {
 
     test("sem data, so registra que a geracao foi pulada", async () => {
       const { food, payload, requestId } = await pendingFood();
+      await running(requestId);
 
       expect(await artifacts.finishFoodGeneration(payload, null, "skipped")).toBe(false);
 
@@ -407,6 +412,7 @@ describe("PostgresArtifactRepository", () => {
 
     test("um pedido ja encerrado nao ganha um segundo resultado", async () => {
       const { payload, requestId } = await pendingFood();
+      await running(requestId);
       await artifacts.finishFoodGeneration(payload, generatedFood("feijoada completa"), "completed");
 
       expect(await artifacts.finishFoodGeneration(payload, generatedFood("feijoada completa"), "completed")).toBe(false);
@@ -415,7 +421,8 @@ describe("PostgresArtifactRepository", () => {
     });
 
     test("dentro do job, a escrita encerra o job na mesma transacao", async () => {
-      const { payload } = await pendingFood();
+      const { requestId, payload } = await pendingFood();
+      await running(requestId);
       const store = new PostgresJobStore(new PostgresDatabase(ctx.pool), 3000, 3);
       const [job] = await store.claim([FOOD_GENERATION_JOB], 1);
 

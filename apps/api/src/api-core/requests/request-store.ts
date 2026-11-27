@@ -228,7 +228,9 @@ export interface RequestStore {
   sessionTurns(userId: string, sessionId: string, limit: number): Promise<RequestRecord[]>;
   steps(requestId: string): Promise<StepRecord[]>;
   entities(requestId: string): Promise<RequestEntityRecord[]>;
-  /** O job comecou a trabalhar no pedido que nao se desdobra em passos (Hermes, modo modelo, voz, alimento). */
+  /** O worker pegou o job do pedido que nao se desdobra em passos (Hermes, modo modelo, voz, alimento): `queued` vira `starting`. */
+  markStarting(requestId: string): Promise<void>;
+  /** O worker fez a primeira chamada ao executor: `queued` ou `starting` viram `running`. Quem ja esta `running` continua. */
   markRunning(requestId: string): Promise<void>;
   /** Cria os passos e enfileira todos os jobs de uma vez; o pedido passa a `running`. */
   beginSteps(requestId: string, steps: readonly NewStep[], dispatch?: DispatchRecord): Promise<void>;
@@ -252,22 +254,28 @@ export interface RequestStore {
     entity: Pick<RequestEntityRecord, "kind" | "id" | "stepId">,
     links: readonly LinkRecord[],
   ): Promise<void>;
-  /** Encerra o pedido se ele ainda esta aberto. */
-  finish(requestId: string, status: "completed" | "failed", outcome: RequestOutcome): Promise<void>;
   /**
-   * O pedido e uma tarefa de agente, ou caiu no fallback: passa para a rota do Hermes, guarda o que o despacho
-   * escolheu e o job do Hermes entra na fila, na mesma transacao. Nada acontece se o pedido ja terminou.
+   * Encerra o pedido se a tabela de transicoes deixa (`agentStatusesBefore`): `completed` e `interrupted` so de
+   * `running`; `failed` de qualquer status aberto. Um pedido final nao reabre e nada acontece com ele.
+   */
+  finish(requestId: string, status: "completed" | "failed" | "interrupted", outcome: RequestOutcome): Promise<void>;
+  /**
+   * O pedido e uma tarefa de agente, ou caiu no fallback: passa para a rota do Hermes (`preparing` vira `queued`),
+   * guarda o que o despacho escolheu e o job do Hermes entra na fila, na mesma transacao. Nada acontece se o pedido
+   * nao esta mais `preparing`.
    */
   handToHermes(requestId: string, dispatch: DispatchRecord): Promise<void>;
   /**
-   * O pedido e de configuracao e passa para a rota do modo modelo: guarda o que o JEV escolheu e o modelo que
-   * vai responder, e o turno do modelo entra na fila, na mesma transacao. Nada acontece se o pedido ja terminou.
+   * O pedido e de configuracao e passa para a rota do modo modelo (`preparing` vira `queued`): guarda o que o JEV
+   * escolheu e o modelo que vai responder, e o turno do modelo entra na fila, na mesma transacao. Nada acontece se
+   * o pedido nao esta mais `preparing`.
    */
   handToModel(requestId: string, dispatch: DispatchRecord, model: ModelSelection): Promise<void>;
   /** A fala virou uma tarefa de pessoa: a relacao do pedido com ela e o pedido concluido, na transacao da tarefa. */
   completeVoice(tx: unknown, input: { requestId: string; taskId: string }): Promise<void>;
   /**
-   * Cancela o pedido e os passos que nao terminaram. Devolve as tarefas cujos jobs vivos precisam ser
+   * Cancela o pedido e os passos que nao terminaram: o que estava `running` fica `interrupted`, o resto `cancelled`
+   * (o codigo de erro do pedido e `cancelled` nos dois casos). Devolve as tarefas cujos jobs vivos precisam ser
    * cancelados; vazio quando o pedido ja tinha terminado.
    */
   cancel(requestId: string): Promise<string[]>;

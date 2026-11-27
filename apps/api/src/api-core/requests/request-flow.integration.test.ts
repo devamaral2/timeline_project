@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
 import { getJobsEnv } from "../../config/env";
 import { Artifact, ProjectNotFoundError, type FoodData } from "../../domain";
 import { ModelRequestError, type ModelChatInput } from "../../infrastructure/model-agent/model-agent";
-import { HermesRequestError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
+import { HermesRequestError, HermesRunInterruptedError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
 import { PostgresEntityBatchWriter } from "../../infrastructure/persistence/agent-batch/postgres-entity-batch-writer";
 import { PostgresScopedSqlQuery } from "../../infrastructure/persistence/agent-sql/postgres-scoped-sql.query";
@@ -49,6 +49,7 @@ import { VoiceTaskWorker } from "./voice-task-worker";
 let ctx: PostgresTestContext;
 let jobs: JobsService;
 let operations: RequestOperations;
+let store: PostgresRequestStore;
 let tasks: PostgresTaskRepository;
 let artifacts: PostgresArtifactRepository;
 /** A pergunta a que o JEV de entrada responde `yes` no proximo pedido; sem nenhuma, o pedido e uma tarefa de agente. */
@@ -85,7 +86,7 @@ beforeAll(async () => {
   const artifactBuilder = new ArtifactBuilder(new PostgresWorkoutCatalog(ctx.db));
   const batchWriter = new PostgresEntityBatchWriter(ctx.db);
   const createTask = new CreateTaskUseCase(tasks, artifacts, artifactBuilder, batchWriter);
-  const store = new PostgresRequestStore(database);
+  store = new PostgresRequestStore(database);
   const sql = new PostgresScopedSqlQuery(ctx.pool);
   const runner = new RequestAgentRunner(gateway, { thoughts: store, reasoning: "low" });
 
@@ -113,10 +114,23 @@ beforeAll(async () => {
     food: new GenerateFoodUseCase(artifacts, foodParsing),
   });
   operations.onModuleInit();
+  // Cada mudanca de status de uma tarefa de agente fica registrada, na ordem: e o que prova o ciclo de vida inteiro,
+  // inclusive os status que duram um instante (`starting`).
+  await ctx.pool.query(`
+    CREATE TABLE status_log (n bigserial PRIMARY KEY, task_id char(26) NOT NULL, status text NOT NULL, finished boolean NOT NULL);
+    CREATE FUNCTION log_status() RETURNS trigger AS $$
+    BEGIN
+      IF NEW.actor = 'agent' AND (TG_OP = 'INSERT' OR NEW.status IS DISTINCT FROM OLD.status) THEN
+        INSERT INTO status_log (task_id, status, finished) VALUES (NEW.id, NEW.status, NEW.finished_at IS NOT NULL);
+      END IF;
+      RETURN NEW;
+    END $$ LANGUAGE plpgsql;
+    CREATE TRIGGER tasks_log_status AFTER INSERT OR UPDATE ON tasks FOR EACH ROW EXECUTE FUNCTION log_status();`);
 }, 120000);
 
 beforeEach(async () => {
   await ctx.reset();
+  await ctx.pool.query("TRUNCATE status_log");
   gateway.outputs.clear();
   gateway.reasonings.clear();
   gateway.calls.length = 0;
@@ -150,6 +164,14 @@ async function drain(): Promise<string[]> {
   return rows.map((row) => row.kind);
 }
 
+/** Os status por que a tarefa de agente passou, na ordem. */
+const historyOf = async (taskId: string) =>
+  (await ctx.pool.query<{ status: string }>("SELECT status FROM status_log WHERE task_id = $1 ORDER BY n", [taskId]))
+    .rows.map((row) => row.status);
+
+const statusOf = async (taskId: string) =>
+  (await ctx.pool.query<{ status: string }>("SELECT status FROM tasks WHERE id = $1", [taskId])).rows[0]?.status;
+
 const jobStatuses = async () =>
   (await ctx.pool.query<{ kind: string; status: string }>("SELECT kind, status FROM jobs ORDER BY created_at, id")).rows;
 
@@ -159,7 +181,7 @@ test("o exemplo-guia: um passo so grava tudo, a refeicao nasce com o alimento li
   ] }));
 
   const requestId = await operations.start({ userId: "user-1", text: "comendo 300g de arroz, depois vou nadar", context: { screen: "agenda" } }, actor);
-  expect(await operations.view(requestId, actor)).toMatchObject({ status: "queued", steps: [], route: "steps" });
+  expect(await operations.view(requestId, actor)).toMatchObject({ status: "preparing", steps: [], route: "steps" });
 
   const ran = await drain();
   expect(ran.filter((kind) => kind.startsWith("request-")).sort()).toEqual([
@@ -460,21 +482,22 @@ test("Hermes: o rastro vem do progresso enquanto roda e das entradas depois que 
   expect(view.progress).toBeUndefined();
 });
 
-test("cancelar: os jobs vivos param, o pedido e os passos abertos ficam cancelados e nada mais e gravado", async () => {
+test("cancelar: os jobs vivos param, o pedido que rodava fica interrompido, o passo que nao comecou fica cancelado e nada mais e gravado", async () => {
   gateway.outputs.set("entity", entityAnswer({ tasks: [task("Almoço", "meal", 12)] }));
   const requestId = await operations.start({ userId: "user-1", text: "almocei" }, actor);
   await jobs.tick();
   await jobs.idle();
 
+  // O despacho ja desdobrou o pedido em passos: ele esta `running`, e cancelar o que roda deixa `interrupted`.
   const cancelled = await operations.cancel(requestId, actor);
-  expect(cancelled).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
+  expect(cancelled).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
   expect(cancelled.steps.map((step) => step.status)).toEqual(["cancelled"]);
   await drain();
 
   expect((await jobStatuses()).filter((job) => job.kind === "request-step").map((job) => job.status)).toEqual(["cancelled"]);
   expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(0);
   expect(gateway.calls).toHaveLength(0);
-  expect(await operations.view(requestId, actor)).toMatchObject({ status: "cancelled", entities: [] });
+  expect(await operations.view(requestId, actor)).toMatchObject({ status: "interrupted", entities: [] });
 });
 
 test("o modelo fora do ar vira passo vermelho com codigo, e o texto do usuario so aparece em mensagens, pensamentos e insumos", async () => {
@@ -645,3 +668,156 @@ function entityEdit(id: string, subtasks: string[]) {
     }],
   };
 }
+
+// O ciclo de vida do pedido (spec 51, ticket 56): preparing, queued, starting, running e como ele termina.
+
+test("ciclo de vida: o pedido do chat nasce preparing e chega a completed passando por running; o passo vai de queued a completed", async () => {
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Almoço", "meal", 12)] }));
+  const requestId = await operations.start({ userId: "user-1", text: "almocei" }, actor);
+  expect(await historyOf(requestId)).toEqual(["preparing"]);
+  await drain();
+
+  expect(await historyOf(requestId)).toEqual(["preparing", "running", "completed"]);
+  const [stepId] = await stepIdsOf(requestId);
+  expect(await historyOf(stepId as string)).toEqual(["queued", "running", "completed"]);
+});
+
+test("ciclo de vida: a edicao por alvo tambem nasce preparing e segue para running", async () => {
+  const sleep = Artifact.create({ userId: "user-1", type: "sleep", name: "Sono", data: { trackedSleepTime: 400, score: 70 } });
+  await artifacts.save(sleep);
+  gateway.outputs.set("sleep_edit", { edits: [{ id: sleep.id, name: null, trackedSleepTime: 480, score: null, tags: null }] });
+  const requestId = await operations.startEdit({ userId: "user-1", text: "dormi 8h", entityType: "sleep_artifact", entityId: sleep.id }, actor);
+  await drain();
+  expect(await historyOf(requestId)).toEqual(["preparing", "running", "completed"]);
+});
+
+test("ciclo de vida: o pedido entregue ao Hermes ou ao modo modelo vai a queued, starting e running", async () => {
+  const trace: AgentTraceDto = { route: "hermes", status: "done", fields: [], entries: [] };
+  const seen: string[] = [];
+  hermesReply = async (input) => {
+    seen.push((await statusOf(input.sessionId.replace("braid-user-1-", "")))!);
+    return { text: "ok", trace };
+  };
+  modelReply = async () => ({ text: "ok", trace: { ...trace, route: "model" } });
+
+  route = undefined;
+  const hermes = await operations.start({ userId: "user-1", text: "me conta uma piada" }, actor);
+  await drain();
+  expect(await historyOf(hermes)).toEqual(["preparing", "queued", "starting", "running", "completed"]);
+  // O Hermes ja estava sendo chamado com o pedido em `running`.
+  expect(seen).toEqual(["running"]);
+
+  route = "config";
+  configModel = { provider: "anthropic", model: "claude-opus-5-5", effort: "medium" };
+  const model = await operations.start({ userId: "user-1", text: "qual modelo?" }, actor);
+  await drain();
+  expect(await historyOf(model)).toEqual(["preparing", "queued", "starting", "running", "completed"]);
+});
+
+test("ciclo de vida: o pedido que ja nasce com destino nasce queued e passa por starting e running (Hermes, modelo, voz e alimento)", async () => {
+  const trace: AgentTraceDto = { route: "hermes", status: "done", fields: [], entries: [] };
+  hermesReply = async () => ({ text: "ok", trace });
+  modelReply = async () => ({ text: "ok", trace });
+  const model = { provider: "openrouter", model: "x-ai/grok-4.7", effort: "low" } as const;
+
+  const hermes = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "h1" }, actor);
+  const modelTurn = await operations.startModel({ userId: "user-1", text: "oi", clientMessageId: "m1", model }, actor);
+  const voice = await operations.startVoice({ transcript: "comecei a estudar" }, actor);
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Refeição", "meal", 12, { foods: "300g de arroz", foodName: "Arroz" })] }));
+  await operations.start({ userId: "user-1", text: "comendo 300g de arroz" }, actor);
+  await drain();
+
+  const lifecycle = ["queued", "starting", "running", "completed"];
+  expect(await historyOf(hermes.id)).toEqual(lifecycle);
+  expect(await historyOf(modelTurn.id)).toEqual(lifecycle);
+  expect(await historyOf(voice)).toEqual(lifecycle);
+  const food = (await operations.list(actor)).find((request) => request.route === "food");
+  expect(await historyOf(food?.id as string)).toEqual(lifecycle);
+});
+
+test.each([["preparing"], ["queued"], ["starting"], ["waiting"]])("cancelar em %s deixa cancelled, com o codigo cancelled", async (status) => {
+  const accepted = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: `c-${status}` }, actor);
+  await ctx.pool.query("UPDATE tasks SET status = $1 WHERE id = $2", [status, accepted.id]);
+
+  const view = await operations.cancel(accepted.id, actor);
+  expect(view).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
+  expect(await historyOf(accepted.id)).toEqual([...new Set(["queued", status, "cancelled"])]);
+  expect((await ctx.pool.query("SELECT finished_at FROM tasks WHERE id = $1", [accepted.id])).rows[0]?.finished_at).not.toBeNull();
+});
+
+test("cancelar em running deixa interrupted, e os passos seguem: o queued vira cancelled e o running vira interrupted", async () => {
+  const requestId = await operations.start({ userId: "user-1", text: "almocei" }, actor);
+  // O pedido ainda esta `preparing`: desdobrar em dois passos o deixa `running`; um dos passos ja roda.
+  const [queuedStep, runningStep] = [ulid(), ulid()];
+  await store.beginSteps(requestId, [
+    { id: queuedStep, agent: "entity", expected: "many" }, { id: runningStep, agent: "query", expected: "one" },
+  ]);
+  await ctx.pool.query("UPDATE tasks SET status = 'running' WHERE id = $1", [runningStep]);
+
+  const view = await operations.cancel(requestId, actor);
+  expect(view).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
+  expect(await statusOf(queuedStep)).toBe("cancelled");
+  expect(await statusOf(runningStep)).toBe("interrupted");
+  expect((await ctx.pool.query("SELECT finished_at FROM tasks WHERE id IN ($1, $2)", [queuedStep, runningStep])).rows.every((row) => row.finished_at)).toBe(true);
+  expect(await historyOf(requestId)).toEqual(["preparing", "running", "interrupted"]);
+});
+
+test("a execucao que o Hermes devolve como cancelada ou interrompida deixa o pedido interrompido; o erro do executor deixa failed", async () => {
+  hermesReply = async () => { throw new HermesRunInterruptedError("Hermes run was cancelled"); };
+  const stopped = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "i1" }, actor);
+  await drain();
+  expect(await operations.view(stopped.id, actor)).toMatchObject({ status: "interrupted" });
+  expect(await historyOf(stopped.id)).toEqual(["queued", "starting", "running", "interrupted"]);
+
+  hermesReply = async () => { throw new HermesRequestError("Hermes run failed"); };
+  const broken = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "i2" }, actor);
+  await drain();
+  expect(await operations.view(broken.id, actor)).toMatchObject({ status: "failed" });
+  expect(await historyOf(broken.id)).toEqual(["queued", "starting", "running", "failed"]);
+});
+
+test("o job abandonado por tentativas esgotadas deixa o pedido que rodava interrompido; o que nao tinha comecado cai em failed", async () => {
+  const running = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "a1" }, actor);
+  const waiting = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "a2" }, actor);
+  // O worker morreu com o pedido de a1 rodando, e nenhum dos dois job tem tentativa sobrando.
+  await ctx.pool.query("UPDATE tasks SET status = 'running' WHERE id = $1", [running.id]);
+  await ctx.pool.query("UPDATE jobs SET attempts = 5 WHERE kind = 'hermes-turn'");
+  await drain();
+
+  expect(await operations.view(running.id, actor)).toMatchObject({ status: "interrupted" });
+  expect(await historyOf(running.id)).toEqual(["queued", "running", "interrupted"]);
+  expect(await operations.view(waiting.id, actor)).toMatchObject({ status: "failed" });
+});
+
+test("uma nova tentativa do worker sobre um pedido em starting ou running continua o trabalho", async () => {
+  const trace: AgentTraceDto = { route: "hermes", status: "done", fields: [], entries: [] };
+  hermesReply = async () => ({ text: "ok", trace });
+  for (const status of ["starting", "running"]) {
+    const accepted = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: `r-${status}` }, actor);
+    await ctx.pool.query("UPDATE tasks SET status = $1 WHERE id = $2", [status, accepted.id]);
+    await drain();
+    expect(await operations.view(accepted.id, actor)).toMatchObject({ status: "completed", message: "ok" });
+  }
+});
+
+test("uma transicao fora da lista e recusada e um pedido final nao reabre", async () => {
+  const trace: AgentTraceDto = { route: "hermes", status: "done", fields: [], entries: [] };
+  const accepted = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "t1" }, actor);
+
+  // queued -> completed e queued -> interrupted nao estao na lista: o pedido continua queued.
+  await store.finish(accepted.id, "completed", { message: "cedo demais", trace });
+  await store.finish(accepted.id, "interrupted", {});
+  expect(await statusOf(accepted.id)).toBe("queued");
+  expect((await operations.view(accepted.id, actor)).message).toBeUndefined();
+
+  await operations.cancel(accepted.id, actor);
+  expect(await statusOf(accepted.id)).toBe("cancelled");
+  // Cancelado e um fim: nada o reabre, nem o worker, nem o despacho, nem uma nova finalizacao.
+  await store.markStarting(accepted.id);
+  await store.markRunning(accepted.id);
+  await store.beginSteps(accepted.id, [{ id: ulid(), agent: "entity", expected: "many" }]);
+  await store.handToHermes(accepted.id, { answers: {}, uncertain: [] });
+  await store.finish(accepted.id, "failed", {});
+  expect(await historyOf(accepted.id)).toEqual(["queued", "cancelled"]);
+  expect(await stepIdsOf(accepted.id)).toEqual([]);
+});

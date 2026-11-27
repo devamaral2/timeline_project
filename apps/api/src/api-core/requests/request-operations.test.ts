@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import type { JobFailureHandler, JobHandler } from "../../infrastructure/jobs/jobs.service";
+import { WorkerAttemptsExhaustedError, type JobFailureHandler, type JobHandler } from "../../infrastructure/jobs/jobs.service";
 import { RequestOperations, type RequestWorkers } from "./request-operations";
 import { InMemoryRequestStore } from "./testing/in-memory-request-store";
 
@@ -77,6 +77,17 @@ describe("fila dos pedidos", () => {
     },
   );
 
+  test("o job abandonado por tentativas esgotadas interrompe o pedido que rodava; o que nao tinha comecado cai em failed", async () => {
+    const { store, handlers, context } = setup();
+    store.seed({ id: "r1", prompt: "x", status: "running" });
+    store.seed({ id: "r2", prompt: "x", status: "queued" });
+    for (const requestId of ["r1", "r2"]) {
+      await handlers.get("hermes-turn")?.onFailure?.({ requestId }, context, new WorkerAttemptsExhaustedError());
+    }
+    expect(store.require("r1")).toMatchObject({ status: "interrupted", errorCode: "unavailable" });
+    expect(store.require("r2")).toMatchObject({ status: "failed", errorCode: "unavailable" });
+  });
+
   test("o alimento: o pedido de construcao passa a rodar, e a falha definitiva grava o estado de falha", async () => {
     const { store, handlers, workers, context } = setup();
     store.seed({ id: "b1", prompt: "banana", route: "food", kind: "build_request", status: "queued" });
@@ -95,7 +106,7 @@ describe("iniciar um pedido", () => {
     const text = `almocei ${"muito ".repeat(30)}`;
     const id = await operations.start({ userId: "user-1", text, context: { screen: "agenda" } }, actor);
 
-    expect(store.require(id)).toMatchObject({ route: "steps", status: "queued", prompt: text, context: { screen: "agenda" } });
+    expect(store.require(id)).toMatchObject({ route: "steps", status: "preparing", prompt: text, context: { screen: "agenda" } });
     expect(store.require(id).title.length).toBeLessThanOrEqual(80);
     expect(store.jobs).toEqual([{ kind: "request-dispatch", requestId: id }]);
     expect(store.require(id).model).toBeUndefined();
@@ -171,7 +182,7 @@ describe("iniciar um pedido", () => {
     const { store, operations } = setup();
     const id = await operations.startEdit({ userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "01H0TASK" }, actor);
     expect(store.require(id)).toMatchObject({
-      route: "steps", prompt: "mude para 19h", status: "queued",
+      route: "steps", prompt: "mude para 19h", status: "preparing",
       target: { entityType: "task", entityId: "01H0TASK" }, context: { screen: "detail", entityId: "01H0TASK" },
     });
     expect(store.jobs).toEqual([{ kind: "request-edit-target", requestId: id }]);
@@ -269,16 +280,17 @@ describe("acompanhar e cancelar", () => {
     expect(await operations.list(actor, 1)).toHaveLength(1);
   });
 
-  test("cancelar marca o pedido e os passos abertos e cancela os jobs vivos deles", async () => {
+  test("cancelar interrompe o pedido que rodava, cancela o passo que nao comecou e cancela os jobs vivos deles", async () => {
     const { store, jobs, operations } = setup();
     store.seed({ id: "r1", prompt: "x" });
     await store.beginSteps("r1", [{ id: "s1", agent: "entity", expected: "many" }, { id: "s2", agent: "query", expected: "one" }]);
+    await store.markStepRunning("s2");
     await store.recordQueryResult({ requestId: "r1", stepId: "s2", result: { columns: [], rows: [], truncated: false }, timings: {} });
 
     const cancelled = await operations.cancel("r1", actor);
 
     expect(jobs.cancelOfTasks).toHaveBeenCalledWith(["r1", "s1", "s2"], "user-1");
-    expect(cancelled).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
+    expect(cancelled).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
     expect(cancelled.steps.map((step) => step.status)).toEqual(["cancelled", "completed"]);
 
     // Cancelar de novo, ou um pedido que ja terminou, nao muda nada.

@@ -86,5 +86,6 @@ test("pedido cancelado nao chama o modelo; cancelado no meio, a tarefa nao e gra
     return original(...args);
   };
   await expect(racing.worker.run("v1")).rejects.toThrow("no longer open");
-  expect(racing.store.require("v1").status).toBe("cancelled");
+  // O pedido ja rodava quando foi cancelado: fica `interrupted`.
+  expect(racing.store.require("v1").status).toBe("interrupted");
 });

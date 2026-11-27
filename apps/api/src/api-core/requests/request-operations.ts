@@ -6,7 +6,7 @@ import type {
 import type { FoodGenerationPayload } from "../../domain/ports";
 import { isInProgressAgentStatus } from "../../domain/agent-status";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { jobErrorCode, type JobFailureHandler, type JobsService } from "../../infrastructure/jobs/jobs.service";
+import { jobErrorCode, WorkerAttemptsExhaustedError, type JobFailureHandler, type JobsService } from "../../infrastructure/jobs/jobs.service";
 import { FOOD_GENERATION_JOB } from "../../infrastructure/persistence/artifacts/repositories/food-generation";
 import { assertConfigOwner } from "../agent/config/agent-config-access";
 import type { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
@@ -88,7 +88,10 @@ export class RequestOperations implements OnModuleInit {
       await workers.voice.run((raw as { requestId: string }).requestId);
     }, { onFailure: this.failRequest() });
     this.jobs.register(FOOD_GENERATION_JOB, async (raw, context) => {
-      if (context.taskId) await this.store.markRunning(context.taskId);
+      if (context.taskId) {
+        await this.store.markStarting(context.taskId);
+        await this.store.markRunning(context.taskId);
+      }
       await workers.food.execute(raw as FoodGenerationPayload);
     }, {
       onFailure: async (raw) => {
@@ -118,9 +121,12 @@ export class RequestOperations implements OnModuleInit {
   /** O job que conduz o pedido morreu: o pedido nunca fica aberto sem ninguem trabalhando nele. */
   private failRequest(message?: string): JobFailureHandler {
     return async (raw, _context, error) => {
-      await this.store.finish((raw as { requestId: string }).requestId, "failed", {
-        errorCode: requestErrorCode(jobErrorCode(error)), ...(message ? { message } : {}),
-      });
+      const { requestId } = raw as { requestId: string };
+      const outcome = { errorCode: requestErrorCode(jobErrorCode(error)), ...(message ? { message } : {}) };
+      // O worker morreu com o job e as tentativas acabaram: o pedido foi interrompido. So quem estava `running` se
+      // interrompe; um pedido que ainda nao tinha comecado cai no `failed`, para nunca ficar aberto sem ninguem.
+      if (error instanceof WorkerAttemptsExhaustedError) await this.store.finish(requestId, "interrupted", outcome);
+      await this.store.finish(requestId, "failed", outcome);
     };
   }
 

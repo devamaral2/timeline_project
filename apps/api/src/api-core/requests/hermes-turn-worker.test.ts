@@ -1,6 +1,6 @@
 import type { AgentTraceDto } from "@repo/contracts";
 import { expect, test, vi } from "vitest";
-import { HermesRequestError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
+import { HermesRequestError, HermesRunInterruptedError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
 import { RetryableJobError } from "../../infrastructure/jobs/jobs.service";
 import { HERMES_OFF_MESSAGE, HermesTurnWorker } from "./hermes-turn-worker";
 import { toRequestDto } from "./request-view";
@@ -72,6 +72,16 @@ test("falha definitiva do Hermes: o pedido falha com um codigo seguro e o ultimo
   const request = store.require("01NEXT");
   expect(request).toMatchObject({ status: "failed", errorCode: "unavailable", trace: trace("failed", "failed") });
   expect(request.answer).toBeUndefined();
+});
+
+test("a execucao que o Hermes devolve como interrompida deixa o pedido interrompido, e o erro dele deixa failed", async () => {
+  const stopped = setup(async () => { throw new HermesRunInterruptedError("Hermes run was cancelled"); });
+  await expect(stopped.run()).rejects.toBeInstanceOf(HermesRunInterruptedError);
+  expect(stopped.store.require("01NEXT")).toMatchObject({ status: "interrupted", finishedAt: expect.any(Date) });
+
+  const broken = setup(async () => { throw new HermesRequestError("Hermes run failed"); });
+  await expect(broken.run()).rejects.toBeInstanceOf(HermesRequestError);
+  expect(broken.store.require("01NEXT").status).toBe("failed");
 });
 
 test("erro que a fila ainda vai tentar de novo nao encerra o pedido", async () => {

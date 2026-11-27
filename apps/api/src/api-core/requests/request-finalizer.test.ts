@@ -85,7 +85,8 @@ describe("fila de finalizacao", () => {
     await ctx.worker.run(write);
     await ctx.store.cancel("r1");
     await ctx.finalizer().run(write);
-    expect(ctx.store.require("r1").status).toBe("cancelled");
+    // O pedido rodava: cancelar o deixa `interrupted`, e a finalizacao nao o reabre nem o fecha de novo.
+    expect(ctx.store.require("r1").status).toBe("interrupted");
   });
 });
 
