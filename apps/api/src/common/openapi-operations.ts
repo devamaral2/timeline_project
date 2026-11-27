@@ -3,6 +3,7 @@ import {
   artifactSchema,
   createArtifactRequestSchema,
   createArtifactResponseSchema,
+  createProjectInputSchema,
   createTaskInputSchema,
   createRecurrenceInputSchema,
   dailyReadingInputSchema,
@@ -58,6 +59,7 @@ export const documentedSchemas = {
   CreatedArtifact: createArtifactResponseSchema,
   UpdateArtifactRequest: updateArtifactRequestSchema,
   Project: projectSchema,
+  CreateProjectInput: createProjectInputSchema,
   Recurrence: recurrenceSchema,
   CreateRecurrenceInput: createRecurrenceInputSchema,
   UpdateRecurrenceInput: updateRecurrenceInputSchema.omit({ recurrenceId: true }),
@@ -174,10 +176,10 @@ export const documentedOperations: Record<string, OperationDoc> = {
   "POST /api/tasks": {
     tag: "Tarefas",
     summary: "Cria uma tarefa",
-    description: "Cria uma tarefa de pessoa, com os artefatos novos ou já existentes que ela carrega.",
+    description: "Cria uma tarefa de pessoa, com os artefatos novos ou já existentes que ela carrega. `projectId` põe a tarefa num projeto do usuário; sem ele, ela fica em `personal`.",
     body: "CreateTaskInput",
     success: { status: 201, description: "A tarefa foi criada.", schema: "CreatedTask" },
-    errors: { 400: invalid, 409: idempotencyClash, 422: idempotencyReuse },
+    errors: { 400: invalid, 404: "Projeto não encontrado (não existe ou não é do usuário).", 409: idempotencyClash, 422: idempotencyReuse },
     idempotent: true,
   },
   "POST /api/tasks/daily-reading": {
@@ -198,10 +200,10 @@ export const documentedOperations: Record<string, OperationDoc> = {
   "PATCH /api/tasks/{taskId}": {
     tag: "Tarefas",
     summary: "Edita uma tarefa",
-    description: "Envie só os campos que mudam, mais o `expectedRevision` lida da tarefa. `null` em `status` ou numa data apaga o valor.",
+    description: "Envie só os campos que mudam, mais o `expectedRevision` lida da tarefa. `null` em `status` ou numa data apaga o valor; `null` em `projectId` devolve a tarefa a `personal`.",
     body: "UpdateTaskInput",
     success: { status: 204, description: "A tarefa foi editada." },
-    errors: { 400: invalid, 404: "Tarefa não encontrada.", 409: stale },
+    errors: { 400: invalid, 404: "Tarefa ou projeto não encontrado.", 409: stale },
   },
   "DELETE /api/tasks/{taskId}": {
     tag: "Tarefas",
@@ -282,6 +284,14 @@ export const documentedOperations: Record<string, OperationDoc> = {
     description: "Os projetos do usuário: `personal` primeiro e os outros por nome. O `personal` nasce na primeira leitura de quem ainda não tem nenhum.",
     success: { status: 200, description: "Os projetos do usuário.", schema: "Project", list: true },
   },
+  "POST /api/projects": {
+    tag: "Projetos",
+    summary: "Cria um projeto",
+    description: "O nome vale sem os espaços das pontas: de 1 a 60 caracteres, único por usuário sem distinguir maiúsculas de minúsculas (`personal` já existe para todos).",
+    body: "CreateProjectInput",
+    success: { status: 201, description: "O projeto foi criado.", schema: "Project" },
+    errors: { 400: invalid, 409: "O usuário já tem um projeto com esse nome." },
+  },
 
   "GET /api/recurrences": {
     tag: "Séries",
@@ -294,7 +304,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
     description: "A regra diz quando cada ocorrência acontece; `template` é a tarefa que cada uma copia, sem a janela.",
     body: "CreateRecurrenceInput",
     success: { status: 201, description: "A série foi criada.", schema: "CreatedRecurrence" },
-    errors: { 400: invalid, 409: idempotencyClash, 422: idempotencyReuse },
+    errors: { 400: invalid, 404: "Projeto do modelo não encontrado (não existe ou não é do usuário).", 409: idempotencyClash, 422: idempotencyReuse },
     idempotent: true,
   },
   "GET /api/recurrences/{recurrenceId}": {
@@ -309,7 +319,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
     description: "Envie `expectedRevision` e os campos da regra que mudam. `template`, se vier, substitui o template inteiro.",
     body: "UpdateRecurrenceInput",
     success: { status: 204, description: "A série foi editada." },
-    errors: { 400: invalid, 404: "Série não encontrada.", 409: stale },
+    errors: { 400: invalid, 404: "Série ou projeto do modelo não encontrado.", 409: stale },
   },
   "DELETE /api/recurrences/{recurrenceId}": {
     tag: "Séries",

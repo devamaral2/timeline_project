@@ -154,7 +154,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": null
@@ -307,7 +312,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -483,7 +493,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -670,7 +685,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -757,7 +777,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -965,7 +990,12 @@
           "copyOf": "food-global",
           "quantity": " 2 fatias "
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -1042,7 +1072,12 @@
           "relation": "uses",
           "copyOf": "food-global"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -1107,7 +1142,12 @@
           "copyOf": "food-global",
           "quantity": "   "
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -1179,7 +1219,12 @@
           "relation": "uses",
           "copyOf": "food-global"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -1311,7 +1356,12 @@
           "global": true,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -1480,7 +1530,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {

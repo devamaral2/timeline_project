@@ -24,6 +24,7 @@ import { TaskEditHeaderFields } from "./TaskEditHeaderFields";
 import { TaskEditInfoSection } from "./TaskEditInfoSection";
 import { TaskEditLocationSection } from "./TaskEditLocationSection";
 import { TaskEditPersistentSection } from "./TaskEditPersistentSection";
+import { TaskEditProjectField } from "./TaskEditProjectField";
 import { TaskEditRecurrenceSection } from "./TaskEditRecurrenceSection";
 import { TaskEditReminderSection } from "./TaskEditReminderSection";
 import { TaskEditHierarchySection } from "./TaskEditHierarchySection";
@@ -149,6 +150,7 @@ export function TaskEditView({ task: loaded, userId, initialName, onReload, onLe
         }}
       >
         <TaskEditInfoSection draft={draft} errors={errors} onChange={setField}>
+          <TaskEditProjectField draft={draft} onChange={setField} />
           {/* A tarefa persistente só existe na edição: a criação ainda não a envia. */}
           {task ? <TaskEditPersistentSection draft={draft} onChange={setField} /> : null}
           {/* A recorrência não aparece com a tarefa persistente: a tarefa longa não se repete. */}

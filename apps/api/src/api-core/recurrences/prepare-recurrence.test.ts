@@ -65,6 +65,18 @@ describe("prepareRecurrence", () => {
     expect(kit.batchWriter.commits).toEqual([]);
   });
 
+  test("the project of the series is one more field of the template, stored when one was chosen", async () => {
+    const kit = setup();
+
+    const chosen = await kit.prepare({ ...dailyRun, template: { name: "Correr", projectId: "project-1" } });
+    const none = await kit.prepare(dailyRun);
+
+    expect(chosen.recurrence.template).toMatchObject({ projectId: "project-1" });
+    expect(storedTemplateOf(chosen.recurrence).projectId).toBe("project-1");
+    expect(none.recurrence.template).not.toHaveProperty("projectId");
+    expect(storedTemplateOf(none.recurrence)).not.toHaveProperty("projectId");
+  });
+
   test("the template has no target, no window and no status unless one was given", async () => {
     const kit = setup();
 
@@ -322,6 +334,12 @@ describe("recurrence templates", () => {
       expect(occurrence.startedAt?.toISOString()).toBe("2026-09-15T10:00:00.000Z");
       expect(occurrence.estimatedFinishAt?.toISOString()).toBe("2026-09-15T10:30:00.000Z");
       expect(occurrence.status).toBeUndefined();
+    });
+
+    test("an occurrence carries no project of its own: the writer puts it in the project of the series", () => {
+      const occurrence = buildOccurrence(series({ ...template, projectId: "project-1" }), "2026-09-15");
+
+      expect(occurrence.projectId).toBeUndefined();
     });
 
     test("each occurrence uses the same artifacts, with links that belong to the series", () => {

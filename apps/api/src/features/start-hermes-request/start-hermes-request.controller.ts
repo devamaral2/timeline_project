@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Inject, Module, NotFoundExcepti
 import type { RequestDto } from "@repo/contracts";
 import { z } from "zod";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
-import { agentTextSchema, clientMessageIdSchema, requestIdSchema } from "../../api-core/agent/agent-input.schemas";
+import { agentTextSchema, clientMessageIdSchema, projectIdSchema, requestIdSchema } from "../../api-core/agent/agent-input.schemas";
 import { getServerEnv } from "../../config/env";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { RequestOperations } from "../../api-core/requests/request-operations";
@@ -17,6 +17,8 @@ export const startHermesRequestBody = z.object({
   sessionId: requestIdSchema.optional(),
   /** Estavel por mensagem: reenviar o mesmo id devolve o pedido ja aceito, sem uma segunda mensagem ao Hermes. */
   clientMessageId: clientMessageIdSchema,
+  /** O projeto do pedido; vale sobre a sessao. Sem ele, o pedido fica no projeto do primeiro da sessao ou em `personal`. */
+  projectId: projectIdSchema.optional(),
 });
 
 /**

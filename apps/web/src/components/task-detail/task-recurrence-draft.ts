@@ -166,6 +166,8 @@ function templateOf(form: TaskDraft): CreateRecurrenceInput["template"] {
     priority: form.priority,
     ...(form.tags.length ? { tags: form.tags } : {}),
     ...(form.reminders.length ? { notifyOffsetsMinutes: form.reminders } : {}),
+    // O projeto da série é um campo do modelo: cada ocorrência nasce nele. Sem escolha, ou no `personal`, nada vai.
+    ...(form.project && !form.project.personal ? { projectId: form.project.id } : {}),
   };
 }
 

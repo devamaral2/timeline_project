@@ -49,7 +49,12 @@
         "task-sub-1",
         "task-sub-2"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": null
@@ -104,7 +109,12 @@
         "task-sub-1",
         "task-sub-2"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -162,7 +172,12 @@
         "task-sub-1",
         "task-sub-2"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -213,7 +228,12 @@
       "longRunning": false,
       "parentTaskId": "task-parent",
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -272,7 +292,12 @@
         "task-sub-2",
         "task-created"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -333,7 +358,12 @@
       "subtaskIds": [
         "task-sub-2"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -390,7 +420,12 @@
       "longRunning": false,
       "parentTaskId": "task-parent",
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -448,7 +483,12 @@
         "task-sub-2",
         "task-sub-1"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -508,7 +548,12 @@
       "subtaskIds": [
         "task-created"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {

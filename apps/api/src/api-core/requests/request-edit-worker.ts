@@ -52,6 +52,7 @@ export class RequestEditWorker {
       if (entities.length === 0) throw new StepFailure("nothing_to_change");
       await this.deps.batchWriter.commit({
         ...session.toBatch(),
+        requestId: request.id,
         afterWrite: (tx) => store.recordStepSuccess(tx, { requestId: request.id, stepId: step.id, entities, timings }),
       });
     });

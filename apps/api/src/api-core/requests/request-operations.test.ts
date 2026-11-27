@@ -142,6 +142,22 @@ describe("iniciar um pedido", () => {
     await expect(operations.start({ userId: "user-1", text: "x", sessionId: "alheio" }, actor)).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  test("o projectId das tres rotas que abrem pedido chega ao armazenamento, e o edit e a voz nao o aceitam", async () => {
+    const { store, operations } = setup();
+    const start = vi.spyOn(store, "start");
+    const project = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+
+    await operations.start({ userId: "user-1", text: "a", projectId: project }, actor);
+    await operations.startHermes({ userId: "user-1", text: "b", clientMessageId: "h1", projectId: project }, actor);
+    await operations.startModel({ userId: "user-1", text: "c", clientMessageId: "m1", projectId: project, model: SELECTION }, actor);
+    expect(start.mock.calls.map(([input]) => input.projectId)).toEqual([project, project, project]);
+
+    await operations.start({ userId: "user-1", text: "d" }, actor);
+    await operations.startEdit({ userId: "user-1", text: "e", entityType: "task", entityId: "t1" }, actor);
+    await operations.startVoice({ transcript: "f" }, actor);
+    expect(start.mock.calls.slice(3).map(([input]) => "projectId" in input)).toEqual([false, false, false]);
+  });
+
   test("ninguem pede em nome de outro usuario", async () => {
     const { store, operations } = setup();
     await expect(operations.start({ userId: "outro", text: "x" }, actor)).rejects.toBeInstanceOf(ForbiddenException);

@@ -177,6 +177,8 @@ export class CreateTaskUseCase {
       tags: input.tags ?? [],
       longRunning: input.longRunning,
       artifactLinks: links,
+      // Quem grava confere que o projeto e do usuario; ausente, a tarefa fica em `personal`.
+      projectId: input.projectId,
     });
 
     const subtasks = await planSubtasks(

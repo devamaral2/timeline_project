@@ -5,7 +5,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { agentFilesRoutes, listAgentFiles, listAgentFileBackups, readAgentFileText, requestAgentFileEdit, restoreAgentFileBackup } from "./agent-files";
 import { createArtifact, deleteArtifact, editArtifact, getArtifact, listArtifacts, artifactsRoutes } from "./artifacts";
 import { placesRoutes, searchPlaces } from "./places";
-import { listProjects, projectsRoutes } from "./projects";
+import { createProject, listProjects, projectsRoutes } from "./projects";
 import { createTask, deleteTask, tasksRoutes, getTask, listAgenda, listTrackedTasks, suggestTags, updateTask } from "./tasks";
 import { cancelRequest, getRequest, listRequests, getModelOptions, requestsRoutes, sendHermesMessage, sendModelMessage, startEditRequest, startRequest, startVoiceRequest } from "./requests";
 import { createRecurrence, deleteRecurrence, editRecurrence, getRecurrence, listRecurrences, recurrencesRoutes } from "./recurrences";
@@ -128,6 +128,7 @@ const cases: Case[] = [
   }),
   ...casesOf("projetos", projectsRoutes, {
     listProjects: () => listProjects(),
+    createProject: () => createProject("braid"),
   }),
   ...casesOf("artefatos", artifactsRoutes, {
     listArtifacts: () => listArtifacts(),

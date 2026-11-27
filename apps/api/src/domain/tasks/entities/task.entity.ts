@@ -59,6 +59,11 @@ export interface TaskCreateProps {
   /** Os artefatos da tarefa, na ordem em que aparecem. */
   artifactLinks?: ArtifactLink[];
   occurrence?: OccurrenceLink;
+  /**
+   * O projeto escolhido (id). Ausente, quem grava resolve: a ocorrencia fica no projeto da serie e as demais, em
+   * `personal`; `null` pede o `personal` de proposito. Quem le uma tarefa gravada sempre recebe o id.
+   */
+  projectId?: string | null;
   /** Ausente, e o agora. */
   now?: Date;
 }
@@ -91,6 +96,8 @@ export interface TaskReviseChanges {
   tags?: string[];
   longRunning?: boolean;
   artifactLinks?: ArtifactLink[];
+  /** Ausente nao muda; `null` devolve a tarefa a `personal`. */
+  projectId?: string | null;
 }
 
 interface TaskBuildProps {
@@ -114,6 +121,7 @@ interface TaskBuildProps {
   parentId: string | undefined;
   subtaskIds: string[];
   occurrence: OccurrenceLink | undefined;
+  projectId: string | null | undefined;
   revision: number;
   createdAt: Date;
   updatedAt: Date;
@@ -166,6 +174,11 @@ export class Task {
   readonly subtaskIds: readonly string[];
   /** Presente quando a tarefa e uma ocorrencia de uma serie. */
   readonly occurrence: OccurrenceLink | undefined;
+  /**
+   * O projeto, pelo id. Ausente numa tarefa que ainda nao foi gravada e que ninguem pos num projeto (quem grava
+   * resolve); `null` numa tarefa revisada para voltar a `personal`.
+   */
+  readonly projectId: string | null | undefined;
   readonly revision: number;
   readonly createdAt: Date;
   /** A ultima gravacao: cada revisao a avanca. */
@@ -192,6 +205,7 @@ export class Task {
     this.parentId = props.parentId;
     this.subtaskIds = props.subtaskIds;
     this.occurrence = props.occurrence;
+    this.projectId = props.projectId;
     this.revision = props.revision;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
@@ -313,6 +327,7 @@ export class Task {
       parentId: undefined,
       subtaskIds: [],
       occurrence: props.occurrence,
+      projectId: props.projectId,
       revision: 1,
       createdAt: now,
       updatedAt: now,
@@ -342,6 +357,7 @@ export class Task {
       parentId: props.parentId,
       subtaskIds: props.subtaskIds ?? [],
       occurrence: props.occurrence,
+      projectId: props.projectId,
       revision: props.revision,
       createdAt: props.createdAt,
       updatedAt: props.updatedAt,
@@ -379,6 +395,7 @@ export class Task {
       parentId: this.parentId,
       subtaskIds: [...this.subtaskIds],
       occurrence: detachOccurrence(this.occurrence),
+      projectId: changes.projectId === undefined ? this.projectId : changes.projectId,
       revision: this.revision + 1,
       createdAt: this.createdAt,
       // Um relogio que volta nao faz a edicao parecer anterior a criacao.

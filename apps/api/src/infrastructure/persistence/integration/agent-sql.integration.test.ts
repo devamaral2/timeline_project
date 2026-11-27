@@ -131,6 +131,23 @@ describe("PostgresScopedSqlQuery", () => {
     expect(await rows("SELECT count(*)::int FROM tasks WHERE kind IN ('request', 'step') OR status = 'done'")).toEqual([[0]]);
   });
 
+  test("tasks traz o nome do projeto da tarefa de pessoa, e o projeto de outro usuario nao aparece", async () => {
+    await ctx.pool.query(`
+      INSERT INTO projects (id, user_id, name) VALUES ('${id("PA", 2)}', 'user-a', 'braid'), ('${id("PB", 2)}', 'user-b', 'segredo-do-b');
+      UPDATE tasks SET project_id = '${id("PA", 2)}' WHERE id = '${A_TRACKED}';
+      UPDATE tasks SET project_id = '${id("PB", 2)}' WHERE id = '${B_TRACKED}';
+    `);
+
+    expect(await rows("SELECT name, project FROM tasks ORDER BY name")).toEqual([
+      ["Tarefa do A", "braid"],
+      ["Treino", "personal"],
+    ]);
+    expect(await rows("SELECT name FROM tasks WHERE project = 'braid'")).toEqual([["Tarefa do A"]]);
+    expect(await rows("SELECT project FROM tasks WHERE project <> 'personal'", "user-b")).toEqual([["segredo-do-b"]]);
+    // Os pedidos do agente, que tambem tem projeto, continuam fora.
+    expect(await rows("SELECT count(*)::int FROM tasks WHERE kind IN ('request', 'step')")).toEqual([[0]]);
+  });
+
   test("artifacts mostra os artefatos vivos do usuario e os globais, sem os arquivos de agente", async () => {
     expect(await rows("SELECT name, type FROM artifacts WHERE NOT global ORDER BY name")).toEqual([
       ["Sono", "sleep"],

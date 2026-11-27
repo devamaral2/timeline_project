@@ -462,6 +462,28 @@ describe("Task.revise", () => {
     expect(task.occurrence?.detached).toBe(false);
   });
 
+  test("the project is the one chosen, and absent when nobody chose: the writer then resolves it", () => {
+    expect(Task.create(props({ projectId: "project-1" })).projectId).toBe("project-1");
+    expect(Task.create(props()).projectId).toBeUndefined();
+    expect(Task.rehydrate(stored({ projectId: "project-2" })).projectId).toBe("project-2");
+  });
+
+  test("revising keeps the project, swaps it for another and null means back to personal", () => {
+    const task = Task.rehydrate(stored({ projectId: "project-1" }));
+
+    expect(task.revise({ name: "Outro" }).projectId).toBe("project-1");
+    expect(task.revise({ projectId: "project-2" }).projectId).toBe("project-2");
+    expect(task.revise({ projectId: null }).projectId).toBeNull();
+    expect(task.revise({ projectId: "project-2" }).revision).toBe(task.revision + 1);
+  });
+
+  test("changing only the project detaches the occurrence like any other field", () => {
+    const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-31", detached: false };
+    const task = Task.rehydrate(stored({ occurrence, projectId: "project-1" }));
+
+    expect(task.revise({ projectId: "project-2" }).occurrence?.detached).toBe(true);
+  });
+
   test("a task that is not an occurrence stays without a series", () => {
     expect(Task.create(props()).revise({ name: "Outro" }).occurrence).toBeUndefined();
   });

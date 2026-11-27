@@ -80,6 +80,7 @@ export class InMemoryTaskDatabase {
       parentId: this.edges.find((edge) => edge.subtaskId === task.id && live(edge.parentId))?.parentId,
       subtaskIds: this.edges.filter((edge) => edge.parentId === task.id && live(edge.subtaskId)).map((edge) => edge.subtaskId),
       occurrence: task.occurrence,
+      projectId: task.projectId,
       revision: task.revision,
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,

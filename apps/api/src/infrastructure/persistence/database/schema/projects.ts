@@ -1,11 +1,9 @@
 import { boolean, char, check, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { MAX_PROJECT_NAME_LENGTH } from "../../../../domain/projects/types/project-name";
 
 /** O nome do projeto padrao: toda tarefa sem escolha fica nele. */
 export const PERSONAL_PROJECT_NAME = "personal";
-
-/** O tamanho maximo do nome de um projeto, depois de tirar os espacos das pontas. */
-export const MAX_PROJECT_NAME_LENGTH = 60;
 
 /**
  * Onde uma tarefa de pessoa ou de agente fica guardada (ADR 0021). O nome e unico por usuario sem distinguir

@@ -17,6 +17,7 @@ import { CreateArtifactModule } from "./features/create-artifact/create-artifact
 import { GetArtifactModule } from "./features/get-artifact/get-artifact.controller";
 import { UpdateArtifactModule } from "./features/update-artifact/update-artifact.controller";
 import { DeleteArtifactModule } from "./features/delete-artifact/delete-artifact.controller";
+import { CreateProjectModule } from "./features/create-project/create-project.module";
 import { ListProjectsModule } from "./features/list-projects/list-projects.module";
 import { ListRecurrencesModule } from "./features/list-recurrences/list-recurrences.module";
 import { CreateRecurrenceModule } from "./features/create-recurrence/create-recurrence.controller";
@@ -58,6 +59,7 @@ import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/r
     UpdateArtifactModule,
     DeleteArtifactModule,
     ListProjectsModule,
+    CreateProjectModule,
     ListRecurrencesModule,
     CreateRecurrenceModule,
     GetRecurrenceModule,

@@ -131,6 +131,12 @@ export class PostgresRequestStore implements RequestStore {
           ...(input.model ? { model: input.model } : {}),
           ...(input.clientMessageId ? { clientMessageId: input.clientMessageId } : {}),
         },
+        project: {
+          ...(input.projectId ? { projectId: input.projectId } : {}),
+          ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+          // So a tarefa tem projeto: o alvo que e artefato nao decide nada.
+          ...(input.target?.entityType === "task" ? { targetTaskId: input.target.entityId } : {}),
+        },
       });
       await this.append(tx, requestId, { kind: "message", role: "user", content: input.text });
       if (input.sessionId) {
@@ -321,6 +327,7 @@ export class PostgresRequestStore implements RequestStore {
       await insertAgentTask(tx, {
         id: step.id, userId, kind: "step", status: "queued", name: stepLabel(step.agent),
         data: { agent: step.agent, expected: step.expected },
+        project: { requestId },
       });
       await tx.execute(sql`
         INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
