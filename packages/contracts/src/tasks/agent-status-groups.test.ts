@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import type { AgentTaskStatus, HumanTaskStatus, TaskActor, TaskStatus } from "./task-types";
 import {
   CANCELLED_AGENT_STATUSES,
+  INTERRUPTED_AGENT_STATUSES,
+  isInterruptedAgentStatus,
   FINAL_AGENT_STATUSES,
   IN_PROGRESS_AGENT_STATUSES,
   OPEN_AGENT_STATUSES,
@@ -28,6 +30,7 @@ describe("grupos de status de agente", () => {
     expect([...FINAL_AGENT_STATUSES]).toEqual(["completed", "interrupted", "failed", "cancelled", "rolled_back"]);
     expect([...SUCCESS_AGENT_STATUSES]).toEqual(["completed"]);
     expect([...CANCELLED_AGENT_STATUSES]).toEqual(["cancelled"]);
+    expect([...INTERRUPTED_AGENT_STATUSES]).toEqual(["interrupted"]);
   });
 
   test("nenhum status de agente é igual a um de pessoa", () => {
@@ -42,7 +45,7 @@ describe("grupos de status de agente", () => {
   test("em andamento é parte do aberto e sucesso e cancelado são partes do final", () => {
     for (const status of AGENT_STATUSES) {
       if (isInProgressAgentStatus(status)) expect(isOpenAgentStatus(status)).toBe(true);
-      if (isSuccessAgentStatus(status) || isCancelledAgentStatus(status)) expect(isFinalAgentStatus(status)).toBe(true);
+      if (isSuccessAgentStatus(status) || isCancelledAgentStatus(status) || isInterruptedAgentStatus(status)) expect(isFinalAgentStatus(status)).toBe(true);
     }
   });
 });

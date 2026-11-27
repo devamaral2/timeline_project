@@ -169,6 +169,18 @@ test("cancelar pelo chat cancela o pedido na API; a mensagem nao vira falha", as
   expect(result.current.messages.find((message) => message.role === "user")).not.toHaveProperty("failed", true);
 });
 
+test("um pedido interrompido pelo servidor vira a mensagem Pedido interrompido, e a mensagem nao vira falha", async () => {
+  const { result } = setup();
+  const id = await ask(result, "crie uma nota");
+  await waitFor(() => expect(result.current.pending).toMatchObject({ requestId: id }));
+
+  advanceRequest(api, id, { status: "interrupted", errorCode: "cancelled" });
+
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(result.current.messages.at(-1)).toMatchObject({ role: "error", text: "Pedido interrompido.", retryText: "crie uma nota" });
+  expect(result.current.messages.find((message) => message.role === "user")).not.toHaveProperty("failed", true);
+});
+
 test("sessao expirada ao acompanhar o pedido", async () => {
   net.authedFetch.mockImplementation(async (path: string, init?: RequestInit) => {
     if ((init?.method ?? "GET") === "GET" && path.startsWith("/api/requests/")) throw new ApiError(401, "expired");

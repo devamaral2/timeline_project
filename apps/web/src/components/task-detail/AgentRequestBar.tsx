@@ -1,6 +1,6 @@
 "use client";
 
-import { isCancelledAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
+import { isCancelledAgentStatus, isInterruptedAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto } from "@repo/contracts";
 import { ArrowUp, MessageSquare } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -130,6 +130,7 @@ export function AgentRequestBar({ userId, request, onRequestChange }: AgentReque
     : isSuccessAgentStatus(tracked.status) ? "Pronto"
     : tracked.status === "failed" ? "Não deu certo"
     : isCancelledAgentStatus(tracked.status) ? "Pedido cancelado"
+    : isInterruptedAgentStatus(tracked.status) ? "Pedido interrompido"
     : "Esperando o seu pedido";
   const failureReason = followId && tracked?.status === "failed" ? agentFailureText(tracked.errorCode ?? "internal") : null;
 

@@ -17,7 +17,10 @@ export const FINAL_AGENT_STATUSES: readonly AgentTaskStatus[] = ["completed", "i
 /** O pedido terminou bem. */
 export const SUCCESS_AGENT_STATUSES: readonly AgentTaskStatus[] = ["completed"];
 
-/** O usuario cancelou o pedido. */
+/** A execucao parou no meio: pode haver trabalho pela metade. */
+export const INTERRUPTED_AGENT_STATUSES: readonly AgentTaskStatus[] = ["interrupted"];
+
+/** O usuario cancelou o pedido antes de ele trabalhar. */
 export const CANCELLED_AGENT_STATUSES: readonly AgentTaskStatus[] = ["cancelled"];
 
 export function isOpenAgentStatus(status: AgentTaskStatus): boolean {
@@ -34,6 +37,10 @@ export function isFinalAgentStatus(status: AgentTaskStatus): boolean {
 
 export function isSuccessAgentStatus(status: AgentTaskStatus): boolean {
   return SUCCESS_AGENT_STATUSES.includes(status);
+}
+
+export function isInterruptedAgentStatus(status: AgentTaskStatus): boolean {
+  return INTERRUPTED_AGENT_STATUSES.includes(status);
 }
 
 export function isCancelledAgentStatus(status: AgentTaskStatus): boolean {

@@ -1,6 +1,6 @@
 "use client";
 
-import { isCancelledAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
+import { isCancelledAgentStatus, isInterruptedAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto } from "@repo/contracts";
 import { ArrowUp, FileText, X } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -143,6 +143,7 @@ export function AgentFileEditBar({ path, onDone, pollMs = AGENT_REQUEST_POLL_MS 
     : followed && isSuccessAgentStatus(followed.status) ? (followed.message ?? null)
     : failed ? agentFailureText(followed.errorCode ?? "internal")
     : followed && isCancelledAgentStatus(followed.status) ? agentFailureText("cancelled")
+    : followed && isInterruptedAgentStatus(followed.status) ? agentFailureText("interrupted")
     : null;
   const shown = error ?? message;
   const hasFailure = error !== null || failed || lost;
@@ -158,6 +159,7 @@ export function AgentFileEditBar({ path, onDone, pollMs = AGENT_REQUEST_POLL_MS 
     : followed && isSuccessAgentStatus(followed.status) ? "Pronto"
     : failed ? "Não deu certo"
     : followed && isCancelledAgentStatus(followed.status) ? "Pedido cancelado"
+    : followed && isInterruptedAgentStatus(followed.status) ? "Pedido interrompido"
     : "Esperando o seu pedido";
   const canDismiss = finished || lost;
 

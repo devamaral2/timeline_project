@@ -111,6 +111,19 @@ test("um pedido que falha mostra o motivo traduzido pelo código", async () => {
   expect(await screen.findByText(agentFailureText("unavailable"))).toBeInTheDocument();
 });
 
+test.each([
+  ["cancelled", "Pedido cancelado"],
+  ["interrupted", "Pedido interrompido"],
+] as const)("um pedido %s diz %s", async (status, text) => {
+  install({ owner: true, hermes: "on" });
+  render(<NoteDetailScreen userId="user-1" noteId="skill-1" />);
+
+  await sendRequest("Troque o passo 1");
+  await waitFor(() => openedRequest());
+  advanceRequest(api, openedRequest(), { status, errorCode: "cancelled" });
+  expect(await screen.findByText(text)).toBeInTheDocument();
+});
+
 test("com o Hermes desligado, o envio diz isso e o campo some", async () => {
   install({ owner: true, hermes: "off" });
   render(<NoteDetailScreen userId="user-1" noteId="skill-1" />);

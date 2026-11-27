@@ -1,7 +1,7 @@
 "use client";
 
-import { isCancelledAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
-import type { AgentTraceDto, ModelOptionsDto, ModelProvider, ModelSelection, RequestDto, RequestScreenContext } from "@repo/contracts";
+import { isCancelledAgentStatus, isInterruptedAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
+import type { AgentTaskStatus, AgentTraceDto, ModelOptionsDto, ModelProvider, ModelSelection, RequestDto, RequestScreenContext } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
 import { ApiRequestError } from "@/lib/api/client-request";
@@ -74,6 +74,7 @@ export type ChatFailureCode =
   | "conflict"
   | "unavailable"
   | "cancelled"
+  | "interrupted"
   | "internal"
   | "connection_lost"
   | "connection_failed"
@@ -122,6 +123,7 @@ const ERROR_TEXTS: Record<ChatFailureCode, string> = {
   conflict: "Os dados mudaram enquanto eu preparava a resposta. Nada foi gravado; tente de novo.",
   unavailable: "A IA está indisponível agora. Tente de novo em instantes.",
   cancelled: "Pedido cancelado.",
+  interrupted: "Pedido interrompido.",
   internal: "Algo deu errado. Tente de novo.",
   connection_lost:
     "A conexão caiu antes da resposta. Se o pedido gravava algo, confira a agenda antes de reenviar.",
@@ -130,6 +132,13 @@ const ERROR_TEXTS: Record<ChatFailureCode, string> = {
 };
 
 /** O texto que o usuário lê para um código de falha. O detalhe de agente usa o mesmo, sem outra tradução. */
+/** O pedido que o usuario cancelou ou que o servidor interrompeu termina com o seu proprio aviso; os demais, com o codigo de erro. */
+export function endCode(status: AgentTaskStatus): "cancelled" | "interrupted" | undefined {
+  if (isCancelledAgentStatus(status)) return "cancelled";
+  if (isInterruptedAgentStatus(status)) return "interrupted";
+  return undefined;
+}
+
 export function agentFailureText(code: ChatFailureCode): string {
   return ERROR_TEXTS[code];
 }
@@ -254,7 +263,7 @@ export function useAgentChat({
       const request = found?.role === "user" ? found : undefined;
       commitMessages((current) => [
         ...current.map((message) =>
-          message.id === id && message.role === "user" && code !== "cancelled" ? { ...message, failed: true } : message,
+          message.id === id && message.role === "user" && code !== "cancelled" && code !== "interrupted" ? { ...message, failed: true } : message,
         ),
         {
           id: `${id}-error`,
@@ -341,7 +350,7 @@ export function useAgentChat({
       if (view.entities.length > 0) onEntitiesChangedRef.current?.();
       // O agente desligado: o servidor escreve o aviso, que diz mais que o texto do codigo.
       const notice = agentOf(view.route) && view.errorCode === "unavailable" ? view.message : undefined;
-      fail(id, isCancelledAgentStatus(view.status) ? "cancelled" : (view.errorCode ?? "internal"), notice);
+      fail(id, endCode(view.status) ?? view.errorCode ?? "internal", notice);
     },
     [applyView, commitMessages, commitPending, fail],
   );
