@@ -1,3 +1,4 @@
+import { acceptsSituation } from "../../agent-status";
 import {
   AGENT_KINDS,
   AGENT_STATUSES,
@@ -5,6 +6,7 @@ import {
   HUMAN_STATUSES,
   PRIORITIES,
   type Actor,
+  type Situation,
   type TaskKind,
   type TaskPriority,
   type TaskStatus,
@@ -37,6 +39,8 @@ export interface TaskCreateProps {
   kind?: TaskKind;
   /** Ausente numa tarefa de pessoa, ela e de referencia: so marca um horario. */
   status?: TaskStatus;
+  /** So o pedido de agente que terminou tem (`acceptsSituation`). */
+  situation?: Situation;
   priority?: TaskPriority;
   name: string;
   description?: string;
@@ -106,6 +110,7 @@ interface TaskBuildProps {
   actor: Actor;
   kind: TaskKind;
   status: TaskStatus | undefined;
+  situation: Situation | undefined;
   priority: TaskPriority;
   name: string;
   description: string;
@@ -155,6 +160,8 @@ export class Task {
   readonly actor: Actor;
   readonly kind: TaskKind;
   readonly status: TaskStatus | undefined;
+  /** O que o usuario decidiu do pedido que terminou. Ausente nas demais tarefas. */
+  readonly situation: Situation | undefined;
   readonly priority: TaskPriority;
   readonly name: string;
   readonly description: string;
@@ -190,6 +197,7 @@ export class Task {
     this.actor = props.actor;
     this.kind = props.kind;
     this.status = props.status;
+    this.situation = props.situation;
     this.priority = props.priority;
     this.name = props.name;
     this.description = props.description;
@@ -237,6 +245,10 @@ export class Task {
       if (!includes(AGENT_STATUSES, props.status)) {
         throw new TaskValidationError("A agent task always has one of the agent statuses");
       }
+    }
+
+    if (props.situation !== undefined && !acceptsSituation(props)) {
+      throw new TaskValidationError("Only a finished agent request has a situation");
     }
 
     if (props.location !== undefined && props.location.length > MAX_TASK_LOCATION_LENGTH) {
@@ -312,6 +324,7 @@ export class Task {
       actor,
       kind,
       status,
+      situation: props.situation,
       priority: props.priority ?? DEFAULT_TASK_PRIORITY,
       name: props.name,
       description: props.description ?? "",
@@ -342,6 +355,7 @@ export class Task {
       actor: props.actor,
       kind: props.kind,
       status: props.status,
+      situation: props.situation,
       priority: props.priority ?? DEFAULT_TASK_PRIORITY,
       name: props.name,
       description: props.description ?? "",
@@ -380,6 +394,7 @@ export class Task {
       actor: this.actor,
       kind: changes.kind ?? this.kind,
       status: pick(changes.status, this.status),
+      situation: undefined,
       priority: changes.priority ?? this.priority,
       name: changes.name ?? this.name,
       description: changes.description ?? this.description,

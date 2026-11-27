@@ -38,6 +38,12 @@ export const TASK_STATUSES = [...new Set([...HUMAN_STATUSES, ...AGENT_STATUSES])
   ...((typeof HUMAN_STATUSES)[number] | (typeof AGENT_STATUSES)[number])[],
 ];
 
+/**
+ * A situacao da tarefa de agente que terminou, que o usuario controla: para revisar, revisada ou guardada.
+ * So tem situacao o pedido (nem passo, nem execucao agendada) que esta num status final.
+ */
+export const SITUATIONS = ["to_review", "reviewed", "bookmarked"] as const;
+
 export const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 
 export const ENTRY_KINDS = ["message", "thought", "trace", "result", "input"] as const;
@@ -64,6 +70,7 @@ export type TaskKind = (typeof TASK_KINDS)[number];
 export type HumanTaskStatus = (typeof HUMAN_STATUSES)[number];
 export type AgentTaskStatus = (typeof AGENT_STATUSES)[number];
 export type TaskStatus = HumanTaskStatus | AgentTaskStatus;
+export type Situation = (typeof SITUATIONS)[number];
 export type TaskPriority = (typeof PRIORITIES)[number];
 export type EntryKind = (typeof ENTRY_KINDS)[number];
 export type EntryRole = (typeof ENTRY_ROLES)[number];
