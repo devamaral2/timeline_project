@@ -237,15 +237,76 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
-  test("update_artifact wraps a new body as text data", async () => {
-    fetchApi.mockResolvedValue(new Response(null, { status: 204 }));
+  test.each(["news", "email_summary", "youtube_transcript"])("create_artifact creates a %s artifact when the type is given", async (type) => {
+    fetchApi.mockResolvedValue(new Response(JSON.stringify({ artifactId: "artifact-1" }), { status: 201 }));
+    const client = await connect();
+
+    await client.callTool({
+      name: "create_artifact",
+      arguments: { type, name: "Resumo do dia", body: "# Resumo", tags: ["leitura"], taskIds: ["e1"], idempotencyKey: `${type}:1` },
+    });
+
+    const [, init] = fetchApi.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({
+      type,
+      name: "Resumo do dia",
+      data: { body: "# Resumo" },
+      tags: ["leitura"],
+      taskIds: ["e1"],
+    });
+    await client.close();
+  });
+
+  test("create_artifact refuses a type that is not free text before calling the API, naming the ones it takes", async () => {
+    const client = await connect();
+
+    const result = await client.callTool({ name: "create_artifact", arguments: { type: "food", body: "arroz", idempotencyKey: "food:1" } });
+
+    expect(result.isError).toBe(true);
+    const message = JSON.stringify(result.content);
+    for (const type of ["text", "news", "email_summary", "youtube_transcript"]) expect(message).toContain(type);
+    expect(fetchApi).not.toHaveBeenCalled();
+    await client.close();
+  });
+
+  test.each(["text", "news", "email_summary", "youtube_transcript"])("update_artifact sends a new body with the type the %s artifact already has", async (type) => {
+    fetchApi.mockImplementation(async (_url, init) =>
+      init?.method === "PATCH" ? new Response(null, { status: 204 }) : new Response(JSON.stringify({ id: "a1", type, revision: 2 }), { status: 200 }),
+    );
     const client = await connect();
 
     await client.callTool({ name: "update_artifact", arguments: { artifactId: "a1", expectedRevision: 2, body: "texto" } });
 
-    const [url, init] = fetchApi.mock.calls[0] as [string, RequestInit];
+    const [[readUrl, readInit], [url, init]] = fetchApi.mock.calls as [string, RequestInit][];
+    expect(readUrl).toBe("http://api.test:3001/api/artifacts/a1");
+    expect(readInit.method ?? "GET").toBe("GET");
     expect(url).toBe("http://api.test:3001/api/artifacts/a1");
-    expect(JSON.parse(init.body as string)).toEqual({ expectedRevision: 2, type: "text", data: { body: "texto" } });
+    expect(JSON.parse(init.body as string)).toEqual({ expectedRevision: 2, type, data: { body: "texto" } });
+    await client.close();
+  });
+
+  test("update_artifact without a body patches the name and tags without reading the artifact", async () => {
+    fetchApi.mockResolvedValue(new Response(null, { status: 204 }));
+    const client = await connect();
+
+    await client.callTool({ name: "update_artifact", arguments: { artifactId: "a1", expectedRevision: 2, name: "Novo nome", tags: ["casa"] } });
+
+    expect(fetchApi).toHaveBeenCalledTimes(1);
+    const [, init] = fetchApi.mock.calls[0] as [string, RequestInit];
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body as string)).toEqual({ expectedRevision: 2, name: "Novo nome", tags: ["casa"] });
+    await client.close();
+  });
+
+  test("update_artifact does not rewrite the body of an artifact that is not free text", async () => {
+    fetchApi.mockResolvedValue(new Response(JSON.stringify({ id: "a1", type: "food", revision: 2 }), { status: 200 }));
+    const client = await connect();
+
+    const result = await client.callTool({ name: "update_artifact", arguments: { artifactId: "a1", expectedRevision: 2, body: "texto" } });
+
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain("food");
+    expect(fetchApi).toHaveBeenCalledTimes(1);
     await client.close();
   });
 
@@ -363,12 +424,15 @@ describe("MCP over HTTP", () => {
 
     await client.callTool({ name: "list_artifacts", arguments: { type: "text", q: "tinta", taskId: "e1" } });
     await client.callTool({ name: "list_recurrences", arguments: {} });
+    for (const type of ["news", "email_summary", "youtube_transcript"]) await client.callTool({ name: "list_artifacts", arguments: { type } });
 
     const [artifacts, series] = fetchApi.mock.calls.map(([url]) => new URL(url as string));
     expect(artifacts?.pathname).toBe("/api/artifacts");
     expect(Object.fromEntries(artifacts?.searchParams ?? [])).toEqual({ type: "text", q: "tinta", taskId: "e1" });
     expect(series?.pathname).toBe("/api/recurrences");
     expect(series?.search).toBe("");
+    const filtered = fetchApi.mock.calls.slice(2).map(([url]) => new URL(url as string).searchParams.get("type"));
+    expect(filtered).toEqual(["news", "email_summary", "youtube_transcript"]);
     await client.close();
   });
 
