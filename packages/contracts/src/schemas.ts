@@ -189,12 +189,22 @@ const taskRecurrenceSchema = z.object({
   id: z.string(), occurrenceOn: z.string(), detached: z.boolean(), rule: z.object(recurrenceRuleShape).strict(),
 }).strict();
 
+const modelProviderSchema = z.enum(["anthropic", "openai", "openrouter"]);
+const modelEffortSchema = z.enum(["low", "medium", "high", "max"]);
+
+export const modelSelectionSchema = z.object({
+  provider: modelProviderSchema,
+  model: z.string().min(1).max(200),
+  effort: modelEffortSchema,
+}).strict();
+
 const taskCardShape = {
   id: z.string(), actor: taskActorSchema, kind: taskKindSchema, status: taskStatusSchema.optional(), priority: taskPrioritySchema,
   name: z.string(), description: z.string(), project: projectSchema, location: z.string().optional(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
   finishedAt: z.string().optional(), longRunning: z.boolean(), notifyOffsetsMinutes: notificationOffsetsSchema,
   tags: z.array(z.string()), artifactTypes: z.array(artifactTypeSchema), parentTaskId: z.string().optional(), recurrence: taskRecurrenceSchema.optional(), revision: z.number().int(),
   createdAt: z.string(), updatedAt: z.string(),
+  model: modelSelectionSchema.optional(),
 };
 
 /** O status de um cartao pertence ao executor dele: pessoa so tem os seus e agente so tem os seus. */
@@ -318,15 +328,6 @@ export const agentTraceSchema = z.object({
     sections: z.array(z.object({ title: z.string(), text: z.string(), code: z.boolean().optional() }).strict()).optional(),
     raw: z.unknown().optional(),
   }).strict()),
-}).strict();
-
-const modelProviderSchema = z.enum(["anthropic", "openai", "openrouter"]);
-const modelEffortSchema = z.enum(["low", "medium", "high", "max"]);
-
-export const modelSelectionSchema = z.object({
-  provider: modelProviderSchema,
-  model: z.string().min(1).max(200),
-  effort: modelEffortSchema,
 }).strict();
 
 export const modelOptionsSchema = z.object({

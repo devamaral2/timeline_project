@@ -1,6 +1,7 @@
 import type { ArtifactDto, ArtifactType } from "../artifacts/artifact.dto";
 import type { RecurrenceRule } from "../recurrences/recurrence-rule";
 import type { TaskActor, TaskArtifactRelation, TaskKind, TaskPriority, TaskStatus } from "./task-types";
+import type { ModelSelection } from "../agent/model.dto";
 import type { NotificationOffsetMinutes } from "./notification-offset-minutes";
 
 /** O projeto a que uma tarefa pertence. Sem escolha, e o `personal`, o projeto padrao do usuario. */
@@ -60,6 +61,11 @@ export interface TaskCardDto {
   createdAt: string;
   /** A ultima gravacao da tarefa (ISO 8601). Igual a `createdAt` enquanto ninguem a editou. */
   updatedAt: string;
+  /**
+   * A escolha de provedor, modelo e esforco que o pedido da tarefa de agente levou. Ausente quando o pedido nao
+   * levou nenhuma (rota por passos, Hermes) e em tarefa de pessoa. A lista so desenha o simbolo do provedor.
+   */
+  model?: ModelSelection;
 }
 
 export interface TaskArtifactDto {
