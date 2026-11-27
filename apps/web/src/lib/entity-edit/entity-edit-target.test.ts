@@ -8,11 +8,11 @@ test.each([
   ["training", "training_artifact"],
   ["skill", "skill_artifact"],
   ["agent", "agent_artifact"],
-] as const)("um documento do tipo %s é editado como %s", (type, entityType) => {
+] as const)("um artefato do tipo %s é editado como %s", (type, entityType) => {
   expect(editEntityTypeOfArtifact({ type, global: false })).toBe(entityType);
 });
 
-test("um documento global não tem barra de edição, qualquer que seja o tipo", () => {
+test("um artefato global não tem barra de edição, qualquer que seja o tipo", () => {
   expect(editEntityTypeOfArtifact({ type: "text", global: true })).toBeNull();
   expect(editEntityTypeOfArtifact({ type: "workout", global: true })).toBeNull();
 });

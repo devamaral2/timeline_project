@@ -1,6 +1,8 @@
 /**
  * Fixtures do leitor de documentos: as saídas de `youtubeVideoOf` (o vídeo de um endereço do YouTube) para as mesmas
- * entradas que o app Android recebe. O `null` do web é o `result` nulo da fixture.
+ * entradas que o app Android recebe. O `null` do web é o `result` nulo da fixture. `youtubeVideoOf` é o reconhecimento
+ * único de `@repo/contracts/youtube` (o mesmo da extensão e da API) mais o instante de início: a porta Kotlin é conferida
+ * contra ele.
  */
 import { youtubeVideoOf } from "../../../apps/web/src/lib/notes/youtube";
 

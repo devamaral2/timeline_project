@@ -17,7 +17,7 @@ fun TestBackend.serveArtifactTasks() {
 
 /**
  * `GET /api/artifacts` como os seletores da tarefa o consomem: o catálogo global de alimentos, os alimentos do usuário,
- * os exercícios globais e os documentos do usuário; com `q`, a versão filtrada.
+ * os exercícios globais e os artefatos do usuário; com `q`, a versão filtrada.
  */
 fun TestBackend.serveArtifactChoices() {
     route("GET", "/api/artifacts") { request ->

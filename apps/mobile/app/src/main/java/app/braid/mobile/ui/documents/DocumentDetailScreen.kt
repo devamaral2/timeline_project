@@ -65,7 +65,7 @@ import app.braid.mobile.ui.aiedit.EntityEditBar
 import app.braid.mobile.ui.taskdetail.DetailIcons
 import java.time.Instant
 
-/** O detalhe de um documento: lê `GET /api/artifacts/{id}` e, num alimento em cálculo, o relê enquanto a tela está à vista. */
+/** O detalhe de um artefato: lê `GET /api/artifacts/{id}` e, num alimento em cálculo, o relê enquanto a tela está à vista. */
 @Composable
 fun DocumentDetailPage(
     onBack: () -> Unit,
@@ -97,7 +97,7 @@ fun DocumentDetailPage(
     )
 }
 
-/** A barra de edição por IA do documento aberto; refeição em cálculo a desliga. */
+/** A barra de edição por IA do artefato aberto; refeição em cálculo a desliga. */
 @Composable
 private fun EditFooter(
     ready: DocumentDetailUiState.Ready,
@@ -144,10 +144,10 @@ fun DocumentDetailContent(
             verticalArrangement = Arrangement.spacedBy(28.dp),
         ) {
             when (state) {
-                DocumentDetailUiState.Loading -> Message("Carregando documento…", alert = false)
-                DocumentDetailUiState.Missing -> Message("Documento não encontrado.", alert = true)
+                DocumentDetailUiState.Loading -> Message("Carregando artefato…", alert = false)
+                DocumentDetailUiState.Missing -> Message("Artefato não encontrado.", alert = true)
                 DocumentDetailUiState.Error -> {
-                    Message("Não foi possível carregar o documento. Tente novamente.", alert = true)
+                    Message("Não foi possível carregar o artefato. Tente novamente.", alert = true)
                     BraidPill(text = "Tentar de novo", onClick = onRetry)
                 }
                 is DocumentDetailUiState.Ready -> ReadyContent(state, onOpenTask)
@@ -175,7 +175,7 @@ private fun TopBar(
             Modifier
                 .size(44.dp)
                 .clickable(role = Role.Button, onClick = onBack)
-                .semantics { contentDescription = "Voltar para Documentos" },
+                .semantics { contentDescription = "Voltar para Artefatos" },
             contentAlignment = Alignment.Center,
         ) {
             SvgIcon(
@@ -186,7 +186,7 @@ private fun TopBar(
             )
         }
         Text(
-            text = "Documento",
+            text = "Artefato",
             modifier = Modifier.padding(start = 4.dp).weight(1f),
             color = MaterialTheme.colorScheme.onBackground,
             fontSize = 15.sp,

@@ -63,7 +63,7 @@ Tarefa de pessoa, sempre com status, que fica fora da agenda e dura mais que um 
 _Avoid_: projeto, épico, registro longo, tarefa sem data
 
 **Agenda**:
-A grade de horários. Mostra as tarefas de pessoa e de agente que têm início e não são longas, juntas ou cada executor em separado. Passos não aparecem nela.
+A grade de horários. Mostra as tarefas de pessoa e de agente que têm início e não são longas, juntas ou cada executor em separado. Passos e conteúdo guardado não aparecem nela.
 _Avoid_: calendário, timeline, linha do tempo
 
 **Fim planejado**:
@@ -75,8 +75,8 @@ Quem realiza a tarefa: uma pessoa ou um agente. Cada um tem o seu próprio conju
 _Avoid_: bot, responsável, dono
 
 **Artefato**:
-Objeto que guarda conteúdo e não é um fluxo: não tem status, horário nem executor. É editável. Quem registra que ele foi criado, alterado ou usado é uma tarefa. Substitui a nota. Na tela ele se chama **documento** (a lista “Documentos”, “Novo documento”); no código, nos contratos, na API e no banco o nome continua artefato (`artifact`).
-_Avoid_: nota (como entidade; fica só como rótulo de tela do artefato de texto), anexo, documento (fora da tela)
+Objeto que guarda conteúdo e não é um fluxo: não tem status, horário nem executor. É editável. Quem registra que ele foi criado, alterado ou usado é uma tarefa. Substitui a nota. Na tela ele tem o mesmo nome: **artefato** (a lista “Artefatos”, “Novo artefato”), como no código, nos contratos, na API e no banco (`artifact`). Entre 2026-11 e a volta a este nome a tela dizia “documento”.
+_Avoid_: nota (como entidade; fica só como rótulo de tela do artefato de texto), anexo, documento
 
 **Relação**:
 Ligação com sentido entre tarefas e artefatos. Vai de quem produz para o que foi produzido: a tarefa de origem cria o artefato ou gera a tarefa de destino. Entre tarefa e artefato, parte sempre da tarefa, que cria, altera, usa ou apaga o artefato.
@@ -91,8 +91,24 @@ Artefato sem dono, que todos leem e ninguém edita pelo app. Só existe para ali
 _Avoid_: catálogo, item de sistema
 
 **Pedido**:
-Tarefa executada por um agente a partir de algo que o usuário pediu, ainda sem classificação.
+Tarefa executada por um agente a partir de algo que o usuário pediu no chat ou por voz, ainda sem classificação. Na tela, o tipo aparece escrito como `request`.
 _Avoid_: prompt, comando, tarefa do agente
+
+**Conteúdo guardado**:
+Tarefa de agente que registra o que o botão da extensão ou o botão "Adicionar vídeo" guardou, em vez de um pedido de conversa. Tem dois tipos: `save_content`, a página de texto guardada (nasce e termina `completed`), e `save_content_with_transcription`, o vídeo do YouTube guardado para transcrever (nasce no status `awaiting_transcription`, à espera do serviço local). Aparece na lista de pedidos e na lista de tarefas, nunca na agenda (ADR 0021), e nunca tem situação (ADR 0023): terminada, cai em Finalizadas; esperando a transcrição ou rodando, aparece na gaveta de execução.
+_Avoid_: pedido de página, favorito, clipe
+
+**Lease de transcrição**:
+A reserva por tempo limitado (5 minutos) que o serviço local faz de um pedido de transcrição. Ele a renova enquanto trabalha, mandando a etapa e a porcentagem; se vence (o computador desligou), o pedido volta para a fila. A entrega, com o resultado ou com a falha, a encerra: o resultado leva o pedido a `running` (formatação com o Haiku) e a falha o leva a `failed`, com um código fechado (`too_large`, `private`, `unavailable`, `no_audio`, `failed`) que o documento mostra por extenso.
+_Avoid_: trava, lock, reserva do job
+
+**Serviço local de transcrição**:
+App (`apps/transcriber`) que roda no computador de casa como serviço do usuário no systemd e sobe no login. Busca os pedidos de transcrição na API, um por vez, com a chave de dispositivo; baixa o áudio, usa a legenda feita por alguém ou transcreve com o Whisper, separa os falantes, recolhe os momentos mais assistidos e os 50 comentários mais recentes, e entrega. Não abre porta nenhuma e nunca guarda a chave da Anthropic: quem chama o Haiku é a API. No código e nas rotas ele aparece como `transcription-worker` (`/api/transcription-worker/*`, permissão `transcription:work`).
+_Avoid_: transcritor, daemon
+
+**Leitura diária**:
+Tarefa de pessoa, uma por dia, em que as páginas e os vídeos guardados no dia se juntam, cada um como um documento de texto. Nasce a fazer, às 18h do dia, quando ainda não existe, e toda gravação nela a devolve para a fazer, mesmo que já estivesse concluída. O conteúdo só entra por uma porta (`DailyReadingGate`), que reconhece o mesmo conteúdo pelo endereço canônico da linha da fonte. O dia é o do pedido, no fuso das tarefas.
+_Avoid_: leitura do dia, inbox, clipping
 
 **Pedido de pesquisa**:
 Pedido para o agente descobrir algo que o usuário ainda não sabe: pesquisa de conceitos e de tudo o que for novo.
@@ -119,7 +135,7 @@ Tarefa de agente em que um pedido se desdobra, executada por um agente interno. 
 _Avoid_: etapa, step do processo, processo
 
 **Gaveta de execução**:
-Gaveta presa acima da barra de navegação, em Tarefas, Agenda e Documentos, que mostra o que os agentes estão fazendo agora: as tarefas de agente em andamento (`preparing`, `queued`, `starting`, `running`) que não são passo nem execução agendada, da mais recente para a mais antiga. Tem três alturas (uma linha, três linhas e todas) e não existe quando nada está em andamento.
+Gaveta presa acima da barra de navegação, em Tarefas, Agenda e Artefatos, que mostra o que os agentes estão fazendo agora: as tarefas de agente em andamento (`preparing`, `queued`, `starting`, `running`) que não são passo nem execução agendada, da mais recente para a mais antiga. Tem três alturas (uma linha, três linhas e todas) e não existe quando nada está em andamento.
 _Avoid_: gaveta (sozinha), barra de progresso, fila de execução
 
 **Gaveta da lista**:
@@ -149,6 +165,12 @@ _Avoid_: sequência, filha, etapa, passo, bloqueio, dependência
 **Tarefa principal**:
 A tarefa de que uma subtarefa é parte.
 _Avoid_: tarefa pai, tarefa mãe, antecessora, projeto (como nome da relação)
+
+### Acesso
+
+**Chave de dispositivo**:
+Credencial de vida longa e revogável que um serviço fora da VPS (o serviço local de transcrição) usa no lugar de uma sessão. Emitida para um usuário, tem uma única permissão (trabalhar em transcrições) e só vale nas três operações desse serviço; nenhuma outra rota a aceita. Emitida e revogada por comando, sem tela. O banco guarda só o hash.
+_Avoid_: token de serviço, API key, sessão do serviço
 
 ### Marca
 

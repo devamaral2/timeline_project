@@ -64,7 +64,7 @@ private val PillShape = RoundedCornerShape(999.dp)
 
 /**
  * A pesquisa dentro do painel do chat ("Pesquisar", `/buscar`), como a vista do web: o voltar para o chat e o campo
- * redondo no topo, "No seu espaço" (sem texto) ou "Resultados", e a lista de tarefas e documentos; tocar num deles abre o
+ * redondo no topo, "No seu espaço" (sem texto) ou "Resultados", e a lista de tarefas e artefatos; tocar num deles abre o
  * detalhe.
  */
 @Composable
@@ -168,10 +168,10 @@ private fun Header(
                     Modifier
                         .weight(1f)
                         .focusRequester(focus)
-                        .semantics { contentDescription = "Pesquisar tarefas e documentos" },
+                        .semantics { contentDescription = "Pesquisar tarefas e artefatos" },
                 decorationBox = { inner ->
                     Box(Modifier.heightIn(min = 40.dp).padding(vertical = 8.dp), contentAlignment = Alignment.CenterStart) {
-                        if (typed.isEmpty()) Text("Buscar tarefas e documentos", color = tokens.faint, fontSize = 16.sp)
+                        if (typed.isEmpty()) Text("Buscar tarefas e artefatos", color = tokens.faint, fontSize = 16.sp)
                         inner()
                     }
                 },
@@ -190,7 +190,7 @@ private fun ResultRow(
         when (result) {
             is SearchResult.Task -> Triple(BraidIcons.calendarDays, result.card.name, "Tarefa")
             is SearchResult.Document ->
-                Triple(BraidIcons.fileText, result.artifact.name, "Documento · ${artifactTypeLabel(result.artifact.type)}")
+                Triple(BraidIcons.fileText, result.artifact.name, "Artefato · ${artifactTypeLabel(result.artifact.type)}")
         }
     Column {
         Row(

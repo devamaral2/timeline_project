@@ -52,17 +52,17 @@ import app.braid.mobile.ui.taskedit.AddButton
 
 /**
  * Os tipos cujo conteúdo aparece inteiro dentro da tarefa: texto, roteador, alimento, treino e sono. Skill e agente
- * ficam só no cabeçalho (o arquivo do Hermes tem leitura e edição no detalhe do documento), e o exercício do catálogo
+ * ficam só no cabeçalho (o arquivo do Hermes tem leitura e edição no detalhe do artefato), e o exercício do catálogo
  * também.
  */
 private val INLINE_TYPES = setOf(ArtifactType.Text, ArtifactType.Router, ArtifactType.Food, ArtifactType.Training, ArtifactType.Sleep)
 
 /**
- * A seção Documentos do detalhe: os documentos da tarefa, na ordem da API. Cada um é um cartão com o ícone do tipo, o
- * nome (que abre o detalhe do documento) e, em mono, a posição, o código do tipo e a relação (`1 · text · uses`); o que
+ * A seção Artefatos do detalhe: os artefatos da tarefa, na ordem da API. Cada um é um cartão com o ícone do tipo, o
+ * nome (que abre o detalhe do artefato) e, em mono, a posição, o código do tipo e a relação (`1 · text · uses`); o que
  * a tarefa criou não tem posição. "catálogo global" aparece só no do catálogo. Dentro vem o conteúdo, aberto, que a seta
  * recolhe. Na refeição o rodapé soma as calorias dos alimentos. Com [onAdd] a seção aparece sempre, com a ação que abre o
- * seletor do tipo da tarefa; sem ele e sem documentos, não aparece.
+ * seletor do tipo da tarefa; sem ele e sem artefatos, não aparece.
  */
 @Composable
 fun TaskArtifactsSection(
@@ -71,10 +71,12 @@ fun TaskArtifactsSection(
     onOpenArtifact: (String) -> Unit,
     onAdd: (() -> Unit)?,
     busy: Boolean,
+    /** Na Leitura diária, o "Adicionar vídeo" (pede a transcrição de um vídeo do YouTube) sob o "+" dos artefatos. */
+    video: (@Composable () -> Unit)? = null,
 ) {
     if (artifacts.isEmpty() && onAdd == null) return
     val positions = artifactPositions(artifacts.map { it.relation })
-    Section("Documentos", artifacts.size.toString()) {
+    Section("Artefatos", artifacts.size.toString()) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             artifacts.forEachIndexed { index, link ->
                 androidx.compose.runtime.key(link.artifact.id) { ArtifactCard(link, positions[index], onOpenArtifact) }
@@ -84,6 +86,7 @@ fun TaskArtifactsSection(
                     AddButton(ArtifactSource.of(kind).addLabel, onClick = { if (!busy) onAdd() })
                 }
             }
+            video?.invoke()
             if (kind == TaskKind.Meal && artifacts.isNotEmpty()) {
                 Row(
                     Modifier.fillMaxWidth(),
@@ -180,7 +183,7 @@ private fun ArtifactCard(
 private const val CARD_RADIUS = 12
 private const val CHEVRON_OPEN = 180f
 
-/** O conteúdo do cartão: o alimento no desenho próprio da tarefa, os demais com o componente do detalhe do documento. */
+/** O conteúdo do cartão: o alimento no desenho próprio da tarefa, os demais com o componente do detalhe do artefato. */
 @Composable
 private fun ArtifactBody(artifact: Artifact) {
     val food = artifact.data as? FoodData

@@ -6,7 +6,7 @@ import { MAX_PROJECT_NAME_LENGTH } from "../../../../domain/projects/types/proje
 export const PERSONAL_PROJECT_NAME = "personal";
 
 /**
- * Onde uma tarefa de pessoa ou de agente fica guardada (ADR 0021). O nome e unico por usuario sem distinguir
+ * Onde uma tarefa de pessoa ou de agente fica guardada (ADR 0022). O nome e unico por usuario sem distinguir
  * maiusculas, e cada usuario tem no maximo um `personal`, o projeto padrao.
  */
 export const projects = pgTable(

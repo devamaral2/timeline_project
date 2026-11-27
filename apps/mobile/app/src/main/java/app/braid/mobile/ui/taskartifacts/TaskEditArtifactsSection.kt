@@ -44,7 +44,7 @@ import app.braid.mobile.ui.taskdetail.Section
 import app.braid.mobile.ui.taskedit.AddButton
 import app.braid.mobile.ui.taskedit.FormField
 
-/** O que a seção Documentos do formulário pede ao [app.braid.mobile.ui.taskedit.TaskEditViewModel]. */
+/** O que a seção Artefatos do formulário pede ao [app.braid.mobile.ui.taskedit.TaskEditViewModel]. */
 class ArtifactEditActions(
     val picker: TaskArtifactPicker,
     val open: () -> Unit,
@@ -53,11 +53,11 @@ class ArtifactEditActions(
     val move: (id: String, step: Int) -> Unit,
 )
 
-const val NO_DOCUMENTS_LABEL = "nenhum documento"
+const val NO_DOCUMENTS_LABEL = "nenhum artefato"
 const val NO_POSITION_LABEL = "sem posição na lista"
 
 /**
- * "Documentos" na edição: a lista da tarefa, na ordem da tela. Cada linha tem a posição, o nome, o tipo, de quem é e a
+ * "Artefatos" na edição: a lista da tarefa, na ordem da tela. Cada linha tem a posição, o nome, o tipo, de quem é e a
  * relação, e os botões Subir, Descer e Remover (não há arrastar). O "+" abre a folha de seleção, e o que ela oferece
  * depende do tipo da tarefa. Nada vai à API aqui: a lista segue no rascunho até o Salvar.
  */
@@ -68,7 +68,7 @@ internal fun TaskEditArtifactsSection(
 ) {
     val list = draft.artifacts
     val positions = draftArtifactPositions(list)
-    Section("Documentos", list.size.toString()) {
+    Section("Artefatos", list.size.toString()) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             list.forEachIndexed { index, item ->
                 if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outline)
@@ -149,7 +149,7 @@ private fun EditRow(
                         actions.move(item.id, 1)
                     }
                 }
-                StepButton(BraidIcons.close, "Remover documento “${item.name}”", enabled = true) { actions.remove(item.id) }
+                StepButton(BraidIcons.close, "Remover artefato “${item.name}”", enabled = true) { actions.remove(item.id) }
             }
         }
     }

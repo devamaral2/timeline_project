@@ -27,6 +27,7 @@ import {
   RecurrenceRevisionConflictError,
   RecurrenceValidationError,
 } from "../domain";
+import { TranscriptionLeaseLostError } from "../api-core/transcription/transcription-requests";
 import {
   AgentLimitReachedError,
   AgentTargetForbiddenError,
@@ -69,6 +70,7 @@ export class DomainExceptionFilter implements ExceptionFilter {
     if (exception instanceof AgentTargetForbiddenError) return HttpStatus.FORBIDDEN;
     if (exception instanceof AgentLimitReachedError) return HttpStatus.UNPROCESSABLE_ENTITY;
     if (exception instanceof EntityBatchConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof TranscriptionLeaseLostError) return HttpStatus.CONFLICT;
     if (exception instanceof ArtifactValidationError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof ArtifactOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof ArtifactNotFoundError) return HttpStatus.NOT_FOUND;

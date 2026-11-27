@@ -14,16 +14,18 @@ import {
   isSuccessAgentStatus,
   acceptsSituation,
   REVIEW_SITUATION_ON_CLOSE,
+  situationOnClose,
 } from "./agent-status";
 
 describe("conjunto de status de agente", () => {
-  test("tem os dez status", () => {
+  test("tem os dez status proprios e o que espera a transcricao", () => {
     expect([...AGENT_STATUSES]).toEqual([
       "preparing",
       "queued",
       "starting",
       "running",
       "waiting",
+      "awaiting_transcription",
       "completed",
       "interrupted",
       "failed",
@@ -40,8 +42,8 @@ describe("conjunto de status de agente", () => {
 
 describe("grupos de status de agente", () => {
   test("guardam os valores da spec", () => {
-    expect([...OPEN_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running", "waiting"]);
-    expect([...IN_PROGRESS_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running"]);
+    expect([...OPEN_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription"]);
+    expect([...IN_PROGRESS_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running", "awaiting_transcription"]);
     expect([...FINAL_AGENT_STATUSES]).toEqual(["completed", "interrupted", "failed", "cancelled", "rolled_back"]);
     expect([...SUCCESS_AGENT_STATUSES]).toEqual(["completed"]);
   });
@@ -65,6 +67,7 @@ describe("grupos de status de agente", () => {
     ["starting", { open: true, inProgress: true, final: false, success: false }],
     ["running", { open: true, inProgress: true, final: false, success: false }],
     ["waiting", { open: true, inProgress: false, final: false, success: false }],
+    ["awaiting_transcription", { open: true, inProgress: true, final: false, success: false }],
     ["completed", { open: false, inProgress: false, final: true, success: true }],
     ["interrupted", { open: false, inProgress: false, final: true, success: false }],
     ["failed", { open: false, inProgress: false, final: true, success: false }],
@@ -90,6 +93,7 @@ describe("transicoes de status de agente", () => {
     ["starting", ["running", "failed", "cancelled"]],
     ["running", ["waiting", "completed", "failed", "interrupted"]],
     ["waiting", ["running", "failed", "cancelled"]],
+    ["awaiting_transcription", ["running", "failed", "cancelled"]],
     ["completed", ["rolled_back"]],
     ["interrupted", ["rolled_back"]],
     ["failed", ["rolled_back"]],
@@ -109,12 +113,13 @@ describe("transicoes de status de agente", () => {
   });
 
   test("agentStatusesBefore lista de onde se chega a um status", () => {
-    expect(agentStatusesBefore("running")).toEqual(["preparing", "queued", "starting", "waiting"]);
+    expect(agentStatusesBefore("running")).toEqual(["preparing", "queued", "starting", "waiting", "awaiting_transcription"]);
     expect(agentStatusesBefore("completed")).toEqual(["running"]);
     expect(agentStatusesBefore("interrupted")).toEqual(["running"]);
-    expect(agentStatusesBefore("cancelled")).toEqual(["preparing", "queued", "starting", "waiting"]);
-    expect(agentStatusesBefore("failed")).toEqual(["preparing", "queued", "starting", "running", "waiting"]);
+    expect(agentStatusesBefore("cancelled")).toEqual(["preparing", "queued", "starting", "waiting", "awaiting_transcription"]);
+    expect(agentStatusesBefore("failed")).toEqual(["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription"]);
     expect(agentStatusesBefore("preparing")).toEqual([]);
+    expect(agentStatusesBefore("awaiting_transcription")).toEqual([]);
   });
 
   test("o worker do turno aceita queued, starting e running", () => {
@@ -137,9 +142,19 @@ describe("situacao da tarefa de agente", () => {
     expect(acceptsSituation({ actor: "agent", kind: "request", status })).toBe(false);
   });
 
+  test("fechar um pedido deixa a situacao para revisar, menos nos tipos que nunca tem situacao", () => {
+    expect(situationOnClose("request")).toBe("to_review");
+    expect(situationOnClose("review_request")).toBe("to_review");
+    for (const kind of ["step", "cron", "save_content", "save_content_with_transcription"]) {
+      expect(situationOnClose(kind)).toBeUndefined();
+    }
+  });
+
   test("passo, execucao agendada e tarefa de pessoa nao aceitam, mesmo num status final", () => {
     expect(acceptsSituation({ actor: "agent", kind: "step", status: "completed" })).toBe(false);
     expect(acceptsSituation({ actor: "agent", kind: "cron", status: "completed" })).toBe(false);
+    expect(acceptsSituation({ actor: "agent", kind: "save_content", status: "completed" })).toBe(false);
+    expect(acceptsSituation({ actor: "agent", kind: "save_content_with_transcription", status: "failed" })).toBe(false);
     expect(acceptsSituation({ actor: "human", kind: "common", status: "done" })).toBe(false);
     expect(acceptsSituation({ actor: "human", kind: "common", status: undefined })).toBe(false);
   });

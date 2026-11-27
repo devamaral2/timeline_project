@@ -1,6 +1,6 @@
 {
-  "id": "fdc956e5-ad11-4aeb-9c58-5cc5917c01cc",
-  "prevId": "36669b79-5971-49ee-997c-0a3b3018b4a2",
+  "id": "36669b79-5971-49ee-997c-0a3b3018b4a2",
+  "prevId": "9e77212b-d140-4e5f-95b7-35d46c69cb4f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -679,7 +679,7 @@
             }
           ],
           "isUnique": false,
-          "where": "\"tasks\".\"started_at\" IS NOT NULL AND NOT \"tasks\".\"long_running\" AND \"tasks\".\"kind\" <> 'step' AND \"tasks\".\"deleted_at\" IS NULL",
+          "where": "\"tasks\".\"started_at\" IS NOT NULL AND NOT \"tasks\".\"long_running\" AND \"tasks\".\"kind\" NOT IN ('step', 'save_content', 'save_content_with_transcription') AND \"tasks\".\"deleted_at\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -831,11 +831,11 @@
         },
         "tasks_kind_matches_actor": {
           "name": "tasks_kind_matches_actor",
-          "value": "(\"tasks\".\"actor\" = 'human' AND \"tasks\".\"kind\" IN ('common', 'meal', 'sleep', 'training')) OR (\"tasks\".\"actor\" = 'agent' AND \"tasks\".\"kind\" IN ('request', 'search_request', 'build_request', 'inquiry_request', 'review_request', 'cron', 'step'))"
+          "value": "(\"tasks\".\"actor\" = 'human' AND \"tasks\".\"kind\" IN ('common', 'meal', 'sleep', 'training')) OR (\"tasks\".\"actor\" = 'agent' AND \"tasks\".\"kind\" IN ('request', 'save_content', 'save_content_with_transcription', 'search_request', 'build_request', 'inquiry_request', 'review_request', 'cron', 'step'))"
         },
         "tasks_status_matches_actor": {
           "name": "tasks_status_matches_actor",
-          "value": "(\"tasks\".\"actor\" = 'human' AND (\"tasks\".\"status\" IS NULL OR \"tasks\".\"status\" IN ('todo', 'toDefine', 'doing', 'inHold', 'done', 'cancel', 'missed'))) OR (\"tasks\".\"actor\" = 'agent' AND \"tasks\".\"status\" IS NOT NULL AND \"tasks\".\"status\" IN ('preparing', 'queued', 'starting', 'running', 'waiting', 'completed', 'interrupted', 'failed', 'cancelled', 'rolled_back'))"
+          "value": "(\"tasks\".\"actor\" = 'human' AND (\"tasks\".\"status\" IS NULL OR \"tasks\".\"status\" IN ('todo', 'toDefine', 'doing', 'inHold', 'done', 'cancel', 'missed'))) OR (\"tasks\".\"actor\" = 'agent' AND \"tasks\".\"status\" IS NOT NULL AND \"tasks\".\"status\" IN ('queued', 'running', 'waiting', 'awaiting_transcription', 'done', 'failed', 'cancel'))"
         },
         "tasks_long_running_shape": {
           "name": "tasks_long_running_shape",

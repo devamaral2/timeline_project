@@ -48,6 +48,9 @@ const ruleCards = [
     ...SITUATIONS.map((situation) => card({ id: `agent-${status}-${situation}`, name: `Agente ${status}, ${situation}`, actor: "agent", kind: "request", status, situation })),
   ]),
   ...agentTaskStatusSchema.options.map((status) => card({ id: `cron-${status}`, name: `Agendada ${status}`, actor: "agent", kind: "cron", status })),
+  // O conteúdo guardado (ADR 0021) não tem situação: terminado cai em Finalizadas; esperando a transcrição ou rodando, na execução.
+  ...agentTaskStatusSchema.options.map((status) => card({ id: `saved-${status}`, name: `Guardado ${status}`, actor: "agent", kind: "save_content", status })),
+  ...agentTaskStatusSchema.options.map((status) => card({ id: `video-${status}`, name: `Vídeo ${status}`, actor: "agent", kind: "save_content_with_transcription", status })),
   card({ id: "reference", name: "Referência sem status" }),
 ];
 

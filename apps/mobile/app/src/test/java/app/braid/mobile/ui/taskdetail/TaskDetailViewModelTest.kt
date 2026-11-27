@@ -5,6 +5,8 @@ import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
 import app.braid.mobile.data.tasks.DefaultTaskDetailRepository
 import app.braid.mobile.data.tasks.TaskDetailApi
+import app.braid.mobile.data.transcription.DefaultTranscriptionRepository
+import app.braid.mobile.data.transcription.TranscriptionApi
 import app.braid.mobile.domain.task.RequestRelation
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskPriority
@@ -74,6 +76,7 @@ class TaskDetailViewModelTest {
             DefaultTaskDetailRepository(graph.apis.create(TaskDetailApi::class.java)),
             AppClock { now },
             DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
+            DefaultTranscriptionRepository(graph.apis.create(TranscriptionApi::class.java)),
         ).also(created::add)
 
     private suspend fun TaskDetailViewModel.content(): TaskDetailUiState.Content =

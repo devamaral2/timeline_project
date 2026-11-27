@@ -1,14 +1,17 @@
 "use client";
 
-import { Apple, Bot, ChevronDown, Dumbbell, FileCode, FileText, type LucideIcon, Moon, Plus, Route } from "lucide-react";
+import { Bot, ChevronDown, FileCode, FileText, type LucideIcon, Plus } from "lucide-react";
 import Link from "next/link";
 import { useId, useState } from "react";
 import type { ArtifactDto, ArtifactType, HumanTaskKind, TaskArtifactDto, TaskDto } from "@repo/contracts";
 import { DetailSection } from "@/components/detail/detail-parts";
 import { ArtifactContent } from "@/components/notes/ArtifactContent";
 import { ICON_STROKE_WIDTH } from "@/components/tasks/task-visuals";
+import { BarbellIcon, CompassIcon, MoonStarIcon, MovementIcon, PlateIcon } from "@/components/ui/type-icons";
+import { isDailyReading } from "@/lib/tasks/daily-reading";
 import { mealCaloriesKcal } from "@/lib/tasks/task-read-model";
 import { ArtifactPickerDialog, artifactSource } from "./TaskEditArtifactsSection";
+import { TaskAddVideo } from "./TaskAddVideo";
 import { TaskMealContent } from "./TaskMealContent";
 import styles from "./task-artifacts.module.css";
 import relations from "./task-relations.module.css";
@@ -23,17 +26,22 @@ interface TaskArtifactsSectionProps {
   onAddArtifact?: (artifact: ArtifactDto) => void;
   /** Uma troca está sendo gravada: a ação espera. */
   busy?: boolean;
+  /**
+   * Na Leitura diária, a seção ganha "Adicionar vídeo", que pede a transcrição de um vídeo do YouTube. Chamado quando
+   * o pedido foi gravado, para a tela reler a tarefa (o artefato do vídeo já está nela).
+   */
+  onVideoRequested?: () => void;
 }
 
 const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
   text: FileText,
-  food: Apple,
-  sleep: Moon,
-  training: Dumbbell,
-  workout: Dumbbell,
+  food: PlateIcon,
+  sleep: MoonStarIcon,
+  training: BarbellIcon,
+  workout: MovementIcon,
   skill: FileCode,
   agent: Bot,
-  router: Route,
+  router: CompassIcon,
 };
 
 /**
@@ -44,7 +52,7 @@ const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
 const INLINE_TYPES: ReadonlySet<ArtifactType> = new Set(["text", "router", "food", "training", "sleep"]);
 
 /**
- * A seção Documentos do detalhe: os documentos da tarefa, na ordem em que vieram
+ * A seção Artefatos do detalhe: os artefatos da tarefa, na ordem em que vieram
  * (`task.artifacts`, sem outra chamada). Cada artefato é um cartão: no cabeçalho, o
  * ícone do tipo, o nome e, em mono, a posição, o código do tipo e a relação
  * (`1 · text · uses`); o que a tarefa criou (`creates`) não está na lista e vem sem
@@ -54,14 +62,15 @@ const INLINE_TYPES: ReadonlySet<ArtifactType> = new Set(["text", "router", "food
  * aberto, e a seta no fim do cabeçalho recolhe e estende. Tocar no nome abre o
  * detalhe do artefato. Tarefa sem artefato não mostra a seção, a não ser que o detalhe ligue
  * artefatos (`onAddArtifact`): aí a seção fica, com a ação embaixo da lista.
- * Na refeição, o total de calorias são os alimentos ligados somados (cópias incluídas).
+ * Na refeição, o total de calorias são os alimentos ligados somados (cópias incluídas). Na Leitura diária, "Adicionar vídeo"
+ * (`onVideoRequested`) pede a transcrição de um vídeo do YouTube.
  */
-export function TaskArtifactsSection({ userId, task, onAddArtifact, busy = false }: TaskArtifactsSectionProps) {
+export function TaskArtifactsSection({ userId, task, onAddArtifact, busy = false, onVideoRequested }: TaskArtifactsSectionProps) {
   if (task.artifacts.length === 0 && !onAddArtifact) return null;
   const positions = artifactPositions(task.artifacts);
 
   return (
-    <DetailSection title="Documentos" labelId="task-artifacts" count={task.artifacts.length}>
+    <DetailSection title="Artefatos" labelId="task-artifacts" count={task.artifacts.length}>
       {task.artifacts.length > 0 ? (
         <ul className={styles.list}>
           {task.artifacts.map((link, index) => (
@@ -70,6 +79,7 @@ export function TaskArtifactsSection({ userId, task, onAddArtifact, busy = false
         </ul>
       ) : null}
       {onAddArtifact ? <AddArtifact task={task} busy={busy} onAdd={onAddArtifact} /> : null}
+      {onVideoRequested && isDailyReading(task) ? <TaskAddVideo onRequested={onVideoRequested} /> : null}
       {task.kind === "meal" && task.artifacts.length > 0 ? (
         <p className={styles.total}>
           <span>Total de calorias</span>

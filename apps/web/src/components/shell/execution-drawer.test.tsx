@@ -103,7 +103,7 @@ test("lê a lista acompanhada pedindo só o executor agente e os status em andam
   await drawerReady();
   const call = api.calls.find((entry) => entry.pathname === "/api/tasks/tracked");
   expect(call?.query.actor).toBe("agent");
-  expect(call?.query.status?.split(",").sort()).toEqual(["preparing", "queued", "running", "starting"]);
+  expect(call?.query.status?.split(",").sort()).toEqual(["awaiting_transcription", "preparing", "queued", "running", "starting"]);
 });
 
 test("com cinco execuções mostra o cabeçalho com a contagem, três linhas e +2, da mais recente para a mais antiga", async () => {
@@ -247,7 +247,7 @@ test("relê a cada 3 s enquanto há execução; parada, relê ao voltar ao foco,
   await waitFor(() => expect(reads()).toBe(idle + 3));
 });
 
-test("aparece em Tarefas, Agenda e Documentos com a mesma altura escolhida e não aparece no detalhe, na edição nem no chat", async () => {
+test("aparece em Tarefas, Agenda e Artefatos com a mesma altura escolhida e não aparece no detalhe, na edição nem no chat", async () => {
   serve(FIVE);
   const { rerender } = mount();
   const region = await drawerReady();

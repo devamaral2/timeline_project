@@ -12,7 +12,7 @@ declare module "vitest" {
 
 const DRIZZLE_DIR = resolve(__dirname, "../../../../drizzle");
 const PROJECT = ulid();
-const MIGRATION = "0011_situacao_da_tarefa_de_agente";
+const MIGRATION = "0012_situacao_da_tarefa_de_agente";
 
 interface JournalEntry { tag: string }
 
@@ -38,12 +38,13 @@ describe("migration da situacao, sobre um banco com dados", () => {
   let pool: Pool;
 
   const finalStatuses = ["completed", "interrupted", "failed", "cancelled", "rolled_back"];
-  const openStatuses = ["preparing", "queued", "starting", "running", "waiting"];
+  const openStatuses = ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription"];
   const finishedRequests = new Map<string, string>();
   const openRequests = new Map<string, string>();
   const finishedBuildRequests: string[] = [];
   const finishedSteps: string[] = [];
   const finishedCrons: string[] = [];
+  const savedContent: string[] = [];
   const humans: string[] = [];
 
   async function situations(): Promise<Map<string, string | null>> {
@@ -79,6 +80,13 @@ describe("migration da situacao, sobre um banco com dados", () => {
     finishedBuildRequests.push(await insert("agent", "build_request", "completed"));
     finishedSteps.push(await insert("agent", "step", "completed"), await insert("agent", "step", "failed"));
     finishedCrons.push(await insert("agent", "cron", "completed"));
+    // O conteudo guardado (migration 0009) nunca tem situacao, nem terminado.
+    savedContent.push(
+      await insert("agent", "save_content", "completed"),
+      await insert("agent", "save_content_with_transcription", "failed"),
+      await insert("agent", "save_content_with_transcription", "cancelled"),
+      await insert("agent", "save_content_with_transcription", "awaiting_transcription"),
+    );
     humans.push(await insert("human", "common", "done"), await insert("human", "common", "todo"));
 
     await applyMigration(pool, MIGRATION);
@@ -102,11 +110,11 @@ describe("migration da situacao, sobre um banco com dados", () => {
     for (const id of finishedBuildRequests) expect(now.get(id)).toBe("reviewed");
   });
 
-  test("os pedidos abertos, os passos, as execucoes agendadas e as tarefas de pessoa ficam sem situacao", async () => {
+  test("os pedidos abertos, os passos, as execucoes agendadas, o conteudo guardado e as tarefas de pessoa ficam sem situacao", async () => {
     const now = await situations();
 
     for (const [id, status] of openRequests) expect(now.get(id), status).toBeNull();
-    for (const id of [...finishedSteps, ...finishedCrons, ...humans]) expect(now.get(id)).toBeNull();
+    for (const id of [...finishedSteps, ...finishedCrons, ...savedContent, ...humans]) expect(now.get(id)).toBeNull();
   });
 
   test("os checks novos passam a valer sobre o que a migration gravou", async () => {
@@ -119,6 +127,8 @@ describe("migration da situacao, sobre um banco com dados", () => {
     await insert("request", "failed", "to_review");
     await expect(insert("request", "running", "to_review")).rejects.toThrow(/tasks_situation_shape/);
     await expect(insert("step", "completed", "to_review")).rejects.toThrow(/tasks_situation_shape/);
+    await expect(insert("save_content", "completed", "to_review")).rejects.toThrow(/tasks_situation_shape/);
+    await expect(insert("save_content_with_transcription", "failed", "reviewed")).rejects.toThrow(/tasks_situation_shape/);
     await expect(insert("request", "completed", "archived")).rejects.toThrow(/tasks_situation_valid/);
   });
 });

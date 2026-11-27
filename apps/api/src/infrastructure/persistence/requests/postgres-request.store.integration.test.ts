@@ -4,6 +4,7 @@ import { Artifact, Task } from "../../../domain";
 import { toRequestDto } from "../../../api-core/requests/request-view";
 import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
 import { PostgresDatabase } from "../database/postgres-database";
+import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
 import { PostgresTaskRequestLinkQuery } from "../tasks/queries/postgres-task-request-link.query";
 import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
 import { PostgresCandidateQuery } from "./postgres-candidate.query";
@@ -317,7 +318,51 @@ describe("PostgresRequestStore", () => {
     });
   });
 
-  test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao", async () => {
+  test("a lista de pedidos traz as paginas guardadas e os videos a transcrever, e nao os passos", async () => {
+  const request = await start("oi");
+  const page = Task.create({ userId: USER, name: "Pagina", actor: "agent", kind: "save_content", status: "completed" });
+  const video = Task.create({
+    userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription",
+  });
+  const step = Task.create({ userId: USER, name: "Passo", actor: "agent", kind: "step", status: "completed" });
+  const tasks = new PostgresTaskRepository(ctx.db);
+  for (const task of [page, video, step]) await tasks.save(task);
+  const listed = await store.list(USER, 10);
+
+  expect(listed.map((record) => record.id).sort()).toEqual([request.requestId, page.id, video.id].sort());
+  expect(listed.find((record) => record.id === video.id)).toMatchObject({ kind: "save_content_with_transcription", status: "awaiting_transcription" });
+});
+
+test("cancelar o pedido de transcricao que espera o servico local o leva a cancelled, sem situacao", async () => {
+  const video = Task.create({
+    userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription",
+  });
+  await new PostgresTaskRepository(ctx.db).save(video);
+
+  expect(await store.cancel(video.id)).toEqual([video.id]);
+
+  const cancelled = await store.find(video.id);
+  expect(cancelled).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
+  expect(cancelled?.situation).toBeUndefined();
+  expect(await store.cancel(video.id)).toEqual([]);
+});
+
+test("cancelar o video que ja esta rodando o deixa interrupted, e fechar o pedido de conteudo guardado nunca grava situacao", async () => {
+  const video = Task.create({
+    userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "running",
+  });
+  await new PostgresTaskRepository(ctx.db).save(video);
+
+  expect(await store.cancel(video.id)).toEqual([video.id]);
+
+  const stopped = await store.find(video.id);
+  expect(stopped).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
+  expect(stopped?.situation).toBeUndefined();
+  const { rows } = await ctx.pool.query("SELECT situation FROM tasks WHERE id = $1", [video.id]);
+  expect(rows[0].situation).toBeNull();
+});
+
+test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao", async () => {
     const first = await start("oi");
     const second = await start("e amanhã?", { sessionId: first.requestId });
     const third = await start("e depois?", { sessionId: first.requestId });

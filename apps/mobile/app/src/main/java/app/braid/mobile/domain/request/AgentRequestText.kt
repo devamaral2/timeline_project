@@ -35,7 +35,7 @@ fun entityOperationLabel(operation: RequestOperation): String =
         RequestOperation.Delete -> "apagado"
     }
 
-/** "Tarefa", o tipo do documento ("Nota", "Refeição"…) ou "Nota" quando o contrato não diz o tipo. */
+/** "Tarefa", o tipo do artefato ("Nota", "Refeição"…) ou "Nota" quando o contrato não diz o tipo. */
 fun entityKindLabel(entity: RequestEntity): String {
     if (entity.kind == EntityKind.Task) return "Tarefa"
     return entity.artifactType?.let(::artifactTypeLabel) ?: "Nota"

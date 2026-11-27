@@ -2,7 +2,7 @@ package app.braid.mobile.core.designsystem
 
 /*
  * Os ícones do web como dados: o `d` e as formas de cada SVG, copiados de
- * `components/ui/nav-icons.tsx`, `components/tasks/task-kind-mark.tsx` e do
+ * `components/ui/nav-icons.tsx`, `components/ui/type-icons.tsx`, `components/tasks/task-kind-mark.tsx` e do
  * lucide-react (o robô e as setas). Na grade de 24.
  */
 object BraidIcons {
@@ -21,12 +21,12 @@ object BraidIcons {
             SvgPart(svgRect(6.25f, 13.25f, 4.75f, 4.75f, 1.3f), fill = true),
         )
 
-    /** Documentos: duas páginas empilhadas, a da frente com as linhas do texto. */
+    /** Artefatos: "Camadas", três camadas empilhadas (`ArtifactsNavIcon` do web). */
     val documentsNav =
         listOf(
-            SvgPart(svgRect(3.5f, 6.5f, 13f, 15f, 2f)),
-            SvgPart("M7 11.5h6M7 15.5h4"),
-            SvgPart("M8 2.75h10.5a2 2 0 0 1 2 2V18"),
+            SvgPart("M12 3l9 4.5-9 4.5-9-4.5z"),
+            SvgPart("M3 12l9 4.5 9-4.5"),
+            SvgPart("M3 16.5l9 4.5 9-4.5"),
         )
 
     val chevronDown = listOf(SvgPart("m6 9 6 6 6-6"))
@@ -44,7 +44,7 @@ object BraidIcons {
     val plus = listOf(SvgPart("M5 12h14"), SvgPart("M12 5v14"))
     val circle = listOf(SvgPart(svgCircle(12f, 12f, 10f)))
 
-    /** O `Image` do lucide: a imagem do documento que espera a pessoa pedir. */
+    /** O `Image` do lucide: a imagem do artefato que espera a pessoa pedir. */
     val image =
         listOf(
             SvgPart(svgRect(3f, 3f, 18f, 18f, 2f)),
@@ -70,7 +70,7 @@ object BraidIcons {
             ),
         )
 
-    /** O `FileText` do lucide: o documento de texto, o arquivo. */
+    /** O `FileText` do lucide: o artefato de texto, o arquivo. */
     val fileText =
         listOf(
             SvgPart("M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"),
@@ -140,21 +140,39 @@ object BraidIcons {
                     SvgPart("m9 16 2 2 4-4"),
                 )
             "meal" ->
+                // "Prato": garfo, prato e faca.
                 listOf(
-                    SvgPart("M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"),
-                    SvgPart("M7 2v20"),
-                    SvgPart("M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"),
+                    SvgPart("M2.5 4.5V8a1.5 1.5 0 0 0 3 0V4.5"),
+                    SvgPart("M4 9.5v10"),
+                    SvgPart(svgCircle(12f, 12f, 4f)),
+                    SvgPart("M21 19.5v-15c-1.5 1-2.25 3.2-2.25 5.5v3H21"),
                 )
-            "sleep" -> listOf(SvgPart("M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"))
+            // "Lua e estrela".
+            "sleep" ->
+                listOf(
+                    SvgPart("M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5a7.1 7.1 0 0 0 10 10z"),
+                    SvgPart("M18.5 2.5v5"),
+                    SvgPart("M16 5h5"),
+                )
+            // "Barra": o barbell.
             "training" ->
                 listOf(
-                    SvgPart("M6.5 6.5v11"),
-                    SvgPart("M17.5 6.5v11"),
+                    SvgPart("M6.5 6v12"),
+                    SvgPart("M17.5 6v12"),
                     SvgPart("M3.5 9v6"),
                     SvgPart("M20.5 9v6"),
                     SvgPart("M6.5 12h11"),
                 )
             "request" -> messageSquare
+            "save_content" -> listOf(SvgPart("m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"))
+            "save_content_with_transcription" ->
+                listOf(
+                    SvgPart(svgRect(2f, 5f, 20f, 14f, 2f)),
+                    SvgPart("M7 15h4"),
+                    SvgPart("M15 15h2"),
+                    SvgPart("M7 11h2"),
+                    SvgPart("M13 11h4"),
+                )
             "search_request" -> search
             "build_request" -> wrench
             "inquiry_request" ->

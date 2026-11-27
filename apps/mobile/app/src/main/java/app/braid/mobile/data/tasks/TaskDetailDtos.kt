@@ -46,7 +46,7 @@ data class TaskDetailDto(
     val artifacts: List<TaskArtifactDto> = emptyList(),
 )
 
-/** `taskArtifactSchema`: o documento ligado, com a relação e se o vínculo veio da série. */
+/** `taskArtifactSchema`: o artefato ligado, com a relação e se o vínculo veio da série. */
 @Serializable
 data class TaskArtifactDto(
     val relation: String,

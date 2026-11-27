@@ -1,0 +1,6 @@
+ALTER TABLE "tasks" DROP CONSTRAINT "tasks_kind_matches_actor";--> statement-breakpoint
+ALTER TABLE "tasks" DROP CONSTRAINT "tasks_status_matches_actor";--> statement-breakpoint
+DROP INDEX "tasks_agenda_idx";--> statement-breakpoint
+CREATE INDEX "tasks_agenda_idx" ON "tasks" USING btree ("user_id","started_at","id") WHERE "tasks"."started_at" IS NOT NULL AND NOT "tasks"."long_running" AND "tasks"."kind" NOT IN ('step', 'save_content', 'save_content_with_transcription') AND "tasks"."deleted_at" IS NULL;--> statement-breakpoint
+ALTER TABLE "tasks" ADD CONSTRAINT "tasks_kind_matches_actor" CHECK (("tasks"."actor" = 'human' AND "tasks"."kind" IN ('common', 'meal', 'sleep', 'training')) OR ("tasks"."actor" = 'agent' AND "tasks"."kind" IN ('request', 'save_content', 'save_content_with_transcription', 'search_request', 'build_request', 'inquiry_request', 'review_request', 'cron', 'step')));--> statement-breakpoint
+ALTER TABLE "tasks" ADD CONSTRAINT "tasks_status_matches_actor" CHECK (("tasks"."actor" = 'human' AND ("tasks"."status" IS NULL OR "tasks"."status" IN ('todo', 'toDefine', 'doing', 'inHold', 'done', 'cancel', 'missed'))) OR ("tasks"."actor" = 'agent' AND "tasks"."status" IS NOT NULL AND "tasks"."status" IN ('queued', 'running', 'waiting', 'awaiting_transcription', 'done', 'failed', 'cancel')));

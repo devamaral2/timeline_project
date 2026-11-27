@@ -28,6 +28,8 @@ function Inside({ status }: { status: AgentTaskStatus }) {
           <circle data-part="dot" cx="14" cy="10" r="1.2" />
         </>
       );
+    case "awaiting_transcription":
+      return <circle cx="10" cy="10" r="3" />;
     case "completed":
       return <path data-part="tick" d="m6.2 10.2 2.6 2.6 5-5.4" />;
     case "interrupted":

@@ -78,7 +78,7 @@ const first = request({ id: "req-first", status: "completed", title: "Planejar a
 const follow = request({ id: "req-new", sessionId: "req-first", title: "Só voos diretos", createdAt: "2026-09-14T15:01:00.000Z", progress: "Filtrando os voos…" });
 
 const statuses = [
-  "preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+  "preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back",
 ] as const;
 const stepCases = [
   [],

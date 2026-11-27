@@ -17,8 +17,8 @@ function drawn(status: AgentTaskStatus) {
 const attr = (element: Element | null, name: string) => element?.getAttribute(name);
 
 describe("AgentStatusIcon", () => {
-  it("existe um ícone para cada um dos dez status", () => {
-    expect(AGENT_TASK_STATUSES).toHaveLength(10);
+  it("existe um ícone para cada um dos onze status", () => {
+    expect(AGENT_TASK_STATUSES).toHaveLength(11);
   });
 
   it.each(AGENT_TASK_STATUSES.map((status) => [status] as const))(
@@ -90,6 +90,17 @@ describe("AgentStatusIcon", () => {
     ]);
   });
 
+  it("awaiting_transcription: o mesmo quadrado com um anel vazio de raio 3 no centro, só contorno", () => {
+    const svg = drawn("awaiting_transcription");
+
+    const ring = svg.querySelector("circle");
+    expect([attr(ring, "cx"), attr(ring, "cy"), attr(ring, "r")]).toEqual(["10", "10", "3"]);
+    expect(ring?.hasAttribute("data-part")).toBe(false);
+    expect(svg.querySelectorAll("circle")).toHaveLength(1);
+    expect(svg.querySelector("rect")?.hasAttribute("data-part")).toBe(false);
+    expect(attr(svg, "aria-label")).toBe("Agente, esperando transcrição");
+  });
+
   it("completed: o quadrado cheio com um visto na cor do fundo", () => {
     const svg = drawn("completed");
 
@@ -140,6 +151,7 @@ describe("agent-status-icon.module.css", () => {
     ["starting", "--brand-accent"],
     ["running", "--brand-accent"],
     ["waiting", "--warning"],
+    ["awaiting_transcription", "--muted-foreground"],
     ["completed", "--success"],
     ["interrupted", "--warning"],
     ["failed", "--destructive"],

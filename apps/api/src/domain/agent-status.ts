@@ -1,3 +1,4 @@
+import { KINDS_WITHOUT_SITUATION } from "@repo/contracts";
 import type { AgentTaskStatus, Situation } from "./sets";
 
 /**
@@ -7,9 +8,9 @@ import type { AgentTaskStatus, Situation } from "./sets";
  */
 
 /** Ainda nao terminou: pode ser cancelado e ainda vai mudar. */
-export const OPEN_AGENT_STATUSES = ["preparing", "queued", "starting", "running", "waiting"] as const satisfies readonly AgentTaskStatus[];
-/** Aberto e com trabalho a fazer ou em curso (fora a espera). */
-export const IN_PROGRESS_AGENT_STATUSES = ["preparing", "queued", "starting", "running"] as const satisfies readonly AgentTaskStatus[];
+export const OPEN_AGENT_STATUSES = ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription"] as const satisfies readonly AgentTaskStatus[];
+/** Aberto e com trabalho a fazer ou em curso, fora a espera da pessoa; esperar a transcricao e trabalho em curso fora daqui. */
+export const IN_PROGRESS_AGENT_STATUSES = ["preparing", "queued", "starting", "running", "awaiting_transcription"] as const satisfies readonly AgentTaskStatus[];
 /** Terminou, de qualquer jeito. */
 export const FINAL_AGENT_STATUSES = ["completed", "interrupted", "failed", "cancelled", "rolled_back"] as const satisfies readonly AgentTaskStatus[];
 /** Terminou bem. */
@@ -64,6 +65,7 @@ const TRANSITIONS: Record<AgentTaskStatus, readonly AgentTaskStatus[]> = {
   starting: ["running", "failed", "cancelled"],
   running: ["waiting", "completed", "failed", "interrupted"],
   waiting: ["running", "failed", "cancelled"],
+  awaiting_transcription: ["running", "failed", "cancelled"],
   completed: ["rolled_back"],
   interrupted: ["rolled_back"],
   failed: ["rolled_back"],
@@ -103,4 +105,9 @@ export const REVIEW_SITUATION_ON_CLOSE = "to_review" as const satisfies Situatio
  * Quem nunca tem situacao (o passo e a execucao agendada) e quem a aceita (um pedido de agente num status final): a regra
  * mora nos contratos, onde o esquema do cartao e a gaveta de execucao do web a alcancam.
  */
+/** A situacao que o fechamento de um pedido deixa nele: nenhuma nos tipos que nunca tem (passo, agendada, conteudo guardado). */
+export function situationOnClose(kind: string): Situation | undefined {
+  return (KINDS_WITHOUT_SITUATION as readonly string[]).includes(kind) ? undefined : REVIEW_SITUATION_ON_CLOSE;
+}
+
 export { acceptsSituation, KINDS_WITHOUT_SITUATION } from "@repo/contracts";

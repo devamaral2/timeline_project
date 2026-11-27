@@ -44,7 +44,7 @@ import app.braid.mobile.ui.chat.rememberReducedMotion
 /*
  * O ícone quadrado do status de agente, o de `components/tasks/agent-status-icon.tsx` do web: uma grade de 20, um quadrado de
  * canto arredondado (18 de lado, raio 5, traço 1,6) e o desenho de dentro centrado em (10, 10). O desenho, a cor e o movimento de
- * cada um dos dez status moram em [agentStatusIcon], uma tabela de dados; o composable só a pinta.
+ * cada um dos onze status moram em [agentStatusIcon], uma tabela de dados; o composable só a pinta.
  */
 
 /** A cor do ícone, por token: apagada, destaque, aviso, sucesso ou erro. */
@@ -72,6 +72,13 @@ sealed interface AgentIconShape {
 
     /** O arco tracejado que gira em "Iniciando". */
     data class Ring(
+        val cx: Float,
+        val cy: Float,
+        val r: Float,
+    ) : AgentIconShape
+
+    /** O anel vazio de "Esperando transcrição": só contorno, parado. */
+    data class Hollow(
         val cx: Float,
         val cy: Float,
         val r: Float,
@@ -124,6 +131,13 @@ data class AgentStatusIconSpec(
             inside.map { shape ->
                 when (shape) {
                     is AgentIconShape.Dot -> IconBounds(shape.cx - shape.r, shape.cy - shape.r, shape.cx + shape.r, shape.cy + shape.r)
+                    is AgentIconShape.Hollow ->
+                        IconBounds(
+                            shape.cx - shape.r - half,
+                            shape.cy - shape.r - half,
+                            shape.cx + shape.r + half,
+                            shape.cy + shape.r + half,
+                        )
                     is AgentIconShape.Ring ->
                         IconBounds(
                             shape.cx - shape.r - half,
@@ -156,7 +170,7 @@ private fun line(vararg points: Float): AgentIconShape.Line =
     )
 
 /**
- * O desenho dos dez status, o `Inside` do web. Um status que não é de agente (ou o desconhecido) é o quadrado liso e apagado,
+ * O desenho dos onze status, o `Inside` do web. Um status que não é de agente (ou o desconhecido) é o quadrado liso e apagado,
  * sem nada dentro: o app mostra que há um agente, sem inventar um status.
  */
 fun agentStatusIcon(status: TaskStatus?): AgentStatusIconSpec {
@@ -178,6 +192,7 @@ fun agentStatusIcon(status: TaskStatus?): AgentStatusIconSpec {
                 AgentIconShape.Dot(10f, 10f, 1.2f),
                 AgentIconShape.Dot(14f, 10f, 1.2f),
             )
+        TaskStatus.AwaitingTranscription -> icon(AgentIconTone.Muted, AgentIconFrame.Plain, AgentIconShape.Hollow(10f, 10f, 3f))
         TaskStatus.Completed ->
             icon(AgentIconTone.Success, AgentIconFrame.Solid, line(6.2f, 10.2f, 8.8f, 12.8f, 13.8f, 7.4f).copy(onSolid = true))
         TaskStatus.Interrupted -> icon(AgentIconTone.Warning, AgentIconFrame.Plain, line(6.5f, 10f, 13.5f, 10f))
@@ -303,6 +318,13 @@ private fun DrawScope.drawInside(
 ) {
     when (shape) {
         is AgentIconShape.Dot -> drawCircle(color, shape.r, Offset(shape.cx, shape.cy), style = Fill)
+        is AgentIconShape.Hollow ->
+            drawCircle(
+                color,
+                shape.r,
+                Offset(shape.cx, shape.cy),
+                style = Stroke(width = STROKE, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
         is AgentIconShape.Pulse ->
             drawRoundRect(
                 color.copy(alpha = pulseAlpha),

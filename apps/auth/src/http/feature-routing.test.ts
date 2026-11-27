@@ -53,6 +53,26 @@ describe('auth feature routing', () => {
     expect(response.status).toBe(413);
   });
 
+  it('lets only the transcription delivery route carry a transcript-sized body', async () => {
+    const body = JSON.stringify({ result: 'a'.repeat(2 * 1024 * 1024) });
+    const post = (path: string, payload = body) =>
+      fetch(`${testApp.url}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: payload });
+
+    // O corpo foi lido e a rota parou onde deve: na falta da chave de dispositivo.
+    expect((await post('/api/transcription-worker/deliver')).status).toBe(401);
+    expect((await post('/api/transcription-worker/next')).status).toBe(413);
+    expect((await post('/api/tasks/daily-reading')).status).toBe(413);
+  });
+
+  it('still caps the transcription delivery body', async () => {
+    const response = await fetch(`${testApp.url}/api/transcription-worker/deliver`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ result: 'a'.repeat(4 * 1024 * 1024) }),
+    });
+    expect(response.status).toBe(413);
+  });
+
   it('keeps the JWKS transport endpoint outside feature modules', async () => {
     const response = await fetch(`${testApp.url}/.well-known/jwks.json`);
     expect(response.status).toBe(200);

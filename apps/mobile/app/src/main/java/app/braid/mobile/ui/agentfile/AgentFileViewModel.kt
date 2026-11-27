@@ -128,7 +128,7 @@ data class EditBar(
 
 data class AgentFileUiState(
     val path: String,
-    /** A versão do arquivo: a do documento, trocada pela que a restauração devolve. */
+    /** A versão do arquivo: a do artefato, trocada pela que a restauração devolve. */
     val hash: String,
     /** O arquivo saiu da pasta: o texto é o último conhecido. */
     val missing: Boolean,

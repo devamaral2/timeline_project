@@ -51,6 +51,34 @@ class TaskListRulesTest {
     }
 
     @Test
+    fun `saved content falls into the web's drawers and reads as the web writes its when`() {
+        val saved = Fixtures.json("task-list-saved-content").jsonObject
+        val savedNow = Instant.parse(saved.getValue("now").jsonPrimitive.content)
+        val savedCards =
+            BraidJson
+                .decodeFromJsonElement(ListSerializer(TaskCardDto.serializer()), saved.getValue("cards"))
+                .map(TaskCardDto::toDomain)
+
+        val drawers = drawersOf(listedCards(savedCards))
+        val expected = saved.getValue("drawers").jsonArray.map { it.jsonObject }
+
+        assertEquals(expected.map { strings(it.getValue("ids")) }, drawers.map { drawer -> drawer.cards.map { it.id } })
+        assertEquals(expected.map { it.getValue("key").jsonPrimitive.content }, drawers.map { it.key.code })
+        assertEquals(
+            strings(saved.getValue("execution")),
+            savedCards.filter { drawerOf(it) == TaskDrawerKey.Execution }.map { it.id },
+        )
+        for (entry in saved.getValue("whens").jsonArray) {
+            val case = entry.jsonObject
+            val card = savedCards.first { it.id == case.getValue("id").jsonPrimitive.content }
+            assertEquals(case.getValue("when").jsonPrimitive.content, cardWhenLabel(card, savedNow))
+        }
+        assertEquals(TaskKind.SaveContent, savedCards[0].kind)
+        assertEquals(TaskKind.SaveContentWithTranscription, savedCards[1].kind)
+        assertEquals(TaskStatus.AwaitingTranscription, savedCards[1].status)
+    }
+
+    @Test
     fun `every recurrence rule reads as the web writes it`() {
         for (entry in fixture.getValue("rules").jsonArray) {
             val case = entry.jsonObject

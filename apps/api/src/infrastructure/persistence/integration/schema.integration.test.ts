@@ -146,6 +146,7 @@ describe("banco novo: checks, restricoes e indices", () => {
 
       await expect(task({ kind: "request" })).rejects.toThrow(/tasks_kind_matches_actor/);
       await expect(task({ kind: "step" })).rejects.toThrow(/tasks_kind_matches_actor/);
+      await expect(task({ kind: "save_content" })).rejects.toThrow(/tasks_kind_matches_actor/);
     });
 
     test("agente aceita os tipos de agente e recusa tipo de pessoa", async () => {
@@ -157,6 +158,8 @@ describe("banco novo: checks, restricoes e indices", () => {
         "review_request",
         "cron",
         "step",
+        "save_content",
+        "save_content_with_transcription",
       ]) {
         await agentTask({ kind });
       }
@@ -177,7 +180,7 @@ describe("banco novo: checks, restricoes e indices", () => {
 
     test("cada executor so aceita os seus status, e os dois conjuntos nao tem valor em comum", async () => {
       const humanStatuses = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"];
-      const agentStatuses = ["preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back"];
+      const agentStatuses = ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back"];
       expect(agentStatuses.filter((status) => humanStatuses.includes(status))).toEqual([]);
 
       for (const status of humanStatuses) await task({ status });
@@ -204,6 +207,12 @@ describe("banco novo: checks, restricoes e indices", () => {
       }
       await expect(agentTask({ kind: "step", status: "completed", situation: "to_review" })).rejects.toThrow(/tasks_situation_shape/);
       await expect(agentTask({ kind: "cron", status: "completed", situation: "to_review" })).rejects.toThrow(/tasks_situation_shape/);
+      for (const kind of ["save_content", "save_content_with_transcription"]) {
+        for (const status of ["completed", "failed", "cancelled"]) {
+          await agentTask({ kind, status });
+          await expect(agentTask({ kind, status, situation: "to_review" }), `${kind} ${status}`).rejects.toThrow(/tasks_situation_shape/);
+        }
+      }
       await expect(task({ status: "done", situation: "reviewed" })).rejects.toThrow(/tasks_situation_shape/);
       await expect(task({ status: null, situation: "reviewed" })).rejects.toThrow(/tasks_situation_shape/);
     });
@@ -600,7 +609,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("janela da agenda", async () => {
       const plan = await planOf(`
         SELECT id FROM tasks
-        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind <> 'step'
+        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind NOT IN ('step', 'save_content', 'save_content_with_transcription')
           AND started_at <= '2026-11-21T03:00:00Z'
           AND started_at >= timestamptz '2026-11-14T03:00:00Z' - interval '31 days'
           AND coalesce(estimated_finish_at, finished_at, started_at) >= '2026-11-14T03:00:00Z'
@@ -622,7 +631,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("agenda so de pessoa", async () => {
       const plan = await planOf(`
         SELECT id FROM tasks
-        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind <> 'step'
+        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind NOT IN ('step', 'save_content', 'save_content_with_transcription')
           AND actor = 'human' AND started_at BETWEEN '2026-11-14T03:00:00Z' AND '2026-11-21T03:00:00Z'
         ORDER BY started_at, id`);
 

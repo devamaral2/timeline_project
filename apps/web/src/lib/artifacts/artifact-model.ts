@@ -33,10 +33,12 @@ export function artifactTypeLabel(type: ArtifactType): string {
   return TYPE_LABELS[type];
 }
 
-/** O tipo que escolhe o ícone e a cor da folha: refeição usa a cor do alimento, exercício a do treino. */
+/**
+ * O tipo que escolhe o ícone da folha: a refeição usa o da tarefa de refeição (`meal`), o treino e o sono os das
+ * tarefas de mesmo nome. O exercício tem desenho próprio, diferente do treino.
+ */
 export function artifactVisualType(type: ArtifactType): string {
   if (type === "food") return "meal";
-  if (type === "workout") return "training";
   return type;
 }
 
@@ -73,8 +75,8 @@ export function sleepAgendaOfArtifact(tasks: readonly ArtifactTaskLinkDto[]): { 
   };
 }
 
-/** "3 documentos": a legenda no topo da lista. */
+/** "3 artefatos": a legenda no topo da lista. */
 export function artifactCountLabel(count: number): string {
-  if (count === 0) return "Nenhum documento";
-  return count === 1 ? "1 documento" : `${count} documentos`;
+  if (count === 0) return "Nenhum artefato";
+  return count === 1 ? "1 artefato" : `${count} artefatos`;
 }

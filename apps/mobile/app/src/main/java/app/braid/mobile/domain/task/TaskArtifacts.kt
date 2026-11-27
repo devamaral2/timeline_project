@@ -5,7 +5,7 @@ import app.braid.mobile.domain.artifact.ArtifactFilters
 import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.FoodData
 
-/** A relação de um documento com a tarefa, como a API a guarda; a tela mostra o [code] como está. */
+/** A relação de um artefato com a tarefa, como a API a guarda; a tela mostra o [code] como está. */
 enum class ArtifactRelation(
     val code: String,
 ) {
@@ -17,11 +17,11 @@ enum class ArtifactRelation(
 
     companion object {
         fun fromCode(code: String): ArtifactRelation =
-            entries.firstOrNull { it.code == code } ?: error("Relação de documento desconhecida: $code")
+            entries.firstOrNull { it.code == code } ?: error("Relação de artefato desconhecida: $code")
     }
 }
 
-/** Um documento ligado à tarefa (`TaskArtifactDto`): a relação e o documento inteiro, na ordem em que a API o devolve. */
+/** Um artefato ligado à tarefa (`TaskArtifactDto`): a relação e o artefato inteiro, na ordem em que a API o devolve. */
 data class TaskArtifact(
     val relation: ArtifactRelation,
     /** O vínculo veio da série, e não de uma edição desta ocorrência. */
@@ -30,7 +30,7 @@ data class TaskArtifact(
 )
 
 /**
- * Um documento na lista de edição da tarefa (`DraftArtifact` do web): o que a lista mostra e a relação. [id] de uma
+ * Um artefato na lista de edição da tarefa (`DraftArtifact` do web): o que a lista mostra e a relação. [id] de uma
  * cópia nova é só a chave da linha: a API não a recebe.
  */
 data class DraftArtifact(
@@ -45,7 +45,7 @@ data class DraftArtifact(
     val quantity: String? = null,
 )
 
-/** Uma entrada da lista de documentos do `PATCH`: um documento ligado (`id`, `relation`) ou uma cópia nova de alimento. */
+/** Uma entrada da lista de artefatos do `PATCH`: um artefato ligado (`id`, `relation`) ou uma cópia nova de alimento. */
 sealed interface ArtifactLink {
     data class Linked(
         val id: String,
@@ -58,7 +58,7 @@ sealed interface ArtifactLink {
     ) : ArtifactLink
 }
 
-/** Os documentos da tarefa lida, na ordem da API. Um alimento que já é cópia da tarefa mostra a quantidade que tem. */
+/** Os artefatos da tarefa lida, na ordem da API. Um alimento que já é cópia da tarefa mostra a quantidade que tem. */
 fun draftArtifactsFromTask(links: List<TaskArtifact>): List<DraftArtifact> =
     links.map { link ->
         val artifact = link.artifact
@@ -72,7 +72,7 @@ fun draftArtifactsFromTask(links: List<TaskArtifact>): List<DraftArtifact> =
         )
     }
 
-/** O documento escolhido na busca entra no fim da lista, com a relação `uses`. Se já está na lista, nada muda. */
+/** O artefato escolhido na busca entra no fim da lista, com a relação `uses`. Se já está na lista, nada muda. */
 fun addDraftArtifact(
     list: List<DraftArtifact>,
     artifact: Artifact,
@@ -98,14 +98,14 @@ fun setCopyQuantity(
     quantity: String,
 ): List<DraftArtifact> = list.map { if (it.id == key && it.copyOf != null) it.copy(quantity = quantity) else it }
 
-/** Tira a ligação da lista; o documento em si não é apagado. */
+/** Tira a ligação da lista; o artefato em si não é apagado. */
 fun removeDraftArtifact(
     list: List<DraftArtifact>,
     id: String,
 ): List<DraftArtifact> = list.filter { it.id != id }
 
 /**
- * Sobe (`-1`) ou desce (`1`) um documento trocando com o vizinho que tem posição. O que a tarefa criou (`creates`) fica
+ * Sobe (`-1`) ou desce (`1`) um artefato trocando com o vizinho que tem posição. O que a tarefa criou (`creates`) fica
  * na lista sem número e não se move; os de posição pulam por cima dele.
  */
 fun moveDraftArtifact(
@@ -127,14 +127,14 @@ fun moveDraftArtifact(
 /** O número de cada linha: 1, 2, … para os de posição; `null` para o que a tarefa criou. */
 fun draftArtifactPositions(list: List<DraftArtifact>): List<Int?> = artifactPositions(list.map { it.relation })
 
-/** A posição de cada documento pela relação: 1, 2, … para os de posição, `null` para o que a tarefa criou. */
+/** A posição de cada artefato pela relação: 1, 2, … para os de posição, `null` para o que a tarefa criou. */
 fun artifactPositions(relations: List<ArtifactRelation>): List<Int?> {
     var next = 0
     return relations.map { if (it == ArtifactRelation.Creates) null else ++next }
 }
 
 /**
- * A lista como o `PATCH` da tarefa a manda: a ordem da tela. Um documento ligado vai com id e relação; uma cópia nova
+ * A lista como o `PATCH` da tarefa a manda: a ordem da tela. Um artefato ligado vai com id e relação; uma cópia nova
  * vai com `copyOf` e a quantidade, se houver (sem espaços nas pontas), sem relação.
  */
 fun artifactLinkInputs(list: List<DraftArtifact>): List<ArtifactLink> =
@@ -146,7 +146,7 @@ fun artifactLinkInputs(list: List<DraftArtifact>): List<ArtifactLink> =
         }
     }
 
-/** Os mesmos documentos, na mesma ordem, com as mesmas relações, cópias e quantidades. */
+/** Os mesmos artefatos, na mesma ordem, com as mesmas relações, cópias e quantidades. */
 fun sameArtifactLinks(
     a: List<DraftArtifact>,
     b: List<DraftArtifact>,
@@ -164,12 +164,12 @@ fun draftWithPickedArtifact(
     key: String,
 ): List<DraftArtifact> = if (kind == TaskKind.Meal) addFoodCopy(list, artifact, key) else addDraftArtifact(list, artifact)
 
-/** Quantos documentos o seletor pede de cada vez. */
+/** Quantos artefatos o seletor pede de cada vez. */
 const val ARTIFACT_CHOICE_LIMIT = 50
 
 /**
  * O que o "+" da seção oferece, conforme o tipo da tarefa (`artifactSource` do web): alimentos na refeição, exercícios
- * no treino, os documentos do usuário nos outros. [filters] são as consultas da busca; a refeição faz duas (o catálogo
+ * no treino, os artefatos do usuário nos outros. [filters] são as consultas da busca; a refeição faz duas (o catálogo
  * global e depois os próprios) e as lista nessa ordem.
  */
 enum class ArtifactSource(
@@ -190,7 +190,7 @@ enum class ArtifactSource(
         "Buscar exercício para o treino",
         "Não foi possível buscar exercícios. Tente de novo.",
     ),
-    Other("Documentos", "Adicionar documento", "Buscar documento para ligar", "Não foi possível buscar documentos. Tente de novo."),
+    Other("Artefatos", "Adicionar artefato", "Buscar artefato para ligar", "Não foi possível buscar artefatos. Tente de novo."),
     ;
 
     /** As consultas de [query] (já sem espaços nas pontas; vazio traz os primeiros). */

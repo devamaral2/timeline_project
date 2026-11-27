@@ -16,7 +16,7 @@ import java.util.Locale
 import kotlin.math.floor
 
 /*
- * As regras de texto dos documentos, portadas de `lib/notes/notes-model.ts`,
+ * As regras de texto dos artefatos, portadas de `lib/notes/notes-model.ts`,
  * `lib/tasks/task-detail-format.ts` e `macroShares` (NoteBody.tsx). Cada saída é
  * conferida contra fixtures geradas pelas funções TS.
  */

@@ -16,26 +16,28 @@ fun artifactTypeLabel(type: ArtifactType): String =
         ArtifactType.Router -> "Roteador"
     }
 
-/** O tipo que escolhe o ícone e a cor da folha: refeição usa a cor do alimento, exercício a do treino. */
+/**
+ * O tipo que escolhe o ícone da folha: a refeição usa o da tarefa de refeição (`meal`), o treino e o sono os das
+ * tarefas de mesmo nome. O exercício tem desenho próprio, diferente do treino.
+ */
 fun artifactVisualType(type: ArtifactType): String =
     when (type) {
         ArtifactType.Food -> "meal"
-        ArtifactType.Workout -> "training"
         else -> type.code
     }
 
-/** "3 documentos": a legenda no topo da lista. */
+/** "3 artefatos": a legenda no topo da lista. */
 fun artifactCountLabel(count: Int): String =
     when (count) {
-        0 -> "Nenhum documento"
-        1 -> "1 documento"
-        else -> "$count documentos"
+        0 -> "Nenhum artefato"
+        1 -> "1 artefato"
+        else -> "$count artefatos"
     }
 
 private val HEADING_MARKER = Regex("^\\s*#{1,6}\\s+")
 
 /**
- * O corpo em markdown de um documento de texto ou roteador, sem o título repetido na primeira linha
+ * O corpo em markdown de um artefato de texto ou roteador, sem o título repetido na primeira linha
  * (a tela já o mostra). Os outros tipos não têm markdown: vazio.
  */
 fun markdownBodyOf(artifact: Artifact): String {

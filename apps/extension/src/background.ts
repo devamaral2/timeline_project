@@ -1,6 +1,8 @@
-import { currentUser, saveReading } from "./api";
+import { currentUser } from "./api";
+import { youtubeLinkOf } from "./capture/youtube";
 import type { CapturedPage } from "./capture/page";
-import { failureToast, savedToast } from "./messages";
+import { failureToast, savedToast, transcriptionToast } from "./messages";
+import { saveFromTab, type ContentKind, type Saved } from "./save";
 import { hostPermissionOf, readSettings } from "./settings";
 import { showToast, type Toast } from "./toast";
 
@@ -8,6 +10,9 @@ import { showToast, type Toast } from "./toast";
  * O service worker da extensão. Um clique no ícone (ou o atalho) lê a página
  * da aba, manda para `POST /api/tasks/daily-reading` e avisa o resultado na
  * própria página.
+ *
+ * Numa aba de vídeo do YouTube o clique pede a transcrição
+ * (`POST /api/tasks/transcription-requests`), sem ler a página.
  *
  * A extensão só enxerga a aba em que a pessoa clicou (`activeTab`): não lê
  * histórico nem outras abas, e não roda em página nenhuma sem o clique.
@@ -21,6 +26,10 @@ const BADGES = {
   ok: { text: "✓", color: "#2e8a7a" },
   error: { text: "!", color: "#aa474f" },
 } as const;
+
+/** O texto do emblema enquanto trabalha e depois de guardar, por tipo de conteúdo. */
+const BUSY_TITLE: Record<ContentKind, string> = { transcription: "Pedindo a transcrição…", page: "Guardando na Leitura diária…" };
+const SAVED_TITLE: Record<ContentKind, string> = { transcription: "Vídeo na fila de transcrição", page: "Guardada na Leitura diária" };
 
 /** O emblema vale só para a aba e some sozinho quando ela vai para outra página. */
 async function setBadge(tabId: number, state: keyof typeof BADGES, title: string): Promise<void> {
@@ -74,24 +83,38 @@ async function saveTab(tab: chrome.tabs.Tab): Promise<void> {
     return;
   }
 
-  await setBadge(tabId, "busy", "Guardando na Leitura diária…");
-  let page: CapturedPage;
-  try {
-    page = await capture(tabId);
-  } catch {
-    await setBadge(tabId, "error", "O Chrome não deixa extensões lerem esta página.");
-    return;
-  }
+  // O endereço da aba é lido uma vez: ele decide o que o clique guarda, o texto do emblema e o aviso de falha.
+  const video = tab.url ? youtubeLinkOf(tab.url) : null;
+  const content: ContentKind = video ? "transcription" : "page";
+  await setBadge(tabId, "busy", BUSY_TITLE[content]);
+  let captureFailed = false;
+  const read = async () => {
+    try {
+      return await capture(tabId);
+    } catch (error) {
+      captureFailed = true;
+      throw error;
+    }
+  };
 
   try {
-    const result = await saveReading(baseUrl, page);
-    await setBadge(tabId, "ok", "Guardada na Leitura diária");
-    await toast(tabId, savedToast(page, result, await taskUrl(baseUrl, result.taskId)));
+    const saved = await saveFromTab(baseUrl, video, read);
+    await setBadge(tabId, "ok", SAVED_TITLE[saved.kind]);
+    await toast(tabId, await savedMessage(baseUrl, saved));
   } catch (error) {
-    const message = failureToast(error, baseUrl);
+    if (captureFailed) {
+      await setBadge(tabId, "error", "O Chrome não deixa extensões lerem esta página.");
+      return;
+    }
+    const message = failureToast(error, baseUrl, content);
     await setBadge(tabId, "error", message.title);
     await toast(tabId, message);
   }
+}
+
+async function savedMessage(baseUrl: string, saved: Saved): Promise<Toast> {
+  const link = await taskUrl(baseUrl, saved.result.taskId);
+  return saved.kind === "transcription" ? transcriptionToast(saved.result, link) : savedToast(saved.page, saved.result, link);
 }
 
 /**

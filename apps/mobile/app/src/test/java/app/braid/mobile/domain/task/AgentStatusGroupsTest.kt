@@ -25,11 +25,18 @@ class AgentStatusGroupsTest {
     @Test
     fun `the groups hold the spec's values`() {
         assertEquals(
-            setOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running, TaskStatus.Waiting),
+            setOf(
+                TaskStatus.Preparing,
+                TaskStatus.Queued,
+                TaskStatus.Starting,
+                TaskStatus.Running,
+                TaskStatus.Waiting,
+                TaskStatus.AwaitingTranscription,
+            ),
             OPEN_AGENT_STATUSES,
         )
         assertEquals(
-            setOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running),
+            setOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running, TaskStatus.AwaitingTranscription),
             IN_PROGRESS_AGENT_STATUSES,
         )
         assertEquals(
@@ -44,7 +51,7 @@ class AgentStatusGroupsTest {
         val person = listOf("todo", "toDefine", "doing", "inHold", "done", "cancel", "missed")
         val agent = OPEN_AGENT_STATUSES + FINAL_AGENT_STATUSES
 
-        assertEquals(10, agent.size)
+        assertEquals(11, agent.size)
         assertEquals(emptyList<String>(), agent.map { it.code }.filter { it in person })
     }
 
@@ -52,7 +59,10 @@ class AgentStatusGroupsTest {
     fun `each status answers the four questions`() {
         val moving = Groups(open = true, inProgress = true, final = false, success = false)
         val ended = Groups(open = false, inProgress = false, final = true, success = false)
-        for (status in listOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running)) {
+        for (
+        status in
+        listOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running, TaskStatus.AwaitingTranscription)
+        ) {
             assertEquals("$status", moving, groupsOf(status))
         }
         assertEquals(Groups(open = true, inProgress = false, final = false, success = false), groupsOf(TaskStatus.Waiting))

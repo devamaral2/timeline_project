@@ -1,13 +1,17 @@
 import { expect, test } from "vitest";
+import { InMemoryTaskRelations } from "../../api-core/tasks/testing/in-memory-task-relations";
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
 import { createTasksKit, type TasksKitOptions } from "../../api-core/tasks/testing/in-memory-tasks-kit";
 import { Artifact, Task, TaskValidationError } from "../../domain";
-import { composeReadingArticle, isDailyReadingName, readingSourceOf, readingSourceUrl } from "./daily-reading-article";
+import { composeReadingArticle, isDailyReadingName, readingSourceOf, readingSourceUrl } from "../../api-core/tasks/daily-reading-article";
+import { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
 import { SaveDailyReadingUseCase } from "./save-daily-reading.usecase";
 
 const actor = { userId: "auth-user-1" };
 // 17/08/2026, 12:00 em Sao Paulo.
 const now = new Date("2026-08-17T15:00:00.000Z");
+// 17/08/2026, 18:00 em Sao Paulo.
+const sixPm = new Date("2026-08-17T21:00:00.000Z");
 
 const page = {
   url: "https://jornal.example/economia/juros?ref=home#comentarios",
@@ -19,9 +23,8 @@ const page = {
 
 function setup(options: TasksKitOptions = {}, materialized: Date[] = []) {
   const kit = createTasksKit({ ...options, clock: () => now });
-  const useCase = new SaveDailyReadingUseCase(
+  const gate = new DailyReadingGate(
     new InMemoryTaskCardQuery(kit.database),
-    kit.taskRepository,
     kit.artifactRepository,
     kit.artifactBuilder,
     kit.createTask,
@@ -29,16 +32,21 @@ function setup(options: TasksKitOptions = {}, materialized: Date[] = []) {
     { materialize: async (_userId, until) => void materialized.push(until as Date) },
     () => now,
   );
-  return { ...kit, useCase, materialized };
+  const relations = new InMemoryTaskRelations();
+  const useCase = new SaveDailyReadingUseCase(gate, relations);
+  return { ...kit, useCase, materialized, relations };
 }
 
 function task(id: string, startedAt: string, overrides: Partial<Parameters<typeof Task.create>[0]> = {}): Task {
   return Task.create({ id, userId: actor.userId, name: "Leitura diária", startedAt: new Date(startedAt), ...overrides });
 }
 
-const bodyOf = (artifact: Artifact | null) => (artifact?.data as { body: string }).body;
+/** As tarefas que não são o registro `save_content` de uma gravação. */
+const withoutSaves = (tasks: Task[]) => tasks.filter((candidate) => candidate.kind !== "save_content");
 
-test("sem a leitura do dia, a tarefa nasce agora com a página como artefato, numa gravação só", async () => {
+const bodyOf = (artifact: Artifact | null) => (artifact?.data as { body?: string } | undefined)?.body;
+
+test("sem a leitura do dia, a tarefa nasce a fazer às 18h com a página como artefato, numa gravação só", async () => {
   const { useCase, taskRepository, artifactRepository, batchWriter } = setup();
 
   const result = await useCase.execute(page, actor);
@@ -50,10 +58,11 @@ test("sem a leitura do dia, a tarefa nasce agora com a página como artefato, nu
     userId: actor.userId,
     actor: "human",
     name: "Leitura diária",
-    startedAt: now,
+    status: "todo",
+    startedAt: sixPm,
     artifactLinks: [{ artifactId: result.artifactId, relation: "creates", fromRecurrence: false }],
   });
-  expect(created?.status).toBeUndefined();
+  expect(created?.finishedAt).toBeUndefined();
   const artifact = await artifactRepository.findById(result.artifactId);
   expect(artifact).toMatchObject({ userId: actor.userId, type: "text", name: "Juros caem pela terceira vez" });
   expect(bodyOf(artifact)).toBe(
@@ -61,7 +70,7 @@ test("sem a leitura do dia, a tarefa nasce agora com a página como artefato, nu
   );
 });
 
-test("com a leitura do dia, a página entra nela e nenhuma tarefa nasce", async () => {
+test("com a leitura do dia, a página entra nela e nenhuma leitura nasce", async () => {
   const other = { artifactId: "pauta", relation: "uses" as const, fromRecurrence: false };
   const { useCase, database, taskRepository } = setup({
     tasks: [task("hoje", "2026-08-17T11:00:00.000Z", { artifactLinks: [other] })],
@@ -71,11 +80,38 @@ test("com a leitura do dia, a página entra nela e nenhuma tarefa nasce", async 
   const result = await useCase.execute(page, actor);
 
   expect(result).toEqual({ taskId: "hoje", artifactId: result.artifactId, taskCreated: false, artifactCreated: true });
-  expect(database.tasks).toHaveLength(1);
+  expect(withoutSaves(database.tasks)).toHaveLength(1);
   expect(await taskRepository.findById("hoje")).toMatchObject({
     artifactLinks: [other, { artifactId: result.artifactId, relation: "creates", fromRecurrence: false }],
     revision: 2,
   });
+});
+
+test("uma página nova numa leitura concluída a devolve para a fazer, sem mexer no horário", async () => {
+  const { useCase, taskRepository } = setup({
+    tasks: [task("hoje", "2026-08-17T11:00:00.000Z", { status: "done", finishedAt: new Date("2026-08-17T12:00:00.000Z") })],
+  });
+
+  await useCase.execute(page, actor);
+
+  const revised = await taskRepository.findById("hoje");
+  expect(revised).toMatchObject({ status: "todo", startedAt: new Date("2026-08-17T11:00:00.000Z"), revision: 2 });
+  expect(revised?.finishedAt).toBeUndefined();
+});
+
+test("atualizar uma página já guardada também devolve a leitura para a fazer", async () => {
+  const { useCase, taskRepository, batchWriter } = setup();
+  const first = await useCase.execute(page, actor);
+  const created = await taskRepository.findById(first.taskId);
+  if (!created) throw new Error("a leitura do dia não foi criada");
+  await taskRepository.save(created.revise({ status: "done", finishedAt: now }, now));
+
+  await useCase.execute({ ...page, markdown: "Texto atualizado." }, actor);
+
+  const revised = await taskRepository.findById(first.taskId);
+  expect(revised).toMatchObject({ status: "todo", startedAt: sixPm });
+  expect(revised?.finishedAt).toBeUndefined();
+  expect(batchWriter.commits.at(-1)?.tasks.filter((change) => change.op === "update")).toHaveLength(1);
 });
 
 test("o nome da tarefa é reconhecido sem acento nem caixa, e as séries do dia são geradas antes da busca", async () => {
@@ -102,7 +138,7 @@ test("a leitura de outro dia, de outra pessoa, de agente ou com outro nome não 
   const result = await useCase.execute(page, actor);
 
   expect(result.taskCreated).toBe(true);
-  expect(database.tasks).toHaveLength(6);
+  expect(withoutSaves(database.tasks)).toHaveLength(6);
 });
 
 test("com duas leituras no dia, a página vai para a que começa mais cedo", async () => {
@@ -121,7 +157,7 @@ test("a mesma página guardada de novo no dia atualiza o artefato dela, mesmo co
   );
 
   expect(second).toEqual({ taskId: first.taskId, artifactId: first.artifactId, taskCreated: false, artifactCreated: false });
-  expect(database.tasks).toHaveLength(1);
+  expect(withoutSaves(database.tasks)).toHaveLength(1);
   expect(database.artifacts).toHaveLength(1);
   const artifact = await artifactRepository.findById(first.artifactId);
   expect(artifact).toMatchObject({ name: "Juros caem de novo", revision: 2 });
@@ -150,9 +186,58 @@ test("duas páginas guardadas ao mesmo tempo caem na mesma tarefa", async () => 
     useCase.execute({ ...page, url: "https://outro.example/a" }, actor),
   ]);
 
-  expect(database.tasks).toHaveLength(1);
+  expect(withoutSaves(database.tasks)).toHaveLength(1);
   expect(second.taskId).toBe(first.taskId);
   expect([first.taskCreated, second.taskCreated]).toEqual([true, false]);
+});
+
+test("guardar uma página registra a tarefa de agente save_content, já concluída, que cria o artefato e gera a leitura nova", async () => {
+  const { useCase, taskRepository, relations, batchWriter, database } = setup();
+
+  const result = await useCase.execute(page, actor);
+
+  // A leitura, o artefato e o registro do que a extensão fez: uma gravação só.
+  expect(batchWriter.commits).toHaveLength(1);
+  expect(database.tasks).toHaveLength(2);
+  const saved = database.tasks.find((candidate) => candidate.kind === "save_content");
+  expect(saved).toMatchObject({
+    userId: actor.userId,
+    actor: "agent",
+    kind: "save_content",
+    status: "completed",
+    startedAt: now,
+    finishedAt: now,
+    data: { url: "https://jornal.example/economia/juros?ref=home" },
+    artifactLinks: [{ artifactId: result.artifactId, relation: "creates", fromRecurrence: false }],
+  });
+  expect(relations.recorded).toEqual([{ fromTaskId: saved?.id, toTaskId: result.taskId, relation: "generates" }]);
+  // A leitura continua sem nenhuma relação de agente nos seus artefatos.
+  expect((await taskRepository.findById(result.taskId))?.actor).toBe("human");
+});
+
+test("numa leitura que já existe, save_content a altera, e o artefato novo é criado por ele", async () => {
+  const { useCase, database, relations } = setup({ tasks: [task("hoje", "2026-08-17T11:00:00.000Z")] });
+
+  const result = await useCase.execute(page, actor);
+
+  const saved = database.tasks.find((candidate) => candidate.kind === "save_content");
+  expect(saved?.artifactLinks).toEqual([{ artifactId: result.artifactId, relation: "creates", fromRecurrence: false }]);
+  expect(relations.recorded).toEqual([{ fromTaskId: saved?.id, toTaskId: "hoje", relation: "updates" }]);
+});
+
+test("guardar de novo a mesma página registra outro save_content, que atualiza o artefato e a leitura", async () => {
+  const { useCase, database, relations } = setup();
+  const first = await useCase.execute(page, actor);
+
+  const second = await useCase.execute({ ...page, markdown: "Texto atualizado." }, actor);
+
+  const saves = database.tasks.filter((candidate) => candidate.kind === "save_content");
+  expect(saves).toHaveLength(2);
+  expect(saves[1]?.artifactLinks).toEqual([{ artifactId: second.artifactId, relation: "updates", fromRecurrence: false }]);
+  expect(second.artifactId).toBe(first.artifactId);
+  expect(relations.recorded.at(-1)).toEqual({ fromTaskId: saves[1]?.id, toTaskId: first.taskId, relation: "updates" });
+  // Os save_content ficam fora da leitura: uma leitura só.
+  expect(database.tasks.filter((candidate) => candidate.actor === "human")).toHaveLength(1);
 });
 
 test("uma falha não trava as próximas páginas da pessoa", async () => {

@@ -36,6 +36,7 @@ import { taskEditFixtures } from "./fixtures/task-edit";
 import { taskHierarchyFixtures } from "./fixtures/task-hierarchy";
 import { themeFixtures } from "./fixtures/theme";
 import { timelineFixtures } from "./fixtures/timeline";
+import { transcriptionFixtures } from "./fixtures/transcription";
 import { youtubeFixtures } from "./fixtures/youtube";
 
 /** O zod que o `packages/contracts` resolve: o raiz do repositório não o tem. */
@@ -47,7 +48,7 @@ export const fixtureDirectory = fileURLToPath(new URL("../../apps/mobile/app/src
 
 export function collectFixtures(): Record<string, unknown> {
   const context: FixtureContext = { z: requireFromContracts("zod").z };
-  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...taskDrawersFixtures(), ...executorFixtures(), ...executionFixtures(), ...taskDetailFixtures(), ...taskEditFixtures(), ...taskHierarchyFixtures(), ...taskArtifactsFixtures(), ...recurrenceFixtures(), ...agendaFixtures(), ...documentsFixtures(), ...documentEditFixtures(), ...entityEditFixtures(), ...agentRequestFixtures(), ...agentFileFixtures(context), ...notificationsFixtures(), ...projectsFixtures(), ...chatFixtures(), ...modelFavoritesFixtures(), ...speechFixtures(), ...themeFixtures(), ...youtubeFixtures() };
+  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...taskDrawersFixtures(), ...executorFixtures(), ...executionFixtures(), ...taskDetailFixtures(), ...taskEditFixtures(), ...taskHierarchyFixtures(), ...taskArtifactsFixtures(), ...recurrenceFixtures(), ...agendaFixtures(), ...documentsFixtures(), ...documentEditFixtures(), ...entityEditFixtures(), ...agentRequestFixtures(), ...agentFileFixtures(context), ...notificationsFixtures(), ...projectsFixtures(), ...chatFixtures(), ...modelFavoritesFixtures(), ...speechFixtures(), ...themeFixtures(), ...youtubeFixtures(), ...transcriptionFixtures() };
 }
 
 export function generateFixtures(): string[] {

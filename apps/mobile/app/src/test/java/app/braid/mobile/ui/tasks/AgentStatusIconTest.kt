@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.abs
 
-/** Os dez ícones quadrados de status de agente: desenho, cor e movimento, conferidos contra a tabela do web (ticket 63). */
+/** Os onze ícones quadrados de status de agente: desenho, cor e movimento, conferidos contra a tabela do web (ticket 63). */
 class AgentStatusIconTest {
     private val agentStatuses =
         listOf(
@@ -16,6 +16,7 @@ class AgentStatusIconTest {
             TaskStatus.Starting,
             TaskStatus.Running,
             TaskStatus.Waiting,
+            TaskStatus.AwaitingTranscription,
             TaskStatus.Completed,
             TaskStatus.Interrupted,
             TaskStatus.Failed,
@@ -30,6 +31,7 @@ class AgentStatusIconTest {
                 TaskStatus.Preparing to AgentIconTone.Muted,
                 TaskStatus.Queued to AgentIconTone.Muted,
                 TaskStatus.Cancelled to AgentIconTone.Muted,
+                TaskStatus.AwaitingTranscription to AgentIconTone.Muted,
                 TaskStatus.RolledBack to AgentIconTone.Muted,
                 TaskStatus.Starting to AgentIconTone.Accent,
                 TaskStatus.Running to AgentIconTone.Accent,
@@ -61,8 +63,16 @@ class AgentStatusIconTest {
     }
 
     @Test
-    fun `the ten drawings are all different`() {
-        assertEquals(10, agentStatuses.map { agentStatusIcon(it) }.toSet().size)
+    fun `the eleven drawings are all different`() {
+        assertEquals(11, agentStatuses.map { agentStatusIcon(it) }.toSet().size)
+    }
+
+    @Test
+    fun `awaiting transcription is the plain square with a hollow ring of radius 3 at the centre`() {
+        val icon = agentStatusIcon(TaskStatus.AwaitingTranscription)
+
+        assertEquals(AgentIconFrame.Plain, icon.frame)
+        assertEquals(listOf<AgentIconShape>(AgentIconShape.Hollow(10f, 10f, 3f)), icon.inside)
     }
 
     @Test
@@ -111,6 +121,7 @@ class AgentStatusIconTest {
                 "Iniciando",
                 "Trabalhando",
                 "Esperando",
+                "Esperando transcrição",
                 "Concluído",
                 "Interrompido",
                 "Falhou",

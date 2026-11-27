@@ -10,7 +10,7 @@ import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
 /** De quanto em quanto tempo uma tela se relê enquanto há pedido de agente em aberto (detalhe e listas). */
 export const AGENT_REQUEST_POLL_MS = 3000;
 
-/** Pedido em fila, executando ou aguardando o usuário: a tela continua relendo. */
+/** Pedido em fila, executando, aguardando o usuário ou a transcrição: a tela continua relendo. */
 export function isOpenRequest(status: AgentTaskStatus): boolean {
   return isOpenAgentStatus(status);
 }

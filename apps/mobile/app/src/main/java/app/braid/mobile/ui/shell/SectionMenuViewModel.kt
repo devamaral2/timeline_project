@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** A escolha de executor do menu: uma só para Agenda, Tarefas e Documentos, guardada no aparelho. */
+/** A escolha de executor do menu: uma só para Agenda, Tarefas e Artefatos, guardada no aparelho. */
 @HiltViewModel
 class SectionMenuViewModel
     @Inject

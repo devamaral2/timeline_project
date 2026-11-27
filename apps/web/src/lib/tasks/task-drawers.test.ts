@@ -52,7 +52,7 @@ test.each([
   expect(drawerOf(card({ id: "t", status, longRunning: true }))).toBe(drawer);
 });
 
-test.each(["preparing", "queued", "starting", "running"])("pedido de agente %s fica fora da lista, na gaveta de execução", (status) => {
+test.each(["preparing", "queued", "starting", "running", "awaiting_transcription"])("pedido de agente %s fica fora da lista, na gaveta de execução", (status) => {
   expect(drawerOf(agent("a", status))).toBe("execution");
 });
 
@@ -67,12 +67,21 @@ test.each(["completed", "interrupted", "failed", "cancelled", "rolled_back"])("p
   expect(drawerOf(agent("a", status))).toBe("ended");
 });
 
-test.each(["preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back"])(
+test.each(["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back"])(
   "a execução agendada cai em Contínuas com o status %s",
   (status) => {
     expect(drawerOf(card({ id: "c", actor: "agent", kind: "cron", status }))).toBe("continuous");
   },
 );
+
+test.each(["save_content", "save_content_with_transcription"])("o conteúdo guardado (%s) não tem situação: terminado cai em Finalizadas, em andamento na execução", (kind) => {
+  const saved = (status: string) => card({ id: "g", actor: "agent", kind, status });
+  expect(drawerOf(saved("awaiting_transcription"))).toBe("execution");
+  expect(drawerOf(saved("running"))).toBe("execution");
+  expect(drawerOf(saved("completed"))).toBe("ended");
+  expect(drawerOf(saved("failed"))).toBe("ended");
+  expect(drawerOf(saved("cancelled"))).toBe("ended");
+});
 
 test("tarefa sem status (de referência) não tem gaveta", () => {
   expect(drawerOf(card({ id: "ref", status: undefined }))).toBeNull();

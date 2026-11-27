@@ -18,7 +18,7 @@ interface TaskDetailRepository {
     )
 
     /**
-     * Grava a lista inteira de documentos da tarefa, na ordem dada, com a revisão que a tela leu (o "+" do detalhe grava
+     * Grava a lista inteira de artefatos da tarefa, na ordem dada, com a revisão que a tela leu (o "+" do detalhe grava
      * na hora). Revisão velha (409) sobe como [StaleRevisionException].
      */
     suspend fun changeArtifacts(

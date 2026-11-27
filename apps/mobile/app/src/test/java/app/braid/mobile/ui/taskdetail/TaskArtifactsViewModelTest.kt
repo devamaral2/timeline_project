@@ -5,6 +5,8 @@ import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
 import app.braid.mobile.data.tasks.DefaultTaskDetailRepository
 import app.braid.mobile.data.tasks.TaskDetailApi
+import app.braid.mobile.data.transcription.DefaultTranscriptionRepository
+import app.braid.mobile.data.transcription.TranscriptionApi
 import app.braid.mobile.domain.task.ArtifactRelation
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.TestBackend
@@ -42,7 +44,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
-/** Os documentos no detalhe da tarefa pela rede: a leitura, o seletor por tipo e o "+" que grava na hora. */
+/** Os artefatos no detalhe da tarefa pela rede: a leitura, o seletor por tipo e o "+" que grava na hora. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TaskArtifactsViewModelTest {
     private val now = Instant.parse("2026-09-14T15:30:45.123Z")
@@ -74,6 +76,7 @@ class TaskArtifactsViewModelTest {
             DefaultTaskDetailRepository(graph.apis.create(TaskDetailApi::class.java)),
             AppClock { now },
             DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
+            DefaultTranscriptionRepository(graph.apis.create(TranscriptionApi::class.java)),
         ).also(created::add)
 
     private suspend fun TaskDetailViewModel.content(): TaskDetailUiState.Content =
@@ -122,8 +125,8 @@ class TaskArtifactsViewModelTest {
             viewModel.openArtifactPicker()
             val picker = viewModel.picker()
 
-            assertEquals("Documentos", picker.source.title)
-            assertEquals("Buscar documento para ligar", picker.source.searchLabel)
+            assertEquals("Artefatos", picker.source.title)
+            assertEquals("Buscar artefato para ligar", picker.source.searchLabel)
             assertEquals(listOf("doc-other", "doc-training"), picker.ids())
             val request = backend.requestsTo("GET", "/api/artifacts").single()
             assertEquals("50", request.requestUrl?.queryParameter("limit"))
@@ -167,7 +170,7 @@ class TaskArtifactsViewModelTest {
             viewModel.openArtifactPicker()
 
             val failed = viewModel.artifactPicker.state.first { it?.search?.status == PickerSearchStatus.Failed }
-            assertEquals("Não foi possível buscar documentos. Tente de novo.", failed?.source?.failedMessage)
+            assertEquals("Não foi possível buscar artefatos. Tente de novo.", failed?.source?.failedMessage)
         }
 
     @Test
@@ -347,7 +350,7 @@ class TaskArtifactsViewModelTest {
                     it is TaskDetailUiState.Content && it.notice != null && !it.saving
                 } as TaskDetailUiState.Content
 
-            assertEquals("Não foi possível ligar o documento. Tente novamente.", failed.notice)
+            assertEquals("Não foi possível ligar o artefato. Tente novamente.", failed.notice)
             assertFalse(failed.saving)
         }
 

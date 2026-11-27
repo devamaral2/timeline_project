@@ -1,5 +1,5 @@
 /**
- * A que projeto uma tarefa pertence (ADR 0021). Toda tarefa, de pessoa ou de agente, tem um; sem escolha, ela fica
+ * A que projeto uma tarefa pertence (ADR 0022). Toda tarefa, de pessoa ou de agente, tem um; sem escolha, ela fica
  * no `personal`, o projeto padrao de cada usuario.
  */
 export interface ProjectRef {

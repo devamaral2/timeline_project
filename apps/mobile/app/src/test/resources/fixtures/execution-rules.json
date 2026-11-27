@@ -29,6 +29,13 @@
     "empty": {
       "input": "execution-list-empty",
       "runs": []
+    },
+    "saved": {
+      "input": "execution-list-saved",
+      "runs": [
+        "page-running",
+        "video-waiting"
+      ]
     }
   },
   "shown": [

@@ -115,7 +115,7 @@ export function NotesScreen({ userId }: { userId: string }) {
   usePublishSectionMenu("notes", {
     count: shown?.length,
     lists: [],
-    search: hasArtifacts ? { label: "Buscar nos documentos", value: query, onChange: setQuery } : undefined,
+    search: hasArtifacts ? { label: "Buscar nos artefatos", value: query, onChange: setQuery } : undefined,
     filtered: activeFilters > 0,
     onClear: clearFilters,
   });
@@ -126,8 +126,8 @@ export function NotesScreen({ userId }: { userId: string }) {
       <input
         type="search"
         className={styles.search}
-        aria-label="Buscar documentos"
-        placeholder="Buscar nos documentos"
+        aria-label="Buscar artefatos"
+        placeholder="Buscar nos artefatos"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
@@ -182,31 +182,31 @@ export function NotesScreen({ userId }: { userId: string }) {
 
   return (
     <main id="conteudo" className={page.frame}>
-      <section className={`${page.lead} ${styles.lead}`} aria-label="Resumo dos documentos">
+      <section className={`${page.lead} ${styles.lead}`} aria-label="Resumo dos artefatos">
         <div className={styles.headRow}>
-          <h1 className={page.eyebrow}>{shown ? artifactCountLabel(shown.length) : "Documentos"}</h1>
+          <h1 className={page.eyebrow}>{shown ? artifactCountLabel(shown.length) : "Artefatos"}</h1>
         </div>
         {hasArtifacts ? <div className={styles.leadFilters}>{filters}</div> : null}
       </section>
 
-      <section className={`${page.body} ${styles.body}`} aria-label="Lista de documentos">
+      <section className={`${page.body} ${styles.body}`} aria-label="Lista de artefatos">
         {error ? (
-          <p role="alert" className={styles.message}>Não foi possível carregar os documentos.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
+          <p role="alert" className={styles.message}>Não foi possível carregar os artefatos.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
         ) : !shown ? (
-          <ListSkeleton label="Carregando documentos…" />
+          <ListSkeleton label="Carregando artefatos…" />
         ) : shown.length === 0 ? (
           activeFilters > 0 || (artifacts?.length ?? 0) > 0 ? (
             <div className={styles.empty}>
               <FileText aria-hidden />
-              <h2 className={styles.emptyTitle}>Nenhum documento encontrado</h2>
+              <h2 className={styles.emptyTitle}>Nenhum artefato encontrado</h2>
               <p className={styles.emptyText}>Nada combina com os filtros escolhidos.</p>
               <button type="button" className={styles.emptyAction} onClick={clearFilters}>Limpar filtros</button>
             </div>
           ) : (
             <div className={styles.empty}>
               <FileText aria-hidden />
-              <h2 className={styles.emptyTitle}>Nenhum documento ainda</h2>
-              <p className={styles.emptyText}>Os documentos aparecem aqui assim que existirem.</p>
+              <h2 className={styles.emptyTitle}>Nenhum artefato ainda</h2>
+              <p className={styles.emptyText}>Os artefatos aparecem aqui assim que existirem.</p>
             </div>
           )
         ) : (

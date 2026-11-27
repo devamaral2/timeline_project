@@ -86,11 +86,11 @@ class DocumentsViewModelTest {
             val viewModel = newViewModel()
 
             assertNull(viewModel.state.value.artifacts)
-            assertEquals("Documentos", viewModel.state.value.caption)
+            assertEquals("Artefatos", viewModel.state.value.caption)
             val state = viewModel.loaded()
 
             assertEquals(ArtifactType.entries.toList(), state.shown!!.map { it.type })
-            assertEquals("${ArtifactType.entries.size} documentos", state.caption)
+            assertEquals("${ArtifactType.entries.size} artefatos", state.caption)
             assertTrue(state.hasArtifacts)
             assertFalse(state.failed)
             assertNull(
@@ -115,7 +115,7 @@ class DocumentsViewModelTest {
                 viewModel.state.value.shown!!
                     .map { it.type },
             )
-            assertEquals("5 documentos", viewModel.state.value.caption)
+            assertEquals("5 artefatos", viewModel.state.value.caption)
 
             chooseMode(viewModel, ViewMode.Agent)
             assertEquals(
@@ -170,7 +170,7 @@ class DocumentsViewModelTest {
                     .queryParameter("q"),
             )
             assertTrue(state.filtered)
-            assertEquals("1 documento", state.caption)
+            assertEquals("1 artefato", state.caption)
             // As opções não somem quando a busca estreita o resultado.
             assertTrue(state.hasArtifacts)
         }
@@ -218,7 +218,7 @@ class DocumentsViewModelTest {
 
             val empty = viewModel.state.first { it.shown?.isEmpty() == true }
             assertEquals(EmptyKind.NothingFound, empty.empty)
-            assertEquals("Nenhum documento", empty.caption)
+            assertEquals("Nenhum artefato", empty.caption)
             assertTrue(empty.hasArtifacts)
 
             viewModel.clearFilters()
@@ -259,7 +259,7 @@ class DocumentsViewModelTest {
             chooseMode(viewModel, ViewMode.Agent)
 
             assertEquals(EmptyKind.NothingFound, viewModel.state.value.empty)
-            assertEquals("Nenhum documento", viewModel.state.value.caption)
+            assertEquals("Nenhum artefato", viewModel.state.value.caption)
         }
 
     @Test

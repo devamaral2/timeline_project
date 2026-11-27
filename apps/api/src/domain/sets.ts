@@ -9,7 +9,10 @@ export const ACTORS = ["human", "agent"] as const;
 
 export const HUMAN_KINDS = ["common", "meal", "sleep", "training"] as const;
 export const AGENT_KINDS = [
+  // So o pedido do chat e da voz; a pagina guardada e o video a transcrever tem tipo proprio.
   "request",
+  "save_content",
+  "save_content_with_transcription",
   "search_request",
   "build_request",
   "inquiry_request",
@@ -18,6 +21,10 @@ export const AGENT_KINDS = [
   "step",
 ] as const;
 export const TASK_KINDS = [...HUMAN_KINDS, ...AGENT_KINDS] as const;
+/** Tarefas de agente que a agenda nunca mostra (ADR 0021); a lista de pedidos mostra as duas de conteudo, mas nao o passo. */
+export const OFF_AGENDA_KINDS = ["step", "save_content", "save_content_with_transcription"] as const satisfies readonly (typeof AGENT_KINDS)[number][];
+/** Os tipos que a agenda aceita como filtro. */
+export const AGENDA_KINDS = TASK_KINDS.filter((kind) => !(OFF_AGENDA_KINDS as readonly string[]).includes(kind));
 
 export const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
 export const AGENT_STATUSES = [
@@ -26,6 +33,7 @@ export const AGENT_STATUSES = [
   "starting",
   "running",
   "waiting",
+  "awaiting_transcription",
   "completed",
   "interrupted",
   "failed",

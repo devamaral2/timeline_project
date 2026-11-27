@@ -21,7 +21,7 @@ enum class EditEntityType(
 }
 
 /**
- * O tipo que a barra manda para um documento aberto; `null` quando ela não se mostra: documento global (catálogo, sem
+ * O tipo que a barra manda para um artefato aberto; `null` quando ela não se mostra: artefato global (catálogo, sem
  * edição pelo app), roteador (o JEV o gerencia) e exercício (só existe no catálogo global).
  */
 fun editEntityTypeOfArtifact(

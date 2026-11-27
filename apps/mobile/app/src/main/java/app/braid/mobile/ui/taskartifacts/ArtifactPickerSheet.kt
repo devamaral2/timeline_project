@@ -16,11 +16,11 @@ import app.braid.mobile.domain.artifact.FoodData
 import app.braid.mobile.ui.picker.EntityPickerSheet
 
 const val GLOBAL_CATALOG_LABEL = "catálogo global"
-const val OWN_DOCUMENT_LABEL = "seu documento"
+const val OWN_DOCUMENT_LABEL = "seu artefato"
 
 /**
- * A folha de seleção de documentos da tarefa, com o título e os textos da fonte do tipo da tarefa (alimentos, exercícios
- * ou os documentos do usuário). Cada escolha mostra o nome, o tipo, de quem é e, no alimento, as calorias.
+ * A folha de seleção de artefatos da tarefa, com o título e os textos da fonte do tipo da tarefa (alimentos, exercícios
+ * ou os artefatos do usuário). Cada escolha mostra o nome, o tipo, de quem é e, no alimento, as calorias.
  */
 @Composable
 fun ArtifactPickerSheet(

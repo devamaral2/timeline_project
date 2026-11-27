@@ -14,7 +14,7 @@ function BrandLogo() {
   return <span className={styles.wordmark}>Agente pessoal</span>;
 }
 
-/** As três abas (Agenda, Tarefas e Documentos) são as telas que têm a barra inferior; o detalhe, a edição e a criação não. */
+/** As três abas (Agenda, Tarefas e Artefatos) são as telas que têm a barra inferior; o detalhe, a edição e a criação não. */
 function isTabRoot(pathname: string | null, userId: string | undefined): boolean {
   if (!userId || !pathname) return false;
   const path = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
