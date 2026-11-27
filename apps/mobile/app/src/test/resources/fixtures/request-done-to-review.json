@@ -1,0 +1,116 @@
+{
+  "id": "task-agent",
+  "kind": "search_request",
+  "route": "steps",
+  "status": "completed",
+  "title": "Buscar passagens",
+  "project": {
+    "id": "project-skills",
+    "name": "agent-skills",
+    "personal": false
+  },
+  "situation": "to_review",
+  "sessionId": "req-first",
+  "createdAt": "2026-09-14T14:48:00.000Z",
+  "updatedAt": "2026-09-14T14:58:00.000Z",
+  "text": "Buscar passagens para sexta",
+  "steps": [
+    {
+      "id": "s1",
+      "agent": "router",
+      "label": "Entender o pedido",
+      "status": "completed"
+    },
+    {
+      "id": "s2",
+      "agent": "search",
+      "label": "Buscar voos",
+      "status": "completed"
+    },
+    {
+      "id": "s3",
+      "agent": "writer",
+      "label": "Montar o resumo",
+      "status": "completed"
+    }
+  ],
+  "entities": [
+    {
+      "kind": "task",
+      "id": "task-1",
+      "name": "Reunião de planejamento",
+      "operation": "create",
+      "linkedTo": []
+    },
+    {
+      "kind": "artifact",
+      "id": "art-1",
+      "name": "Lista de voos",
+      "artifactType": "text",
+      "operation": "create",
+      "linkedTo": []
+    },
+    {
+      "kind": "artifact",
+      "id": "art-2",
+      "name": "Café da manhã",
+      "artifactType": "food",
+      "operation": "update",
+      "linkedTo": []
+    },
+    {
+      "kind": "artifact",
+      "id": "art-3",
+      "name": "Rascunho antigo",
+      "artifactType": "sleep",
+      "operation": "delete",
+      "linkedTo": []
+    },
+    {
+      "kind": "artifact",
+      "id": "art-4",
+      "name": "Nota solta",
+      "operation": "update",
+      "linkedTo": []
+    }
+  ],
+  "trace": {
+    "route": "steps",
+    "status": "done",
+    "fields": [],
+    "entries": [
+      {
+        "id": "e1",
+        "kind": "request",
+        "label": "Pedido",
+        "summary": "Buscar passagens para sexta",
+        "status": "done",
+        "startedAt": "2026-09-14T14:48:05.000Z"
+      },
+      {
+        "id": "e2",
+        "kind": "routing",
+        "label": "Escolheu os agentes",
+        "source": "router",
+        "status": "done",
+        "startedAt": "2026-09-14T14:48:09.000Z"
+      },
+      {
+        "id": "e3",
+        "kind": "tool",
+        "label": "Executou um comando",
+        "source": "search.flights",
+        "summary": "voos GRU-SDU sexta",
+        "status": "done"
+      },
+      {
+        "id": "e4",
+        "kind": "answer",
+        "label": "Resposta",
+        "summary": "Achei três voos.",
+        "status": "done",
+        "startedAt": "2026-09-14T14:57:50.000Z"
+      }
+    ]
+  }
+}

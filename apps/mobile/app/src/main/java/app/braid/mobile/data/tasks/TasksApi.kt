@@ -4,6 +4,7 @@ import kotlinx.serialization.json.JsonObject
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -35,4 +36,11 @@ interface TasksApi {
         @Path("id") id: String,
         @Body body: JsonObject,
     )
+
+    /** `PUT /api/tasks/{id}/situation` devolve o cartão atualizado; a última gravação vale, sem revisão. */
+    @PUT("api/tasks/{id}/situation")
+    suspend fun setSituation(
+        @Path("id") id: String,
+        @Body body: SetSituationBody,
+    ): TaskCardDto
 }

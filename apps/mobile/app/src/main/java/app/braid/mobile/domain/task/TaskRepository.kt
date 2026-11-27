@@ -36,6 +36,15 @@ interface TaskRepository {
         taskId: String,
         patch: StatusPatch,
     )
+
+    /**
+     * Grava a situação do pedido de agente que terminou (`PUT /api/tasks/{id}/situation`). Vale a última gravação, sem
+     * revisão; a tarefa que não aceita situação (409) e qualquer outra falha sobem como exceção.
+     */
+    suspend fun setSituation(
+        taskId: String,
+        situation: TaskSituation,
+    )
 }
 
 /** Outra mudança chegou antes: a revisão que a tela leu já não é a da tarefa. */

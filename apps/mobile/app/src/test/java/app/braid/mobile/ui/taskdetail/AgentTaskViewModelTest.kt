@@ -5,9 +5,12 @@ import app.braid.mobile.data.requests.DefaultAgentRequestRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
 import app.braid.mobile.data.tasks.DefaultTaskDetailRepository
+import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TaskDetailApi
+import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.request.PreviousRequest
 import app.braid.mobile.domain.request.RequestOperation
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.FakeMicrophone
@@ -34,6 +37,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.mockwebserver.MockResponse
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -43,6 +47,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
+import java.util.concurrent.CountDownLatch
 
 /** O detalhe da tarefa de agente pela rede: leitura do pedido, continuar, cancelar e a releitura a cada 3 s. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -84,6 +89,7 @@ class AgentTaskViewModelTest {
         return AgentTaskViewModel(
             SavedStateHandle(mapOf("taskId" to "task-agent")),
             DefaultTaskDetailRepository(graph.apis.create(TaskDetailApi::class.java)),
+            DefaultTaskRepository(graph.apis.create(TasksApi::class.java)),
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
             AppClock { now },
@@ -151,6 +157,89 @@ class AgentTaskViewModelTest {
             )
             assertEquals("Buscando voos…", content.statusLine)
             assertTrue(content.canCancel)
+        }
+
+    private val situationPath = "/api/tasks/task-agent/situation"
+
+    /** Segura a resposta do `PUT` até o teste soltar, para conferir o que a tela mostra enquanto grava. */
+    private fun holdSituationPut(response: MockResponse): CountDownLatch {
+        val release = CountDownLatch(1)
+        backend.route("PUT", situationPath) {
+            release.await()
+            response
+        }
+        return release
+    }
+
+    @Test
+    fun `the situation of a finished request comes from the request, and an open one has none`() =
+        runTest {
+            serveAgent("request-done-to-review")
+            assertEquals(TaskSituation.ToReview, newViewModel().settled().request.situation)
+
+            serveAgent()
+            assertNull(newViewModel().settled().request.situation)
+        }
+
+    @Test
+    fun `choosing a situation changes it at once and saves it with the PUT`() =
+        runTest {
+            serveAgent("request-done-to-review")
+            val release = holdSituationPut(fixture("task-situation-reviewed"))
+            val viewModel = newViewModel()
+            viewModel.settled()
+
+            viewModel.chooseSituation(TaskSituation.Reviewed)
+
+            assertEquals(TaskSituation.Reviewed, viewModel.content().request.situation)
+            release.countDown()
+            viewModel.state.first { it is AgentTaskUiState.Content && !it.savingSituation }
+            val body =
+                Json
+                    .parseToJsonElement(
+                        backend
+                            .requestsTo("PUT", situationPath)
+                            .single()
+                            .body
+                            .clone()
+                            .readUtf8(),
+                    ).jsonObject
+            assertEquals("reviewed", body.getValue("situation").jsonPrimitive.content)
+            assertEquals(TaskSituation.Reviewed, viewModel.content().request.situation)
+            assertNull(viewModel.content().situationError)
+        }
+
+    @Test
+    fun `with the API failing the situation goes back and the screen says so`() =
+        runTest {
+            serveAgent("request-done-to-review")
+            val release = holdSituationPut(status(500))
+            val viewModel = newViewModel()
+            viewModel.settled()
+
+            viewModel.chooseSituation(TaskSituation.Bookmarked)
+            assertEquals(TaskSituation.Bookmarked, viewModel.content().request.situation)
+            release.countDown()
+            val after = viewModel.state.first { it is AgentTaskUiState.Content && it.situationError != null } as AgentTaskUiState.Content
+
+            assertEquals(TaskSituation.ToReview, after.request.situation)
+            assertEquals(SITUATION_FAILED_TEXT, after.situationError)
+        }
+
+    @Test
+    fun `a request with no situation, or the one it already has, saves nothing`() =
+        runTest {
+            serveAgent()
+            val open = newViewModel()
+            open.settled()
+            open.chooseSituation(TaskSituation.Reviewed)
+
+            serveAgent("request-done-to-review")
+            val done = newViewModel()
+            done.settled()
+            done.chooseSituation(TaskSituation.ToReview)
+
+            assertEquals(0, backend.requests.count { it.method == "PUT" })
         }
 
     @Test

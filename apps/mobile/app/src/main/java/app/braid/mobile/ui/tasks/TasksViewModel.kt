@@ -14,6 +14,7 @@ import app.braid.mobile.domain.task.TaskGroup
 import app.braid.mobile.domain.task.TaskGroupKey
 import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.TaskRepository
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.groupTrackedTasks
 import app.braid.mobile.domain.task.hasOpenAgentTask
@@ -40,6 +41,7 @@ const val TASK_SEARCH_DEBOUNCE_MS = 250L
 
 const val STALE_TASK_LIST_NOTICE = "Esta tarefa mudou em outro lugar. Carregamos a lista atual; confira e tente de novo."
 const val FAILED_TASK_LIST_NOTICE = "Não foi possível trocar o status. Tente novamente."
+const val FAILED_SITUATION_NOTICE = "Não foi possível mudar a situação. Tente novamente."
 
 /**
  * [cards] é a última lista lida com os filtros de agora, e `null` até a primeira chegar. [facets] é a última lista lida
@@ -63,6 +65,8 @@ data class TasksUiState(
     val statusPicker: TaskCard? = null,
     val notice: String? = null,
     val saving: Boolean = false,
+    /** Quantas gravações de situação estão em curso: a mudança já está na tela e a API ainda não respondeu. */
+    val situationSaves: Int = 0,
     /** O instante da última leitura: os textos calculados da linha ("Hoje", "há 12 min") saem dele. */
     val now: Instant,
     /** De quem são as tarefas lidas: vem da escolha do menu, que vale para as três seções. */
@@ -78,6 +82,8 @@ data class TasksUiState(
 
     /** As linhas dos grupos que não vêm recolhidos: o número do topo e o do menu. */
     val openCount: Int get() = groups.filterNot { it.collapsedByDefault }.sumOf { it.cards.size }
+
+    val savingSituation: Boolean get() = situationSaves > 0
 
     val tags: List<String> get() = tagsByUse(facets.orEmpty())
 
@@ -209,6 +215,44 @@ class TasksViewModel
                     mutableState.update { it.copy(saving = false) }
                 }
             }
+        }
+
+        /**
+         * A situação do pedido de agente que terminou muda na hora, na lista e nas tags (as duas leituras), e é gravada pelo
+         * `PUT`; se a gravação falha, volta ao que era e avisa. Vale a última gravação, sem revisão: não há conflito a
+         * tratar. Só uma tarefa de agente que já tem situação a muda, e escolher a que ela tem não grava nada.
+         */
+        fun chooseSituation(
+            card: TaskCard,
+            situation: TaskSituation,
+        ) {
+            val before = card.situation ?: return
+            if (card.actor != TaskActor.Agent || situation == TaskSituation.Unknown || situation == before) return
+            mutableState.update { it.copy(notice = null, situationSaves = it.situationSaves + 1) }
+            showSituation(card.id, situation)
+            viewModelScope.launch {
+                try {
+                    tasks.setSituation(card.id, situation)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    // Só desfaz se a linha ainda mostra a escolha que falhou: uma escolha mais nova não é apagada por esta.
+                    showSituation(card.id, before, onlyIf = situation)
+                    mutableState.update { it.copy(notice = FAILED_SITUATION_NOTICE) }
+                } finally {
+                    mutableState.update { it.copy(situationSaves = it.situationSaves - 1) }
+                }
+            }
+        }
+
+        private fun showSituation(
+            taskId: String,
+            situation: TaskSituation,
+            onlyIf: TaskSituation? = null,
+        ) {
+            fun apply(list: List<TaskCard>?) =
+                list?.map { if (it.id == taskId && (onlyIf == null || it.situation == onlyIf)) it.copy(situation = situation) else it }
+            mutableState.update { it.copy(cards = apply(it.cards), facets = apply(it.facets)) }
         }
 
         /** A tela está à vista (resumida) ou não: a releitura das tarefas de agente só anda com ela à vista. */

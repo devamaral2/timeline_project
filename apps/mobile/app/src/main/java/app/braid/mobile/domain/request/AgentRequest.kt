@@ -3,6 +3,7 @@ package app.braid.mobile.domain.request
 import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.project.Project
 import app.braid.mobile.domain.task.TaskKind
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import java.time.Instant
 
@@ -170,6 +171,8 @@ data class AgentRequest(
     val model: ModelSelection? = null,
     /** O projeto do pedido e da tarefa dele; só leitura. */
     val project: Project = Project.Personal,
+    /** A situação do pedido que terminou, que o usuário muda; ausente enquanto o pedido está aberto. */
+    val situation: TaskSituation? = null,
 )
 
 /** O primeiro pedido da sessão, que a seção "Sessão" mostra e abre. */

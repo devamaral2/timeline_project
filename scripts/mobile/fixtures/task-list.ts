@@ -9,6 +9,7 @@ import { statusPatch } from "../../../apps/web/src/lib/tasks/task-read-model";
 import { cardIsOverdue, cardWhenLabel, recurrenceRuleLabel } from "../../../apps/web/src/lib/tasks/card-text";
 import { groupTrackedTasks, nestSubtasks, oneRowPerSeries, showsSeriesRule } from "../../../apps/web/src/lib/tasks/task-groups";
 import { PRIORITY_ORDER, tagsByUse, taskFilterCount, trackedFilters } from "../../../apps/web/src/lib/tasks/task-filters";
+import { TASK_SITUATIONS, situationNames } from "../../../apps/web/src/components/tasks/task-situation";
 import { NOW } from "./tasks";
 import { PERSONAL_PROJECT } from "./project";
 
@@ -69,6 +70,21 @@ const cards = [
   // Uma série encerrada na fila de cancelamento também vira uma linha só.
   card({ id: "series-c-1", name: "Pagar a luz", status: "cancel", startedAt: "2026-09-05T12:00:00.000Z", recurrence: occurrence("series-c", "2026-09-05", { frequency: "monthly", byMonthDay: 5, timeOfDay: "09:00" }) }),
   card({ id: "series-c-2", name: "Pagar a luz", status: "inHold", startedAt: "2026-10-05T12:00:00.000Z", recurrence: occurrence("series-c", "2026-10-05", { frequency: "monthly", byMonthDay: 5, timeOfDay: "09:00" }) }),
+];
+
+/**
+ * A lista com situação (ticket 58): um cartão de cada situação, e os que não têm situação (esperando você, execução agendada,
+ * em andamento, e o concluído de antes da situação existir). O servidor só manda a situação no pedido de agente que terminou.
+ */
+const situationCards = [
+  card({ id: "sit-person", name: "Tarefa minha", status: "todo", startedAt: "2026-09-14T12:00:00.000Z" }),
+  card({ id: "sit-review", name: "Resumo para revisar", actor: "agent", kind: "review_request", status: "completed", situation: "to_review", startedAt: "2026-09-14T11:00:00.000Z" }),
+  card({ id: "sit-reviewed", name: "Resumo revisado", actor: "agent", kind: "review_request", status: "completed", situation: "reviewed", startedAt: "2026-09-14T10:00:00.000Z" }),
+  card({ id: "sit-bookmarked", name: "Busca guardada", actor: "agent", kind: "search_request", status: "failed", situation: "bookmarked", startedAt: "2026-09-14T09:00:00.000Z" }),
+  card({ id: "sit-waiting", name: "Qual hotel prefere?", actor: "agent", kind: "inquiry_request", status: "waiting", startedAt: "2026-09-14T13:00:00.000Z" }),
+  card({ id: "sit-cron", name: "Backup da noite", actor: "agent", kind: "cron", status: "completed", startedAt: "2026-09-14T02:00:00.000Z" }),
+  card({ id: "sit-running", name: "Buscar passagens", actor: "agent", kind: "search_request", status: "running", startedAt: "2026-09-14T14:48:00.000Z" }),
+  card({ id: "sit-legacy", name: "Concluído de antes", actor: "agent", kind: "request", status: "completed", startedAt: "2026-09-01T10:00:00.000Z" }),
 ];
 
 const pick = (...ids: string[]) => cards.filter((item) => ids.includes(item.id));
@@ -163,6 +179,12 @@ export function taskListFixtures(): Record<string, unknown> {
     "task-list-after-done": reread({ "task-1": { status: "done", revision: 4 } }),
     /** A releitura de um conflito: outra pessoa já tinha cancelado a tarefa (revisão 9). */
     "task-list-after-conflict": reread({ "task-1": { status: "cancel", revision: 9 } }),
+    "task-list-situations": situationCards,
+    /** As três situações na ordem do menu e o nome de cada uma (`TASK_SITUATIONS` e `situationNames` do web). */
+    "task-situation-names": TASK_SITUATIONS.map((situation) => ({ situation, name: situationNames[situation] })),
+    /** A resposta do `PUT /api/tasks/:taskId/situation`: o cartão com a situação nova. */
+    "task-situation-reviewed": card({ ...situationCards[1], situation: "reviewed" }),
+    "task-situation-bookmarked": card({ ...situationCards[1], situation: "bookmarked" }),
     "task-list-subtasks": subtaskCards,
     /** A lista depois de "Comprar passagens" (revisão 3) passar a "done" (revisão 4), pelo próprio servidor. */
     "task-list-subtasks-after-done": subtaskCards.map((item) => (item.id === "sub-2" ? card({ ...item, status: "done", revision: 4 }) : item)),

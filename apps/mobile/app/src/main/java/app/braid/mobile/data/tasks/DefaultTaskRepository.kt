@@ -8,6 +8,7 @@ import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskChanges
 import app.braid.mobile.domain.task.TaskFilters
 import app.braid.mobile.domain.task.TaskRepository
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.trackedQuery
 import app.braid.mobile.domain.timeline.toIsoMillis
@@ -50,6 +51,13 @@ class DefaultTaskRepository
                     query.query,
                     statuses.takeIf { it.isNotEmpty() }?.joinToString(",") { it.code },
                 ).map(TaskCardDto::toDomain)
+        }
+
+        override suspend fun setSituation(
+            taskId: String,
+            situation: TaskSituation,
+        ) {
+            api.setSituation(taskId, SetSituationBody(situation.code))
         }
 
         override suspend fun changeStatus(

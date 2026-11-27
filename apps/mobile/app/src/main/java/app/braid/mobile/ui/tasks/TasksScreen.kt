@@ -57,6 +57,7 @@ import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskGroup
 import app.braid.mobile.domain.task.TaskGroupKey
 import app.braid.mobile.domain.task.TaskPriority
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.showsSeriesRule
 import app.braid.mobile.ui.agenda.ListSkeleton
 import app.braid.mobile.ui.chat.OnEntitiesChanged
@@ -99,6 +100,7 @@ fun TasksScreen(
     TasksContent(
         state = state,
         onStatusClick = viewModel::openStatusPicker,
+        onSituationPick = viewModel::chooseSituation,
         onToggleGroup = viewModel::toggleGroup,
         onToggleSubtasks = viewModel::toggleSubtasks,
         onRetry = viewModel::retry,
@@ -158,6 +160,7 @@ fun TasksScreen(
 fun TasksContent(
     state: TasksUiState,
     onStatusClick: (TaskCard) -> Unit,
+    onSituationPick: (TaskCard, TaskSituation) -> Unit,
     onToggleGroup: (TaskGroupKey) -> Unit,
     onToggleSubtasks: (String) -> Unit,
     onRetry: () -> Unit,
@@ -228,6 +231,7 @@ fun TasksContent(
                             onToggle = { onToggleGroup(group.key) },
                             onToggleSubtasks = onToggleSubtasks,
                             onStatusClick = onStatusClick,
+                            onSituationPick = onSituationPick,
                             onOpenTask = onOpenTask,
                         )
                     }
@@ -251,6 +255,7 @@ private fun GroupSection(
     onToggle: () -> Unit,
     onToggleSubtasks: (String) -> Unit,
     onStatusClick: (TaskCard) -> Unit,
+    onSituationPick: (TaskCard, TaskSituation) -> Unit,
     onOpenTask: (String) -> Unit,
 ) {
     if (group.collapsedByDefault) {
@@ -265,11 +270,14 @@ private fun GroupSection(
             val opensPicker = card.actor == TaskActor.Human
             val subtasks = tree.subtasksOf(card.id)
             val drawerOpen = card.id !in closedSubtasks
+            // O glifo da tarefa de agente que terminou abre as três opções de situação logo abaixo da linha.
+            var situationMenuOpen by remember(card.id) { mutableStateOf(false) }
             TaskRow(
                 card = card,
                 now = now,
                 onClick = { onOpenTask(card.id) },
                 onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null,
+                onSituationClick = { situationMenuOpen = !situationMenuOpen },
                 ruleInPlaceOfTime = showsSeriesRule(card),
                 aside =
                     if (subtasks.isEmpty()) {
@@ -278,6 +286,17 @@ private fun GroupSection(
                         { SubtaskToggle(card = card, subtasks = subtasks, expanded = drawerOpen, onToggle = { onToggleSubtasks(card.id) }) }
                     },
             )
+            val situation = card.situation
+            if (situationMenuOpen && situation != null) {
+                SituationMenu(
+                    value = situation,
+                    onPick = {
+                        situationMenuOpen = false
+                        onSituationPick(card, it)
+                    },
+                    modifier = Modifier.padding(start = 36.dp, top = 2.dp, bottom = 10.dp),
+                )
+            }
             if (subtasks.isNotEmpty() && drawerOpen) {
                 SubtaskDrawer(
                     parent = card,
