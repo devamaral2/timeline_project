@@ -7,6 +7,7 @@ import { taskSchema } from "../../../packages/contracts/src/schemas";
 import { cardDurationLabel, recurrenceRuleLabel } from "../../../apps/web/src/lib/tasks/card-text";
 import { mapsUrl } from "../../../apps/web/src/lib/tasks/maps-link";
 import { momentLabel, priorityPatch, recurrenceLines, reminderLabel } from "../../../apps/web/src/lib/tasks/task-read-model";
+import { PERSONAL_PROJECT } from "./project";
 
 type TaskInput = Record<string, unknown> & { id: string; name: string };
 
@@ -16,6 +17,7 @@ function task(input: TaskInput) {
     kind: "common",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],

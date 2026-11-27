@@ -22,6 +22,7 @@ import { CHANGE_LABELS, requestEntityRef } from "../../../apps/web/src/component
 import { parseCommand } from "../../../apps/web/src/components/hub/hub-commands";
 import { requestWithWindow } from "../../../apps/web/src/components/hub/agent-chat-panel";
 import { timelineBars, traceDuration } from "../../../apps/web/src/components/hub/agent-trace";
+import { PERSONAL_PROJECT } from "./project";
 
 type RequestInput = Record<string, unknown> & { id: string };
 
@@ -31,6 +32,7 @@ function request(input: RequestInput) {
     route: "steps",
     status: "queued",
     title: "Pedido",
+    project: PERSONAL_PROJECT,
     createdAt: "2026-09-14T14:48:00.000Z",
     updatedAt: "2026-09-14T14:48:00.000Z",
     steps: [],

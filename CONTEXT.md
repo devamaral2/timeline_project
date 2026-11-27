@@ -59,7 +59,7 @@ Tarefa sem status, que só marca um horário na agenda. Continua editável e pod
 _Avoid_: tarefa stateless, agendado, tarefa azul
 
 **Tarefa longa**:
-Tarefa de pessoa, sempre com status, que fica fora da agenda, como um projeto. Pode ter início real e prazo, mas nenhuma data a coloca na agenda. O trabalho nela aparece na agenda como subtarefas com horário. Não se repete e não vira perdida: com o prazo vencido, fica atrasada. Toda tarefa que duraria mais de 31 dias é uma tarefa longa.
+Tarefa de pessoa, sempre com status, que fica fora da agenda e dura mais que um bloco da agenda. Pode ter início real e prazo, mas nenhuma data a coloca na agenda. O trabalho nela aparece na agenda como subtarefas com horário. Não se repete e não vira perdida: com o prazo vencido, fica atrasada. Toda tarefa que duraria mais de 31 dias é uma tarefa longa.
 _Avoid_: projeto, épico, registro longo, tarefa sem data
 
 **Agenda**:
@@ -125,6 +125,10 @@ _Avoid_: conversa (como entidade), thread, chat
 **Entrada**:
 Registro acrescentado a uma tarefa e nunca alterado: mensagem, pensamento, trace, resultado ou insumo de um passo. O texto do usuário só aparece em mensagens, pensamentos e insumos.
 _Avoid_: log, histórico, trace (como termo geral)
+
+**Projeto**:
+Onde uma tarefa, de pessoa ou de agente, fica guardada. Toda tarefa pertence a um projeto; sem escolha, ela fica no projeto `personal`, que cada usuário tem desde a primeira necessidade e que não se renomeia nem se apaga. O nome tem de 1 a 60 caracteres, sem os espaços das pontas, e é único por usuário sem distinguir maiúsculas. Na tela o projeto é uma marca de iniciais sobre uma cor que vem do nome (a do `personal` é neutra), seguida do nome. A ocorrência de uma tarefa recorrente fica no projeto da série.
+_Avoid_: pasta, espaço, workspace, repositório, tarefa longa (como sinônimo)
 
 **Subtarefa**:
 Tarefa que é parte de outra, a tarefa principal. Cada tarefa tem no máximo uma principal e pode ter várias subtarefas; as duas podem ser de pessoa ou de agente. A ligação é informativa: não segura nada em espera, não muda status e não revisa nenhuma das duas.

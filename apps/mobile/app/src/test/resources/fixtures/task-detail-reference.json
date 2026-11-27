@@ -5,6 +5,11 @@
   "priority": "medium",
   "name": "Pagar o condomínio",
   "description": "",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
   "startedAt": "2026-09-14T03:00:00.000Z",
   "longRunning": false,
   "notifyOffsetsMinutes": [],

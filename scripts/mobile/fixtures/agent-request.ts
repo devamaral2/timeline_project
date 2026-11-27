@@ -15,6 +15,7 @@ import {
   stepProgress,
 } from "../../../apps/web/src/lib/tasks/agent-request-model";
 import { taskDetailFixtures } from "./task-detail";
+import { PERSONAL_PROJECT } from "./project";
 
 type RequestInput = Record<string, unknown> & { id: string };
 
@@ -24,6 +25,7 @@ function request(input: RequestInput) {
     route: "steps",
     status: "running",
     title: "Buscar passagens",
+    project: PERSONAL_PROJECT,
     createdAt: "2026-09-14T14:48:00.000Z",
     updatedAt: "2026-09-14T14:52:00.000Z",
     steps: [],

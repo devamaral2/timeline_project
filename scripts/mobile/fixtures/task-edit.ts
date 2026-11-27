@@ -28,6 +28,7 @@ import {
   reminderMinutes,
   type ReminderUnit,
 } from "../../../apps/web/src/components/task-detail/task-reminders-tags";
+import { PERSONAL_PROJECT } from "./project";
 
 type TaskInput = Record<string, unknown> & { id: string; name: string };
 
@@ -37,6 +38,7 @@ function task(input: TaskInput) {
     kind: "common",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],

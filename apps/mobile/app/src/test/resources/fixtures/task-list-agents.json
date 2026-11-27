@@ -7,6 +7,11 @@
     "priority": "medium",
     "name": "Buscar passagens",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T14:48:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -24,6 +29,11 @@
     "priority": "medium",
     "name": "Montar relatório",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T14:57:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -41,6 +51,11 @@
     "priority": "medium",
     "name": "Qual hotel prefere?",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T13:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -58,6 +73,11 @@
     "priority": "medium",
     "name": "Resumo pronto",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-12T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -75,6 +95,11 @@
     "priority": "medium",
     "name": "Backup falhou",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T02:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -92,6 +117,11 @@
     "priority": "medium",
     "name": "Pedido cancelado",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T10:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],

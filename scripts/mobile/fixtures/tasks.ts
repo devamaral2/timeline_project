@@ -10,6 +10,7 @@ import { agendaTasksByDay, isAgendaCard } from "../../../apps/web/src/components
 import { hasOpenAgentTask } from "../../../apps/web/src/lib/tasks/agent-request-model";
 import { humanStatusOptions, statusPatch } from "../../../apps/web/src/lib/tasks/task-read-model";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel, elapsedLabel } from "../../../apps/web/src/lib/tasks/card-text";
+import { PERSONAL_PROJECT } from "./project";
 
 /** 14 de setembro de 2026, 12:00 em São Paulo: uma segunda-feira. */
 export const NOW = "2026-09-14T15:00:00.000Z";
@@ -22,6 +23,7 @@ function card(input: CardInput) {
     kind: "common",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],

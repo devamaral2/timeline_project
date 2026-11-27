@@ -6,6 +6,11 @@
   "priority": "urgent",
   "name": "Reunião de planejamento",
   "description": "Pauta do trimestre.\nLevar o relatório impresso.",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
   "location": "Rua Augusta, 100 - São Paulo",
   "startedAt": "2026-09-14T21:30:00.000Z",
   "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
