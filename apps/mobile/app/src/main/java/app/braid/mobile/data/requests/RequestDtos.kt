@@ -244,7 +244,7 @@ fun RequestDto.toDomain(): AgentRequest =
 fun ModelSelection.toDto() = ModelSelectionDto(provider.code, model, effort.code)
 
 /** Um provedor ou esforço que este app não conhece some (a seleção inteira, `null`) em vez de derrubar o pedido. */
-private fun ModelSelectionDto.toDomain(): ModelSelection? {
+fun ModelSelectionDto.toDomain(): ModelSelection? {
     val provider = ModelProvider.fromCodeOrNull(provider) ?: return null
     val effort = ModelEffort.fromCodeOrNull(effort) ?: return null
     return ModelSelection(provider, model, effort)

@@ -13,31 +13,36 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.ProjectLine
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
-import app.braid.mobile.core.designsystem.braidTokens
+import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
+import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.cardDurationLabel
 import app.braid.mobile.domain.task.cardIsOverdue
 import app.braid.mobile.domain.task.cardWhenLabel
+import app.braid.mobile.ui.chat.ProviderMark
 import java.time.Instant
 
 /**
  * A linha única das listas: glifo de status, título, a linha do projeto, uma linha com o tipo, o
  * "quando" e as tags, e a duração à direita. Pessoa e agente usam a mesma
- * grade; a tarefa de agente fecha a linha com o robô, a sua assinatura. Os
+ * grade; a tarefa de agente leva à esquerda um ponto inerte e à direita o nome e o ícone do status e o provedor. Os
  * textos calculados saem do cartão e de [now].
  */
 @Composable
@@ -51,7 +56,7 @@ fun TaskRow(
     onStatusClick: (() -> Unit)? = null,
     /**
      * Na tarefa de agente que terminou, o toque no glifo da esquerda, que mostra a situação; sem isso (a Agenda) ou sem
-     * situação (esperando você, execução agendada) o glifo é um ponto inerte.
+     * situação (esperando você, execução agendada) o glifo é o ponto inerte.
      */
     onSituationClick: (() -> Unit)? = null,
     /** A lista pede a regra da série no lugar do horário, quando a ocorrência segue uma. */
@@ -99,19 +104,19 @@ private fun TaskRowBody(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        val situation = if (isAgent && onSituationClick != null) card.situation else null
-        val glyphBox =
-            when {
-                situation != null -> Modifier.size(24.dp).clickable(role = Role.Button, onClick = checkNotNull(onSituationClick))
-                onStatusClick == null || isAgent -> Modifier.size(24.dp)
-                else -> Modifier.size(24.dp).clickable(role = Role.Button, onClick = onStatusClick)
-            }
-        Box(glyphBox, contentAlignment = Alignment.Center) {
-            when {
-                situation != null ->
-                    TaskSituationGlyph(situation, description = "${situationName(situation)}. Mudar situação de “${card.name}”")
-                isAgent -> InertDot()
-                else -> TaskStatusGlyph(actor = card.actor, status = card.status)
+        if (isAgent) {
+            AgentLead(card, onSituationClick)
+        } else {
+            val glyphBox =
+                if (onStatusClick ==
+                    null
+                ) {
+                    Modifier.size(24.dp)
+                } else {
+                    Modifier.size(24.dp).clickable(role = Role.Button, onClick = onStatusClick)
+                }
+            Box(glyphBox, contentAlignment = Alignment.Center) {
+                TaskStatusGlyph(actor = card.actor, status = card.status)
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -142,26 +147,71 @@ private fun TaskRowBody(
         if (duration != null) {
             Text(text = duration, color = muted, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 18.sp, maxLines = 1)
         }
-        if (isAgent) {
-            // Decorativo: o nome do glifo de status já diz "Agente".
-            SvgIcon(
-                BraidIcons.bot,
-                size = 18.dp,
-                color = braidTokens().brandAccent,
-                strokeWidth = 1.9f,
-                modifier = Modifier.padding(top = 2.dp).clearAndSetSemantics {},
-            )
+        if (isAgent) AgentSide(status = card.status, model = card.model)
+    }
+}
+
+/** O que ocupa a esquerda da tarefa de agente: o glifo de situação que abre as três opções (tarefa que terminou, na lista) ou o ponto inerte de [GLYPH_SLOT] (22 dp, a 40%). */
+@Composable
+private fun AgentLead(
+    card: TaskCard,
+    onSituationClick: (() -> Unit)?,
+) {
+    val situation = card.situation
+    if (situation != null && onSituationClick != null) {
+        Box(Modifier.size(GLYPH_SLOT).clickable(role = Role.Button, onClick = onSituationClick), contentAlignment = Alignment.Center) {
+            TaskSituationGlyph(situation, description = "${situationName(situation)}. Mudar situação de “${card.name}”")
+        }
+        return
+    }
+    Box(Modifier.size(GLYPH_SLOT).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
+        SvgIcon(
+            listOf(SvgPart("M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z", fill = true)),
+            size = 22.dp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = IDLE_DOT_ALPHA),
+        )
+    }
+}
+
+/**
+ * A ponta direita da tarefa de agente: o nome do status à esquerda do ícone quadrado e, abaixo, o símbolo do provedor,
+ * alinhados na borda direita. O provedor só aparece quando o cartão traz a escolha do pedido.
+ */
+@Composable
+private fun AgentSide(
+    status: TaskStatus?,
+    model: ModelSelection?,
+) {
+    val spec = remember(status) { agentStatusIcon(status) }
+    val tone = agentToneColor(spec.tone)
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga.
+            agentStatusLabel(status)?.let { label ->
+                Text(
+                    text = label,
+                    modifier = Modifier.clearAndSetSemantics {},
+                    color = tone,
+                    fontSize = 13.sp,
+                    lineHeight = 22.sp,
+                    maxLines = 1,
+                )
+            }
+            AgentStatusIcon(status = status)
+        }
+        if (model != null) {
+            Box(
+                Modifier.size(width = 20.dp, height = 16.dp).semantics {
+                    contentDescription = model.provider.label
+                    role = Role.Image
+                },
+                contentAlignment = Alignment.Center,
+            ) {
+                ProviderMark(model.provider, MaterialTheme.colorScheme.onSurfaceVariant, fitIn = DpSize(15.dp, 13.dp))
+            }
         }
     }
 }
 
-/** O que ocupa a esquerda da tarefa de agente sem controle de situação: um ponto, na caixa de 24 dp do glifo de pessoa. */
-@Composable
-private fun InertDot() {
-    SvgIcon(
-        parts = listOf(SvgPart("M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z", fill = true)),
-        size = 22.dp,
-        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-        modifier = Modifier.clearAndSetSemantics {},
-    )
-}
+private val GLYPH_SLOT = 24.dp
+private const val IDLE_DOT_ALPHA = 0.4f

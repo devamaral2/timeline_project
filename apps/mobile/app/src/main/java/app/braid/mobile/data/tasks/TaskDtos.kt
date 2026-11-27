@@ -2,6 +2,8 @@ package app.braid.mobile.data.tasks
 
 import app.braid.mobile.data.projects.ProjectDto
 import app.braid.mobile.data.projects.toDomain
+import app.braid.mobile.data.requests.ModelSelectionDto
+import app.braid.mobile.data.requests.toDomain
 import app.braid.mobile.domain.task.FinishedAtChange
 import app.braid.mobile.domain.task.RecurrenceFrequency
 import app.braid.mobile.domain.task.RecurrenceRule
@@ -48,6 +50,7 @@ data class TaskCardDto(
     val revision: Int,
     val createdAt: String,
     val updatedAt: String,
+    val model: ModelSelectionDto? = null,
 )
 
 @Serializable
@@ -101,6 +104,7 @@ fun TaskCardDto.toDomain(): TaskCard =
         notifyOffsetsMinutes = notifyOffsetsMinutes.map { it.toInt() },
         project = project.toDomain(),
         situation = TaskSituation.fromCode(situation),
+        model = model?.toDomain(),
     )
 
 fun TaskRecurrenceDto.toDomain() =
