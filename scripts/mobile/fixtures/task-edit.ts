@@ -110,7 +110,10 @@ const occurrence = task({
 /** Uma tarefa que já está num projeto que não é o `personal`. */
 const inProject = task({ id: "task-p", name: "Revisar o contrato", status: "todo", project: TIMELINE_PROJECT, startedAt: "2026-09-14T21:30:00.000Z", revision: 2 });
 
-const tasks = { full, reference, long, done, bare, occurrence, inProject };
+/** A ocorrência da série `rec-1` quando a série mora no projeto `timeline_project` (`weeklyInProject` de `recurrence.ts`). */
+const occurrenceInProject = task({ ...occurrence, id: "task-occ-p", project: TIMELINE_PROJECT });
+
+const tasks = { full, reference, long, done, bare, occurrence, inProject, occurrenceInProject };
 
 function edit(base: ReturnType<typeof task>, changes: Partial<TaskDraft>): TaskDraft {
   return { ...draftFromTask(base), ...changes };

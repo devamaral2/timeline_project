@@ -386,7 +386,7 @@
     }
   },
   {
-    "name": "personal project is left out of the template",
+    "name": "personal project goes in the template with its id",
     "draft": {
       "frequency": "weekly",
       "interval": 1,
@@ -431,7 +431,8 @@
         "kind": "common",
         "name": "Treino de força",
         "description": "",
-        "priority": "medium"
+        "priority": "medium",
+        "projectId": "project-personal"
       }
     }
   },

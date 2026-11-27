@@ -1,6 +1,6 @@
 "use client";
 
-import { isCancelledAgentStatus, isInterruptedAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
+import { isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto } from "@repo/contracts";
 import { ArrowUp, FileText, X } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -8,7 +8,7 @@ import styles from "@/components/detail/entity-ai-edit-bar.module.css";
 import { useHermesDock } from "@/components/ui/hermes-flight";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
-import { agentFailureText, startFailureCode } from "@/lib/agent-chat/use-agent-chat";
+import { agentEndLabel, agentEndText, agentFailureText, startFailureCode } from "@/lib/agent-chat/use-agent-chat";
 import { requestAgentFileEdit } from "@/lib/api/agent-files";
 import { operationId } from "@/lib/api/operation-id";
 import { HermesOffError, getRequest } from "@/lib/api/requests";
@@ -142,9 +142,7 @@ export function AgentFileEditBar({ path, onDone, pollMs = AGENT_REQUEST_POLL_MS 
   const message = lost ? LOST_TEXT
     : followed && isSuccessAgentStatus(followed.status) ? (followed.message ?? null)
     : failed ? agentFailureText(followed.errorCode ?? "internal")
-    : followed && isCancelledAgentStatus(followed.status) ? agentFailureText("cancelled")
-    : followed && isInterruptedAgentStatus(followed.status) ? agentFailureText("interrupted")
-    : null;
+    : (followed && agentEndText(followed.status)) || null;
   const shown = error ?? message;
   const hasFailure = error !== null || failed || lost;
   const state: HermesState = speech.listening ? "listening"
@@ -158,9 +156,7 @@ export function AgentFileEditBar({ path, onDone, pollMs = AGENT_REQUEST_POLL_MS 
     : open ? (followed?.progress ?? (followed ? runningStepLabel(followed) : undefined) ?? "Entendendo o pedido…")
     : followed && isSuccessAgentStatus(followed.status) ? "Pronto"
     : failed ? "Não deu certo"
-    : followed && isCancelledAgentStatus(followed.status) ? "Pedido cancelado"
-    : followed && isInterruptedAgentStatus(followed.status) ? "Pedido interrompido"
-    : "Esperando o seu pedido";
+    : (followed && agentEndLabel(followed.status)) || "Esperando o seu pedido";
   const canDismiss = finished || lost;
 
   return (

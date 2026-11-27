@@ -1,6 +1,6 @@
 import type { TokenUsage } from "../../agent/gateways/structured-completion.gateway";
 import type { ModelSelection, RequestQueryResult } from "@repo/contracts";
-import { canTransitionAgentStatus, isInProgressAgentStatus, isOpenAgentStatus, REVIEW_SITUATION_ON_CLOSE, type Artifact, type Task } from "../../../domain";
+import { canTransitionAgentStatus, isInProgressAgentStatus, isOpenAgentStatus, REVIEW_SITUATION_ON_CLOSE, stoppedStatusOf, type Artifact, type Task } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
 import { requestTitleOf } from "../../../infrastructure/persistence/requests/postgres-request.store";
 import { personalProjectOf } from "../../projects/testing/in-memory-project.query";
@@ -257,14 +257,14 @@ export class InMemoryRequestStore implements RequestStore {
   async cancel(requestId: string): Promise<string[]> {
     const request = this.requests.get(requestId);
     if (!request || !isOpenAgentStatus(request.status)) return [];
-    request.status = request.status === "running" ? "interrupted" : "cancelled";
+    request.status = stoppedStatusOf(request.status);
     request.situation = REVIEW_SITUATION_ON_CLOSE;
     request.errorCode = "cancelled";
     request.finishedAt = this.clock();
     const steps = this.stepRecords.filter((step) => step.requestId === requestId);
     for (const step of steps) {
       if (!isInProgressAgentStatus(step.status)) continue;
-      step.status = step.status === "running" ? "interrupted" : "cancelled";
+      step.status = stoppedStatusOf(step.status);
       step.finishedAt = this.clock();
     }
     return [requestId, ...steps.map((step) => step.id)];

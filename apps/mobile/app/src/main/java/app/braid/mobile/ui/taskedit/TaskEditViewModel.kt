@@ -460,7 +460,10 @@ class TaskEditViewModel
                 if (newSeries != null) createSeries(newSeries) else create(buildCreateTask(form.draft, now))
             } else if (base != null) {
                 val patch = buildTaskPatch(base, form.draft, now)
-                val seriesPatch = if (!startsSeries && rule != null && series != null) planSeriesEdit(series, rule) else null
+                // O projeto é um campo do modelo da série: trocar o da ocorrência troca o da série (e `personal` leva o id dele).
+                val movedProject = form.draft.project?.takeIf { it.id != base.card.project.id }
+                val seriesPatch =
+                    if (!startsSeries && rule != null && series != null) planSeriesEdit(series, rule, movedProject) else null
                 if (patch == null && seriesPatch == null && newSeries == null) {
                     updateForm { it.copy(done = true) }
                 } else {
@@ -517,7 +520,8 @@ class TaskEditViewModel
 
         /**
          * Grava a edição: a série nova primeiro, para uma regra recusada deixar a tarefa como estava, depois a troca da
-         * regra da série e por fim a tarefa. Revisão velha em qualquer uma relê a tarefa e a série.
+         * regra da série e por fim a tarefa (antes da série, se o projeto dela muda). Revisão velha em qualquer uma relê a
+         * tarefa e a série.
          */
         private fun edit(
             id: String,
@@ -534,8 +538,12 @@ class TaskEditViewModel
             viewModelScope.launch {
                 try {
                     if (newSeries != null && key != null) recurrences.create(newSeries, key)
+                    // Com modelo novo a série regera as ocorrências de hoje em diante que ninguém editou: a tarefa vai
+                    // antes, e editada ela deixa de ser regerada.
+                    val taskFirst = seriesPatch?.template != null
+                    if (taskFirst && patch != null) edits.update(id, patch)
                     if (seriesPatch != null && seriesId != null) recurrences.update(seriesId, seriesPatch)
-                    if (patch != null) edits.update(id, patch)
+                    if (!taskFirst && patch != null) edits.update(id, patch)
                     updateForm { it.copy(saving = false, done = true) }
                 } catch (cancelled: CancellationException) {
                     throw cancelled

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isCancelledAgentStatus, isInterruptedAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
+import { isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto, RequestEntityDto } from "@repo/contracts";
+import { agentEndText } from "@/lib/agent-chat/use-agent-chat";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { operationId } from "@/lib/api/operation-id";
 import { cancelRequest, getRequest, listRequests, startVoiceRequest } from "@/lib/api/requests";
@@ -84,9 +85,7 @@ export function useVoiceTaskQueue({ onCreated }: { onCreated: (task: RequestEnti
           onCreatedRef.current(created);
         } else {
           terminal = true;
-          const error = isCancelledAgentStatus(request.status) ? "Pedido cancelado."
-            : isInterruptedAgentStatus(request.status) ? "Pedido interrompido."
-            : request.message ?? CREATION_FAILED;
+          const error = agentEndText(request.status) ?? request.message ?? CREATION_FAILED;
           commit(jobsRef.current.map((item) => item.id !== job.id ? item : { ...item, status: "error", error, cancelling: false }));
         }
       }

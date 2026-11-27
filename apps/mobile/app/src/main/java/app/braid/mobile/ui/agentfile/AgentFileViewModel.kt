@@ -13,6 +13,8 @@ import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
 import app.braid.mobile.domain.request.HermesOffException
 import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
+import app.braid.mobile.domain.request.agentEndLabel
+import app.braid.mobile.domain.request.agentEndText
 import app.braid.mobile.domain.request.agentFailureText
 import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.runningStepLabel
@@ -105,9 +107,7 @@ data class EditBar(
                 lost -> EDIT_LOST_TEXT
                 isSuccessAgentStatus(followed?.status) -> followed?.message
                 failed -> agentFailureText(followed?.errorCode ?: "internal")
-                followed?.status == TaskStatus.Cancelled -> agentFailureText("cancelled")
-                followed?.status == TaskStatus.Interrupted -> agentFailureText("interrupted")
-                else -> null
+                else -> agentEndText(followed?.status)
             }
 
     /** O texto grande do resultado: o erro de envio, senão [message]. */
@@ -122,9 +122,7 @@ data class EditBar(
                 open -> followed?.progress ?: followed?.let { runningStepLabel(it.steps) } ?: "Entendendo o pedido…"
                 isSuccessAgentStatus(followed?.status) -> "Pronto"
                 failed -> "Não deu certo"
-                followed?.status == TaskStatus.Cancelled -> "Pedido cancelado"
-                followed?.status == TaskStatus.Interrupted -> "Pedido interrompido"
-                else -> "Esperando o seu pedido"
+                else -> agentEndLabel(followed?.status) ?: "Esperando o seu pedido"
             }
 }
 

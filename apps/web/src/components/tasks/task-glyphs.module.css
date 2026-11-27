@@ -58,10 +58,7 @@
 /* A escolha de status aberta pelo glifo de uma linha: a lista de `TaskChoiceList`
    num cartão fixo. Esta é a posição de reserva, no pé da tela; com o glifo de
    âncora o componente a troca pela posição sob o glifo, sem passar desta base. */
-.statusPicker { --picker-bottom: max(24px, calc(var(--execution-clearance, 0px) + 12px)); position: fixed; inset: auto 16px var(--picker-bottom); width: fit-content; max-width: calc(100vw - 32px); margin-inline: auto; z-index: var(--z-popover); }
+.statusPicker { --picker-bottom: var(--fixed-bottom-offset); position: fixed; inset: auto 16px var(--picker-bottom); width: fit-content; max-width: calc(100vw - 32px); margin-inline: auto; z-index: var(--z-popover); }
 .statusPicker [role="listbox"] { position: static; max-height: calc(100dvh - var(--picker-bottom) - 24px); overflow-y: auto; overscroll-behavior: contain; }
-/* No celular o cartão fica acima da barra inferior (90px, como o aviso da lista), nunca atrás dela. Com a gaveta de
-   execução à vista, sobe a altura que ela cobre (`--execution-clearance`, publicada por `ExecutionDrawer`). */
-@media (max-width: 720px) {
-  .statusPicker { --picker-bottom: max(calc(90px + env(safe-area-inset-bottom, 0px)), calc(var(--execution-clearance, 0px) + 12px)); }
-}
+/* O afastamento do fundo (`--fixed-bottom-offset`, em globals.css) já põe o cartão acima da barra inferior no celular e
+   acima da gaveta de execução quando ela está à vista. */

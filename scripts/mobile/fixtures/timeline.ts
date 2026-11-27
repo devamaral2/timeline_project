@@ -11,7 +11,7 @@ import {
 } from "../../../packages/timeline/src/index";
 import { briefDate } from "../../../apps/web/src/lib/dates/day-labels";
 import {
-  darkTheme, hueForTag, lightTheme, oklchToCss, projectInitials, projectMarkColors, tagColors, type ProjectIdentity, type Theme,
+  darkTheme, hueForTag, lightTheme, projectInitials, tagColors, type Theme,
 } from "../../../packages/theme/src/index";
 
 type Case = { args: unknown[]; result: unknown };
@@ -57,14 +57,18 @@ const PROJECT_NAMES = [
 ];
 
 /** `personal` é o único projeto com a marca neutra; o nome dele vem sempre com o booleano ligado. */
-const projectOf = (name: string): ProjectIdentity => ({ name, personal: name === "personal" });
+const projectOf = (name: string) => ({ name, personal: name === "personal" });
 
-/** A marca já resolvida em hexadecimal, como o Android a desenha: o fundo, o texto e o contorno quando há. */
-function projectMark(project: ProjectIdentity, theme: Theme) {
-  const mark = projectMarkColors(project, theme);
-  if (mark.personal) return { initials: projectInitials(project.name), personal: true, background: mark.background, text: mark.text, outline: mark.outline };
-  const background = oklchToCss({ lightness: mark.lightness, chroma: mark.chroma, hue: mark.hue, alpha: 1 });
-  return { initials: projectInitials(project.name), personal: false, hue: mark.hue, background, text: mark.text };
+/**
+ * A marca como o Android a desenha: o fundo, o texto e o contorno quando há. A cor de um projeto comum é a das tags
+ * (`tagColors`, com o matiz do nome) e o texto é a cor do fundo da tela; o `personal` usa os tokens neutros do tema.
+ */
+function projectMark(project: { name: string; personal: boolean }, theme: Theme) {
+  const initials = projectInitials(project.name);
+  if (project.personal) {
+    return { initials, personal: true, background: theme.colors.muted, text: theme.colors.mutedForeground, outline: theme.colors.border };
+  }
+  return { initials, personal: false, hue: hueForTag(project.name), background: tagColors(project.name, theme).color, text: theme.colors.background };
 }
 
 export function timelineFixtures(): Record<string, unknown> {

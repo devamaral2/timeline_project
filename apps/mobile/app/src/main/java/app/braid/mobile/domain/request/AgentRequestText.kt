@@ -2,6 +2,8 @@ package app.braid.mobile.domain.request
 
 import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isCancelledAgentStatus
+import app.braid.mobile.domain.task.isInterruptedAgentStatus
 import app.braid.mobile.domain.task.isOpenAgentStatus
 import app.braid.mobile.domain.task.isSuccessAgentStatus
 
@@ -69,6 +71,20 @@ private val FAILURE_TEXTS =
 /** O texto que o usuário lê para o código de falha de um pedido; sem código ou com um desconhecido, o de "internal". */
 fun agentFailureText(code: String?): String = FAILURE_TEXTS[code ?: "internal"] ?: FAILURE_TEXTS.getValue("internal")
 
+/** O código de fim do pedido que a pessoa cancelou ou que o servidor interrompeu; `null` para os demais status. */
+fun endCode(status: TaskStatus?): String? =
+    when {
+        isCancelledAgentStatus(status) -> "cancelled"
+        isInterruptedAgentStatus(status) -> "interrupted"
+        else -> null
+    }
+
+/** O aviso do pedido cancelado ou interrompido ("Pedido cancelado."); `null` para os demais status. */
+fun agentEndText(status: TaskStatus?): String? = endCode(status)?.let(::agentFailureText)
+
+/** O mesmo aviso sem o ponto final, para a linha de estado ("Pedido cancelado"). */
+fun agentEndLabel(status: TaskStatus?): String? = agentEndText(status)?.removeSuffix(".")
+
 /** A linha de status do rodapé: o que o pedido que a tela acompanha está fazendo; `null` é "ainda sem o primeiro estado". */
 fun requestStatusLine(tracked: AgentRequest?): String =
     when {
@@ -76,7 +92,5 @@ fun requestStatusLine(tracked: AgentRequest?): String =
         isOpenAgentStatus(tracked.status) -> tracked.progress ?: runningStepLabel(tracked.steps) ?: "Entendendo o pedido…"
         isSuccessAgentStatus(tracked.status) -> "Pronto"
         tracked.status == TaskStatus.Failed -> "Não deu certo"
-        tracked.status == TaskStatus.Cancelled -> "Pedido cancelado"
-        tracked.status == TaskStatus.Interrupted -> "Pedido interrompido"
-        else -> "Esperando o seu pedido"
+        else -> agentEndLabel(tracked.status) ?: "Esperando o seu pedido"
     }

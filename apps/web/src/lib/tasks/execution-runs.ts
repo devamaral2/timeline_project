@@ -1,5 +1,5 @@
-import { IN_PROGRESS_AGENT_STATUSES, isInProgressAgentStatus } from "@repo/contracts";
-import type { AgentTaskStatus, TaskCardDto, TaskStatus } from "@repo/contracts";
+import { IN_PROGRESS_AGENT_STATUSES, isExecutionRun } from "@repo/contracts";
+import type { TaskCardDto, TaskStatus } from "@repo/contracts";
 
 /**
  * O que a gaveta de execução lê da lista de tarefas acompanhadas: as execuções de agente em andamento, da mais
@@ -15,11 +15,6 @@ export const DEFAULT_EXECUTION_MODE: ExecutionDrawerMode = "three";
 
 /** Quantas execuções a altura de três mostra. */
 export const EXECUTION_PEEK = 3;
-
-/** Altura de cada linha, a da linha recolhida e a do cabeçalho, em px. O CSS usa os mesmos números. */
-export const EXECUTION_ROW_PX = 40;
-export const EXECUTION_ONE_PX = 44;
-export const EXECUTION_HEADER_PX = 44;
 
 /** Da menor para a maior: a gaveta cresce quando a nova altura tem posto maior. */
 const RANK: Record<ExecutionDrawerMode, number> = { one: 1, three: 2, all: 3 };
@@ -40,14 +35,7 @@ export function drawerGrows(from: ExecutionDrawerMode, to: ExecutionDrawerMode):
 export function executionRunsOf(cards: readonly TaskCardDto[]): TaskCardDto[] {
   const startOf = (card: TaskCardDto) => (card.startedAt ? Date.parse(card.startedAt) : Number.NEGATIVE_INFINITY);
   return cards
-    .filter(
-      (card) =>
-        card.actor === "agent" &&
-        card.status !== undefined &&
-        isInProgressAgentStatus(card.status as AgentTaskStatus) &&
-        card.kind !== "step" &&
-        card.kind !== "cron",
-    )
+    .filter(isExecutionRun)
     .sort((a, b) => startOf(b) - startOf(a) || b.id.localeCompare(a.id));
 }
 

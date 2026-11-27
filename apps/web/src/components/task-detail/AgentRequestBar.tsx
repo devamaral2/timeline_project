@@ -1,6 +1,6 @@
 "use client";
 
-import { isCancelledAgentStatus, isInterruptedAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
+import { isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto } from "@repo/contracts";
 import { ArrowUp, MessageSquare } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -9,7 +9,7 @@ import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import { useHermesDock } from "@/components/ui/hermes-flight";
 import styles from "@/components/detail/entity-ai-edit-bar.module.css";
 import agentStyles from "./agent-task-detail.module.css";
-import { agentFailureText } from "@/lib/agent-chat/use-agent-chat";
+import { agentEndLabel, agentFailureText } from "@/lib/agent-chat/use-agent-chat";
 import { operationId } from "@/lib/api/operation-id";
 import { FoodCancelConflictError, cancelRequest, getRequest, startRequest } from "@/lib/api/requests";
 import { isOpenRequest, runningStepLabel } from "@/lib/tasks/agent-request-model";
@@ -129,9 +129,7 @@ export function AgentRequestBar({ userId, request, onRequestChange }: AgentReque
     : open ? (tracked.progress ?? runningStepLabel(tracked) ?? "Entendendo o pedido…")
     : isSuccessAgentStatus(tracked.status) ? "Pronto"
     : tracked.status === "failed" ? "Não deu certo"
-    : isCancelledAgentStatus(tracked.status) ? "Pedido cancelado"
-    : isInterruptedAgentStatus(tracked.status) ? "Pedido interrompido"
-    : "Esperando o seu pedido";
+    : agentEndLabel(tracked.status) ?? "Esperando o seu pedido";
   const failureReason = followId && tracked?.status === "failed" ? agentFailureText(tracked.errorCode ?? "internal") : null;
 
   return (

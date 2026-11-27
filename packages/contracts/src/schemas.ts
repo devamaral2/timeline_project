@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { FINAL_AGENT_STATUSES } from "./tasks/agent-status-groups";
-import type { AgentTaskStatus } from "./tasks/task-types";
+import { acceptsSituation } from "./tasks/agent-status-groups";
 
 /**
  * Os contratos como esquemas, para os testes de contrato dos clientes. A forma
@@ -221,9 +220,7 @@ const STATUS_MATCHES_ACTOR = { message: "O status nao e do executor da tarefa", 
 
 /** So o pedido de agente (nem passo, nem execucao agendada) num status final tem situacao. */
 function situationFitsTask(card: { actor: "human" | "agent"; kind: string; status?: string | undefined; situation?: string | undefined }): boolean {
-  if (card.situation === undefined) return true;
-  return card.actor === "agent" && card.kind !== "step" && card.kind !== "cron"
-    && card.status !== undefined && FINAL_AGENT_STATUSES.includes(card.status as AgentTaskStatus);
+  return card.situation === undefined || acceptsSituation(card);
 }
 
 const SITUATION_FITS_TASK = { message: "A tarefa nao aceita situacao", path: ["situation"] };

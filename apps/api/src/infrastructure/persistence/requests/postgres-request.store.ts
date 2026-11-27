@@ -12,7 +12,15 @@ import type {
   RequestScreenContext,
 } from "@repo/contracts";
 import { stepLabel } from "../../../api-core/requests/request-config";
-import { agentStatusesBefore, IN_PROGRESS_AGENT_STATUSES, OPEN_AGENT_STATUSES, REVIEW_SITUATION_ON_CLOSE } from "../../../domain/agent-status";
+import {
+  agentStatusesBefore,
+  IN_PROGRESS_AGENT_STATUSES,
+  OPEN_AGENT_STATUSES,
+  REVIEW_SITUATION_ON_CLOSE,
+  STOPPABLE_RUNNING_STATUS,
+  STOPPED_BEFORE_RUNNING,
+  STOPPED_FROM_RUNNING,
+} from "../../../domain/agent-status";
 import type { AgentTaskStatus } from "../../../domain/sets";
 import { sqlList } from "../database/schema/sets";
 import { finalizeConcurrencyKey, REQUEST_JOBS, type RequestAgent } from "../../../api-core/requests/request-steps";
@@ -65,8 +73,10 @@ const IN_PROGRESS = sql`(${sqlList(IN_PROGRESS_AGENT_STATUSES)})`;
 /** De onde a tabela de transicoes deixa chegar a `to`: a guarda de toda gravacao de status. */
 const before = (to: AgentTaskStatus) => sql`(${sqlList(agentStatusesBefore(to))})`;
 /** Cancelar o que ainda nao comecou deixa `cancelled`; cancelar o que estava `running` deixa `interrupted`. */
-const STOPPED_STATUS = sql`CASE WHEN status = 'running' THEN 'interrupted' ELSE 'cancelled' END`;
-const STOPPED_STATUS_OF_STEP = sql`CASE WHEN s.status = 'running' THEN 'interrupted' ELSE 'cancelled' END`;
+const stoppedStatus = (column: string) =>
+  sql`CASE WHEN ${sql.raw(column)} = ${sqlList([STOPPABLE_RUNNING_STATUS])} THEN ${sqlList([STOPPED_FROM_RUNNING])} ELSE ${sqlList([STOPPED_BEFORE_RUNNING])} END`;
+const STOPPED_STATUS = stoppedStatus("status");
+const STOPPED_STATUS_OF_STEP = stoppedStatus("s.status");
 /** O fechamento do pedido grava a situacao junto com o status final: a politica de revisao esta em `agent-status`. */
 const ON_CLOSE_SITUATION = sql`${REVIEW_SITUATION_ON_CLOSE}`;
 

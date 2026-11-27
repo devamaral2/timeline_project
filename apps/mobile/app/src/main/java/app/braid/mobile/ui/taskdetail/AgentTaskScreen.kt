@@ -192,8 +192,8 @@ private fun Body(
 }
 
 /**
- * O topo: o código do tipo, o título e o status do agente, solto na linha, com o robô na ponta como assinatura. O pedido que
- * terminou ganha o controle de situação ao lado do status: o toque abre as três opções logo abaixo.
+ * O topo: o código do tipo, o título e o status do agente, solto na linha, com o projeto (só leitura) e o robô na ponta como
+ * assinatura. O pedido que terminou ganha o controle de situação ao lado do status: o toque abre as três opções logo abaixo.
  */
 @Composable
 private fun Header(
@@ -234,7 +234,11 @@ private fun Header(
                     Text(situationName(situation), color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, lineHeight = 20.sp)
                 }
             }
+            // Só leitura: o projeto de uma tarefa de agente não muda depois que ela nasce.
+            Spacer(Modifier.width(16.dp))
+            ProjectLine(task.card.project, Modifier.weight(1f, fill = false))
             Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
             SvgIcon(
                 BraidIcons.bot,
                 size = 20.dp,
@@ -265,8 +269,6 @@ private fun InfoSection(
     Section("Informações") {
         Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-            // Só leitura: o projeto de uma tarefa de agente não muda depois que ela nasce.
-            FactRow("Projeto") { ProjectLine(task.card.project) }
             FactRow("Início") {
                 val startedAt = task.card.startedAt
                 if (startedAt == null) {

@@ -5,7 +5,7 @@ import { setField } from "@/components/edit/edit-test-helpers";
 import { TaskRow } from "@/components/tasks/task-row";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { FAKE_PERSONAL_PROJECT, projectsArea } from "@/test/fake-api/projects";
-import { recurrencesArea } from "@/test/fake-api/recurrences";
+import { recurrenceFixture, recurrencesArea } from "@/test/fake-api/recurrences";
 import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 
 const replace = vi.fn();
@@ -288,6 +288,45 @@ describe("edição", () => {
     await waitFor(() => expect(writes()).toHaveLength(1));
     expect(writes()[0]?.body).toEqual({ expectedRevision: 3, projectId: null });
     expect(api.store.table<TaskDto>("tasks").get("ev-1")?.project).toEqual(FAKE_PERSONAL_PROJECT);
+  });
+
+  it("uma ocorrência de série do braid devolvida ao personal leva a série junto, com o id do personal no modelo", async () => {
+    const rule = { frequency: "daily", interval: 1, timeOfDay: "18:00", timeZone: "America/Sao_Paulo", startsOn: "2026-11-03" } as const;
+    install([inBraid({ recurrence: { id: "rec-1", occurrenceOn: "2026-11-14", detached: false, rule } })]);
+    api.store.table<RecurrenceDto>("recurrences").set(
+      "rec-1",
+      recurrenceFixture({ id: "rec-1", ...rule, template: { name: "Revisar o PR", kind: "common", priority: "medium", description: "", tags: ["pr"], projectId: "project-braid" } }),
+    );
+    render(<TaskEditRoute userId="user-1" taskId="ev-1" />);
+    await screen.findByRole("button", { name: FIELD_NAME("braid") });
+
+    openChoice("braid");
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “personal”" }));
+    save();
+
+    await waitFor(() => expect(writes().map((call) => `${call.method} ${call.pathname}`)).toEqual(["PATCH /api/tasks/ev-1", "PATCH /api/recurrences/rec-1"]));
+    // O modelo troca inteiro: o que a série já levava continua, e o projeto vira o id do personal.
+    expect(api.store.table<RecurrenceDto>("recurrences").get("rec-1")?.template).toEqual({
+      name: "Revisar o PR", kind: "common", priority: "medium", description: "", tags: ["pr"], projectId: FAKE_PERSONAL_PROJECT.id,
+    });
+  });
+
+  it("uma série em que a pessoa voltou ao personal leva o id do personal no modelo", async () => {
+    render(<TaskCreateRoute userId="user-1" />);
+    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    openChoice();
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “braid”" }));
+    openChoice("braid");
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “personal”" }));
+
+    setField("Título", "Corrida");
+    setField("Data de início", "2026-11-16");
+    setField("Hora de início", "18:30");
+    fireEvent.click(screen.getByRole("button", { name: "Definir a regra" }));
+    save();
+
+    await waitFor(() => expect(writes().map((call) => call.pathname)).toEqual(["/api/recurrences"]));
+    expect(writes()[0]?.body).toMatchObject({ template: { name: "Corrida", projectId: FAKE_PERSONAL_PROJECT.id } });
   });
 
   it("criar um projeto novo na edição também o escolhe", async () => {

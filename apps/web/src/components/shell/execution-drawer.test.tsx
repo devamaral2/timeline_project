@@ -279,6 +279,21 @@ test("aparece em Tarefas, Agenda e Documentos com a mesma altura escolhida e nã
   expect(await drawerReady()).toHaveAttribute("data-mode", "all");
 });
 
+test("o menu da seção cobre a gaveta, como o chat: ela sai de vista com ele aberto e volta quando ele fecha", async () => {
+  serve(FIVE);
+  mount();
+  await drawerReady();
+  const tasksTab = () => within(screen.getByRole("navigation", { name: "Navegação inferior" })).getByRole("link", { name: "Tarefas" });
+
+  fireEvent.click(tasksTab());
+  expect(tasksTab()).toHaveAttribute("aria-expanded", "true");
+  expect(drawer()).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Fechar menu", hidden: true }));
+  expect(tasksTab()).toHaveAttribute("aria-expanded", "false");
+  expect(await drawerReady()).toBeInTheDocument();
+});
+
 test("a altura escolhida fica guardada no aparelho e o padrão é três", async () => {
   serve(FIVE);
   const first = mount();

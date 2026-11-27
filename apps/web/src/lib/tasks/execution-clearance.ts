@@ -4,8 +4,8 @@ import { type RefObject, useLayoutEffect } from "react";
 
 /**
  * O quanto a gaveta de execução cobre do pé da tela, em px, como variável CSS na raiz do documento. O que fica fixo
- * no pé da tela (a escolha de status da lista, o aviso) sobe esse tanto e nunca fica por baixo da gaveta. Sem gaveta à
- * vista a variável não existe, e o CSS cai no valor de sempre (`var(--execution-clearance, 0px)`).
+ * no pé da tela (a escolha de status da lista) sobe esse tanto e nunca fica por baixo da gaveta. Sem gaveta à
+ * vista a variável não existe, e o CSS cai no valor de sempre (`--fixed-bottom-offset`, em globals.css, lê `var(--execution-clearance, 0px)`).
  */
 export const EXECUTION_CLEARANCE_VAR = "--execution-clearance";
 

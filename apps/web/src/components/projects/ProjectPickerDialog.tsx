@@ -8,6 +8,7 @@ import { EntityPickerDialog } from "@/components/edit/EntityPickerDialog";
 import actions from "@/components/edit/task-create-actions.module.css";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { createProject, listProjects } from "@/lib/api/projects";
+import { plainText } from "@/lib/tasks/agenda-search";
 import { ProjectLine } from "./project-line";
 
 interface ProjectPickerDialogProps {
@@ -21,16 +22,11 @@ const NAME_TAKEN = "Já existe um projeto com esse nome. Escolha-o na lista ou u
 const NAME_INVALID = "O nome do projeto tem de 1 a 60 caracteres.";
 const CREATE_FAILED = "Não foi possível criar o projeto. Tente de novo.";
 
-/** Sem maiúsculas nem acentos: "Açaí" acha "acai". */
-function plain(text: string): string {
-  return text.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("pt-BR");
-}
-
 /** Os projetos do usuário (`personal` primeiro, os outros por nome) cujo nome tem o texto da busca. */
 async function searchProjects(query: string): Promise<ProjectDto[]> {
   const projects = await listProjects();
-  const needle = plain(query);
-  return needle ? projects.filter((project) => plain(project.name).includes(needle)) : projects;
+  const needle = plainText(query);
+  return needle ? projects.filter((project) => plainText(project.name).includes(needle)) : projects;
 }
 
 /**

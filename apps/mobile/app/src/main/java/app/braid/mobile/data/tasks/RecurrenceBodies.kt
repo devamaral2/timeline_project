@@ -45,4 +45,5 @@ fun SeriesPatch.toBody(): JsonObject =
         byMonthDay?.let { put("byMonthDay", it) }
         byMonth?.let { put("byMonth", it) }
         endsOn?.let { put("endsOn", it) }
+        template?.let { put("template", it) }
     }

@@ -134,6 +134,10 @@ não tem onde marcar.
    de agente que já estão num status final e não são passo nem execução agendada: o que terminou antes desta mudança
    nunca foi mostrado ao usuário como "para revisar", então não entra na fila de revisão. As abertas e os passos ficam
    sem situação.
+
+   Esta mudança chega em três migrations (0009 para o projeto, 0010 e 0011 para os status e a situação), e não em uma.
+   A entrega continua atômica: o migrador do Drizzle aplica todas as pendentes dentro de uma transação só, então ou
+   entram as três, ou nenhuma.
 6. **No web:** na linha da tarefa de agente que tem situação, o glifo da esquerda mostra a situação (Para revisar é o
    círculo vazio de "A fazer", em cor apagada; Revisada, um círculo com dois vistos, em sucesso; Guardada, um marcador,
    na cor de informação, o azul de `--routine`) e abre as três opções na própria linha. A mudança aparece na hora e é

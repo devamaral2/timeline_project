@@ -145,5 +145,39 @@
       "month": 3,
       "endsOn": ""
     }
+  },
+  {
+    "name": "weeklyInProject",
+    "series": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-1",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium",
+        "tags": [
+          "saúde"
+        ],
+        "projectId": "project-timeline"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 42,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": ""
+    }
   }
 ]

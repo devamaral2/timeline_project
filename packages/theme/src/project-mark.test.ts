@@ -1,13 +1,5 @@
 import { expect, test } from "vitest";
-import { darkTheme, hueForTag, lightTheme } from "./theme";
-import { projectInitials, projectMarkColors, type ColoredProjectMark, type ProjectIdentity } from "./project-mark";
-import type { Theme } from "./theme";
-
-function coloredMark(project: ProjectIdentity, theme: Theme): ColoredProjectMark {
-  const mark = projectMarkColors(project, theme);
-  if (mark.personal) throw new Error(`${project.name} should be colored`);
-  return mark;
-}
+import { projectInitials } from "./project-mark";
 
 test("derives the initials from the examples of the spec", () => {
   expect(projectInitials("timeline_project")).toBe("TP");
@@ -35,32 +27,4 @@ test("upper cases accented initials and ignores empty words", () => {
   expect(projectInitials("órbita_ação")).toBe("ÓA");
   expect(projectInitials("  --lead  --")).toBe("LE");
   expect(projectInitials("日本語")).toBe("日本");
-});
-
-test("a colored mark takes its hue from the tag hue function and the tag lightness and chroma of the theme", () => {
-  const mark = coloredMark({ name: "timeline_project", personal: false }, lightTheme);
-  expect(mark.personal).toBe(false);
-  expect(mark.hue).toBe(hueForTag("timeline_project"));
-  expect(mark.lightness).toBe(lightTheme.tag.lightness);
-  expect(mark.chroma).toBe(lightTheme.tag.chroma);
-  expect(mark.text).toBe(lightTheme.colors.background);
-
-  const dark = coloredMark({ name: "timeline_project", personal: false }, darkTheme);
-  expect(dark.hue).toBe(mark.hue);
-  expect(dark.lightness).toBe(darkTheme.tag.lightness);
-  expect(dark.text).toBe(darkTheme.colors.background);
-});
-
-test("the same name always gets the same color, and personal has none", () => {
-  const a = coloredMark({ name: "agent-skills", personal: false }, lightTheme);
-  expect(projectMarkColors({ name: "agent-skills", personal: false }, lightTheme)).toEqual(a);
-  expect(coloredMark({ name: "t3code", personal: false }, lightTheme).hue).not.toBe(a.hue);
-
-  const personal = projectMarkColors({ name: "personal", personal: true }, lightTheme);
-  expect(personal).toEqual({
-    personal: true,
-    background: lightTheme.colors.muted,
-    text: lightTheme.colors.mutedForeground,
-    outline: lightTheme.colors.border,
-  });
 });

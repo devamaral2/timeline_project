@@ -40,7 +40,7 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
    recusa o cartão e o pedido sem ele. `GET /api/projects` devolve os projetos do usuário, `personal` primeiro e os
    outros por nome, e cria o `personal` de quem ainda não tem nenhum.
 6. **A marca do projeto é uma regra pura**, em `packages/theme` ao lado da regra que dá a cor das tags
-   (`projectInitials`, `projectMarkColors`), compartilhada com o Android por fixture. As iniciais são as das duas
+   (`projectInitials`; a cor sai de `hueForTag` e dos tokens de tag, sem função própria), compartilhada com o Android por fixture. As iniciais são as das duas
    primeiras palavras (separadas por espaço, `_`, `-`, `.`, `/` e pela passagem de minúscula para maiúscula) ou os dois
    primeiros caracteres de uma palavra só. O matiz vem do nome pela função que dá o matiz das tags, com a luminosidade e
    o croma das tags de cada tema, e o texto usa a cor do fundo da tela. `personal` não tem cor: fundo suave, texto

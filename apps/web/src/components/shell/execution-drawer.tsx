@@ -64,7 +64,7 @@ function RunRow({ card, index, userId, total, hidden }: { card: TaskCardDto; ind
  * execuções em andamento da mais recente para a mais antiga, em três alturas (uma linha, três linhas e todas). Tocar no
  * cabeçalho alterna entre três e todas, a seta dupla recolhe a uma linha e tocar na linha recolhida volta a três.
  * Sem execução em andamento ela não é desenhada. `active` diz se a tela atual tem a barra (as três abas); `covered`,
- * se o chat cobre a tela. A tela por baixo reserva no fim a altura atual da gaveta (o espaçador).
+ * se o chat ou o menu da seção cobre a tela. A tela por baixo reserva no fim a altura atual da gaveta (o espaçador).
  */
 export function ExecutionDrawer({ userId, active, covered = false }: { userId: string; active: boolean; covered?: boolean }) {
   const runs = useExecutionRuns(active);
