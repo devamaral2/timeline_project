@@ -1,0 +1,17 @@
+{
+  "id": "doc-news",
+  "name": "Notícias da manhã",
+  "schemaVersion": 1,
+  "global": false,
+  "derived": false,
+  "tags": [
+    "leitura"
+  ],
+  "revision": 7,
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-14T13:00:00.000Z",
+  "type": "news",
+  "data": {
+    "body": "Mudou em outro lugar"
+  }
+}

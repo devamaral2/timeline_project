@@ -3,6 +3,7 @@ package app.braid.mobile.ui.documents
 import androidx.lifecycle.SavedStateHandle
 import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
+import app.braid.mobile.domain.chat.ChatCommand
 import app.braid.mobile.support.Fixtures
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
@@ -368,6 +369,83 @@ class DocumentEditViewModelTest {
                 )
             }
         }
+
+    @Test
+    fun `the editor loads name, tags and body of news, an email summary and a transcript`() =
+        runTest {
+            listOf(
+                Triple("doc-news", "documents-detail-news", Triple("Notícias da manhã", listOf("leitura"), "# Notícias da manhã")),
+                Triple(
+                    "doc-email",
+                    "documents-detail-email-summary",
+                    Triple("Resumo da caixa de entrada", emptyList<String>(), "Três mensagens"),
+                ),
+                Triple(
+                    "doc-youtube",
+                    "documents-detail-youtube-transcript",
+                    Triple("Aula de jardinagem", emptyList<String>(), "# Aula de jardinagem"),
+                ),
+            ).forEach { (id, detail, expected) ->
+                backend.route("GET", "/api/artifacts/$id", fixture(detail))
+
+                val form = newViewModel(id).settled() as DocumentEditUiState.Form
+
+                assertTrue(form.existing)
+                assertEquals(expected.first, form.name)
+                assertEquals(expected.second, form.tags)
+                assertTrue(form.body.startsWith(expected.third))
+            }
+        }
+
+    @Test
+    fun `a global document of a new type and a type this app does not know are not edited here`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-news-global", fixture("documents-detail-news-global"))
+            backend.route("GET", "/api/artifacts/doc-future", fixture("documents-detail-unknown"))
+            backend.route("GET", "/api/artifacts/doc-future-bare", fixture("documents-detail-unknown-no-body"))
+
+            assertEquals(DocumentEditUiState.NotEditable, newViewModel("doc-news-global").settled())
+            assertEquals(DocumentEditUiState.NotEditable, newViewModel("doc-future").settled())
+            assertEquals(DocumentEditUiState.NotEditable, newViewModel("doc-future-bare").settled())
+        }
+
+    @Test
+    fun `a stale revision on news re-reads it, warns, and the retry sends the own type and the new revision`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-news", fixture("documents-detail-news"), fixture("document-edit-reread-news"))
+            backend.route("PATCH", "/api/artifacts/doc-news", status(409), MockResponse().setResponseCode(204))
+            val viewModel = newViewModel("doc-news")
+            viewModel.settled()
+            viewModel.setBody("Texto corrigido")
+            viewModel.save()
+
+            val stale = viewModel.saved()
+            assertEquals(STALE_TEXT_MESSAGE, stale.error)
+            assertEquals("Texto corrigido", stale.body)
+            assertEquals(2, backend.requestsTo("GET", "/api/artifacts/doc-news").size)
+
+            viewModel.save()
+            assertEquals("doc-news", viewModel.awaitSaved())
+
+            val patches = backend.requestsTo("PATCH", "/api/artifacts/doc-news")
+            assertEquals(Fixtures.json("document-edit-update-news-after-stale-request"), body(patches[1]))
+            assertEquals(
+                "news",
+                body(patches[0])
+                    .jsonObject
+                    .getValue("type")
+                    .jsonPrimitive.content,
+            )
+        }
+
+    @Test
+    fun `the app offers to create only a text document or a food, with no way to make one of the new types`() {
+        assertEquals(listOf(NewDocumentKind.Text, NewDocumentKind.Meal), NewDocumentKind.entries)
+        assertEquals(
+            listOf("tarefa", "nota", "buscar", "notificacoes", "configuracoes"),
+            ChatCommand.entries.map { it.slug },
+        )
+    }
 
     @Test
     fun `an edit that clears the name omits it`() =

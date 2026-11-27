@@ -4,12 +4,14 @@ import app.braid.mobile.data.chat.DefaultChatRepository
 import app.braid.mobile.data.requests.DefaultAgentRequestRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
+import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.chat.ModelSelector
 import app.braid.mobile.domain.chat.StoredModelSelection
 import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.request.ModelEffort
 import app.braid.mobile.domain.request.ModelProvider
 import app.braid.mobile.domain.request.ModelSelection
+import app.braid.mobile.domain.request.editEntityTypeOfArtifact
 import app.braid.mobile.domain.speech.SpeechError
 import app.braid.mobile.support.FakeMicrophone
 import app.braid.mobile.support.FakeSpeechRecognizer
@@ -236,6 +238,23 @@ class EntityEditViewModelTest {
             val done = viewModel.until { it.phase == EditPhase.Done }
             assertEquals("Nada a mudar.", done.message)
             assertEquals(0, edits.size)
+        }
+
+    @Test
+    fun `news, an email summary and a transcript send the artifact target with their own id, as a text document does`() =
+        runTest {
+            servingInOrder("entity-edit-done")
+            for (type in listOf(ArtifactType.Text, ArtifactType.News, ArtifactType.EmailSummary, ArtifactType.YoutubeTranscript)) {
+                val target = checkNotNull(editEntityTypeOfArtifact(type, global = false))
+                val viewModel = newViewModel(target, "art-${type.code}")
+                viewModel.sendAndFinish("Resuma em duas linhas")
+
+                val post = backend.requestsTo("POST", editPath).map(::body).last()
+                assertEquals(type.code, "artifact", post.getValue("entityType").jsonPrimitive.content)
+                assertEquals("art-${type.code}", post.getValue("entityId").jsonPrimitive.content)
+                assertEquals("Resuma em duas linhas", post.getValue("text").jsonPrimitive.content)
+            }
+            assertEquals(4, backend.requestsTo("POST", editPath).size)
         }
 
     @Test

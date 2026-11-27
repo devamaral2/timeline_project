@@ -116,6 +116,75 @@ class DocumentDetailViewModelTest {
         }
 
     @Test
+    fun `a global document of a new type offers no edit, delete or AI box`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-news-global", fixture("documents-detail-news-global"))
+
+            val ready = newViewModel("doc-news-global").settled() as DocumentDetailUiState.Ready
+
+            assertEquals(ArtifactType.News, ready.artifact.type)
+            assertFalse(ready.canEdit)
+            assertNull(ready.editType)
+        }
+
+    @Test
+    fun `the AI box of the three new types uses the artifact target, and the router and the exercise have none`() =
+        runTest {
+            listOf(
+                "doc-news" to "documents-detail-news",
+                "doc-email" to "documents-detail-email-summary",
+                "doc-youtube" to "documents-detail-youtube-transcript",
+                "doc-text" to "documents-detail-text",
+            ).forEach { (id, detail) ->
+                backend.route("GET", "/api/artifacts/$id", fixture(detail))
+                val type = (newViewModel(id).settled() as DocumentDetailUiState.Ready).editType
+                assertEquals(id, "artifact", type?.code)
+            }
+            backend.route("GET", "/api/artifacts/doc-router", fixture("documents-detail-router"))
+            backend.route("GET", "/api/artifacts/doc-workout", fixture("documents-detail-workout"))
+
+            assertNull((newViewModel("doc-router").settled() as DocumentDetailUiState.Ready).editType)
+            assertNull((newViewModel("doc-workout").settled() as DocumentDetailUiState.Ready).editType)
+        }
+
+    @Test
+    fun `deleting news, an email summary or a transcript asks first, sends DELETE and marks it as gone`() =
+        runTest {
+            listOf(
+                "doc-news" to "documents-detail-news",
+                "doc-email" to "documents-detail-email-summary",
+                "doc-youtube" to "documents-detail-youtube-transcript",
+            ).forEach { (id, detail) ->
+                backend.route("GET", "/api/artifacts/$id", fixture(detail))
+                backend.route("DELETE", "/api/artifacts/$id", MockResponse().setResponseCode(204))
+                val viewModel = newViewModel(id)
+                viewModel.settled()
+
+                viewModel.askDelete()
+                assertTrue((viewModel.state.value as DocumentDetailUiState.Ready).delete.open)
+                assertTrue(backend.requestsTo("DELETE", "/api/artifacts/$id").isEmpty())
+
+                viewModel.confirmDelete()
+                val done = viewModel.awaitDeleteDone() as DocumentDetailUiState.Ready
+
+                assertTrue(done.deleted)
+                assertEquals(1, backend.requestsTo("DELETE", "/api/artifacts/$id").size)
+            }
+        }
+
+    @Test
+    fun `an unknown type cannot be deleted from the app`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-future", fixture("documents-detail-unknown"))
+            val viewModel = newViewModel("doc-future")
+            viewModel.settled()
+
+            viewModel.confirmDelete()
+
+            assertTrue(backend.requestsTo("DELETE", "/api/artifacts/doc-future").isEmpty())
+        }
+
+    @Test
     fun `an unknown type with a body shows it as text but cannot be edited, by hand or by AI`() =
         runTest {
             backend.route("GET", "/api/artifacts/doc-future", fixture("documents-detail-unknown"))
