@@ -58,13 +58,14 @@ import app.braid.mobile.domain.request.TraceEntry
 import app.braid.mobile.domain.request.entityKindLabel
 import app.braid.mobile.domain.request.entityOperationLabel
 import app.braid.mobile.domain.request.entryText
-import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.stepProgress
 import app.braid.mobile.domain.request.traceKindName
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.elapsedLabel
+import app.braid.mobile.domain.task.isOpenAgentStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.task.momentLabel
 import app.braid.mobile.domain.timeline.formatTime
 import app.braid.mobile.ui.aiedit.MicrophonePermissionEffect
@@ -522,8 +523,8 @@ private fun requestBotState(
     val tracked = content.tracked
     return when {
         listening -> BotState.Listening
-        tracked == null || content.composer.sending || isOpenRequest(tracked.status) -> BotState.Thinking
-        tracked.status == TaskStatus.Done -> BotState.Done
+        tracked == null || content.composer.sending || isOpenAgentStatus(tracked.status) -> BotState.Thinking
+        isSuccessAgentStatus(tracked.status) -> BotState.Done
         tracked.status == TaskStatus.Failed -> BotState.Error
         else -> BotState.Idle
     }

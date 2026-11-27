@@ -7,7 +7,6 @@ import app.braid.mobile.domain.request.EntityKind
 import app.braid.mobile.domain.request.RequestFollow
 import app.braid.mobile.domain.request.RequestOperation
 import app.braid.mobile.domain.request.followRequest
-import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.runningStepLabel
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
@@ -25,6 +24,8 @@ import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.draftWithPicked
 import app.braid.mobile.domain.task.draftWithoutParent
 import app.braid.mobile.domain.task.draftWithoutSubtask
+import app.braid.mobile.domain.task.isOpenAgentStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.task.pickerExclusions
 import app.braid.mobile.domain.task.topCreatedTasks
 import app.braid.mobile.domain.time.AppClock
@@ -220,7 +221,7 @@ class TaskHierarchyEditor(
                                 return@launch
                             }
                         }
-                    if (request.status != TaskStatus.Done) {
+                    if (!isSuccessAgentStatus(request.status)) {
                         setFooter(PickerFooter.Failed(request.message ?: HERMES_ASK_FAILED))
                         return@launch
                     }
@@ -272,4 +273,4 @@ class TaskHierarchyEditor(
     private fun setFooter(footer: PickerFooter) = mutableState.update { it.copy(picker = it.picker?.copy(footer = footer)) }
 }
 
-private val AgentRequest.isOpen: Boolean get() = isOpenRequest(status)
+private val AgentRequest.isOpen: Boolean get() = isOpenAgentStatus(status)
