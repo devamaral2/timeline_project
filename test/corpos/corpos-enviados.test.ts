@@ -18,7 +18,8 @@ import { registerTools } from "../../apps/mcp/src/tools";
 type Handler = (args: Record<string, unknown>) => Promise<unknown>;
 interface Sent { method: "POST" | "PATCH"; path: string; body: Record<string, unknown> }
 
-function mcp() {
+/** `artifactType` e o tipo que a API devolve para o artefato lido antes de uma edicao do texto. */
+function mcp(artifactType = "text") {
   const handlers = new Map<string, { schema: Record<string, { parse(value: unknown): unknown }>; run: Handler }>();
   const sent: Sent[] = [];
   const server = {
@@ -29,7 +30,7 @@ function mcp() {
   const api = {
     async post(path: string, body: Record<string, unknown>) { sent.push({ method: "POST", path, body }); return {}; },
     async patch(path: string, body: Record<string, unknown>) { sent.push({ method: "PATCH", path, body }); return { ok: true }; },
-    async get() { return {}; },
+    async get() { return { type: artifactType }; },
   };
   registerTools(server as never, api as never);
   /** Chama a ferramenta como o cliente MCP: os argumentos passam pelo esquema da ferramenta antes do handler. */
@@ -76,12 +77,20 @@ describe("o que o MCP manda passa na API", () => {
     }
   });
 
-  test("update_artifact, com e sem o texto novo", async () => {
+  test.each(["text", "news", "email_summary", "youtube_transcript"])("create_artifact com o tipo %s", async (type) => {
+    const { body } = await mcp().call("create_artifact", { type, body: "texto", name: "Resumo", tags: ["a"], idempotencyKey: key });
+    expect(body.type).toBe(type);
+    expect(() => assertArtifactRequest(body, true)).not.toThrow();
+    expect(createArtifactRequestSchema.safeParse(body).success).toBe(true);
+  });
+
+  test.each(["text", "news", "email_summary", "youtube_transcript"])("update_artifact de um artefato %s, com e sem o texto novo", async (type) => {
     for (const extra of [{ name: "Outro" }, { body: "novo texto", tags: ["b"] }]) {
-      const { body } = await mcp().call("update_artifact", { artifactId: "a1", expectedRevision: 3, ...extra });
+      const { body } = await mcp(type).call("update_artifact", { artifactId: "a1", expectedRevision: 3, ...extra });
       expect(() => assertArtifactRequest(body as never, false)).not.toThrow();
       expect(() => assertExpectedRevision(body)).not.toThrow();
       expect(updateArtifactRequestSchema.safeParse(body).success).toBe(true);
+      if ("body" in extra) expect(body.type).toBe(type);
     }
   });
 });
