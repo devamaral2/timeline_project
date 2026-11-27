@@ -12,7 +12,7 @@ import type { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
  * mesmo dia atualiza o artefato dela, não cria outro.
  *
  * Cada gravação registra a tarefa de agente `save_content` (spec #39), que nasce
- * e termina `done` na mesma gravação: ela cria ou atualiza o artefato e gera ou
+ * e termina `completed` na mesma gravação: ela cria ou atualiza o artefato e gera ou
  * altera a leitura.
  */
 export class SaveDailyReadingUseCase {
@@ -34,7 +34,7 @@ export class SaveDailyReadingUseCase {
           userId: actor.userId,
           actor: "agent",
           kind: "save_content",
-          status: "done",
+          status: "completed",
           name: `Página guardada: ${article.name}`,
           startedAt: now,
           finishedAt: now,

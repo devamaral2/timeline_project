@@ -24,7 +24,7 @@ const FORMAT_FAILED_TEXT = "Transcrição indisponível: a formatação do resul
  * O job interno que fecha o pedido de transcrição (spec #39): o Haiku dá nome
  * aos falantes e escreve o resumo por tópicos (chamada 1) e o resumo dos
  * comentários (chamada 2, independente), e a API monta o documento com o texto
- * das falas exatamente como o serviço local entregou. O pedido termina `done`
+ * das falas exatamente como o serviço local entregou. O pedido termina `completed`
  * ou `failed` e a Leitura diária do dia do pedido volta para a fazer.
  *
  * Falha na chamada 1 ou resposta fora do schema: o pedido termina `failed`.
@@ -60,7 +60,7 @@ export class FormatTranscriptionUseCase {
     const markdown = composeTranscriptionDocument(pending.data.videoId, result, segments, format, comments.summary);
     await this.place(userId, pending, markdown, (tx, where) =>
       this.requests.finish(tx, {
-        requestId, userId, status: "done", at: this.clock(), where, ...(comments.failed ? { commentsSummaryFailed: true } : {}),
+        requestId, userId, status: "completed", at: this.clock(), where, ...(comments.failed ? { commentsSummaryFailed: true } : {}),
       }));
   }
 

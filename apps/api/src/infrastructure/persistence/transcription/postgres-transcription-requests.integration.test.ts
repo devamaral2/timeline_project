@@ -3,6 +3,7 @@ import { ArtifactBuilder } from "../../../api-core/artifacts/services/artifact-b
 import { CreateTaskUseCase } from "../../../api-core/tasks/create-task.usecase";
 import { TRANSCRIPTION_JOB } from "../../../api-core/transcription/transcription-requests";
 import { DailyReadingGate } from "../../../api-core/tasks/daily-reading.gate";
+import { SaveDailyReadingUseCase } from "../../../features/save-daily-reading/save-daily-reading.usecase";
 import { RequestTranscriptionUseCase } from "../../../features/request-transcription/request-transcription.usecase";
 import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
 import { PostgresWorkoutCatalog } from "../artifacts/postgres-workout.catalog";
@@ -22,6 +23,7 @@ describe("pedido de transcricao no Postgres", () => {
   let ctx: PostgresTestContext;
   let useCase: RequestTranscriptionUseCase;
   let tasks: PostgresTaskRepository;
+  let saveReading: SaveDailyReadingUseCase;
 
   beforeAll(async () => {
     ctx = await createPostgresTestContext();
@@ -32,6 +34,7 @@ describe("pedido de transcricao no Postgres", () => {
     const createTask = new CreateTaskUseCase(tasks, artifacts, builder, writer, () => now);
     const gate = new DailyReadingGate(new PostgresTaskCardQuery(ctx.db), artifacts, builder, createTask, writer, undefined, () => now);
     useCase = new RequestTranscriptionUseCase(gate, new PostgresTranscriptionRequests(ctx.db), new PostgresTaskRelations());
+    saveReading = new SaveDailyReadingUseCase(gate, new PostgresTaskRelations());
   }, 60000);
 
   beforeEach(async () => {
@@ -67,9 +70,25 @@ describe("pedido de transcricao no Postgres", () => {
     expect(await countRows(ctx.pool, "tasks", "kind = 'save_content_with_transcription'")).toBe(1);
   });
 
+  test("o pedido de transcricao, a tarefa de conteudo guardado e a leitura do dia caem no personal do dono, sem situacao", async () => {
+    const video = await useCase.execute({ url: VIDEO }, { userId: USER });
+    const page = await saveReading.execute({ url: "https://jornal.example/economia", title: "Juros", markdown: "Texto." }, { userId: USER });
+
+    const projects = await selectRows(ctx.pool, "SELECT id, name, personal FROM projects WHERE user_id = $1", [USER]);
+    expect(projects).toHaveLength(1);
+    expect(projects[0]).toMatchObject({ name: "personal", personal: true });
+    const owned = await selectRows(ctx.pool, "SELECT kind, project_id, situation FROM tasks WHERE user_id = $1 ORDER BY kind", [USER]);
+    expect(owned.map((row) => row.kind)).toEqual(["common", "save_content", "save_content_with_transcription"]);
+    for (const row of owned) {
+      expect(row.project_id, String(row.kind)).toBe(projects[0].id);
+      expect(row.situation, String(row.kind)).toBeNull();
+    }
+    expect(page.taskId).toBe(video.taskId);
+  });
+
   test("com o pedido ja concluido, o proximo pedido atualiza o mesmo documento e a leitura relaciona 'updates'", async () => {
     const first = await useCase.execute({ url: VIDEO }, { userId: USER });
-    await ctx.pool.query("UPDATE tasks SET status = 'done', finished_at = now() WHERE id = $1", [first.requestId]);
+    await ctx.pool.query("UPDATE tasks SET status = 'completed', finished_at = now() WHERE id = $1", [first.requestId]);
     await ctx.pool.query("UPDATE tasks SET status = 'done', finished_at = now() WHERE id = $1", [first.taskId]);
 
     const second = await useCase.execute({ url: VIDEO }, { userId: USER });

@@ -130,7 +130,7 @@ describe("servico local de transcricao no Postgres", () => {
 
     expect(await new CancelTranscriptionUseCase(gate, requestsStore, { cancelOfTasks: async () => {} }, () => now).execute(created.requestId, actor)).toBe(true);
 
-    expect(await tasks.findById(created.requestId)).toMatchObject({ status: "cancel", data: { errorCode: "cancelled" } });
+    expect(await tasks.findById(created.requestId)).toMatchObject({ status: "cancelled", data: { errorCode: "cancelled" } });
     expect(await selectRows(ctx.pool, "SELECT kind, status FROM jobs")).toEqual([{ kind: TRANSCRIPTION_JOB, status: "cancelled" }]);
     const body = (await artifacts.findById(created.artifactId))?.data as { body: string };
     expect(body.body).toBe(`Fonte: [YouTube](${VIDEO})\n\nTranscrição cancelada\n`);
@@ -232,13 +232,13 @@ describe("servico local de transcricao no Postgres", () => {
       return created;
     }
 
-    test("monta o documento, leva o pedido a done e a leitura de volta para a fazer", async () => {
+    test("monta o documento, leva o pedido a completed e a leitura de volta para a fazer", async () => {
       const created = await deliveredRequest();
 
       await new FormatTranscriptionUseCase(gate, requestsStore, haiku({ summary: "Gostaram." }), () => now).run(created.requestId, USER);
 
       const request = await tasks.findById(created.requestId);
-      expect(request).toMatchObject({ status: "done" });
+      expect(request).toMatchObject({ status: "completed" });
       expect(request?.finishedAt).toBeInstanceOf(Date);
       const artifact = await artifacts.findById(created.artifactId);
       expect(artifact?.name).toBe("Entrevista");
@@ -258,19 +258,19 @@ describe("servico local de transcricao no Postgres", () => {
 
       const request = await tasks.findById(created.requestId);
       const { artifactId } = (request?.data ?? {}) as { artifactId: string };
-      expect(request).toMatchObject({ status: "done" });
+      expect(request).toMatchObject({ status: "completed" });
       expect(artifactId).not.toBe(created.artifactId);
       expect(await bodyOf(artifactId)).toContain("## Transcrição");
       expect(await countRows(ctx.pool, "artifacts", "type = 'text' AND deleted_at IS NULL")).toBe(1);
       expect((await tasks.findById(created.taskId))?.artifactLinks.map((link) => link.artifactId)).toContain(artifactId);
     });
 
-    test("com falha só nos comentários, o pedido termina done e ganha a entrada", async () => {
+    test("com falha só nos comentários, o pedido termina completed e ganha a entrada", async () => {
       const created = await deliveredRequest();
 
       await new FormatTranscriptionUseCase(gate, requestsStore, haiku(new FastStageError("provider")), () => now).run(created.requestId, USER);
 
-      expect(await tasks.findById(created.requestId)).toMatchObject({ status: "done" });
+      expect(await tasks.findById(created.requestId)).toMatchObject({ status: "completed" });
       expect(await bodyOf(created.artifactId)).not.toContain("## Comentários");
       expect(await selectRows(ctx.pool, "SELECT kind, data FROM task_entries WHERE kind = 'trace'")).toEqual([
         { kind: "trace", data: { stage: "comments_summary", status: "failed" } },

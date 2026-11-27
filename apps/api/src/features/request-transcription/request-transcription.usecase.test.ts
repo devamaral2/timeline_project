@@ -132,7 +132,7 @@ test.each(["awaiting_transcription", "running"] as const)(
   },
 );
 
-test.each(["done", "failed"] as const)(
+test.each(["completed", "failed"] as const)(
   "o mesmo vídeo no mesmo dia, com o pedido já %s, cria outro pedido que atualiza o mesmo documento e devolve a leitura para a fazer",
   async (status) => {
     const { useCase, taskRepository, artifactRepository, database, requests, relations } = setup();

@@ -204,7 +204,7 @@ test("guardar uma página registra a tarefa de agente save_content, já concluí
     userId: actor.userId,
     actor: "agent",
     kind: "save_content",
-    status: "done",
+    status: "completed",
     startedAt: now,
     finishedAt: now,
     data: { url: "https://jornal.example/economia/juros?ref=home" },

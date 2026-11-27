@@ -160,11 +160,11 @@ describe("filters", () => {
 });
 
 describe("saved content", () => {
-  const saved = (id: string, kind: "save_content" | "save_content_with_transcription", status: "done" | "awaiting_transcription") =>
+  const saved = (id: string, kind: "save_content" | "save_content_with_transcription", status: "completed" | "awaiting_transcription") =>
     task(id, "2026-08-17T12:00:00.000Z", { actor: "agent", kind, status });
   const tasks = [
     task("common", "2026-08-17T15:00:00.000Z"),
-    saved("page", "save_content", "done"),
+    saved("page", "save_content", "completed"),
     saved("video", "save_content_with_transcription", "awaiting_transcription"),
   ];
 

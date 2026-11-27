@@ -18,7 +18,7 @@ export const TRANSCRIPTION_QUEUED_TEXT = "Transcrição na fila";
  * job do serviço local entra na fila na mesma transação.
  *
  * O mesmo vídeo no mesmo dia, com o pedido ainda esperando ou rodando, devolve
- * esse pedido sem gravar nada. Com o pedido já `done` ou `failed`, nasce outro
+ * esse pedido sem gravar nada. Com o pedido já `completed` ou `failed`, nasce outro
  * que atualiza o mesmo documento, como uma página guardada de novo.
  */
 export class RequestTranscriptionUseCase {
