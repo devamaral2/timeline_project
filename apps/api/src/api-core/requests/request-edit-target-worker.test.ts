@@ -83,6 +83,25 @@ describe("worker da edicao pela tela de detalhe", () => {
     expect(ctx.store.stepRecords).toHaveLength(0);
   });
 
+  test.each(["text", "news", "email_summary", "youtube_transcript"] as const)("alvo artifact aceita um artefato %s e chama o mesmo agente da nota", async (type) => {
+    const { ctx } = await withArtifact("artifact", { name: "Resumo", type, data: { body: "texto atual" }, tags: ["leitura"] });
+    await ctx.editTargetWorker.run("r1");
+    expect(ctx.store.stepRecords).toMatchObject([{
+      agent: "artifact-edit",
+      input: { target: { snapshot: { name: "Resumo", tags: ["leitura"], text: "texto atual" } } },
+    }]);
+  });
+
+  test.each([
+    ["router", { body: "regras" }],
+    ["sleep", { trackedSleepTime: 1, score: 1 }],
+  ] as const)("alvo artifact recusa um artefato %s com type_mismatch", async (type, data) => {
+    const { ctx } = await withArtifact("artifact", { type, data });
+    await ctx.editTargetWorker.run("r1");
+    expect(ctx.store.require("r1")).toMatchObject({ status: "failed", answer: uiConfig.targetFailed.type_mismatch });
+    expect(ctx.store.stepRecords).toHaveLength(0);
+  });
+
   test("tipo informado que nao bate com o artefato falha com type_mismatch", async () => {
     const { ctx } = await withArtifact("food_artifact", { type: "sleep", data: { trackedSleepTime: 1, score: 1 } });
     await ctx.editTargetWorker.run("r1");

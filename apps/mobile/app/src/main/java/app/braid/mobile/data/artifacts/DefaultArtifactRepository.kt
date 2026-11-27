@@ -8,6 +8,7 @@ import app.braid.mobile.domain.artifact.ArtifactDraft
 import app.braid.mobile.domain.artifact.ArtifactFilters
 import app.braid.mobile.domain.artifact.ArtifactNotFoundException
 import app.braid.mobile.domain.artifact.ArtifactRepository
+import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.TextContent
 import app.braid.mobile.domain.task.StaleRevisionException
 import kotlinx.serialization.json.JsonArray
@@ -66,13 +67,14 @@ class DefaultArtifactRepository
             id: String,
             revision: Int,
             text: TextContent,
+            type: ArtifactType,
         ) {
             val body =
                 buildJsonObject {
                     put("expectedRevision", revision)
                     text.name?.let { put("name", it) }
                     put("tags", text.tags.toJsonArray())
-                    put("type", "text")
+                    put("type", type.code)
                     put("data", buildJsonObject { put("body", text.body) })
                 }
             try {

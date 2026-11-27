@@ -117,7 +117,9 @@ export function ArtifactEditView({ existing, initialName, onSaved, onLeave }: Ar
 
     if (existing) {
       try {
-        await editArtifact(existing.id, { expectedRevision: revision, name: title, tags, type: "text", data: { body: content }, ...links });
+        // O texto novo vai com o tipo do próprio artefato: editar notícias ou um resumo não os transforma em nota.
+        const ownType = isFreeTextArtifact(existing) ? existing.type : "text";
+        await editArtifact(existing.id, { expectedRevision: revision, name: title, tags, type: ownType, data: { body: content }, ...links });
         onSaved(existing.id);
       } catch (cause) {
         if (cause instanceof ApiRequestError && cause.kind === "stale_revision") {
