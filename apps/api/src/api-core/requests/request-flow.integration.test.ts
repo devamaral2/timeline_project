@@ -205,13 +205,13 @@ test("situacao: o pedido que falha fica para revisar", async () => {
   expect(await situations(requestId)).toEqual({ request: "to_review", steps: [null] });
 });
 
-test("situacao: o pedido cancelado fica para revisar, e os passos cancelados, sem situacao", async () => {
+test("situacao: o pedido cancelado enquanto rodava fica interrompido e para revisar, e os passos, sem situacao", async () => {
   gateway.outputs.set("entity", entityAnswer({ tasks: [task("Almoço", "meal", 12)] }));
   const requestId = await operations.start({ userId: "user-1", text: "almocei" }, actor);
   await jobs.tick();
   await jobs.idle();
 
-  expect(await operations.cancel(requestId, actor)).toMatchObject({ status: "cancelled", situation: "to_review" });
+  expect(await operations.cancel(requestId, actor)).toMatchObject({ status: "interrupted", situation: "to_review" });
   expect(await situations(requestId)).toEqual({ request: "to_review", steps: [null] });
 });
 
@@ -793,6 +793,8 @@ test.each([["preparing"], ["queued"], ["starting"], ["waiting"]])("cancelar em %
   expect(view).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
   expect(await historyOf(accepted.id)).toEqual([...new Set(["queued", status, "cancelled"])]);
   expect((await ctx.pool.query("SELECT finished_at FROM tasks WHERE id = $1", [accepted.id])).rows[0]?.finished_at).not.toBeNull();
+  // O fim passa pelo mesmo fechamento: o pedido fica para revisar.
+  expect(await situations(accepted.id)).toEqual({ request: "to_review", steps: [] });
 });
 
 test("cancelar em running deixa interrupted, e os passos seguem: o queued vira cancelled e o running vira interrupted", async () => {
@@ -810,6 +812,8 @@ test("cancelar em running deixa interrupted, e os passos seguem: o queued vira c
   expect(await statusOf(runningStep)).toBe("interrupted");
   expect((await ctx.pool.query("SELECT finished_at FROM tasks WHERE id IN ($1, $2)", [queuedStep, runningStep])).rows.every((row) => row.finished_at)).toBe(true);
   expect(await historyOf(requestId)).toEqual(["preparing", "running", "interrupted"]);
+  // O pedido interrompido fica para revisar; os passos, cancelado e interrompido, nao tem situacao.
+  expect(await situations(requestId)).toEqual({ request: "to_review", steps: [null, null] });
 });
 
 test("a execucao que o Hermes devolve como cancelada ou interrompida deixa o pedido interrompido; o erro do executor deixa failed", async () => {
@@ -818,6 +822,7 @@ test("a execucao que o Hermes devolve como cancelada ou interrompida deixa o ped
   await drain();
   expect(await operations.view(stopped.id, actor)).toMatchObject({ status: "interrupted" });
   expect(await historyOf(stopped.id)).toEqual(["queued", "starting", "running", "interrupted"]);
+  expect(await situations(stopped.id)).toEqual({ request: "to_review", steps: [] });
 
   hermesReply = async () => { throw new HermesRequestError("Hermes run failed"); };
   const broken = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "i2" }, actor);
@@ -836,6 +841,7 @@ test("o job abandonado por tentativas esgotadas deixa o pedido que rodava interr
 
   expect(await operations.view(running.id, actor)).toMatchObject({ status: "interrupted" });
   expect(await historyOf(running.id)).toEqual(["queued", "running", "interrupted"]);
+  expect(await situations(running.id)).toEqual({ request: "to_review", steps: [] });
   expect(await operations.view(waiting.id, actor)).toMatchObject({ status: "failed" });
 });
 
