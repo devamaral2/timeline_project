@@ -104,9 +104,10 @@ fun ProjectMark(
             lineHeight = 10.sp,
             // Corta a sobra da fonte igual em cima e embaixo, como o `line-height` do CSS. O padrão (proporcional)
             // corta mais em cima e deixava a letra quase 1 dp acima do centro.
-            style = LocalTextStyle.current.copy(
-                lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
-            ),
+            style =
+                LocalTextStyle.current.copy(
+                    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None),
+                ),
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 0.02.em,
             maxLines = 1,
