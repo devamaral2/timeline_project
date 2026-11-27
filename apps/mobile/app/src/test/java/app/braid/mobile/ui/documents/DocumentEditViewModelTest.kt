@@ -20,6 +20,8 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
@@ -336,6 +338,35 @@ class DocumentEditViewModelTest {
             assertEquals("doc-text", viewModel.awaitSaved())
             assertEquals(Fixtures.json("document-edit-update-request"), body(patches().single()))
             assertTrue(posts().isEmpty())
+        }
+
+    @Test
+    fun `saving an edit of news, an email summary or a transcript keeps the type of the document`() =
+        runTest {
+            listOf(
+                Triple("doc-news", "documents-detail-news", "news"),
+                Triple("doc-email", "documents-detail-email-summary", "email_summary"),
+                Triple("doc-youtube", "documents-detail-youtube-transcript", "youtube_transcript"),
+            ).forEach { (id, detail, code) ->
+                backend.route("GET", "/api/artifacts/$id", fixture(detail))
+                backend.route("PATCH", "/api/artifacts/$id", MockResponse().setResponseCode(204))
+                val viewModel = newViewModel(id)
+                viewModel.settled()
+                viewModel.setBody("Texto corrigido")
+                viewModel.save()
+
+                assertEquals(id, viewModel.awaitSaved())
+                val sent = body(backend.requestsTo("PATCH", "/api/artifacts/$id").single()).jsonObject
+                assertEquals(code, sent.getValue("type").jsonPrimitive.content)
+                assertEquals(
+                    "Texto corrigido",
+                    sent
+                        .getValue("data")
+                        .jsonObject
+                        .getValue("body")
+                        .jsonPrimitive.content,
+                )
+            }
         }
 
     @Test
