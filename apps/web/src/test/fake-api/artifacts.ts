@@ -24,7 +24,9 @@ import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 
 const ARTIFACTS = "artifacts";
 const TASKS = "tasks";
-const ARTIFACT_TYPES: readonly ArtifactType[] = ["text", "food", "sleep", "training", "workout", "skill", "agent", "router"];
+const ARTIFACT_TYPES: readonly ArtifactType[] = [
+  "text", "news", "email_summary", "youtube_transcript", "food", "sleep", "training", "workout", "skill", "agent", "router",
+];
 /** Arquivos do agente e roteador: a API não edita nem apaga por aqui (400). */
 const FOLLOWS_FILES: ReadonlySet<ArtifactType> = new Set(["skill", "agent", "router"]);
 const DEFAULT_NAMES: Partial<Record<ArtifactType, string>> = { text: "Nota", food: "Alimento", sleep: "Sono", training: "Treino" };

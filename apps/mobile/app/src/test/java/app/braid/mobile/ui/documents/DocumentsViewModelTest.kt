@@ -111,11 +111,20 @@ class DocumentsViewModelTest {
 
             chooseMode(viewModel, ViewMode.Human)
             assertEquals(
-                listOf(ArtifactType.Text, ArtifactType.Food, ArtifactType.Sleep, ArtifactType.Training, ArtifactType.Workout),
+                listOf(
+                    ArtifactType.Text,
+                    ArtifactType.News,
+                    ArtifactType.EmailSummary,
+                    ArtifactType.YoutubeTranscript,
+                    ArtifactType.Food,
+                    ArtifactType.Sleep,
+                    ArtifactType.Training,
+                    ArtifactType.Workout,
+                ),
                 viewModel.state.value.shown!!
                     .map { it.type },
             )
-            assertEquals("5 artefatos", viewModel.state.value.caption)
+            assertEquals("8 artefatos", viewModel.state.value.caption)
 
             chooseMode(viewModel, ViewMode.Agent)
             assertEquals(

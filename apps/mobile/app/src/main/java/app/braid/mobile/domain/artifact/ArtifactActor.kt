@@ -7,6 +7,9 @@ enum class ArtifactType(
     val code: String,
 ) {
     Text("text"),
+    News("news"),
+    EmailSummary("email_summary"),
+    YoutubeTranscript("youtube_transcript"),
     Food("food"),
     Sleep("sleep"),
     Training("training"),
@@ -22,10 +25,11 @@ enum class ArtifactType(
 }
 
 /**
- * Os tipos de texto livre: o que a pessoa lê e edita como uma nota (o corpo em markdown é o dado). Hoje só o texto; um
- * tipo novo de texto livre entra aqui e nos demais lugares nada muda. Espelha `FREE_TEXT_ARTIFACT_TYPES` do web.
+ * Os tipos de texto livre: o que a pessoa lê e edita como uma nota (o corpo em markdown é o dado): o texto, as notícias,
+ * o resumo de e-mail e a transcrição. Espelha `FREE_TEXT_ARTIFACT_TYPES` do web.
  */
-val FREE_TEXT_ARTIFACT_TYPES: Set<ArtifactType> = setOf(ArtifactType.Text)
+val FREE_TEXT_ARTIFACT_TYPES: Set<ArtifactType> =
+    setOf(ArtifactType.Text, ArtifactType.News, ArtifactType.EmailSummary, ArtifactType.YoutubeTranscript)
 
 /**
  * Os tipos cujo dado é `{ body }` em markdown: os de texto livre e o roteador, que segue um arquivo do agente e por

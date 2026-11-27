@@ -7,6 +7,9 @@ import java.time.Instant
 fun artifactTypeLabel(type: ArtifactType): String =
     when (type) {
         ArtifactType.Text -> "Nota"
+        ArtifactType.News -> "Notícias"
+        ArtifactType.EmailSummary -> "Resumo de e-mail"
+        ArtifactType.YoutubeTranscript -> "Transcrição"
         ArtifactType.Food -> "Refeição"
         ArtifactType.Sleep -> "Sono"
         ArtifactType.Training -> "Treino"

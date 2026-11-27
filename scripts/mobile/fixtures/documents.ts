@@ -80,8 +80,16 @@ const textNote = artifact({
 
 const week = (relation: string, taskId: string, name: string, kind: string, extra: Record<string, unknown> = {}) => ({ taskId, relation, name, actor: "human", kind, ...extra });
 
+/** Um artefato de cada tipo de texto livre que não é a nota: o mesmo dado, com o tipo próprio. */
+const freeTextDocuments = [
+  artifact({ id: "doc-news", name: "Notícias da manhã", type: "news", tags: ["leitura"], data: { body: "# Notícias da manhã\n\n- [Chuva no fim de semana](https://example.com/chuva)" } }),
+  artifact({ id: "doc-email", name: "Resumo da caixa de entrada", type: "email_summary", data: { body: "Três mensagens pedem resposta.\n\n- A fatura vence amanhã" } }),
+  artifact({ id: "doc-youtube", name: "Aula de jardinagem", type: "youtube_transcript", data: { body: "# Aula de jardinagem\n\n00:00 Como podar roseiras" } }),
+];
+
 const documents = [
   textNote,
+  ...freeTextDocuments,
   food("doc-food", "Almoço de ontem", { tasks: [week("creates", "task-2", "Almoço", "meal", { startedAt: "2026-09-13T15:00:00.000Z" })] }),
   artifact({ id: "doc-sleep", name: "Noite de sono", type: "sleep", tags: ["saúde"], data: { trackedSleepTime: 450, score: 87 }, tasks: [week("creates", "task-6", "Dormir", "sleep", { startedAt: "2026-09-15T01:00:00.000Z", estimatedFinishAt: "2026-09-15T09:00:00.000Z" })] }),
   artifact({
@@ -106,6 +114,13 @@ const documents = [
   artifact({ id: "doc-agent", name: "Planejador", type: "agent", data: { path: "hermes/agents/planejador.md", hash: "def", missing: true } }),
   artifact({ id: "doc-router", name: "Roteador", type: "router", data: { body: "Roteia pedidos" } }),
 ];
+
+/** O artefato de exemplo de um tipo: pelo tipo, e não pela posição, para a lista poder crescer. */
+function documentOf(type: string) {
+  const found = documents.find((document) => document.type === type);
+  if (!found) throw new Error(`sem artefato de exemplo do tipo ${type}`);
+  return found;
+}
 
 const DETAIL_TASKS = [
   week("creates", "task-1", "Reunião de planejamento", "common", { startedAt: "2026-09-14T12:00:00.000Z" }),
@@ -146,16 +161,16 @@ export function documentsFixtures(): Record<string, unknown> {
     "documents-detail-text": withTasks,
     "documents-detail-text-single-task": { ...documents[0], tasks: [DETAIL_TASKS[0]] },
     "documents-detail-text-global": { ...documents[0], id: "doc-text-global", global: true, tasks: DETAIL_TASKS },
-    "documents-detail-food": documents[1],
+    "documents-detail-food": documentOf("food"),
     "documents-detail-food-pending": food("doc-food-pending", "Prato novo", {}, pendingData),
     "documents-detail-food-done": food("doc-food-pending", "Prato novo"),
     "documents-detail-food-failed": food("doc-food-pending", "Prato novo", {}, { ...pendingData, generation: { status: "failed" } }),
-    "documents-detail-sleep": documents[2],
-    "documents-detail-training": documents[3],
-    "documents-detail-workout": documents[4],
-    "documents-detail-skill": documents[5],
-    "documents-detail-agent": documents[6],
-    "documents-detail-router": documents[7],
+    "documents-detail-sleep": documentOf("sleep"),
+    "documents-detail-training": documentOf("training"),
+    "documents-detail-workout": documentOf("workout"),
+    "documents-detail-skill": documentOf("skill"),
+    "documents-detail-agent": documentOf("agent"),
+    "documents-detail-router": documentOf("router"),
     "documents-model": {
       now: now.toISOString(),
       typeOrder: ARTIFACT_TYPE_ORDER,
@@ -190,7 +205,7 @@ export function documentsFixtures(): Record<string, unknown> {
         { totalProteinGrams: 10, totalCarbohydrateGrams: 0, totalFatGrams: 0 },
         { totalProteinGrams: 25, totalCarbohydrateGrams: 25, totalFatGrams: 10 },
       ].map((totals) => ({ ...totals, result: macroShares(totals) })),
-      setGroups: (documents[3]?.data as { workouts: Array<{ sets?: never[] }> }).workouts
+      setGroups: (documentOf("training").data as { workouts: Array<{ sets?: never[] }> }).workouts
         .filter((workout) => workout.sets)
         .map((workout) => ({ sets: workout.sets, result: groupSetsByExercise(workout.sets as never).map((group) => ({ exercise: group.exercise, setIds: group.sets.map((set) => set.id) })) })),
       messages: { pending: pendingMealMessage, failed: failedMealMessage },
