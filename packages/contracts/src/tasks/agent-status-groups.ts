@@ -47,6 +47,34 @@ export function isCancelledAgentStatus(status: AgentTaskStatus): boolean {
   return CANCELLED_AGENT_STATUSES.includes(status);
 }
 
+/**
+ * Os tipos de tarefa de agente que nao sao um pedido: o passo de um pedido e a execucao agendada. Nao tem situacao e
+ * nao aparece na gaveta de execucao.
+ */
+export const KINDS_WITHOUT_SITUATION = ["step", "cron"] as const;
+
+/** O que as perguntas sobre pedido de agente leem de uma tarefa ou cartao. */
+interface AgentTaskFacts {
+  actor: string;
+  kind: string;
+  status?: string | null | undefined;
+}
+
+/** E um pedido de agente: de agente, e nao passo nem execucao agendada. */
+export function isAgentRequest(task: AgentTaskFacts): boolean {
+  return task.actor === "agent" && !(KINDS_WITHOUT_SITUATION as readonly string[]).includes(task.kind);
+}
+
+/** A tarefa aceita situacao: e um pedido de agente num status final. */
+export function acceptsSituation(task: AgentTaskFacts): boolean {
+  return isAgentRequest(task) && task.status != null && isFinalAgentStatus(task.status as AgentTaskStatus);
+}
+
+/** A tarefa e uma execucao: um pedido de agente em andamento (a gaveta de execucao mostra so estas). */
+export function isExecutionRun(task: AgentTaskFacts): boolean {
+  return isAgentRequest(task) && task.status != null && isInProgressAgentStatus(task.status as AgentTaskStatus);
+}
+
 /*
  * Perguntas que servem a pessoa e ao agente ao mesmo tempo. Os status de pessoa nao mudam; os de
  * agente vem dos grupos acima. Por isso cada uma recebe o executor.

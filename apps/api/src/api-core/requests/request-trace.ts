@@ -1,5 +1,5 @@
 import type { AgentTraceDto, AgentTraceEntryDto, AgentTraceField, AgentTraceSection, AgentTraceStatus } from "@repo/contracts";
-import { isFinalAgentStatus, isSuccessAgentStatus } from "../../domain/agent-status";
+import { isCancelledAgentStatus, isFinalAgentStatus, isInterruptedAgentStatus, isSuccessAgentStatus } from "../../domain/agent-status";
 import { dispatchConfig, stepLabel } from "./request-config";
 import { ENTITY_AGENT } from "./request-steps";
 import type { DispatchRecord, RequestEntityRecord, RequestRecord, StepRecord } from "./request-store";
@@ -270,7 +270,7 @@ function answerEntry(
     : entities.length === 1 ? "1 registro gravado" : `${entities.length} registros gravados`;
   return {
     id: `${request.id}-answer`, kind: "answer",
-    label: request.status === "cancelled" ? "Cancelado" : request.status === "interrupted" ? "Interrompido" : failed ? "Encerrou com falha" : message ? "Resposta" : "Concluiu",
+    label: isCancelledAgentStatus(request.status) ? "Cancelado" : isInterruptedAgentStatus(request.status) ? "Interrompido" : failed ? "Encerrou com falha" : message ? "Resposta" : "Concluiu",
     summary, status: failed ? "failed" : "done",
     ...(request.finishedAt ? { startedAt: request.finishedAt.toISOString() } : {}),
     fields,
