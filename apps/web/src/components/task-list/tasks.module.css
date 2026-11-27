@@ -112,6 +112,8 @@
 .message { composes: message from "../ui/page.module.css"; }
 .retry { composes: retry from "../ui/page.module.css"; }
 .empty { composes: empty from "../ui/page.module.css"; }
+/* A lista sem nada para fazer enquanto o agente trabalha: uma linha só, no tom do texto de apoio. */
+.quiet { margin: 0; padding: 24px 0; font-size: var(--font-size-sm); line-height: 20px; color: var(--muted); }
 .emptyTitle { composes: emptyTitle from "../ui/page.module.css"; }
 .emptyText { composes: emptyText from "../ui/page.module.css"; }
 .emptyAction { composes: pill from "../ui/controls.module.css"; color: var(--ink); font-weight: 600; }

@@ -19,7 +19,7 @@ import { useNow } from "@/lib/tasks/use-now";
 import { useOpenAgentRefresh } from "@/lib/tasks/use-open-agent-refresh";
 import { useViewMode } from "@/lib/tasks/view-mode";
 import { nestSubtasks, oneRowPerSeries, showsSeriesRule } from "@/lib/tasks/task-groups";
-import { drawersOf, listedCards, toNowLabel, type ListDrawerKey } from "@/lib/tasks/task-drawers";
+import { drawerOf, drawersOf, listedCards, toNowLabel, type ListDrawerKey } from "@/lib/tasks/task-drawers";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { SubtaskDrawer, SubtaskToggle } from "./subtask-drawer";
 import { TaskFilters } from "./TaskFilters";
@@ -183,6 +183,8 @@ export function TaskListScreen({ userId }: { userId: string }) {
   const tree = useMemo(() => nestSubtasks(rows), [rows]);
   const drawers = useMemo(() => drawersOf(tree.roots), [tree]);
   const toggleSubtasks = (taskId: string) => setClosedSubtasks((current) => toggleIn(current, taskId));
+  /** Nada na lista, mas o agente ainda trabalha: a tela não convida a criar a primeira tarefa. */
+  const onlyAgentWork = (cards ?? []).some((card) => drawerOf(card) === "execution");
   const toNow = drawers.find((drawer) => drawer.key === "now")?.cards.length ?? 0;
   const tags = useMemo(() => tagsByUse(facets ?? []), [facets]);
   const hasTasks = (facets?.length ?? 0) > 0;
@@ -252,6 +254,8 @@ export function TaskListScreen({ userId }: { userId: string }) {
               <p className={styles.emptyText}>Nada combina com os filtros escolhidos.</p>
               <button type="button" className={styles.emptyAction} onClick={clearFilters}>Limpar filtros</button>
             </div>
+          ) : onlyAgentWork ? (
+            <p className={styles.quiet}>Nada pede a sua atenção agora.</p>
           ) : (
             <div className={styles.empty}>
               <ListChecks aria-hidden />

@@ -608,3 +608,13 @@ test("a subtarefa cuja principal está em andamento continua como linha, e a pri
   expect(screen.queryByRole("link", { name: /Montar a viagem/ })).not.toBeInTheDocument();
   expect(row.parentElement?.closest("li")).toBeNull();
 });
+
+test("sem nada na lista mas com o agente trabalhando, diz que nada pede atenção e não convida a criar tarefa", async () => {
+  serve([taskFixture({ id: "pesquisa", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running" })]);
+  render(<TaskListScreen userId="user-1" />);
+
+  expect(await screen.findByText("Nada pede a sua atenção agora.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Nenhuma tarefa para agora");
+  expect(screen.queryByRole("heading", { name: "Nenhuma tarefa por aqui" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Nova tarefa" })).not.toBeInTheDocument();
+});
