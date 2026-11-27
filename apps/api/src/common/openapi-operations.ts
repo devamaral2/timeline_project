@@ -304,7 +304,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
     description: "A regra diz quando cada ocorrência acontece; `template` é a tarefa que cada uma copia, sem a janela.",
     body: "CreateRecurrenceInput",
     success: { status: 201, description: "A série foi criada.", schema: "CreatedRecurrence" },
-    errors: { 400: invalid, 409: idempotencyClash, 422: idempotencyReuse },
+    errors: { 400: invalid, 404: "Projeto do modelo não encontrado (não existe ou não é do usuário).", 409: idempotencyClash, 422: idempotencyReuse },
     idempotent: true,
   },
   "GET /api/recurrences/{recurrenceId}": {
@@ -319,7 +319,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
     description: "Envie `expectedRevision` e os campos da regra que mudam. `template`, se vier, substitui o template inteiro.",
     body: "UpdateRecurrenceInput",
     success: { status: 204, description: "A série foi editada." },
-    errors: { 400: invalid, 404: "Série não encontrada.", 409: stale },
+    errors: { 400: invalid, 404: "Série ou projeto do modelo não encontrado.", 409: stale },
   },
   "DELETE /api/recurrences/{recurrenceId}": {
     tag: "Séries",

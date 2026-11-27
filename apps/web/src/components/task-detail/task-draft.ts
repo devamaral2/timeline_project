@@ -1,4 +1,4 @@
-import type { CreateTaskInput, TaskDto, TaskPriority, HumanTaskKind, HumanTaskStatus } from "@repo/contracts";
+import type { CreateTaskInput, ProjectDto, TaskDto, TaskPriority, HumanTaskKind, HumanTaskStatus } from "@repo/contracts";
 import { dayKeyOf, formatTime, zonedDayStart, zonedTimeAt } from "@repo/timeline";
 import type { EditTaskInput } from "@/lib/api/tasks";
 import { statusPatch } from "@/lib/tasks/task-read-model";
@@ -43,6 +43,11 @@ export interface TaskDraft {
    * posição. Guarda nome e tipo para a lista mostrar sem outra chamada.
    */
   artifacts: DraftArtifact[];
+  /**
+   * O projeto da tarefa, com a marca e o nome que o campo mostra. `null` na criação, enquanto ninguém escolheu: a
+   * tarefa nasce em `personal`, e o campo mostra esse.
+   */
+  project: ProjectDto | null;
 }
 
 export type TaskDraftField = keyof TaskDraft;
@@ -71,6 +76,7 @@ const FIELD_SET: Record<TaskDraftField, true> = {
   parentTaskId: true,
   subtaskIds: true,
   artifacts: true,
+  project: true,
 };
 export const TASK_DRAFT_FIELDS = Object.keys(FIELD_SET) as TaskDraftField[];
 
@@ -96,6 +102,7 @@ export function draftFromTask(task: TaskDto): TaskDraft {
     parentTaskId: task.parentTaskId ?? null,
     subtaskIds: [...task.subtaskIds],
     artifacts: draftArtifactsFromTask(task.artifacts),
+    project: { ...task.project },
   };
 }
 
@@ -118,6 +125,7 @@ export function emptyTaskDraft(name = ""): TaskDraft {
     parentTaskId: null,
     subtaskIds: [],
     artifacts: [],
+    project: null,
   };
 }
 
@@ -145,6 +153,8 @@ export function buildCreateTaskInput(draft: TaskDraft, now: Date): CreateTaskInp
   if (draft.location.trim()) input.location = draft.location.trim();
   if (draft.reminders.length) input.notifyOffsetsMinutes = draft.reminders;
   if (draft.tags.length) input.tags = draft.tags;
+  // Sem escolha, ou com o `personal` (o padrão), a API põe a tarefa em `personal`.
+  if (draft.project && !draft.project.personal) input.projectId = draft.project.id;
   return input;
 }
 
@@ -188,6 +198,8 @@ export function buildTaskPatch(task: TaskDto, draft: TaskDraft, now: Date): Edit
   if (draft.parentTaskId !== base.parentTaskId) patch.parentTaskId = draft.parentTaskId;
   if (!sameList(draft.subtaskIds, base.subtaskIds)) patch.subtaskIds = draft.subtaskIds;
   if (!sameArtifactLinks(draft.artifacts, base.artifacts)) patch.artifacts = artifactLinkInputs(draft.artifacts);
+  // Voltar ao `personal` manda `null`; outro projeto manda o id.
+  if (draft.project && draft.project.id !== base.project?.id) patch.projectId = draft.project.personal ? null : draft.project.id;
   return Object.keys(patch).length > 1 ? patch : null;
 }
 
@@ -229,10 +241,10 @@ export function rebaseDraft(draft: TaskDraft, previous: TaskDto, next: TaskDto):
 }
 
 /**
- * Listas se comparam pelo conteúdo, e na mesma ordem: `draftFromTask` cria arrays e objetos novos a cada leitura, e
- * a lista de artefatos traz objetos (nome e tipo), que só o JSON compara por valor.
+ * Listas e objetos se comparam pelo conteúdo, e na mesma ordem: `draftFromTask` cria arrays e objetos novos a cada
+ * leitura, e a lista de artefatos traz objetos (nome e tipo), assim como o projeto, que só o JSON compara por valor.
  */
 function sameDraftValue(a: TaskDraft[TaskDraftField], b: TaskDraft[TaskDraftField]): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) return JSON.stringify(a) === JSON.stringify(b);
+  if (typeof a === "object" && typeof b === "object" && a !== null && b !== null) return JSON.stringify(a) === JSON.stringify(b);
   return a === b;
 }

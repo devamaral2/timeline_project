@@ -28,9 +28,10 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
    `apps/api/src/infrastructure/persistence/projects/resolve-project.ts`), e as duas funções que inserem tarefa
    (`insertTaskAggregate` e `insertAgentTask`) e a que insere série (`insertRecurrenceAggregate`) passam por ele: criação
    pela pessoa, nascimento de pedido, passos, cálculo de alimento, tarefa criada por voz, ocorrência de série e lote do
-   agente de escrita. A primeira regra que se aplica vale. Nesta versão são duas: a ocorrência fica no projeto da série e
-   todo o resto fica em `personal`. As demais regras (o `projectId` da entrada, o projeto do pedido para os passos, o da
-   sessão, o da tarefa editada) entram com a escolha do projeto.
+   agente de escrita. A primeira regra que se aplica vale. Valem três: o `projectId` da entrada (que precisa ser do
+   usuário: o que não existe ou é de outro usuário dá `ProjectNotFoundError`, 404, sem dizer qual dos dois; `null` pede o
+   `personal` de proposito), a ocorrência no projeto da série e todo o resto em `personal`. As demais regras (o projeto do
+   pedido para os passos, o da sessão, o da tarefa editada) entram com os pedidos.
 5. **O cartão da tarefa e o pedido trazem sempre o projeto**, como `{ id, name, personal }`. O esquema dos contratos
    recusa o cartão e o pedido sem ele. `GET /api/projects` devolve os projetos do usuário, `personal` primeiro e os
    outros por nome, e cria o `personal` de quem ainda não tem nenhum.
@@ -42,6 +43,16 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
    apagado e um fio de contorno.
 7. **Na tela, o projeto é a linha da tarefa** (marca e nome), abaixo do título e acima da linha do tipo, igual para
    pessoa e agente, também quando é o `personal`. Os detalhes da tarefa e do pedido o mostram, só para leitura.
+8. **A pessoa escolhe e cria o projeto no formulário da tarefa.** `POST /api/projects`, com `{ name }`, cria um projeto
+   (409 para nome repetido, sem distinguir maiúsculas nem espaços das pontas, e o `personal` conta mesmo antes de
+   existir; 400 para nome vazio ou com mais de 60 caracteres). A criação e a edição de tarefa de pessoa aceitam
+   `projectId`: na edição ausente não muda e `null` devolve a tarefa a `personal`, e trocar o projeto é uma edição comum,
+   com `expectedRevision`, que destaca a ocorrência da série como qualquer outro campo. O projeto de uma série é um campo
+   do modelo dela (`template.projectId`), que o modelo substitui por inteiro como os outros: sem ele, a série volta a
+   `personal`. A coluna `recurrences.project_id` guarda a resolução e as ocorrências novas nascem nela; as que já
+   existem ficam onde estavam. No formulário o campo "Projeto" mostra a marca e o nome, abre a escolha (`personal`
+   primeiro, os outros por nome, busca pelo nome) e cria um projeto com o texto digitado sem fechar a escolha quando o
+   nome já existe.
 
 ## Alternativas rejeitadas
 
@@ -51,8 +62,8 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
 
 ## Consequências
 
-- O projeto de uma tarefa só muda quando as telas e a API passarem a aceitar `projectId`; até lá, quase toda tarefa
-  está em `personal`.
+- O projeto de uma tarefa de pessoa muda pelo formulário. O de uma tarefa de agente só passa a sair do `personal` quando o
+  chat tiver onde escolher (o projeto de um pedido herda dos pedidos).
 - O Android lê o cartão com o campo novo e o ignora; a linha do projeto fica registrada como pendente em
   `docs/mobile-parity.md`.
 - O agente de consulta ainda não enxerga o projeto: a visão de tarefas dele não ganhou o nome do projeto.
