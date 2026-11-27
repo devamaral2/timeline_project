@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
 
+const val FAILED_DOCUMENT_PULL_NOTICE = "Não foi possível atualizar o artefato. Tente novamente."
 const val DELETE_FAILED_MESSAGE = "Não foi possível excluir a nota. Tente novamente."
 
 /** A confirmação de excluir: aberta, em andamento e o erro da última tentativa. */
@@ -49,6 +50,10 @@ sealed interface DocumentDetailUiState {
         val delete: DocumentDeleteDialog = DocumentDeleteDialog(),
         /** O artefato foi excluído: a tela volta para a lista. */
         val deleted: Boolean = false,
+        /** Um puxar para recarregar está em curso: o indicador gira; as releituras automáticas não acendem isto. */
+        val refreshing: Boolean = false,
+        /** O aviso do puxar que falhou, com o artefato mantido; só o puxar o acende e o apaga (as releituras o preservam). */
+        val pullNotice: String? = null,
     ) : DocumentDetailUiState {
         /** Um alimento que o agente ainda calcula: a tela o relê até terminar. */
         val pendingMeal: Boolean =
@@ -100,17 +105,53 @@ class DocumentDetailViewModel
         /** Relê o artefato sem trocar a tela por "Carregando": depois de uma edição por IA ela mostra a versão nova. Falha mantém a que está. */
         fun refresh() {
             if (mutableState.value !is DocumentDetailUiState.Ready) return
+            viewModelScope.launch { reread() }
+        }
+
+        /**
+         * O puxar para recarregar: a mesma releitura silenciosa de [refresh], com o indicador girando até ela acabar.
+         * "Não existe mais" (404 e 403) vai para "Artefato não encontrado."; qualquer outra falha mantém o artefato e
+         * acende [Ready.pullNotice]. Não faz nada com outro puxar em curso nem fora do artefato lido.
+         */
+        fun pull() {
+            val ready = mutableState.value as? DocumentDetailUiState.Ready ?: return
+            if (ready.refreshing) return
+            updateReady { it.copy(refreshing = true) }
             viewModelScope.launch {
                 try {
-                    mutableState.value = DocumentDetailUiState.Ready(artifacts.get(documentId), clock.now())
+                    when (reread()) {
+                        null -> updateReady { it.copy(pullNotice = null) }
+                        is ArtifactNotFoundException -> mutableState.value = DocumentDetailUiState.Missing
+                        else -> updateReady { it.copy(pullNotice = FAILED_DOCUMENT_PULL_NOTICE) }
+                    }
+                } finally {
+                    updateReady { it.copy(refreshing = false) }
+                }
+            }
+        }
+
+        /** Lê o artefato e o põe na tela, mantendo o aviso do puxar; devolve a falha, ou `null`. A tela fica como está se falhar. */
+        private suspend fun reread(): Exception? {
+            val failure =
+                try {
+                    mutableState.value = readyOf(artifacts.get(documentId))
+                    null
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (failure: Exception) {
                     // A falha de transporte mantém o artefato visível.
+                    failure
                 }
-                syncPolling()
-            }
+            syncPolling()
+            return failure
         }
+
+        private fun readyOf(artifact: Artifact) =
+            DocumentDetailUiState.Ready(
+                artifact,
+                clock.now(),
+                pullNotice = (mutableState.value as? DocumentDetailUiState.Ready)?.pullNotice,
+            )
 
         /** A tela está à vista (resumida) ou não: a releitura do alimento em cálculo só anda com ela à vista. */
         fun setVisible(value: Boolean) {
@@ -166,7 +207,7 @@ class DocumentDetailViewModel
         private fun syncPolling() {
             polling.sync(active = { visible && pending() }) {
                 try {
-                    mutableState.value = DocumentDetailUiState.Ready(artifacts.get(documentId), clock.now())
+                    mutableState.value = readyOf(artifacts.get(documentId))
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (failure: Exception) {

@@ -22,6 +22,7 @@ import { briefDate } from "@/lib/dates/day-labels";
 import { plainText } from "@/lib/tasks/agenda-search";
 import { useNow } from "@/lib/tasks/use-now";
 import { useViewMode } from "@/lib/tasks/view-mode";
+import { usePullRefresh } from "@/lib/navigation/pull-refresh";
 import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { useSessionState } from "@/lib/session/use-session";
 import { AgendaDay } from "./agenda-day";
@@ -91,6 +92,8 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     silentReload.current = true;
     setRefreshVersion((version) => version + 1);
   });
+  // Quem puxou a tela para recarregar espera aqui o fim da leitura que pediu.
+  const pullDone = useRef<(() => void) | null>(null);
   const [selectedTask, setSelectedTask] = useState<SelectedTask | null>(null);
   // A tarefa de referência cujo ponto azul foi tocado, e o aviso da última troca que falhou.
   const [statusCard, setStatusCard] = useState<TaskCardDto | null>(null);
@@ -176,6 +179,9 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     // A releitura da tarefa de agente não mostra o carregando; uma falha nela mantém a agenda que já está na tela.
     const silent = silentReload.current;
     silentReload.current = false;
+    // A leitura que um puxão pediu também é silenciosa, mas a falha dela aparece: a pessoa pediu para recarregar.
+    const pulled = pullDone.current;
+    pullDone.current = null;
     if (!silent) setLoadState("loading");
 
     async function loadTasks() {
@@ -207,12 +213,17 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
         if (fresh.length > 0) reflow(daysRef.current, apply);
         else apply();
       } catch {
-        if (!cancelled && !silent) setLoadState("failed");
+        if (!cancelled && (!silent || pulled)) setLoadState("failed");
+      } finally {
+        pulled?.();
       }
     }
 
     void loadTasks();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      pulled?.();
+    };
   }, [rangeEnd, rangeStart, ready, refreshVersion, user, userId, viewMode.actor]);
 
   useEffect(() => {
@@ -350,6 +361,15 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
       cancelAnimationFrame(scrollFrame.current);
     };
   }, [mode]);
+
+  // Puxar a tela para baixo relê a semana sem o estado de carregando. Em sequência não há o gesto: lá, puxar no
+  // topo já traz os dias anteriores e relê a janela.
+  usePullRefresh(() => new Promise<void>((resolve) => {
+    pullDone.current?.();
+    pullDone.current = resolve;
+    silentReload.current = true;
+    setRefreshVersion((version) => version + 1);
+  }), Boolean(userId && user && ready) && mode === "day");
 
   // O menu da barra inferior (tocar na aba Agenda já selecionada): a busca e, na engrenagem, o que antes
   // ficava no botão de opções do celular.

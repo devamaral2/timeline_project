@@ -1,0 +1,50 @@
+/*
+ * O indicador de puxar para recarregar: um disco de 40 px que mora acima da
+ * borda de cima da tela e desce com o dedo (`--pull`, escrito pelo componente).
+ * O arco cresce até o limite (`--pull-arc`, de 0 a 75 de um círculo de 100) e
+ * acende quando soltar já vale; enquanto a tela relê, gira.
+ */
+.indicator {
+  --pull: 0px;
+  --pull-arc: 0;
+  position: fixed;
+  z-index: 18;
+  top: calc(env(safe-area-inset-top) - 44px);
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-left: -20px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: var(--shadow-float);
+  color: var(--muted-foreground);
+  pointer-events: none;
+  transform: translateY(var(--pull));
+  transition: transform var(--duration-slow) var(--ease-out), opacity var(--duration-slow) var(--ease-in), color var(--duration-fast) linear;
+}
+/* Em repouso o disco some enquanto volta para cima da borda. */
+.indicator[data-phase="idle"] { opacity: 0; }
+/* Com o dedo na tela o disco anda junto, sem atraso. */
+.indicator[data-phase="pulling"] { transition: color var(--duration-fast) linear; }
+.indicator[data-armed], .indicator[data-phase="refreshing"] { color: var(--brand); }
+
+.indicator .ring { width: 22px; height: 22px; overflow: visible; transform: rotate(calc(var(--pull-arc) * 3.6deg - 90deg)); }
+.ring circle { fill: none; stroke-width: 2.25; }
+.track { stroke: var(--border); }
+.arc { stroke: currentColor; stroke-linecap: round; stroke-dasharray: var(--pull-arc) 100; }
+
+.indicator[data-phase="refreshing"] .ring { animation: pullSpin 900ms linear infinite; }
+.indicator[data-phase="refreshing"] .arc { stroke-dasharray: 62 100; }
+
+@keyframes pullSpin {
+  from { transform: rotate(-90deg); }
+  to { transform: rotate(270deg); }
+}
+
+/* Sem movimento: o arco fica parado e a cor da marca diz que a tela está relendo. */
+@media (prefers-reduced-motion: reduce) {
+  .indicator[data-phase="refreshing"] .ring { animation: none; }
+}

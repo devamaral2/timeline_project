@@ -37,6 +37,7 @@ const val FAILED_STATUS_NOTICE = "Não foi possível trocar o status. Tente nova
 const val FAILED_PRIORITY_NOTICE = "Não foi possível trocar a prioridade. Tente novamente."
 const val FAILED_ARTIFACT_NOTICE = "Não foi possível ligar o artefato. Tente novamente."
 const val GONE_TASK_NOTICE = "Esta tarefa já não existe. Ela foi apagada em outro lugar."
+const val FAILED_TASK_PULL_NOTICE = "Não foi possível atualizar a tarefa. Tente novamente."
 const val FAILED_DELETE_NOTICE = "Não foi possível excluir a tarefa. Tente novamente."
 
 /**
@@ -78,6 +79,10 @@ sealed interface TaskDetailUiState {
         val delete: DeleteDialog = DeleteDialog(),
         /** A tarefa foi excluída: a tela volta à anterior. */
         val deleted: Boolean = false,
+        /** Um puxar para recarregar está em curso: o indicador gira; as releituras automáticas não acendem isto. */
+        val refreshing: Boolean = false,
+        /** O aviso do puxar que falhou, com a tarefa mantida; só o puxar o acende e o apaga (não divide o campo [notice]). */
+        val pullNotice: String? = null,
     ) : TaskDetailUiState
 }
 
@@ -117,6 +122,31 @@ class TaskDetailViewModel
             }
         }
 
+        /**
+         * O puxar para recarregar: a mesma releitura de [reload], com o indicador girando até a tarefa e as ligadas
+         * chegarem. "Não existe mais" (404 e 403) vai para "Tarefa não encontrada.", como na primeira leitura; qualquer
+         * outra falha mantém a tela como está (inclusive a barra de edição por IA) e acende [Content.pullNotice].
+         * Não faz nada com outro puxar em curso nem fora da tarefa lida.
+         */
+        fun pull() {
+            val content = mutableState.value as? TaskDetailUiState.Content ?: return
+            if (content.refreshing) return
+            mutableState.update { (it as? TaskDetailUiState.Content)?.copy(refreshing = true) ?: it }
+            viewModelScope.launch {
+                try {
+                    if (readTask(keepOnFailure = true)) {
+                        mutableState.update { (it as? TaskDetailUiState.Content)?.copy(pullNotice = null) ?: it }
+                        loadLinked()
+                        linkedJob?.join()
+                    } else {
+                        mutableState.update { (it as? TaskDetailUiState.Content)?.copy(pullNotice = FAILED_TASK_PULL_NOTICE) ?: it }
+                    }
+                } finally {
+                    mutableState.update { (it as? TaskDetailUiState.Content)?.copy(refreshing = false) ?: it }
+                }
+            }
+        }
+
         private fun load() {
             mutableState.value = TaskDetailUiState.Loading
             viewModelScope.launch {
@@ -124,8 +154,11 @@ class TaskDetailViewModel
             }
         }
 
-        /** Lê a tarefa e a põe na tela, mantendo o que já estava (troca em voo, aviso, diálogo). Falha de leitura vira a tela de erro. */
-        private suspend fun readTask(): Boolean =
+        /**
+         * Lê a tarefa e a põe na tela, mantendo o que já estava (troca em voo, aviso, diálogo). Falha de leitura vira a tela
+         * de erro, salvo com [keepOnFailure] (o puxar), que deixa a tela como está; "não encontrada" vira a tela sempre.
+         */
+        private suspend fun readTask(keepOnFailure: Boolean = false): Boolean =
             try {
                 val task = tasks.task(taskId)
                 val readAt = clock.now()
@@ -143,7 +176,7 @@ class TaskDetailViewModel
                 mutableState.value = TaskDetailUiState.Missing
                 false
             } catch (failure: Exception) {
-                mutableState.value = TaskDetailUiState.Failed
+                if (!keepOnFailure) mutableState.value = TaskDetailUiState.Failed
                 false
             }
 

@@ -259,6 +259,16 @@
     scrollbar-gutter: stable;
   }
 
+  /* Com o shell montado, puxar a tela no topo é o gesto de recarregar do app
+     (`components/shell/pull-to-refresh.tsx`): relê só os dados da tela. No
+     toque, o do navegador (que recarregaria a página inteira) sai de cena. */
+  @media (pointer: coarse) {
+    html[data-pull-refresh],
+    html[data-pull-refresh] body {
+      overscroll-behavior-y: none;
+    }
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);

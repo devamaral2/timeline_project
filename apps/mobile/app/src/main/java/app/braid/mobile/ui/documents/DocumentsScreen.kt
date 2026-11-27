@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -51,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.core.designsystem.BraidPullToRefresh
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.documentTokens
 import app.braid.mobile.core.designsystem.tagColors
@@ -76,7 +79,7 @@ fun DocumentsScreen(
         if (firstResume) firstResume = false else viewModel.onResume()
         onPauseOrDispose {}
     }
-    DocumentsContent(state, onOpenDocument, onRetry = viewModel::retry, onClear = viewModel::clearFilters)
+    DocumentsContent(state, onOpenDocument, onRetry = viewModel::retry, onClear = viewModel::clearFilters, onRefresh = viewModel::pull)
     // O menu da seção: a busca só aparece quando há artefato; as listas são as de executor, do shell.
     PublishSectionMenu(
         tab = MainTab.Documents,
@@ -96,6 +99,7 @@ fun DocumentsContent(
     onOpenDocument: (String) -> Unit,
     onRetry: () -> Unit,
     onClear: () -> Unit,
+    onRefresh: () -> Unit,
 ) {
     val bottomInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
     Column(
@@ -114,23 +118,46 @@ fun DocumentsContent(
             lineHeight = 16.sp,
             letterSpacing = 0.08.em,
         )
+        state.notice?.let { notice ->
+            Text(
+                text = notice,
+                modifier = Modifier.padding(vertical = 6.dp).semantics { liveRegion = LiveRegionMode.Assertive },
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+            )
+        }
         val shown = state.shown
-        when {
-            state.failed -> LoadFailed(onRetry)
-            shown == null -> LoadingList()
-            shown.isEmpty() -> EmptyList(state.empty ?: EmptyKind.NoneYet, onClear)
-            else ->
-                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 120.dp + bottomInset)) {
-                    item { HorizontalDivider(color = MaterialTheme.colorScheme.outline) }
-                    items(shown, key = { it.id }) { artifact ->
-                        DocumentRow(artifact, onClick = { onOpenDocument(artifact.id) })
-                        HorizontalDivider(Modifier.padding(start = 60.dp), color = MaterialTheme.colorScheme.outline)
+        // Puxar para recarregar: fora da primeira leitura (o esqueleto). O erro e o vazio rolam, para o gesto ter de onde vir.
+        BraidPullToRefresh(
+            refreshing = state.refreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            enabled = shown != null || state.failed,
+        ) {
+            when {
+                state.failed -> Scrolling { LoadFailed(onRetry) }
+                shown == null -> LoadingList()
+                shown.isEmpty() -> Scrolling { EmptyList(state.empty ?: EmptyKind.NoneYet, onClear) }
+                else ->
+                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 120.dp + bottomInset)) {
+                        item { HorizontalDivider(color = MaterialTheme.colorScheme.outline) }
+                        items(shown, key = { it.id }) { artifact ->
+                            DocumentRow(artifact, onClick = { onOpenDocument(artifact.id) })
+                            HorizontalDivider(Modifier.padding(start = 60.dp), color = MaterialTheme.colorScheme.outline)
+                        }
+                        // A gaveta de execução, quando há, ocupa o pé da tela: o último artefato continua alcançável acima dela.
+                        item { ExecutionReserveSpacer() }
                     }
-                    // A gaveta de execução, quando há, ocupa o pé da tela: o último documento continua alcançável acima dela.
-                    item { ExecutionReserveSpacer() }
-                }
+            }
         }
     }
+}
+
+/** O estado que não é lista (erro, vazio) rolando na vertical: o puxar para recarregar precisa de uma rolagem de onde vir. */
+@Composable
+private fun Scrolling(content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { content() }
 }
 
 @OptIn(ExperimentalLayoutApi::class)

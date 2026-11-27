@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.core.designsystem.BraidPullToRefresh
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.domain.task.SubtaskTree
 import app.braid.mobile.domain.task.TaskActor
@@ -93,17 +94,26 @@ fun TasksScreen(
     }
     // Um pedido do chat que mexeu em tarefas relê a lista.
     OnEntitiesChanged { viewModel.onResume() }
-    TasksContent(
-        state = state,
-        onStatusClick = viewModel::openStatusPicker,
-        onSituationPick = viewModel::chooseSituation,
-        onToggleDrawer = viewModel::toggleDrawer,
-        onToggleSubtasks = viewModel::toggleSubtasks,
-        onRetry = viewModel::retry,
-        onClearFilters = viewModel::clearFilters,
-        onNewTask = onNewTask,
-        onOpenTask = onOpenTask,
-    )
+    // Puxar para recarregar: fora da primeira leitura (o esqueleto); o erro dela também puxa, como "Tentar de novo".
+    BraidPullToRefresh(
+        refreshing = state.refreshing,
+        onRefresh = viewModel::pull,
+        modifier = Modifier.fillMaxSize(),
+        enabled = state.cards != null || state.failed,
+        indicatorModifier = Modifier.windowInsetsPadding(WindowInsets.statusBars),
+    ) {
+        TasksContent(
+            state = state,
+            onStatusClick = viewModel::openStatusPicker,
+            onSituationPick = viewModel::chooseSituation,
+            onToggleDrawer = viewModel::toggleDrawer,
+            onToggleSubtasks = viewModel::toggleSubtasks,
+            onRetry = viewModel::retry,
+            onClearFilters = viewModel::clearFilters,
+            onNewTask = onNewTask,
+            onOpenTask = onOpenTask,
+        )
+    }
     state.statusPicker?.let { card ->
         TaskStatusSheet(
             taskName = card.name,

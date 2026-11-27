@@ -8,8 +8,11 @@ import { AgentTaskDetailView } from "@/components/task-detail/AgentTaskDetailVie
 import { TaskDetailView } from "@/components/task-detail/TaskDetailView";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { getTask } from "@/lib/api/tasks";
+import { usePullRefresh } from "@/lib/navigation/pull-refresh";
 
 type LoadState = "loading" | "ready" | "missing" | "error";
+
+const REFRESH_FAILURE_MESSAGE = "Não foi possível atualizar a tarefa. Tente novamente.";
 
 /** A única rota de detalhe de tarefa: a agenda e a lista de tarefas abrem aqui. */
 export default function TaskPage({ params }: { params: Promise<{ userId: string; taskId: string }> }) {
@@ -18,6 +21,8 @@ export default function TaskPage({ params }: { params: Promise<{ userId: string;
   const [taskId, setTaskId] = useState<string | null>(null);
   const [task, setTask] = useState<TaskDto | null>(null);
   const [state, setState] = useState<LoadState>("loading");
+  /** O aviso de um puxão que falhou: a tarefa fica na tela. */
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,6 +39,7 @@ export default function TaskPage({ params }: { params: Promise<{ userId: string;
     if (!taskId) return;
     let cancelled = false;
     setState("loading");
+    setRefreshNotice(null);
     getTask(taskId).then(
       (loaded) => {
         if (cancelled) return;
@@ -52,10 +58,35 @@ export default function TaskPage({ params }: { params: Promise<{ userId: string;
     if (!taskId) return;
     try {
       setTask(await getTask(taskId));
+      setState("ready");
+      setRefreshNotice(null);
     } catch (error) {
       setState(isMissing(error) ? "missing" : "error");
     }
   }, [taskId]);
+
+  /**
+   * Puxar a tela para baixo relê a tarefa e, na tarefa de agente, o pedido (`alsoRead`). A falha não joga fora o
+   * que está na tela: fica o aviso, e o que foi digitado continua lá. Só a tarefa que deixou de existir troca a
+   * tela. Na tela de erro, é o jeito de tentar de novo.
+   */
+  const pull = useCallback(async (alsoRead?: () => Promise<void>) => {
+    if (!taskId) return;
+    const [read, extra] = await Promise.allSettled([getTask(taskId), alsoRead?.()]);
+    if (read.status === "fulfilled") {
+      setTask(read.value);
+      setState("ready");
+    } else if (isMissing(read.reason)) {
+      setState("missing");
+      return;
+    } else {
+      setState((current) => (current === "ready" ? current : "error"));
+    }
+    setRefreshNotice(read.status === "rejected" || extra.status === "rejected" ? REFRESH_FAILURE_MESSAGE : null);
+  }, [taskId]);
+
+  // A tarefa de agente publica o puxão dela, que traz também o pedido.
+  usePullRefresh(() => pull(), Boolean(taskId) && task?.actor !== "agent");
 
   function frame(children: ReactNode) {
     return (
@@ -75,8 +106,8 @@ export default function TaskPage({ params }: { params: Promise<{ userId: string;
   }
   if (state === "loading" || !task || !userId) return frame(<DetailMessage>Carregando tarefa…</DetailMessage>);
 
-  if (task.actor === "agent") return <AgentTaskDetailView userId={userId} task={task} onChanged={reload} />;
-  return <TaskDetailView userId={userId} task={task} onChanged={reload} />;
+  if (task.actor === "agent") return <AgentTaskDetailView userId={userId} task={task} onChanged={reload} onPull={pull} notice={refreshNotice} />;
+  return <TaskDetailView userId={userId} task={task} onChanged={reload} notice={refreshNotice} />;
 }
 
 /** A tarefa de outro usuário responde 403 e o inexistente 404: a tela diz só que não há tarefa. */

@@ -11,6 +11,7 @@ import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.artifact.markdownBodyOf
 import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.time.AppClock
+import app.braid.mobile.support.RequestGate
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
@@ -459,5 +460,140 @@ class DocumentDetailViewModelTest {
             withContext(Dispatchers.Default) { delay(100) }
 
             assertTrue(backend.requestsTo("DELETE", "/api/artifacts/doc-food").isEmpty())
+        }
+
+    @Test
+    fun `a pull reads the document again, keeps it on screen and turns the flag on and off`() =
+        runTest {
+            val gate = RequestGate()
+            val bodies = ArrayDeque(listOf("documents-detail-food-pending", "documents-detail-food-done"))
+            backend.route("GET", "/api/artifacts/doc-food") {
+                gate.pass()
+                fixture(if (bodies.size > 1) bodies.removeFirst() else bodies.first())
+            }
+            val viewModel = newViewModel("doc-food")
+            val before = viewModel.settled() as DocumentDetailUiState.Ready
+            gate.close()
+
+            viewModel.pull()
+
+            val during = viewModel.state.value as DocumentDetailUiState.Ready
+            assertTrue(during.refreshing)
+            assertEquals(before.artifact, during.artifact)
+            awaitReads("doc-food", 2)
+            gate.open()
+            val after =
+                viewModel.state.first {
+                    it is DocumentDetailUiState.Ready && !it.refreshing && !it.pendingMeal
+                } as DocumentDetailUiState.Ready
+            assertNull((after.artifact.data as FoodData).generation)
+            assertEquals(2, reads("doc-food"))
+        }
+
+    @Test
+    fun `a second pull while one is in flight does nothing`() =
+        runTest {
+            val gate = RequestGate()
+            backend.route("GET", "/api/artifacts/doc-text") {
+                gate.pass()
+                fixture("documents-detail-text")
+            }
+            val viewModel = newViewModel("doc-text")
+            viewModel.settled()
+            gate.close()
+
+            viewModel.pull()
+            viewModel.pull()
+            awaitReads("doc-text", 2)
+            gate.open()
+            viewModel.state.first { it is DocumentDetailUiState.Ready && !it.refreshing }
+
+            assertEquals(2, reads("doc-text"))
+        }
+
+    private suspend fun DocumentDetailViewModel.pulled(): DocumentDetailUiState.Ready =
+        state.first { it is DocumentDetailUiState.Ready && !it.refreshing } as DocumentDetailUiState.Ready
+
+    @Test
+    fun `a pull that fails keeps the document and says so, and the next pull that works takes the notice away`() =
+        runTest {
+            var broken = false
+            backend.route("GET", "/api/artifacts/doc-text") { if (broken) status(503) else fixture("documents-detail-text") }
+            val viewModel = newViewModel("doc-text")
+            val before = viewModel.settled() as DocumentDetailUiState.Ready
+            broken = true
+
+            viewModel.pull()
+            val failed = viewModel.pulled()
+
+            assertEquals("Não foi possível atualizar o artefato. Tente novamente.", failed.pullNotice)
+            assertEquals(before.artifact, failed.artifact)
+            assertEquals(2, reads("doc-text"))
+
+            broken = false
+            viewModel.pull()
+            val recovered = viewModel.pulled()
+
+            assertNull(recovered.pullNotice)
+            assertEquals(before.artifact, recovered.artifact)
+        }
+
+    @Test
+    fun `the re-read after an AI edit neither sets nor clears the pull notice`() =
+        runTest {
+            var broken = false
+            backend.route("GET", "/api/artifacts/doc-text") { if (broken) status(503) else fixture("documents-detail-text") }
+            val viewModel = newViewModel("doc-text")
+            viewModel.settled()
+            broken = true
+            viewModel.refresh()
+            awaitReads("doc-text", 2)
+            withContext(Dispatchers.Default) { delay(100) }
+            assertNull((viewModel.state.value as DocumentDetailUiState.Ready).pullNotice)
+
+            viewModel.pull()
+            viewModel.pulled()
+            broken = false
+            viewModel.refresh()
+            awaitReads("doc-text", 4)
+            withContext(Dispatchers.Default) { delay(100) }
+
+            assertEquals(
+                "Não foi possível atualizar o artefato. Tente novamente.",
+                (viewModel.state.value as DocumentDetailUiState.Ready).pullNotice,
+            )
+        }
+
+    @Test
+    fun `a pull on a document that no longer exists says it was not found`() =
+        runTest {
+            var missing = 0
+            backend.route("GET", "/api/artifacts/doc-text") { if (missing != 0) status(missing) else fixture("documents-detail-text") }
+            val viewModel = newViewModel("doc-text")
+            viewModel.settled()
+            missing = 404
+
+            viewModel.pull()
+            assertEquals(DocumentDetailUiState.Missing, viewModel.state.first { it == DocumentDetailUiState.Missing })
+
+            val other = newViewModel("doc-text")
+            missing = 0
+            other.settled()
+            missing = 403
+            other.pull()
+            assertEquals(DocumentDetailUiState.Missing, other.state.first { it == DocumentDetailUiState.Missing })
+        }
+
+    @Test
+    fun `a pull does nothing before the document is read or on the error screen`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/broken", status(500))
+            val viewModel = newViewModel("broken")
+            assertEquals(DocumentDetailUiState.Error, viewModel.settled())
+
+            viewModel.pull()
+
+            assertEquals(1, reads("broken"))
+            assertEquals(DocumentDetailUiState.Error, viewModel.state.value)
         }
 }

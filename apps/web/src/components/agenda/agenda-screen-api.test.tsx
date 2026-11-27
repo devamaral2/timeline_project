@@ -3,6 +3,8 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
 import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
+import { PullToRefresh } from "@/components/shell/pull-to-refresh";
+import { pullDown } from "@/test/pull-down";
 
 const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
 const session = vi.hoisted(() => ({ state: { user: { userId: "user-1" }, ready: true } }));
@@ -301,4 +303,53 @@ test("as linhas da agenda mostram a marca e o nome do projeto", async () => {
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(2));
   const marks = [...dayOf(TODAY).querySelectorAll("[data-project-mark]")].map((mark) => `${mark.textContent} ${mark.getAttribute("aria-label")}`);
   expect(marks).toEqual(["TP timeline_project", "D diario"]);
+});
+
+test("puxar a tela relê a semana sem o carregando", async () => {
+  const api = installApi();
+  render(<><PullToRefresh /><AgendaScreen userId="user-1" todayKey={TODAY} /></>);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+  const reads = () => api.calls.filter((call) => call.pathname === "/api/tasks").length;
+  const before = reads();
+
+  const loadingSeen: boolean[] = [];
+  const observer = new MutationObserver(() => loadingSeen.push(screen.queryByText("Carregando sua agenda…") !== null));
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+  const table = api.store.table<TaskDto>("tasks");
+  table.set("ev-1", { ...(table.get("ev-1") as TaskDto), name: "Revisar contrato" });
+  pullDown();
+  expect(await within(dayOf(TODAY)).findByRole("link", { name: /Revisar contrato/ })).toBeInTheDocument();
+  observer.disconnect();
+
+  expect(reads()).toBe(before + 1);
+  expect(loadingSeen.some(Boolean)).toBe(false);
+  // O indicador só recolhe depois de a leitura terminar.
+  await waitFor(() => expect(document.querySelector("[data-phase]")).toHaveAttribute("data-phase", "idle"));
+});
+
+test("o puxão que falha mantém a agenda na tela e avisa", async () => {
+  const api = installApi();
+  render(<><PullToRefresh /><AgendaScreen userId="user-1" todayKey={TODAY} /></>);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+
+  api.failNext("GET", "/api/tasks", 500);
+  pullDown();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar a agenda. Tente novamente.");
+  expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5);
+});
+
+test("em sequência não há o puxão: lá o topo da lista já traz os dias anteriores", async () => {
+  installApi();
+  // Trocar de modo volta a página ao topo, e o jsdom não rola.
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  render(<><PullToRefresh /><AgendaScreen userId="user-1" todayKey={TODAY} /></>);
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+  fireEvent.click(screen.getByRole("button", { name: "Em sequência" }));
+  await waitFor(() => expect(screen.getByRole("region", { name: "Agenda em lista contínua" })).toBeInTheDocument());
+
+  pullDown({ release: false });
+
+  expect(document.querySelector("[data-phase]")).toHaveAttribute("data-phase", "idle");
 });

@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
-import { artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
+import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
+import { PullToRefresh } from "@/components/shell/pull-to-refresh";
+import { pullDown } from "@/test/pull-down";
 
 // A tela troca o authedFetch pela API falsa: a rede inteira passa por ela.
 const net = vi.hoisted(() => ({ authedFetch: vi.fn() }));
@@ -268,5 +270,47 @@ describe("notícias, resumo de e-mail e transcrição", () => {
 
     await waitFor(() => expect(lastQuery()).toEqual({ q: "roseiras" }));
     await waitFor(() => expect(listedIds()).toEqual(["art-video"]));
+  });
+});
+
+describe("puxar para recarregar", () => {
+  test("relê a lista com os filtros atuais, sem voltar ao esqueleto", async () => {
+    render(<><PullToRefresh /><NotesScreen userId="user-1" /></>);
+    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    fireEvent.click(screen.getByRole("button", { name: /^#leitura/ }));
+    await waitFor(() => expect(listedIds()).toEqual(["art-antiga"]));
+    const reads = api.calls.length;
+
+    const stored = api.store.table<StoredArtifact>("artifacts").get("art-antiga");
+    if (stored) stored.name = "Livros lidos";
+    pullDown();
+
+    expect(await screen.findByRole("link", { name: /Livros lidos/ })).toBeInTheDocument();
+    expect(api.calls).toHaveLength(reads + 1);
+    expect(lastQuery()).toMatchObject({ tag: "leitura" });
+    expect(screen.queryByText("Carregando artefatos…")).not.toBeInTheDocument();
+  });
+
+  test("o puxão que falha mantém a lista na tela e avisa", async () => {
+    render(<><PullToRefresh /><NotesScreen userId="user-1" /></>);
+    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+
+    api.failNext("GET", "/api/artifacts", 500);
+    pullDown();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível atualizar os artefatos. Tente novamente.");
+    expect(listedIds()).toHaveLength(4);
+    expect(screen.queryByRole("button", { name: "Tentar de novo" })).not.toBeInTheDocument();
+  });
+
+  test("na tela de erro, o puxão que dá certo traz a lista", async () => {
+    api.failNext("GET", "/api/artifacts", 500);
+    render(<><PullToRefresh /><NotesScreen userId="user-1" /></>);
+    await screen.findByRole("button", { name: "Tentar de novo" });
+
+    pullDown();
+
+    expect(await screen.findByRole("heading", { level: 1, name: "4 artefatos" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

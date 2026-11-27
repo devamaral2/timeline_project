@@ -4,6 +4,8 @@ import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { type StoredArtifact, artifactFixture, artifactsArea } from "@/test/fake-api/artifacts";
 import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { requestsArea } from "@/test/fake-api/requests";
+import { PullToRefresh } from "@/components/shell/pull-to-refresh";
+import { pullDown } from "@/test/pull-down";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -347,4 +349,47 @@ test.each(["news", "email_summary", "youtube_transcript"] as const)("um artefato
   fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }));
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas"));
   expect(api.calls.at(-1)).toMatchObject({ method: "DELETE", pathname: "/api/artifacts/art-livre" });
+});
+
+test("puxar a tela relê o artefato sem voltar ao carregando", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias para a proposta", data: { body: "Começar pelo problema." } })] });
+  render(<><PullToRefresh /><NoteDetailScreen userId="user-1" noteId="art-1" /></>);
+  await screen.findByRole("heading", { level: 1, name: "Ideias para a proposta" });
+  const before = readsOf("art-1");
+
+  const stored = api.store.table<StoredArtifact>("artifacts").get("art-1");
+  if (stored) stored.name = "Proposta revisada";
+  pullDown();
+
+  expect(screen.queryByText("Carregando artefato…")).not.toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Proposta revisada" })).toBeInTheDocument();
+  expect(readsOf("art-1")).toBe(before + 1);
+});
+
+test("o artefato apagado em outro lugar vira não encontrado no puxão", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias para a proposta", data: { body: "Começar pelo problema." } })] });
+  render(<><PullToRefresh /><NoteDetailScreen userId="user-1" noteId="art-1" /></>);
+  await screen.findByRole("heading", { level: 1, name: "Ideias para a proposta" });
+
+  api.store.table<StoredArtifact>("artifacts").delete("art-1");
+  pullDown();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Artefato não encontrado.");
+});
+
+test("o puxão que falha mantém o artefato na tela e avisa; o seguinte que dá certo tira o aviso", async () => {
+  install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias para a proposta", data: { body: "Começar pelo problema." } })] });
+  render(<><PullToRefresh /><NoteDetailScreen userId="user-1" noteId="art-1" /></>);
+  await screen.findByRole("heading", { level: 1, name: "Ideias para a proposta" });
+
+  api.failNext("GET", "/api/artifacts/art-1", 500);
+  pullDown();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível atualizar o artefato. Tente novamente.");
+  expect(screen.getByRole("heading", { level: 1, name: "Ideias para a proposta" })).toBeInTheDocument();
+  expect(screen.getByText("Começar pelo problema.")).toBeInTheDocument();
+
+  await waitFor(() => expect(document.querySelector("[data-phase]")).toHaveAttribute("data-phase", "idle"));
+  pullDown();
+  await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
 });

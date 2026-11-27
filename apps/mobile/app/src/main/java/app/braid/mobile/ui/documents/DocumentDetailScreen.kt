@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.core.designsystem.BraidPullToRefresh
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.documentTokens
 import app.braid.mobile.core.designsystem.tagColors
@@ -86,6 +87,7 @@ fun DocumentDetailPage(
         onBack = onBack,
         onOpenTask = onOpenTask,
         onRetry = viewModel::retry,
+        onRefresh = viewModel::pull,
         onEdit = onEdit,
         onAskDelete = viewModel::askDelete,
         onDismissDelete = viewModel::dismissDelete,
@@ -119,6 +121,7 @@ fun DocumentDetailContent(
     onBack: () -> Unit,
     onOpenTask: (String) -> Unit,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
     onEdit: (String) -> Unit,
     onAskDelete: () -> Unit,
     onDismissDelete: () -> Unit,
@@ -136,21 +139,29 @@ fun DocumentDetailContent(
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         TopBar(onBack, actions = actions?.let { DetailActions(onEdit = { onEdit(it.artifact.id) }, onDelete = onAskDelete) })
-        Column(
-            Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 32.dp + if (footer == null) bottomInset else 0.dp),
-            verticalArrangement = Arrangement.spacedBy(28.dp),
+        // Puxar para recarregar: só com o artefato lido; o erro tem o "Tentar de novo" e o esqueleto é a primeira leitura.
+        BraidPullToRefresh(
+            refreshing = ready?.refreshing == true,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            enabled = ready != null,
         ) {
-            when (state) {
-                DocumentDetailUiState.Loading -> Message("Carregando artefato…", alert = false)
-                DocumentDetailUiState.Missing -> Message("Artefato não encontrado.", alert = true)
-                DocumentDetailUiState.Error -> {
-                    Message("Não foi possível carregar o artefato. Tente novamente.", alert = true)
-                    BraidPill(text = "Tentar de novo", onClick = onRetry)
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, bottom = 32.dp + if (footer == null) bottomInset else 0.dp),
+                verticalArrangement = Arrangement.spacedBy(28.dp),
+            ) {
+                when (state) {
+                    DocumentDetailUiState.Loading -> Message("Carregando artefato…", alert = false)
+                    DocumentDetailUiState.Missing -> Message("Artefato não encontrado.", alert = true)
+                    DocumentDetailUiState.Error -> {
+                        Message("Não foi possível carregar o artefato. Tente novamente.", alert = true)
+                        BraidPill(text = "Tentar de novo", onClick = onRetry)
+                    }
+                    is DocumentDetailUiState.Ready -> ReadyContent(state, onOpenTask)
                 }
-                is DocumentDetailUiState.Ready -> ReadyContent(state, onOpenTask)
             }
         }
         footer?.invoke()
@@ -295,6 +306,16 @@ private fun ReadyContent(
     onOpenTask: (String) -> Unit,
 ) {
     val artifact = state.artifact
+    // O aviso do puxar que falhou fica no topo, onde a pessoa puxou, no estilo da linha de erro da exclusão.
+    state.pullNotice?.let {
+        Text(
+            text = it,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+            color = MaterialTheme.colorScheme.error,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+        )
+    }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             text = artifactTypeLabel(artifact.type).uppercase(),

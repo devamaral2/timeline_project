@@ -5,6 +5,7 @@ import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.Fixtures
+import app.braid.mobile.support.RequestGate
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
@@ -13,16 +14,19 @@ import app.braid.mobile.support.TestViewModes
 import app.braid.mobile.support.stopAndJoin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -351,5 +355,157 @@ class AgendaViewModelTest {
                     .map { it.id },
             )
             assertNull(viewModel.state.value.shownOn("2030-01-01"))
+        }
+
+    /** A semana de hoje em duas páginas, seguindo o cursor, com a resposta presa no [gate] e a falha ligável. */
+    private fun routeWeekWith(
+        gate: RequestGate,
+        broken: () -> Boolean = { false },
+    ) {
+        backend.route("GET", tasksPath) { request ->
+            gate.pass()
+            when {
+                broken() -> status(503)
+                request.requestUrl!!.queryParameter("cursor") == null -> fixture("tasks-agenda-page-1")
+                else -> fixture("tasks-agenda-page-2")
+            }
+        }
+    }
+
+    @Test
+    fun `a pull reads the week again, keeps the days on screen and turns the flag on and off`() =
+        runTest {
+            val gate = RequestGate()
+            routeWeekWith(gate)
+            val viewModel = newViewModel()
+            val before = viewModel.settled()
+            val firstRead = backend.requestsTo("GET", tasksPath).map { it.requestUrl!!.queryParameter("from") }
+            gate.close()
+
+            viewModel.pull()
+
+            assertTrue(viewModel.state.value.refreshing)
+            assertEquals(AgendaLoad.Idle, viewModel.state.value.load)
+            assertEquals(before.tasksByDay, viewModel.state.value.tasksByDay)
+            gate.open()
+            val after = viewModel.state.first { !it.refreshing }
+            val reads = backend.requestsTo("GET", tasksPath)
+            assertEquals(4, reads.size)
+            assertEquals(firstRead, reads.drop(2).map { it.requestUrl!!.queryParameter("from") })
+            assertEquals("cursor-1", reads[3].requestUrl!!.queryParameter("cursor"))
+            assertEquals(AgendaLoad.Idle, after.load)
+            assertEquals(before.tasksByDay, after.tasksByDay)
+        }
+
+    @Test
+    fun `a second pull while one is in flight does nothing`() =
+        runTest {
+            val gate = RequestGate()
+            routeWeekWith(gate)
+            val viewModel = newViewModel()
+            viewModel.settled()
+            gate.close()
+
+            viewModel.pull()
+            viewModel.pull()
+            gate.open()
+            viewModel.state.first { !it.refreshing }
+
+            assertEquals(4, backend.requestsTo("GET", tasksPath).size)
+        }
+
+    @Test
+    fun `a failed pull keeps the days that were read and shows the load failure, and trying again recovers`() =
+        runTest {
+            var broken = false
+            routeWeekWith(RequestGate()) { broken }
+            val viewModel = newViewModel()
+            val before = viewModel.settled()
+            broken = true
+
+            viewModel.pull()
+            val failed = viewModel.state.first { !it.refreshing }
+
+            assertEquals(AgendaLoad.Failed, failed.load)
+            assertEquals(before.tasksByDay, failed.tasksByDay)
+            assertEquals(expectedIds("2026-09-14"), ids(failed, "2026-09-14"))
+
+            broken = false
+            viewModel.retry()
+            val recovered = viewModel.state.first { it.load == AgendaLoad.Idle }
+
+            assertEquals(before.tasksByDay, recovered.tasksByDay)
+        }
+
+    @Test
+    fun `an automatic re-read that fails still says nothing`() =
+        runTest {
+            var broken = false
+            routeWeekWith(RequestGate()) { broken }
+            val viewModel = newViewModel()
+            viewModel.settled()
+            broken = true
+
+            viewModel.onResume()
+            withContext(Dispatchers.Default) { delay(200) }
+
+            assertEquals(AgendaLoad.Idle, viewModel.state.value.load)
+            assertFalse(viewModel.state.value.refreshing)
+        }
+
+    @Test
+    fun `choosing a week that was not read in the middle of a pull still ends the pull`() =
+        runTest {
+            val gate = RequestGate()
+            routeWeekWith(gate)
+            val viewModel = newViewModel()
+            viewModel.settled()
+            gate.close()
+
+            viewModel.pull()
+            viewModel.selectDay("2026-09-23")
+            assertFalse(viewModel.state.value.refreshing)
+            gate.open()
+            val after = viewModel.state.first { "2026-09-23" in it.tasksByDay && it.load == AgendaLoad.Idle }
+
+            assertFalse(after.refreshing)
+        }
+
+    @Test
+    fun `a pull does nothing during the skeleton, and a pull on the failed week reads it again`() =
+        runTest {
+            val gate = RequestGate()
+            gate.close()
+            var broken = true
+            routeWeekWith(gate) { broken }
+            val viewModel = newViewModel()
+
+            viewModel.pull()
+            assertFalse(viewModel.state.value.refreshing)
+            gate.open()
+            assertEquals(AgendaLoad.Failed, viewModel.settled().load)
+
+            broken = false
+            viewModel.pull()
+            val recovered = viewModel.state.first { !it.refreshing }
+
+            assertEquals(AgendaLoad.Idle, recovered.load)
+            assertEquals(expectedIds("2026-09-14"), ids(recovered, "2026-09-14"))
+        }
+
+    @Test
+    fun `the continuous list has no pull, since reaching its top already reads again`() =
+        runTest {
+            routeWeekOfToday()
+            val viewModel = newViewModel()
+            viewModel.settled()
+            viewModel.setMode(AgendaMode.Sequence)
+            viewModel.settled()
+            val before = backend.requestsTo("GET", tasksPath).size
+
+            viewModel.pull()
+
+            assertFalse(viewModel.state.value.refreshing)
+            assertEquals(before, backend.requestsTo("GET", tasksPath).size)
         }
 }

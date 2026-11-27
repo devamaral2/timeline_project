@@ -7,6 +7,7 @@ import { HeaderActions } from "./header-actions";
 import { type HubHandle, MobileNavigation } from "./mobile-navigation";
 import { NavigationMotion } from "./navigation-motion";
 import { PrimaryNavigation } from "./primary-navigation";
+import { PullToRefresh } from "./pull-to-refresh";
 import styles from "./shell.module.css";
 
 /** A assinatura: "Agente pessoal" na serifa, sem símbolo. */
@@ -61,6 +62,7 @@ export function AppShell({
   return (
     <div className={`${styles.shell} ${darkMode ? styles.dark : ""}`}>
       <NavigationMotion />
+      <PullToRefresh />
       <a href="#conteudo" className={styles.skipLink}>Pular para o conteúdo</a>
       <header className={styles.header}>
         <div className={styles.headerInner}>

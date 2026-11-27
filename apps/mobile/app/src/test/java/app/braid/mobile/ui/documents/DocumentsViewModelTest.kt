@@ -5,6 +5,7 @@ import app.braid.mobile.data.artifacts.DefaultArtifactRepository
 import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.executor.ViewMode
+import app.braid.mobile.support.RequestGate
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
@@ -396,5 +397,134 @@ class DocumentsViewModelTest {
                 viewModel.state.value.shown!!
                     .size,
             )
+        }
+
+    @Test
+    fun `a pull reads the list again, keeps it on screen and turns the flag on and off`() =
+        runTest {
+            val gate = RequestGate()
+            backend.route("GET", path) {
+                gate.pass()
+                fixture("documents-list")
+            }
+            val viewModel = newViewModel()
+            val before = viewModel.loaded()
+            gate.close()
+
+            viewModel.pull()
+
+            assertTrue(viewModel.state.value.refreshing)
+            awaitReads(2)
+            assertEquals(before.artifacts, viewModel.state.value.artifacts)
+            assertNull(viewModel.state.value.notice)
+            gate.open()
+            val after = viewModel.state.first { !it.refreshing }
+            assertEquals(2, reads())
+            assertEquals(before.artifacts, after.artifacts)
+            assertFalse(after.failed)
+            assertNull(after.notice)
+        }
+
+    @Test
+    fun `a pull keeps the search that is applied`() =
+        runTest {
+            backend.route("GET", path) { request ->
+                if (request.requestUrl!!.queryParameter("q") == null) fixture("documents-list") else fixture("documents-list-empty")
+            }
+            val viewModel = newViewModel()
+            viewModel.loaded()
+            viewModel.search("zzz")
+            advanceTimeBy(250)
+            runCurrent()
+            awaitReads(2)
+            viewModel.state.first { it.shown?.isEmpty() == true }
+
+            viewModel.pull()
+            viewModel.state.first { !it.refreshing }
+
+            assertEquals(3, reads())
+            assertEquals(
+                "zzz",
+                backend
+                    .requestsTo("GET", path)
+                    .last()
+                    .requestUrl!!
+                    .queryParameter("q"),
+            )
+        }
+
+    @Test
+    fun `a second pull while one is in flight does nothing`() =
+        runTest {
+            val gate = RequestGate()
+            backend.route("GET", path) {
+                gate.pass()
+                fixture("documents-list")
+            }
+            val viewModel = newViewModel()
+            viewModel.loaded()
+            gate.close()
+
+            viewModel.pull()
+            viewModel.pull()
+            awaitReads(2)
+            gate.open()
+            viewModel.state.first { !it.refreshing }
+
+            assertEquals(2, reads())
+        }
+
+    @Test
+    fun `a failed pull keeps the list and says so, and the next read that works takes the notice away`() =
+        runTest {
+            var broken = false
+            backend.route("GET", path) { if (broken) status(503) else fixture("documents-list") }
+            val viewModel = newViewModel()
+            val before = viewModel.loaded()
+            broken = true
+
+            viewModel.pull()
+            val failed = viewModel.state.first { !it.refreshing }
+
+            assertEquals(before.artifacts, failed.artifacts)
+            assertFalse(failed.failed)
+            assertEquals("Não foi possível atualizar os artefatos. Tente novamente.", failed.notice)
+
+            broken = false
+            viewModel.pull()
+            val recovered = viewModel.state.first { !it.refreshing }
+
+            assertNull(recovered.notice)
+            assertEquals(before.artifacts, recovered.artifacts)
+        }
+
+    @Test
+    fun `a pull does nothing during the first read, and on the first read's error it tries again`() =
+        runTest {
+            val gate = RequestGate()
+            gate.close()
+            var broken = true
+            backend.route("GET", path) {
+                gate.pass()
+                if (broken) status(500) else fixture("documents-list")
+            }
+            val viewModel = newViewModel()
+
+            viewModel.pull()
+            assertFalse(viewModel.state.value.refreshing)
+            gate.open()
+            assertTrue(viewModel.loaded().failed)
+
+            broken = false
+            gate.close()
+            viewModel.pull()
+            // O erro fica na tela até a leitura voltar.
+            assertTrue(viewModel.state.value.failed)
+            assertTrue(viewModel.state.value.refreshing)
+            gate.open()
+            val recovered = viewModel.state.first { !it.refreshing }
+
+            assertFalse(recovered.failed)
+            assertTrue(recovered.artifacts!!.isNotEmpty())
         }
 }

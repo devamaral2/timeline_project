@@ -16,6 +16,7 @@ import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.FakeMicrophone
 import app.braid.mobile.support.FakeSpeechRecognizer
 import app.braid.mobile.support.Fixtures
+import app.braid.mobile.support.RequestGate
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
@@ -732,5 +733,172 @@ class AgentTaskViewModelTest {
 
             assertFalse(speech.listening)
             assertEquals("", (viewModel.state.value as AgentTaskUiState.Content).composer.draft)
+        }
+
+    @Test
+    fun `a pull reads the task and the request again, keeps them on screen and turns the flag on and off`() =
+        runTest {
+            val gate = RequestGate()
+            var finished = false
+            backend.route("GET", requestPath) {
+                gate.pass()
+                fixture(if (finished) "request-done" else "request-running")
+            }
+            backend.route("GET", taskPath) {
+                gate.pass()
+                fixture(if (finished) "task-detail-agent-done" else "task-detail-agent")
+            }
+            backend.route("GET", "/api/requests/req-first", fixture("request-first"))
+            val viewModel = newViewModel()
+            val before = viewModel.settled()
+            gate.close()
+            finished = true
+
+            viewModel.pull()
+
+            val during = viewModel.state.value as AgentTaskUiState.Content
+            assertTrue(during.refreshing)
+            assertEquals(before.request, during.request)
+            assertEquals(before.task, during.task)
+            gate.open()
+            val after = viewModel.state.first { it is AgentTaskUiState.Content && !it.refreshing } as AgentTaskUiState.Content
+            assertEquals(TaskStatus.Completed, after.request.status)
+            assertEquals(2, reads(requestPath))
+            assertEquals(2, reads(taskPath))
+        }
+
+    @Test
+    fun `a pull keeps the draft of the footer and a second pull while one is in flight does nothing`() =
+        runTest {
+            val gate = RequestGate()
+            backend.route("GET", taskPath) {
+                gate.pass()
+                fixture("task-detail-agent")
+            }
+            backend.route("GET", requestPath) {
+                gate.pass()
+                fixture("request-running")
+            }
+            backend.route("GET", "/api/requests/req-first", fixture("request-first"))
+            val viewModel = newViewModel()
+            viewModel.settled()
+            viewModel.onDraftChange("Só voos diretos")
+            gate.close()
+
+            viewModel.pull()
+            viewModel.pull()
+            gate.open()
+            val after = viewModel.state.first { it is AgentTaskUiState.Content && !it.refreshing } as AgentTaskUiState.Content
+
+            assertEquals("Só voos diretos", after.composer.draft)
+            assertEquals(2, reads(requestPath))
+            assertEquals(2, reads(taskPath))
+        }
+
+    private val pullFailedNotice = "Não foi possível atualizar a tarefa. Tente novamente."
+
+    private suspend fun AgentTaskViewModel.pulled(): AgentTaskUiState.Content =
+        state.first { it is AgentTaskUiState.Content && !it.refreshing } as AgentTaskUiState.Content
+
+    @Test
+    fun `a pull that fails keeps what is on screen with the footer draft, says so, and the next pull that works takes the notice away`() =
+        runTest {
+            var broken = false
+            backend.route("GET", requestPath) { if (broken) status(500) else fixture("request-running") }
+            backend.route("GET", taskPath) { if (broken) status(500) else fixture("task-detail-agent") }
+            backend.route("GET", "/api/requests/req-first", fixture("request-first"))
+            val viewModel = newViewModel()
+            val before = viewModel.settled()
+            viewModel.onDraftChange("Só voos diretos")
+            broken = true
+
+            viewModel.pull()
+            val failed = viewModel.pulled()
+
+            assertEquals(pullFailedNotice, failed.pullNotice)
+            assertEquals(before.task, failed.task)
+            assertEquals(before.request, failed.request)
+            assertEquals("Só voos diretos", failed.composer.draft)
+            assertEquals(2, reads(requestPath))
+            assertEquals(2, reads(taskPath))
+
+            broken = false
+            viewModel.pull()
+            val recovered = viewModel.pulled()
+
+            assertNull(recovered.pullNotice)
+            assertEquals("Só voos diretos", recovered.composer.draft)
+        }
+
+    @Test
+    fun `when only the request read fails the task is applied and the notice shows, even for a 404 of the request`() =
+        runTest {
+            var requestStatus = 200
+            var finished = false
+            backend.route("GET", requestPath) { if (requestStatus != 200) status(requestStatus) else fixture("request-running") }
+            backend.route("GET", taskPath) { fixture(if (finished) "task-detail-agent-done" else "task-detail-agent") }
+            backend.route("GET", "/api/requests/req-first", fixture("request-first"))
+            val viewModel = newViewModel()
+            val before = viewModel.settled()
+            finished = true
+            requestStatus = 404
+
+            viewModel.pull()
+            val after = viewModel.pulled()
+
+            assertEquals(pullFailedNotice, after.pullNotice)
+            assertEquals(before.request, after.request)
+            assertEquals(TaskStatus.Completed, after.task.status)
+        }
+
+    @Test
+    fun `when only the task read fails the request is applied and the notice shows`() =
+        runTest {
+            var finished = false
+            var broken = false
+            backend.route("GET", requestPath) { fixture(if (finished) "request-done" else "request-running") }
+            backend.route("GET", taskPath) { if (broken) status(500) else fixture("task-detail-agent") }
+            backend.route("GET", "/api/requests/req-first", fixture("request-first"))
+            val viewModel = newViewModel()
+            val before = viewModel.settled()
+            finished = true
+            broken = true
+
+            viewModel.pull()
+            val after = viewModel.pulled()
+
+            assertEquals(pullFailedNotice, after.pullNotice)
+            assertEquals(before.task, after.task)
+            assertEquals(TaskStatus.Completed, after.request.status)
+        }
+
+    @Test
+    fun `a pull on a task that no longer exists says it was not found`() =
+        runTest {
+            var missing = 0
+            backend.route("GET", requestPath, fixture("request-running"))
+            backend.route("GET", taskPath) { if (missing != 0) status(missing) else fixture("task-detail-agent") }
+            backend.route("GET", "/api/requests/req-first", fixture("request-first"))
+            val viewModel = newViewModel()
+            viewModel.settled()
+            missing = 404
+
+            viewModel.pull()
+
+            assertEquals(AgentTaskUiState.Missing("Tarefa não encontrada."), viewModel.state.first { it is AgentTaskUiState.Missing })
+        }
+
+    @Test
+    fun `a pull does nothing before the task is read or on the error screen`() =
+        runTest {
+            backend.route("GET", taskPath, fixture("task-detail-agent"))
+            backend.route("GET", requestPath, status(500))
+            val viewModel = newViewModel()
+            viewModel.state.first { it is AgentTaskUiState.Failed }
+
+            viewModel.pull()
+
+            assertEquals(1, reads(requestPath))
+            assertTrue(viewModel.state.value is AgentTaskUiState.Failed)
         }
 }

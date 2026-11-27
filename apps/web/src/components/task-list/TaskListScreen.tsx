@@ -14,6 +14,7 @@ import { hasOpenAgentTask } from "@/lib/tasks/agent-request-model";
 import { statusPatch } from "@/lib/tasks/task-read-model";
 import { taskPriorityLabels } from "@/components/tasks/task-priority-mark";
 import { PRIORITY_ORDER, taskFilterCount, tagsByUse, trackedFilters } from "@/lib/tasks/task-filters";
+import { usePullRefresh } from "@/lib/navigation/pull-refresh";
 import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { useNow } from "@/lib/tasks/use-now";
 import { useOpenAgentRefresh } from "@/lib/tasks/use-open-agent-refresh";
@@ -32,6 +33,7 @@ function toggleIn<T>(list: readonly T[], value: T): T[] {
 const STALE_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a lista atual; confira e tente de novo.";
 const FAILURE_MESSAGE = "Não foi possível trocar o status. Tente novamente.";
 const SITUATION_FAILURE_MESSAGE = "Não foi possível mudar a situação. Tente novamente.";
+const REFRESH_FAILURE_MESSAGE = "Não foi possível atualizar as tarefas. Tente novamente.";
 /** Espera depois da última tecla antes de consultar a API pelo texto. Igual à aba Notas. */
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -83,20 +85,24 @@ export function TaskListScreen({ userId }: { userId: string }) {
 
   /**
    * Relê a lista com os filtros atuais. Falha vira o aviso de carregamento com "Tentar de novo". Releitura
-   * silenciosa (`quiet`, a da tarefa de agente em aberto) troca os dados sem o estado de carregando e, se
-   * falhar, mantém a lista que já está na tela.
+   * silenciosa (`quiet`, a da tarefa de agente em aberto e a de quem puxa a tela) troca os dados sem o estado
+   * de carregando e, se falhar, mantém a lista que já está na tela. Devolve `false` só quando esta leitura
+   * falhou; a que foi atropelada por uma mais nova não conta.
    */
-  const refresh = useCallback(async (quiet = false) => {
+  const refresh = useCallback(async (quiet = false): Promise<boolean> => {
     const request = ++latestRequest.current;
     try {
       const list = await listTrackedTasks({ ...trackedFilters(filters), actor: viewMode.actor });
-      if (request !== latestRequest.current) return;
+      if (request !== latestRequest.current) return true;
       setCards(list);
       setError(false);
       // Sem filtro, a lista inteira é também a fonte das opções de tag.
       if (taskFilterCount(filters) === 0) setFacets(list);
+      return true;
     } catch {
-      if (request === latestRequest.current && !quiet) setError(true);
+      if (request !== latestRequest.current) return true;
+      if (!quiet) setError(true);
+      return false;
     }
   }, [filters, viewMode.actor]);
 
@@ -105,7 +111,15 @@ export function TaskListScreen({ userId }: { userId: string }) {
   }, [refresh]);
 
   // Enquanto houver tarefa de agente em aberto nesta lista, ela se relê sozinha; sem ele, não há recarga.
-  useOpenAgentRefresh(hasOpenAgentTask(cards ?? []), () => refresh(true));
+  useOpenAgentRefresh(hasOpenAgentTask(cards ?? []), async () => {
+    await refresh(true);
+  });
+
+  // Puxar a tela para baixo relê a lista em silêncio; se a leitura falhar, a lista fica e o aviso diz.
+  usePullRefresh(async () => {
+    setNotice(null);
+    if (!(await refresh(true))) setNotice(REFRESH_FAILURE_MESSAGE);
+  });
 
   const retry = useCallback(() => {
     setError(false);
@@ -241,7 +255,7 @@ export function TaskListScreen({ userId }: { userId: string }) {
       </section>
 
       <section className={`${page.body} ${styles.body}`} aria-label="Lista de tarefas">
-        {notice ? <p role="alert" className={styles.message}>{notice}</p> : null}
+        {notice && !error ? <p role="alert" className={styles.message}>{notice}</p> : null}
         {error ? (
           <p role="alert" className={styles.message}>Não foi possível carregar as tarefas.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
         ) : !cards || !now ? (

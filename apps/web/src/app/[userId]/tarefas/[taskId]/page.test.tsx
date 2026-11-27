@@ -4,6 +4,8 @@ import type { TaskDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { requestFixture, requestsArea } from "@/test/fake-api/requests";
+import { PullToRefresh } from "@/components/shell/pull-to-refresh";
+import { pullDown } from "@/test/pull-down";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }) }));
@@ -241,4 +243,60 @@ test("o detalhe da tarefa mostra o projeto, só para leitura", async () => {
   expect(within(info).getByText("timeline_project")).toBeInTheDocument();
   expect(within(info).getByText("TP")).toBeInTheDocument();
   expect(within(info).queryByRole("button", { name: /projeto/i })).not.toBeInTheDocument();
+});
+
+test("puxar a tela relê a tarefa sem voltar ao carregando", async () => {
+  install([training()]);
+  render(<><PullToRefresh /><TaskPage params={Promise.resolve({ userId: "user-1", taskId: "ev-1" })} /></>);
+  await screen.findByRole("heading", { level: 1, name: NAME });
+  const reads = () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/tasks/ev-1").length;
+  const before = reads();
+
+  api.store.table<TaskDto>("tasks").set("ev-1", training({ name: "Treino de pernas", revision: 2 }));
+  pullDown();
+
+  expect(screen.queryByText("Carregando tarefa…")).not.toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Treino de pernas" })).toBeInTheDocument();
+  expect(reads()).toBe(before + 1);
+});
+
+test("na tela de erro, puxar tenta de novo e traz a tarefa", async () => {
+  install([training()]);
+  api.failNext("GET", "/api/tasks/ev-1", 500);
+  render(<><PullToRefresh /><TaskPage params={Promise.resolve({ userId: "user-1", taskId: "ev-1" })} /></>);
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar a tarefa. Tente novamente.");
+
+  pullDown();
+
+  expect(await screen.findByRole("heading", { level: 1, name: NAME })).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+test("a tarefa apagada em outro lugar vira não encontrada no puxão", async () => {
+  install([training()]);
+  render(<><PullToRefresh /><TaskPage params={Promise.resolve({ userId: "user-1", taskId: "ev-1" })} /></>);
+  await screen.findByRole("heading", { level: 1, name: NAME });
+
+  api.store.table<TaskDto>("tasks").delete("ev-1");
+  pullDown();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Tarefa não encontrada.");
+});
+
+test("o puxão que falha mantém a tarefa na tela e avisa; o seguinte que dá certo tira o aviso", async () => {
+  install([training()]);
+  render(<><PullToRefresh /><TaskPage params={Promise.resolve({ userId: "user-1", taskId: "ev-1" })} /></>);
+  await screen.findByRole("heading", { level: 1, name: NAME });
+
+  api.failNext("GET", "/api/tasks/ev-1", 500);
+  pullDown();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível atualizar a tarefa. Tente novamente.");
+  expect(screen.getByRole("heading", { level: 1, name: NAME })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Informações" })).toBeInTheDocument();
+
+  await waitFor(() => expect(document.querySelector("[data-phase]")).toHaveAttribute("data-phase", "idle"));
+  pullDown();
+  await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  expect(screen.getByRole("heading", { level: 1, name: NAME })).toBeInTheDocument();
 });

@@ -13,6 +13,7 @@ import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.Fixtures
+import app.braid.mobile.support.RequestGate
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
@@ -477,5 +478,151 @@ class TaskDetailViewModelTest {
             viewModel.confirmDelete()
             viewModel.state.first { it is TaskDetailUiState.Content && it.deleted }
             assertEquals(2, backend.requestsTo("DELETE", taskPath).size)
+        }
+
+    /** O conteúdo com a tarefa principal e as subtarefas já lidas. */
+    private suspend fun TaskDetailViewModel.withLinked(): TaskDetailUiState.Content =
+        state.first {
+            it is TaskDetailUiState.Content && it.parent?.cards != null && it.subtasks?.cards != null
+        } as TaskDetailUiState.Content
+
+    @Test
+    fun `a pull reads the task again, keeps it on screen and turns the flag on and off`() =
+        runTest {
+            val gate = RequestGate()
+            val bodies = ArrayDeque(listOf("task-detail-person", "task-detail-reloaded-doing"))
+            backend.route("GET", taskPath) {
+                gate.pass()
+                fixture(if (bodies.size > 1) bodies.removeFirst() else bodies.first())
+            }
+            serveHierarchy()
+            val viewModel = newViewModel()
+            val before = viewModel.withLinked()
+            gate.close()
+
+            viewModel.pull()
+
+            val during = viewModel.state.value as TaskDetailUiState.Content
+            assertTrue(during.refreshing)
+            assertEquals(before.task, during.task)
+            assertEquals(before.parent, during.parent)
+            gate.open()
+            val after = viewModel.state.first { it is TaskDetailUiState.Content && !it.refreshing && it.task.status == TaskStatus.Doing }
+            assertEquals(2, backend.requestsTo("GET", taskPath).size)
+            assertEquals(before.parent, (after as TaskDetailUiState.Content).parent)
+        }
+
+    @Test
+    fun `a second pull while one is in flight does nothing`() =
+        runTest {
+            val gate = RequestGate()
+            backend.route("GET", taskPath) {
+                gate.pass()
+                fixture("task-detail-person")
+            }
+            serveHierarchy()
+            val viewModel = newViewModel()
+            viewModel.withLinked()
+            gate.close()
+
+            viewModel.pull()
+            viewModel.pull()
+            gate.open()
+            viewModel.state.first { it is TaskDetailUiState.Content && !it.refreshing }
+
+            assertEquals(2, backend.requestsTo("GET", taskPath).size)
+        }
+
+    @Test
+    fun `a pull that fails keeps the task and says so, and the next pull that works takes the notice away`() =
+        runTest {
+            var broken = false
+            backend.route("GET", taskPath) { if (broken) status(500) else fixture("task-detail-person") }
+            serveHierarchy()
+            val viewModel = newViewModel()
+            val before = viewModel.withLinked()
+            broken = true
+
+            viewModel.pull()
+            val failed =
+                viewModel.state.first { it is TaskDetailUiState.Content && !it.refreshing } as TaskDetailUiState.Content
+
+            assertEquals("Não foi possível atualizar a tarefa. Tente novamente.", failed.pullNotice)
+            assertEquals(before.task, failed.task)
+            assertEquals(before.parent, failed.parent)
+            assertNull(failed.notice)
+
+            broken = false
+            viewModel.pull()
+            val recovered =
+                viewModel.state.first { it is TaskDetailUiState.Content && !it.refreshing } as TaskDetailUiState.Content
+
+            assertNull(recovered.pullNotice)
+            assertEquals(before.task, recovered.task)
+        }
+
+    @Test
+    fun `a pull on a task that no longer exists says it was not found`() =
+        runTest {
+            var missing = 0
+            backend.route("GET", taskPath) { if (missing != 0) status(missing) else fixture("task-detail-person") }
+            serveHierarchy()
+            val viewModel = newViewModel()
+            viewModel.withLinked()
+            missing = 404
+
+            viewModel.pull()
+
+            assertEquals(TaskDetailUiState.Missing, viewModel.state.first { it == TaskDetailUiState.Missing })
+        }
+
+    @Test
+    fun `a pull on a task that turned foreign says it was not found`() =
+        runTest {
+            var missing = 0
+            backend.route("GET", taskPath) { if (missing != 0) status(missing) else fixture("task-detail-person") }
+            serveHierarchy()
+            val viewModel = newViewModel()
+            viewModel.withLinked()
+            missing = 403
+
+            viewModel.pull()
+
+            assertEquals(TaskDetailUiState.Missing, viewModel.state.first { it == TaskDetailUiState.Missing })
+        }
+
+    @Test
+    fun `a re-read after an edit that fails still goes to the error screen and sets no pull notice`() =
+        runTest {
+            var broken = false
+            backend.route("GET", taskPath) { if (broken) status(500) else fixture("task-detail-person") }
+            serveHierarchy()
+            val viewModel = newViewModel()
+            viewModel.withLinked()
+            broken = true
+
+            viewModel.reload()
+
+            assertEquals(TaskDetailUiState.Failed, viewModel.state.first { it == TaskDetailUiState.Failed })
+        }
+
+    @Test
+    fun `a pull does nothing before the task is read or on the error screen`() =
+        runTest {
+            val gate = RequestGate()
+            gate.close()
+            backend.route("GET", taskPath) {
+                gate.pass()
+                status(503)
+            }
+            val viewModel = newViewModel()
+
+            viewModel.pull()
+            gate.open()
+            viewModel.state.first { it == TaskDetailUiState.Failed }
+            viewModel.pull()
+
+            assertEquals(1, backend.requestsTo("GET", taskPath).size)
+            assertEquals(TaskDetailUiState.Failed, viewModel.state.value)
         }
 }

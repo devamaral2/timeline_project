@@ -1,7 +1,7 @@
 "use client";
 
 import type { RequestDto } from "@repo/contracts";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { getRequest } from "@/lib/api/requests";
 import { AGENT_REQUEST_POLL_MS, isOpenRequest } from "@/lib/tasks/agent-request-model";
@@ -14,11 +14,13 @@ export type AgentRequestLoad = "loading" | "ready" | "missing" | "error";
  * Lê o pedido da tarefa de agente (o mesmo id) e, enquanto ele estiver em aberto, relê o pedido a cada intervalo e
  * chama `onTick`, que relê a tarefa (a conclusão e a data vêm dele). Para no estado final, depois de uma última
  * releitura da tarefa. Falha numa releitura mantém a última versão na tela; a próxima tenta de novo.
+ * `reload` relê o pedido a pedido de quem usa (o puxão na tela): a falha mantém o que está na tela e volta para
+ * quem pediu, que avisa.
  */
 export function useAgentRequest(
   requestId: string,
   onTick: () => Promise<void>,
-): { request: RequestDto | null; load: AgentRequestLoad; applyRequest: (view: RequestDto) => void } {
+): { request: RequestDto | null; load: AgentRequestLoad; applyRequest: (view: RequestDto) => void; reload: () => Promise<void> } {
   const [request, setRequest] = useState<RequestDto | null>(null);
   const [load, setLoad] = useState<AgentRequestLoad>("loading");
   const tickRef = useRef(onTick);
@@ -71,7 +73,12 @@ export function useAgentRequest(
     };
   }, [open, requestId]);
 
-  return { request, load, applyRequest: setRequest };
+  const reload = useCallback(async () => {
+    setRequest(await getRequest(requestId));
+    setLoad("ready");
+  }, [requestId]);
+
+  return { request, load, applyRequest: setRequest, reload };
 }
 
 /** O pedido inexistente responde 404 e o de outro usuário 403: a tela diz só que não há pedido. */

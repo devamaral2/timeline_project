@@ -3,6 +3,8 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { TaskDto } from "@repo/contracts";
 import { createFakeApi } from "@/test/fake-api";
 import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
+import { PullToRefresh } from "@/components/shell/pull-to-refresh";
+import { pullDown } from "@/test/pull-down";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -618,4 +620,38 @@ test("sem nada na lista mas com o agente trabalhando, diz que nada pede atençã
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Nenhuma tarefa para agora");
   expect(screen.queryByRole("heading", { name: "Nenhuma tarefa por aqui" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Nova tarefa" })).not.toBeInTheDocument();
+});
+
+test("puxar a tela relê a lista com os filtros atuais, sem voltar ao esqueleto", async () => {
+  const api = serve(tasks);
+  render(<><PullToRefresh /><TaskListScreen userId="user-1" /></>);
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+  const reads = () => api.calls.filter((call) => call.pathname === "/api/tasks/tracked").length;
+  const before = reads();
+
+  const table = api.store.table<TaskDto>("tasks");
+  table.set("luz", { ...(table.get("luz") as TaskDto), name: "Pagar conta de água" });
+  pullDown();
+
+  expect(screen.getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+  expect(await screen.findByRole("link", { name: /Pagar conta de água/ })).toBeInTheDocument();
+  expect(reads()).toBe(before + 1);
+  expect(screen.queryByText("Carregando tarefas…")).not.toBeInTheDocument();
+});
+
+test("o puxão que falha mantém a lista na tela e avisa; o seguinte que dá certo tira o aviso", async () => {
+  const api = serve(tasks);
+  render(<><PullToRefresh /><TaskListScreen userId="user-1" /></>);
+  await screen.findByRole("link", { name: /Pagar conta de luz/ });
+
+  api.failNext("GET", "/api/tasks/tracked", 503);
+  pullDown();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível atualizar as tarefas. Tente novamente.");
+  expect(screen.getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Tentar de novo" })).not.toBeInTheDocument();
+
+  await act(async () => { await vi.advanceTimersByTimeAsync(600); });
+  pullDown();
+  await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
 });
