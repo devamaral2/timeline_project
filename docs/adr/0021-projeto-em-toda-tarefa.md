@@ -28,9 +28,13 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
    `apps/api/src/infrastructure/persistence/projects/resolve-project.ts`), e as duas funções que inserem tarefa
    (`insertTaskAggregate` e `insertAgentTask`) e a que insere série (`insertRecurrenceAggregate`) passam por ele: criação
    pela pessoa, nascimento de pedido, passos, cálculo de alimento, tarefa criada por voz, ocorrência de série e lote do
-   agente de escrita. A primeira regra que se aplica vale. Nesta versão são duas: a ocorrência fica no projeto da série e
-   todo o resto fica em `personal`. As demais regras (o `projectId` da entrada, o projeto do pedido para os passos, o da
-   sessão, o da tarefa editada) entram com a escolha do projeto.
+   agente de escrita. A primeira regra que se aplica vale, nesta ordem: o `projectId` da entrada (que
+   precisa ser do usuário, senão `ProjectNotFoundError`, 404); o projeto do pedido, para o passo e para a tarefa ou série
+   que o pedido cria pela rota por passos (o lote do agente de escrita leva o `requestId`); o projeto do primeiro pedido
+   da sessão; o projeto da tarefa sobre a qual o pedido de edição foi feito; o projeto da série, para a ocorrência; e
+   `personal` para o resto. Uma regra que não acha o que procura (o pedido sumiu, a tarefa alvo foi apagada) passa
+   adiante. O pedido de voz e o cálculo de alimento não trazem regra e ficam em `personal`. O projeto de uma tarefa de
+   agente não muda depois que ela nasce.
 5. **O cartão da tarefa e o pedido trazem sempre o projeto**, como `{ id, name, personal }`. O esquema dos contratos
    recusa o cartão e o pedido sem ele. `GET /api/projects` devolve os projetos do usuário, `personal` primeiro e os
    outros por nome, e cria o `personal` de quem ainda não tem nenhum.
@@ -55,4 +59,7 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
   está em `personal`.
 - O Android lê o cartão com o campo novo e o ignora; a linha do projeto fica registrada como pendente em
   `docs/mobile-parity.md`.
-- O agente de consulta ainda não enxerga o projeto: a visão de tarefas dele não ganhou o nome do projeto.
+- O agente de consulta enxerga o projeto: a visão `tasks` dele tem a coluna `project` com o nome, só para tarefas de
+  pessoa, como antes.
+- As rotas que abrem pedido (chat, Hermes e modo modelo) aceitam `projectId` opcional; o chat ainda não o envia, porque
+  escolher o projeto no chat está fora do escopo da spec 51.

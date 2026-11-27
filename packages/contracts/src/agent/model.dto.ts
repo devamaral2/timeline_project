@@ -52,4 +52,6 @@ export interface StartModelRequestInput {
   sessionId?: string;
   clientMessageId: string;
   model: ModelSelection;
+  /** O projeto do pedido, como em `StartRequestInput.projectId`. */
+  projectId?: string;
 }

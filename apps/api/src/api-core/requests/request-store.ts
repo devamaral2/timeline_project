@@ -202,6 +202,8 @@ export interface NewRequest {
   clientMessageId?: string;
   /** O provedor, o modelo e o esforco que o usuario escolheu para o pedido, em qualquer rota que use modelo. */
   model?: ModelSelection;
+  /** O projeto escolhido para o pedido. Vale sobre o da sessao e sobre o da tarefa alvo; precisa ser do usuario. */
+  projectId?: string;
   /** O job que comeca a executar o pedido. */
   job: RequestJobKind;
 }
