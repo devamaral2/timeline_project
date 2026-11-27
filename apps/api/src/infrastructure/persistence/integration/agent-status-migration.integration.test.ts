@@ -12,7 +12,7 @@ declare module "vitest" {
 
 const DRIZZLE_DIR = resolve(__dirname, "../../../../drizzle");
 const PROJECT = ulid();
-const MIGRATION = "0010_status_de_agente_proprios";
+const MIGRATION = "0011_status_de_agente_proprios";
 
 interface JournalEntry { tag: string }
 
@@ -38,13 +38,14 @@ describe("migration dos status de agente, sobre um banco com dados", () => {
   let pool: Pool;
 
   const humanStatuses = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"];
-  const agentBefore = ["queued", "running", "waiting", "done", "failed", "cancel"];
+  const agentBefore = ["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"];
   const agentAfter: Record<string, string> = {
-    queued: "queued", running: "running", waiting: "waiting", done: "completed", failed: "failed", cancel: "cancelled",
+    queued: "queued", running: "running", waiting: "waiting", awaiting_transcription: "awaiting_transcription", done: "completed", failed: "failed", cancel: "cancelled",
   };
   const humans = new Map<string, string>();
   const requests = new Map<string, string>();
   const steps = new Map<string, string>();
+  const saved = new Map<string, string>();
 
   async function rows<T = Record<string, unknown>>(text: string, values: unknown[] = []): Promise<T[]> {
     return (await pool.query(text, values)).rows as T[];
@@ -83,6 +84,12 @@ describe("migration dos status de agente, sobre um banco com dados", () => {
       const stepId = ulid();
       steps.set(stepId, status);
       await insert(stepId, "agent", "step", status);
+      // Os tipos de conteudo guardado (migration 0009) tambem ja tem tarefas com os status antigos.
+      for (const kind of ["save_content", "save_content_with_transcription"]) {
+        const savedId = ulid();
+        saved.set(savedId, `${kind}:${status}`);
+        await insert(savedId, "agent", kind, status);
+      }
     }
 
     await applyMigration(pool, MIGRATION);
@@ -104,6 +111,7 @@ describe("migration dos status de agente, sobre um banco com dados", () => {
 
     for (const [id, before] of requests) expect(now.get(id), `pedido ${before}`).toBe(agentAfter[before]);
     for (const [id, before] of steps) expect(now.get(id), `passo ${before}`).toBe(agentAfter[before]);
+    for (const [id, before] of saved) expect(now.get(id), `guardado ${before}`).toBe(agentAfter[before.split(":")[1]]);
     expect(now.get([...requests].find(([, status]) => status === "done")?.[0] as string)).toBe("completed");
     expect(now.get([...requests].find(([, status]) => status === "cancel")?.[0] as string)).toBe("cancelled");
   });
@@ -114,13 +122,15 @@ describe("migration dos status de agente, sobre um banco com dados", () => {
     for (const [id, before] of humans) expect(now.get(id), `pessoa ${before}`).toBe(before);
   });
 
-  test("o check novo aceita os dez status de agente e recusa os de pessoa em tarefa de agente", async () => {
+  test("o check novo aceita os onze status de agente, nos tipos de conteudo guardado tambem, e recusa os de pessoa em tarefa de agente", async () => {
     const insert = (actor: string, kind: string, status: string) =>
       pool.query(`INSERT INTO tasks (id, project_id, user_id, actor, kind, status, name) VALUES ($1, $5, 'user-1', $2, $3, $4, 'Nova')`, [ulid(), actor, kind, status, PROJECT]);
 
-    for (const status of ["preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back"]) {
+    for (const status of ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back"]) {
       await insert("agent", "request", status);
+      await insert("agent", "save_content_with_transcription", status);
     }
+    await expect(insert("agent", "save_content", "done")).rejects.toThrow(/tasks_status_matches_actor/);
     await expect(insert("agent", "request", "done")).rejects.toThrow(/tasks_status_matches_actor/);
     await expect(insert("agent", "step", "cancel")).rejects.toThrow(/tasks_status_matches_actor/);
     await expect(insert("human", "common", "completed")).rejects.toThrow(/tasks_status_matches_actor/);

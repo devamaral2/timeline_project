@@ -1,3 +1,4 @@
+import { KINDS_WITHOUT_SITUATION } from "@repo/contracts";
 import type { AgentTaskStatus, Situation } from "./sets";
 
 /**
@@ -104,4 +105,9 @@ export const REVIEW_SITUATION_ON_CLOSE = "to_review" as const satisfies Situatio
  * Quem nunca tem situacao (o passo e a execucao agendada) e quem a aceita (um pedido de agente num status final): a regra
  * mora nos contratos, onde o esquema do cartao e a gaveta de execucao do web a alcancam.
  */
+/** A situacao que o fechamento de um pedido deixa nele: nenhuma nos tipos que nunca tem (passo, agendada, conteudo guardado). */
+export function situationOnClose(kind: string): Situation | undefined {
+  return (KINDS_WITHOUT_SITUATION as readonly string[]).includes(kind) ? undefined : REVIEW_SITUATION_ON_CLOSE;
+}
+
 export { acceptsSituation, KINDS_WITHOUT_SITUATION } from "@repo/contracts";

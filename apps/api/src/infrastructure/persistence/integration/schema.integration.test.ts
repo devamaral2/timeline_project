@@ -207,6 +207,12 @@ describe("banco novo: checks, restricoes e indices", () => {
       }
       await expect(agentTask({ kind: "step", status: "completed", situation: "to_review" })).rejects.toThrow(/tasks_situation_shape/);
       await expect(agentTask({ kind: "cron", status: "completed", situation: "to_review" })).rejects.toThrow(/tasks_situation_shape/);
+      for (const kind of ["save_content", "save_content_with_transcription"]) {
+        for (const status of ["completed", "failed", "cancelled"]) {
+          await agentTask({ kind, status });
+          await expect(agentTask({ kind, status, situation: "to_review" }), `${kind} ${status}`).rejects.toThrow(/tasks_situation_shape/);
+        }
+      }
       await expect(task({ status: "done", situation: "reviewed" })).rejects.toThrow(/tasks_situation_shape/);
       await expect(task({ status: null, situation: "reviewed" })).rejects.toThrow(/tasks_situation_shape/);
     });

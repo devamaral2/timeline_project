@@ -11,7 +11,7 @@ declare module "vitest" {
 }
 
 const DRIZZLE_DIR = resolve(__dirname, "../../../../drizzle");
-const MIGRATION = "0009_projeto_em_toda_tarefa";
+const MIGRATION = "0010_projeto_em_toda_tarefa";
 
 interface JournalEntry { tag: string; when: number }
 
@@ -41,7 +41,7 @@ describe("migration que da um projeto a toda tarefa e serie, sobre um banco com 
   let pool: Pool;
 
   const ids = {
-    humanA: ulid(), requestA: ulid(), stepA: ulid(), humanB: ulid(), seriesB: ulid(), onlySeries: ulid(), occurrenceB: ulid(),
+    humanA: ulid(), requestA: ulid(), stepA: ulid(), humanB: ulid(), savedA: ulid(), seriesB: ulid(), onlySeries: ulid(), occurrenceB: ulid(),
   };
 
   async function rows<T = Record<string, unknown>>(text: string, values: unknown[] = []): Promise<T[]> {
@@ -68,6 +68,8 @@ describe("migration que da um projeto a toda tarefa e serie, sobre um banco com 
     await task(ids.requestA, "user-a", "agent", "request", "done");
     await task(ids.stepA, "user-a", "agent", "step", "done");
     await task(ids.humanB, "user-b", "human", "common", "doing");
+    // O conteudo guardado (migration 0009) tambem e tarefa de agente e ganha o personal do dono.
+    await task(ids.savedA, "user-a", "agent", "save_content_with_transcription", "awaiting_transcription");
 
     const series = (id: string, userId: string) =>
       pool.query(
@@ -114,7 +116,7 @@ describe("migration que da um projeto a toda tarefa e serie, sobre um banco com 
       `SELECT t.id, t.user_id AS owner, p.user_id AS project_owner, p.personal
        FROM tasks t JOIN projects p ON p.id = t.project_id`,
     );
-    expect(taskProjects).toHaveLength(5);
+    expect(taskProjects).toHaveLength(6);
     for (const row of taskProjects) {
       expect(row.project_owner, row.id).toBe(row.owner);
       expect(row.personal, row.id).toBe(true);

@@ -14,6 +14,7 @@ import {
   isSuccessAgentStatus,
   acceptsSituation,
   REVIEW_SITUATION_ON_CLOSE,
+  situationOnClose,
 } from "./agent-status";
 
 describe("conjunto de status de agente", () => {
@@ -139,6 +140,14 @@ describe("situacao da tarefa de agente", () => {
 
   test.each(OPEN_AGENT_STATUSES)("a tarefa de agente %s ainda aberta nao aceita", (status) => {
     expect(acceptsSituation({ actor: "agent", kind: "request", status })).toBe(false);
+  });
+
+  test("fechar um pedido deixa a situacao para revisar, menos nos tipos que nunca tem situacao", () => {
+    expect(situationOnClose("request")).toBe("to_review");
+    expect(situationOnClose("review_request")).toBe("to_review");
+    for (const kind of ["step", "cron", "save_content", "save_content_with_transcription"]) {
+      expect(situationOnClose(kind)).toBeUndefined();
+    }
   });
 
   test("passo, execucao agendada e tarefa de pessoa nao aceitam, mesmo num status final", () => {
