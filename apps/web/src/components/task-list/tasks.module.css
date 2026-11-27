@@ -115,7 +115,7 @@
 .emptyTitle { composes: emptyTitle from "../ui/page.module.css"; }
 .emptyText { composes: emptyText from "../ui/page.module.css"; }
 .emptyAction { composes: pill from "../ui/controls.module.css"; color: var(--ink); font-weight: 600; }
-.toast { position: fixed; inset-inline: 0; bottom: 24px; z-index: var(--z-toast); display: flex; align-items: center; gap: 16px; width: fit-content; max-width: calc(100vw - 32px); min-height: 56px; margin-inline: auto; padding: 6px 6px 6px 20px; border: 1px solid var(--line); border-radius: 28px; background: var(--card); box-shadow: var(--shadow-float); animation: rise var(--duration-slow) var(--ease-out); }
+.toast { position: fixed; inset-inline: 0; bottom: max(24px, calc(var(--execution-clearance, 0px) + 12px)); z-index: var(--z-toast); display: flex; align-items: center; gap: 16px; width: fit-content; max-width: calc(100vw - 32px); min-height: 56px; margin-inline: auto; padding: 6px 6px 6px 20px; border: 1px solid var(--line); border-radius: 28px; background: var(--card); box-shadow: var(--shadow-float); animation: rise var(--duration-slow) var(--ease-out); }
 /* O fio do aviso encolhe com o tempo que resta para desfazer. */
 .toast::after { content: ""; position: absolute; left: 24px; right: 24px; bottom: 0; height: 2px; border-radius: 1px; background: var(--brand); transform-origin: left; animation: toastLife var(--toast-ms, 5000ms) linear forwards; }
 @keyframes toastLife { to { transform: scaleX(0); } }
@@ -168,5 +168,5 @@ textarea.line { height: auto; min-height: 64px; padding: 10px 0; line-height: 1.
   .meta li + li::before { content: none; }
   .date { font-size: 22px; line-height: 22px; }
   .side .priorityText { display: none; }
-  .toast { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: max(calc(90px + env(safe-area-inset-bottom, 0px)), calc(var(--execution-clearance, 0px) + 12px)); }
 }
