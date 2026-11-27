@@ -87,7 +87,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "expected": {
       "kind": "common",
@@ -109,7 +114,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -201,7 +211,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "expected": {
       "kind": "common",
@@ -224,7 +239,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -316,7 +336,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "expected": {
       "kind": "common",
@@ -339,7 +364,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -432,7 +462,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "expected": {
       "kind": "common",
@@ -456,7 +491,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   }
 ]
