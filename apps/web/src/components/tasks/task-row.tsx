@@ -1,10 +1,12 @@
-import { Bot } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus } from "@repo/contracts";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/tasks/card-text";
+import { ProviderMark, providerNames } from "@/components/hub/provider-marks";
 import { ProjectLine } from "@/components/projects/project-line";
 import { TaskKindMark } from "./task-kind-mark";
+import { AgentStatusIcon } from "./agent-status-icon";
+import { agentStatusNames } from "./agent-status-names";
 import { TaskStatusGlyph, taskStatusName } from "./task-status-glyph";
 import styles from "./task-row.module.css";
 
@@ -28,8 +30,10 @@ export interface TaskRowProps {
 /**
  * A linha única das listas: glifo de status, título, a linha do projeto (marca e
  * nome), uma linha com o tipo, o "quando" e as tags, e a duração à direita. Pessoa e agente usam a
- * mesma grade; a tarefa de agente fecha a linha com o robô, a sua assinatura.
- * O glifo de pessoa é um botão; o de agente não muda status.
+ * mesma grade. A tarefa de agente leva à direita o nome do status, o ícone quadrado dele e, abaixo,
+ * o símbolo do provedor (quando o pedido levou a escolha); o status do agente não se edita.
+ * O glifo de pessoa é um botão; à esquerda da tarefa de agente fica um ponto inerte, que é o
+ * lugar do controle de situação.
  */
 export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, aside, children }: TaskRowProps) {
   const isAgent = card.actor === "agent";
@@ -39,16 +43,11 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, a
   // O contrato garante que o status e de agente quando o ator e agente, e de pessoa (ou ausente) no outro caso.
   const agentStatus = card.status as AgentTaskStatus;
   const humanStatus = (card.status ?? null) as HumanTaskStatus | null;
-  const glyph = isAgent ? (
-    <TaskStatusGlyph actor="agent" status={agentStatus} />
-  ) : (
-    <TaskStatusGlyph actor="human" status={humanStatus} />
-  );
 
   return (
     <li className={styles.row} data-actor={card.actor} data-status={card.status ?? "reference"}>
       {isAgent ? (
-        <span className={styles.glyphSlot}>{glyph}</span>
+        <AgentLead />
       ) : (
         <button
           type="button"
@@ -56,7 +55,7 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, a
           aria-label={`${taskStatusName("human", humanStatus)}. Mudar status de “${card.name}”`}
           onClick={(event) => onStatusClick?.(card, event.currentTarget)}
         >
-          {glyph}
+          <TaskStatusGlyph actor="human" status={humanStatus} />
         </button>
       )}
       <Link href={`/${userId}/tarefas/${card.id}`} className={styles.body}>
@@ -77,11 +76,42 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, a
           </span>
         </span>
         {duration ? <span className={styles.duration}>{duration}</span> : null}
-        {/* Decorativo: o nome do glifo de status já diz "Agente". */}
-        {isAgent ? <Bot className={styles.agentMark} size={18} strokeWidth={1.9} aria-hidden="true" data-agent-mark /> : null}
+        {isAgent ? <AgentSide status={agentStatus} model={card.model} /> : null}
       </Link>
       {aside}
       {children}
     </li>
+  );
+}
+
+/**
+ * O que ocupa a esquerda da tarefa de agente: um ponto inerte, na caixa de 24px do glifo de pessoa. O
+ * controle de situação entra neste lugar.
+ */
+function AgentLead() {
+  return (
+    <span className={styles.glyphSlot} data-row-lead>
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" className={styles.idleDot}>
+        <path d="M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" fill="currentColor" />
+      </svg>
+    </span>
+  );
+}
+
+/** A ponta direita da tarefa de agente: o nome e o ícone do status, e o provedor que rodou a tarefa embaixo. */
+function AgentSide({ status, model }: { status: AgentTaskStatus; model: TaskCardDto["model"] }) {
+  return (
+    <span className={styles.side} data-row-side>
+      <span className={styles.status} data-status={status}>
+        {/* O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */}
+        <span aria-hidden="true">{agentStatusNames[status]}</span>
+        <AgentStatusIcon status={status} />
+      </span>
+      {model ? (
+        <span className={styles.provider} role="img" aria-label={providerNames[model.provider]}>
+          <ProviderMark provider={model.provider} />
+        </span>
+      ) : null}
+    </span>
   );
 }

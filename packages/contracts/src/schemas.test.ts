@@ -108,3 +108,16 @@ test("the new project takes only a name", () => {
   expect(createProjectInputSchema.safeParse({ name: "braid", personal: true }).success).toBe(false);
   expect(createProjectInputSchema.safeParse({}).success).toBe(false);
 });
+
+const agentCard = { ...card, actor: "agent", kind: "request", status: "completed" };
+const choice = { provider: "anthropic", model: "claude-opus-5-5", effort: "high" };
+
+test("an agent card passes with and without the model choice of its request", () => {
+  expect(taskCardSchema.parse(agentCard)).toEqual(agentCard);
+  expect(taskCardSchema.parse({ ...agentCard, model: choice })).toEqual({ ...agentCard, model: choice });
+});
+
+test("the model choice on a card must be a whole choice", () => {
+  expect(taskCardSchema.safeParse({ ...agentCard, model: { provider: "anthropic" } }).success).toBe(false);
+  expect(taskCardSchema.safeParse({ ...agentCard, model: { ...choice, provider: "google" } }).success).toBe(false);
+});
