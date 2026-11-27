@@ -3,7 +3,7 @@ import styles from "./hermes-mark.module.css";
 
 /**
  * Os cinco estados do Hermes: parado (o robô pisca), ouvindo (a onda, com
- * halo), pensando (cinco pontos), concluiu (o ✓) e erro (a exclamação).
+ * halo), pensando (três pontos que pulam), concluiu (o ✓) e erro (a exclamação).
  */
 export type HermesState = HermesBotState;
 
