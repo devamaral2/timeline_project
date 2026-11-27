@@ -7,7 +7,7 @@ date: 2026-11-27
 
 Spec 51. Esta ADR junta as decisões da tarefa de agente na spec; cada ticket acrescenta a sua seção. A primeira é a
 dos status de agente, que **substitui o item 3 da ADR 0011** no que diz respeito aos status de agente. Os tipos de
-agente e o status de pessoa daquele item continuam valendo. Os projetos têm a ADR 0021.
+agente e o status de pessoa daquele item continuam valendo. Os projetos têm a ADR 0022.
 
 ## Status de agente
 
@@ -20,13 +20,15 @@ trabalha, nem a execução que parou no meio da que falhou.
 
 ### Decisão
 
-1. **O conjunto de agente tem dez status e nenhum é igual a um de pessoa:** `preparing`, `queued`, `starting`,
-   `running`, `waiting`, `completed`, `interrupted`, `failed`, `cancelled` e `rolled_back`. Os de pessoa não mudam
+1. **O conjunto de agente tem dez status próprios mais `awaiting_transcription`, onze ao todo, e nenhum é igual a um de
+   pessoa:** `preparing`, `queued`, `starting`, `running`, `waiting`, `awaiting_transcription`, `completed`,
+   `interrupted`, `failed`, `cancelled` e `rolled_back` (o `awaiting_transcription` vem do conteúdo guardado, ADR 0021;
+   veja "`awaiting_transcription`", abaixo). Os de pessoa não mudam
    (`todo`, `toDefine`, `doing`, `inHold`, `done`, `cancel`, `missed`). O check `tasks_status_matches_actor` continua
    por executor, agora com os dois conjuntos sem valor em comum.
 2. **Os grupos moram num lugar só por camada** e são o que as telas e a API perguntam, no lugar de listas soltas:
-   - aberto: `preparing`, `queued`, `starting`, `running`, `waiting`;
-   - em andamento: `preparing`, `queued`, `starting`, `running`;
+   - aberto: `preparing`, `queued`, `starting`, `running`, `waiting`, `awaiting_transcription`;
+   - em andamento: `preparing`, `queued`, `starting`, `running`, `awaiting_transcription`;
    - final: `completed`, `interrupted`, `failed`, `cancelled`, `rolled_back`;
    - sucesso: `completed`.
    Estão em `apps/api/src/domain/agent-status.ts`, `packages/contracts/src/tasks/agent-status-groups.ts` (web) e
@@ -38,12 +40,12 @@ trabalha, nem a execução que parou no meio da que falhou.
    status de tarefa.
 4. **Onde a API gravava `done` e `cancel` de uma tarefa de agente, grava `completed` e `cancelled`.** Os momentos em que
    cada status é gravado estão na tabela "Significado e quem grava", abaixo.
-5. **Uma migration** (`0010_status_de_agente_proprios`) tira o check, troca os valores nas tarefas de agente (pedidos e
-   passos) e recoloca o check, tudo na mesma transação. As tarefas de pessoa não são tocadas. Os pedidos que já existem
+5. **Uma migration** (`0011_status_de_agente_proprios`; a 0009 é a do conteúdo guardado e a 0010 a dos projetos) tira o
+   check, troca os valores nas tarefas de agente (pedidos, passos e conteúdo guardado) e recoloca o check, com os onze, tudo na mesma transação. As tarefas de pessoa não são tocadas. Os pedidos que já existem
    continuam na lista: os concluídos como "Concluído" e os cancelados como "Cancelado".
 6. **Os contratos recusam o status de um executor no outro:** o esquema do cartão da tarefa rejeita um cartão de agente
    com `done` ou `cancel` e um de pessoa com status de agente.
-7. **Os nomes na tela:** "Preparando", "Na fila", "Iniciando", "Trabalhando", "Esperando", "Concluído", "Interrompido",
+7. **Os nomes na tela:** "Preparando", "Na fila", "Iniciando", "Trabalhando", "Esperando", "Esperando transcrição", "Concluído", "Interrompido",
    "Falhou", "Cancelado" e "Revertido"; o nome acessível é "Agente, " e o nome em minúscula ("Agente, concluído"). Um
    pedido `cancelled` mostra "Pedido cancelado" e um `interrupted` mostra "Pedido interrompido". Os ícones quadrados
    próprios vêm com a linha da tarefa de agente; até lá o glifo é o de hoje, reaproveitado.
@@ -65,6 +67,7 @@ gravado em todo status final.
 | `starting` | Um worker pegou o job e ainda não chamou o executor. | O worker do turno (Hermes, modelo, voz, alimento) ao pegar o job (`markStarting`). |
 | `running` | O executor está trabalhando. | O worker do turno na primeira chamada ao executor (`markRunning`); o roteamento e a edição por alvo, ao desdobrar o pedido em passos (`beginSteps`); o passo, ao começar (`markStepRunning`). |
 | `waiting` | Espera alguém. | Ninguém ainda. |
+| `awaiting_transcription` | O vídeo espera o serviço local de transcrição (ou a formatação do que ele entregou, que já é `running`). | O pedido de transcrição já nasce assim (`save_content_with_transcription`); a entrega do serviço local o leva a `running`. |
 | `completed` | Terminou bem. | O finalizador (todos os passos), o worker do turno e o fim do cálculo de alimento; o passo, ao gravar o resultado. |
 | `interrupted` | Parou no meio, sem terminar nem falhar. | O cancelamento de um pedido ou passo `running`; a execução que o Hermes devolve como cancelada ou interrompida; o job abandonado porque o worker morreu e as tentativas acabaram (`WorkerAttemptsExhaustedError`). |
 | `failed` | O executor falhou, ou o pedido não pôde começar. | O erro devolvido pelo executor (worker do turno, passo, finalizador quando todos os passos falham), o job que morreu por erro e o job abandonado cujo pedido ainda não rodava. |
@@ -79,6 +82,7 @@ queued    -> starting | running | failed | cancelled
 starting  -> running | failed | cancelled
 running   -> waiting | completed | failed | interrupted
 waiting   -> running | failed | cancelled
+awaiting_transcription -> running | failed | cancelled
 completed | interrupted | failed -> rolled_back
 ```
 
@@ -98,8 +102,26 @@ depois da entrega não despache de novo.
 
 - O app Android precisa ser publicado junto com a API. O app antigo falhava ao ler um status que não conhecia; o novo lê
   um status desconhecido como neutro, sem derrubar o cartão.
-- Quem entrar depois com um status de agente novo (como `awaiting_transcription`, das issues 39 e 40) decide entre usar
-  `queued` e acrescentá-lo ao conjunto e aos grupos, com nome, ícone e cor.
+- Quem entrar depois com um status de agente novo decide entre usar um existente e acrescentá-lo ao conjunto e aos
+  grupos, com nome, ícone e cor.
+
+### `awaiting_transcription`
+
+A transcrição de vídeos (spec #39, ADR 0021) entrou na `main` com um status de agente próprio, e a spec 51 o acolheu em
+vez de trocá-lo por `queued`, porque a fila dele é a do serviço local, não a de um worker da API.
+
+- **Entrou no conjunto** (onze status), nos grupos **aberto** e **em andamento** (a execução da gaveta o mostra) e na tabela
+  de transições: `awaiting_transcription -> running | failed | cancelled`. Ninguém chega a ele por transição: o pedido
+  de transcrição nasce assim. Cancelar o que ainda espera deixa `cancelled`; depois da entrega o pedido está `running`
+  (formatando) e cancelar o deixa `interrupted`, como em qualquer pedido que já trabalhava.
+- **Nome e ícone:** "Esperando transcrição", em tom apagado; o mesmo quadrado arredondado dos outros, com um anel vazio
+  (círculo de raio 3, só contorno, centrado em (10, 10)), no web e no Android.
+- **Sem situação.** `save_content` e `save_content_with_transcription` são conteúdo guardado, não um pedido que alguém
+  precisa revisar: nunca têm situação, como o passo e a execução agendada (`KINDS_WITHOUT_SITUATION`, na mesma lista do
+  check `tasks_situation_shape`). Um que terminou cai em Finalizadas; um `awaiting_transcription` ou `running` aparece na
+  gaveta de execução, que só deixa de fora o passo e a execução agendada.
+- Tudo que a transcrição gravava como `done` e `cancel` de agente passou a `completed` e `cancelled`, pelos grupos e pelo
+  mesmo SQL de fechamento do store de pedidos (`agent-status-sql.ts`); a migration 0011 converte também essas linhas.
 
 ## Situação
 
@@ -114,9 +136,9 @@ não tem onde marcar.
 1. **A tarefa de agente que termina ganha uma situação, que o usuário controla:** `to_review` (Para revisar),
    `reviewed` (Revisada) ou `bookmarked` (Guardada). A coluna `tasks.situation` é texto e opcional; o nome nos contratos
    é o mesmo (`TaskSituation`, `situation` no cartão da tarefa e no pedido).
-2. **Quem pode ter situação** é o pedido de agente que não é passo nem execução agendada e está num status final. O
+2. **Quem pode ter situação** é o pedido de agente que não é passo, execução agendada nem conteúdo guardado (`save_content*`) e está num status final. O
    domínio (`acceptsSituation`, no mesmo módulo dos grupos de status) e dois checks do banco impõem isso:
-   `tasks_situation_valid` (um dos três valores) e `tasks_situation_shape` (só agente, só fora de `step` e `cron`, só em
+   `tasks_situation_valid` (um dos três valores) e `tasks_situation_shape` (só agente, só fora de `step`, `cron` e `save_content*`, só em
    status final). O check vale **só num sentido**: uma tarefa final pode ficar sem situação. Assim, restringir a política
    de revisão depois não pede migration.
 3. **A política de revisão mora num lugar só** (`REVIEW_SITUATION_ON_CLOSE`, em `domain/agent-status.ts`): a gravação que
@@ -130,12 +152,13 @@ não tem onde marcar.
    casos iguais) e 409 quando a tarefa não aceita situação (de pessoa, passo, execução agendada ou ainda aberta). A
    gravação confere o critério de novo no próprio `UPDATE`, porque o status pode ter mudado desde a leitura. A mudança
    sobe a `revision` e o `updated_at` da tarefa. A rota está no catálogo de rotas da API.
-5. **A migration** `0011_situacao_da_tarefa_de_agente` acrescenta a coluna e os dois checks e grava `reviewed` nas tarefas
-   de agente que já estão num status final e não são passo nem execução agendada: o que terminou antes desta mudança
+5. **A migration** `0012_situacao_da_tarefa_de_agente` acrescenta a coluna e os dois checks e grava `reviewed` nas tarefas
+   de agente que já estão num status final e não são passo, execução agendada nem conteúdo guardado: o que terminou antes desta mudança
    nunca foi mostrado ao usuário como "para revisar", então não entra na fila de revisão. As abertas e os passos ficam
    sem situação.
 
-   Esta mudança chega em três migrations (0009 para o projeto, 0010 e 0011 para os status e a situação), e não em uma.
+   Esta mudança chega em três migrations (0010 para o projeto, 0011 e 0012 para os status e a situação), e não em uma; a 0009,
+   do conteúdo guardado, veio da `main` e já está aplicada nos ambientes compartilhados, por isso as nossas ficam depois dela.
    A entrega continua atômica: o migrador do Drizzle aplica todas as pendentes dentro de uma transação só, então ou
    entram as três, ou nenhuma.
 6. **No web:** na linha da tarefa de agente que tem situação, o glifo da esquerda mostra a situação (Para revisar é o

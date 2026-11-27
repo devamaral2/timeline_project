@@ -27,7 +27,7 @@ isso produz ou usa.
      `cancel`, `missed`.
    - Agente: tipos `request`, `search_request`, `build_request`, `inquiry_request`, `review_request`, `cron`, `step`;
      status `queued`, `running`, `waiting`, `done`, `failed`, `cancel`. **Os status de agente foram substituídos pela
-     ADR 0022:** são `preparing`, `queued`, `starting`, `running`, `waiting`, `completed`, `interrupted`, `failed`,
+     ADR 0023:** são `preparing`, `queued`, `starting`, `running`, `waiting`, `completed`, `interrupted`, `failed`,
      `cancelled` e `rolled_back`.
 4. **Evento de referência.** Um evento de pessoa pode não ter status: só marca um horário na agenda. Continua
    editável e pode passar a ter status a qualquer momento. Evento de agente sempre tem status.

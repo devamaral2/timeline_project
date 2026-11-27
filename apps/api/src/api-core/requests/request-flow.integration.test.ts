@@ -565,7 +565,7 @@ test("o modelo fora do ar vira passo vermelho com codigo, e o texto do usuario s
   expect(traces.rows.every((row) => row.content === null)).toBe(true);
 });
 
-// Projetos (ADR 0021): o trabalho de um pedido fica no projeto dele.
+// Projetos (ADR 0022): o trabalho de um pedido fica no projeto dele.
 
 const projectOf = async (taskId: string) =>
   (await ctx.pool.query<{ name: string; personal: boolean }>(

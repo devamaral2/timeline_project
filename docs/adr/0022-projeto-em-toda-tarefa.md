@@ -36,6 +36,8 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
    `personal` para o resto. Uma regra que não acha o que procura (o pedido sumiu, a tarefa alvo foi apagada) passa
    adiante. O pedido de voz e o cálculo de alimento não trazem regra e ficam em `personal`. O projeto de uma tarefa de
    agente não muda depois que ela nasce.
+   O conteúdo guardado (ADR 0021) não tem regra própria: a página guardada, o pedido de transcrição de vídeo e a Leitura
+   diária que eles acham ou criam passam por `insertTaskAggregate` e caem em `personal`.
 5. **O cartão da tarefa e o pedido trazem sempre o projeto**, como `{ id, name, personal }`. O esquema dos contratos
    recusa o cartão e o pedido sem ele. `GET /api/projects` devolve os projetos do usuário, `personal` primeiro e os
    outros por nome, e cria o `personal` de quem ainda não tem nenhum.

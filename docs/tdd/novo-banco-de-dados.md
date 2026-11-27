@@ -89,7 +89,7 @@ create table events (
   actor                  text not null,                   -- human | agent
   kind                   text not null,
   status                 text,                            -- nulo = evento de referência
-  situation              text,                            -- to_review | reviewed | bookmarked (ADR 0022)
+  situation              text,                            -- to_review | reviewed | bookmarked (ADR 0023)
   priority               text not null default 'medium',  -- urgent | high | medium | low
   name                   text not null,
   description            text not null default '',
@@ -117,7 +117,7 @@ priority in ('urgent', 'high', 'medium', 'low')
 
 -- tipo conforme o executor
 (actor = 'human' and kind in ('routine', 'meal', 'sleep', 'training'))
-or (actor = 'agent' and kind in ('request', 'search_request', 'build_request',
+or (actor = 'agent' and kind in ('request', 'save_content', 'save_content_with_transcription', 'search_request', 'build_request',
                                  'inquiry_request', 'review_request', 'cron', 'step'))
 
 -- status conforme o executor; só evento de pessoa pode não ter status
@@ -125,13 +125,14 @@ or (actor = 'agent' and kind in ('request', 'search_request', 'build_request',
 (actor = 'human' and (status is null
                       or status in ('todo', 'toDefine', 'doing', 'inHold', 'done', 'cancel', 'missed')))
 or (actor = 'agent' and status is not null
-    and status in ('preparing', 'queued', 'starting', 'running', 'waiting', 'completed', 'interrupted', 'failed',
-                   'cancelled', 'rolled_back'))  -- ADR 0022 (era queued, running, waiting, done, failed, cancel)
+    and status in ('preparing', 'queued', 'starting', 'running', 'waiting', 'awaiting_transcription', 'completed', 'interrupted',
+                   'failed', 'cancelled', 'rolled_back'))  -- ADR 0023 (era queued, running, waiting, done, failed, cancel)
 
--- situação (ADR 0022): só o pedido de agente, fora de passo e de execução agendada, num status final.
+-- situação (ADR 0023): só o pedido de agente, fora de passo, execução agendada e conteúdo guardado, num status final.
 -- Vale só num sentido: uma tarefa final pode ficar sem situação
 situation is null or situation in ('to_review', 'reviewed', 'bookmarked')
-situation is null or (actor = 'agent' and kind not in ('step', 'cron')
+situation is null or (actor = 'agent' and kind not in ('step', 'cron', 'save_content',
+                                                            'save_content_with_transcription')
                       and status in ('completed', 'interrupted', 'failed', 'cancelled', 'rolled_back'))
 
 -- evento longo: de pessoa, com status, sem recorrência, nunca perdido
