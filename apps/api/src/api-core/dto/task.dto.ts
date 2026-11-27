@@ -45,6 +45,7 @@ export function toTaskCardDto({ task, project, artifactTypes, recurrence }: Task
     name: task.name,
     description: task.description,
     project: { id: project.id, name: project.name, personal: project.personal },
+    ...(task.situation ? { situation: task.situation } : {}),
     ...(task.location ? { location: task.location } : {}),
     startedAt: task.startedAt?.toISOString(),
     estimatedFinishAt: task.estimatedFinishAt?.toISOString(),

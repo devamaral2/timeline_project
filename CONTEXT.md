@@ -134,6 +134,10 @@ _Avoid_: log, histórico, trace (como termo geral)
 Onde uma tarefa, de pessoa ou de agente, fica guardada. Toda tarefa pertence a um projeto; sem escolha, ela fica no projeto `personal`, que cada usuário tem desde a primeira necessidade e que não se renomeia nem se apaga. O nome tem de 1 a 60 caracteres, sem os espaços das pontas, e é único por usuário sem distinguir maiúsculas. Na tela o projeto é uma marca de iniciais sobre uma cor que vem do nome (a do `personal` é neutra), seguida do nome. A ocorrência de uma tarefa recorrente fica no projeto da série.
 _Avoid_: pasta, espaço, workspace, repositório, tarefa longa (como sinônimo)
 
+**Situação**:
+O que o usuário decidiu de um pedido de agente que terminou: **Para revisar** (`to_review`), **Revisada** (`reviewed`) ou **Guardada** (`bookmarked`). Só tem situação o pedido de agente, nem passo nem execução agendada, num status final. O pedido nasce Para revisar quando termina, de qualquer jeito que termine; o usuário muda a situação, de qualquer uma para qualquer uma, pelo glifo da esquerda da linha e pelo cabeçalho do detalhe. Não é o status: o status diz como a execução terminou e a situação diz o que o usuário fez com o resultado.
+_Avoid_: modo, estado de revisão, leitura, arquivada
+
 **Subtarefa**:
 Tarefa que é parte de outra, a tarefa principal. Cada tarefa tem no máximo uma principal e pode ter várias subtarefas; as duas podem ser de pessoa ou de agente. A ligação é informativa: não segura nada em espera, não muda status e não revisa nenhuma das duas.
 _Avoid_: sequência, filha, etapa, passo, bloqueio, dependência

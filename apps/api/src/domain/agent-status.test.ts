@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { AGENT_STATUSES, HUMAN_STATUSES } from "./sets";
+import { AGENT_STATUSES, HUMAN_STATUSES, SITUATIONS } from "./sets";
 import {
   FINAL_AGENT_STATUSES,
   IN_PROGRESS_AGENT_STATUSES,
@@ -9,6 +9,8 @@ import {
   isInProgressAgentStatus,
   isOpenAgentStatus,
   isSuccessAgentStatus,
+  acceptsSituation,
+  REVIEW_SITUATION_ON_CLOSE,
 } from "./agent-status";
 
 describe("conjunto de status de agente", () => {
@@ -75,5 +77,28 @@ describe("grupos de status de agente", () => {
       final: isFinalAgentStatus(status),
       success: isSuccessAgentStatus(status),
     }).toEqual(expected);
+  });
+});
+
+describe("situacao da tarefa de agente", () => {
+  test("sao tres, e o pedido que fecha nasce para revisar", () => {
+    expect([...SITUATIONS]).toEqual(["to_review", "reviewed", "bookmarked"]);
+    expect(REVIEW_SITUATION_ON_CLOSE).toBe("to_review");
+  });
+
+  test.each(FINAL_AGENT_STATUSES)("o pedido de agente %s aceita situacao", (status) => {
+    expect(acceptsSituation({ actor: "agent", kind: "request", status })).toBe(true);
+    expect(acceptsSituation({ actor: "agent", kind: "build_request", status })).toBe(true);
+  });
+
+  test.each(OPEN_AGENT_STATUSES)("a tarefa de agente %s ainda aberta nao aceita", (status) => {
+    expect(acceptsSituation({ actor: "agent", kind: "request", status })).toBe(false);
+  });
+
+  test("passo, execucao agendada e tarefa de pessoa nao aceitam, mesmo num status final", () => {
+    expect(acceptsSituation({ actor: "agent", kind: "step", status: "completed" })).toBe(false);
+    expect(acceptsSituation({ actor: "agent", kind: "cron", status: "completed" })).toBe(false);
+    expect(acceptsSituation({ actor: "human", kind: "common", status: "done" })).toBe(false);
+    expect(acceptsSituation({ actor: "human", kind: "common", status: undefined })).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 import type { TokenUsage } from "../../agent/gateways/structured-completion.gateway";
 import type { ModelSelection, RequestQueryResult } from "@repo/contracts";
-import { isInProgressAgentStatus, isOpenAgentStatus, type Artifact, type Task } from "../../../domain";
+import { isInProgressAgentStatus, isOpenAgentStatus, REVIEW_SITUATION_ON_CLOSE, type Artifact, type Task } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
 import { requestTitleOf } from "../../../infrastructure/persistence/requests/postgres-request.store";
 import { personalProjectOf } from "../../projects/testing/in-memory-project.query";
@@ -230,6 +230,7 @@ export class InMemoryRequestStore implements RequestStore {
     const request = this.requests.get(requestId);
     if (!request || !isOpenAgentStatus(request.status)) return;
     request.status = status;
+    request.situation = REVIEW_SITUATION_ON_CLOSE;
     request.finishedAt = this.clock();
     request.updatedAt = this.clock();
     if (outcome.failedSteps?.length) request.failedSteps = outcome.failedSteps;
@@ -250,6 +251,7 @@ export class InMemoryRequestStore implements RequestStore {
     const request = this.requests.get(requestId);
     if (!request || !isOpenAgentStatus(request.status)) return [];
     request.status = "cancelled";
+    request.situation = REVIEW_SITUATION_ON_CLOSE;
     request.errorCode = "cancelled";
     request.finishedAt = this.clock();
     const steps = this.stepRecords.filter((step) => step.requestId === requestId);

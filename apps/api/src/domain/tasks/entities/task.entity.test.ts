@@ -330,6 +330,41 @@ describe("Task.rehydrate", () => {
     expect(() => Task.rehydrate(stored({ actor: "agent", kind: "step" }))).toThrow(TaskValidationError);
   });
 
+  describe("situation", () => {
+    const agent = (overrides: Partial<TaskRehydrateProps> = {}) =>
+      stored({ actor: "agent", kind: "request", status: "completed", ...overrides });
+
+    test("a finished agent request carries the situation it was stored with", () => {
+      expect(Task.rehydrate(agent({ situation: "bookmarked" })).situation).toBe("bookmarked");
+      expect(Task.rehydrate(agent()).situation).toBeUndefined();
+    });
+
+    test.each(["completed", "interrupted", "failed", "cancelled", "rolled_back"] as const)(
+      "accepts a situation when the request is %s",
+      (status) => {
+        expect(Task.rehydrate(agent({ status, situation: "reviewed" })).situation).toBe("reviewed");
+      },
+    );
+
+    test.each([
+      ["a human task", stored({ situation: "reviewed" })],
+      ["a finished human task", stored({ status: "done", situation: "reviewed" })],
+      ["a step", agent({ kind: "step", situation: "to_review" })],
+      ["a scheduled execution", agent({ kind: "cron", situation: "to_review" })],
+      ["an open agent request", agent({ status: "running", situation: "to_review" })],
+      ["a waiting agent request", agent({ status: "waiting", situation: "to_review" })],
+    ])("refuses a situation on %s", (_, input) => {
+      expect(() => Task.rehydrate(input)).toThrow(TaskValidationError);
+    });
+
+    test("a new task can carry a situation under the same rule", () => {
+      expect(Task.create(props({ actor: "agent", kind: "request", status: "failed", situation: "to_review" })).situation).toBe("to_review");
+      expect(() => Task.create(props({ actor: "agent", kind: "request", status: "queued", situation: "to_review" }))).toThrow(
+        TaskValidationError,
+      );
+    });
+  });
+
   test("rejects a revision that is not an integer >= 1", () => {
     expect(() => Task.rehydrate(stored({ revision: 0 }))).toThrow("Task revision must be an integer >= 1");
     expect(() => Task.rehydrate(stored({ revision: 1.5 }))).toThrow(TaskValidationError);

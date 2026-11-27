@@ -5,11 +5,15 @@ import {
   TaskOwnershipError,
   TaskRevisionConflictError,
   SUBTASK_RELATION,
+  FINAL_AGENT_STATUSES,
+  KINDS_WITHOUT_SITUATION,
   type ArtifactLink,
   type ArtifactWrites,
+  type Situation,
 } from "../../../../domain/index";
 import type { TaskRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema/index";
+import { sqlList } from "../../database/schema/sets";
 import { resolveProjectId, type ProjectScope } from "../../projects/resolve-project";
 import { writeArtifacts } from "../../artifacts/repositories/postgres-artifact.repository";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
@@ -63,6 +67,7 @@ export async function insertTaskAggregate(
       actor: task.actor,
       kind: task.kind,
       status: task.status ?? null,
+      situation: task.situation ?? null,
       priority: task.priority,
       name: task.name,
       description: task.description,
@@ -289,6 +294,17 @@ export class PostgresTaskRepository implements TaskRepository {
     await this.db.transaction(async (tx) => {
       await softDeleteTask(tx, taskId, actorUserId);
     });
+  }
+
+  async setSituation(taskId: string, userId: string, situation: Situation): Promise<boolean> {
+    // O mesmo criterio de `acceptsSituation`, no comando: o status pode ter mudado desde a leitura.
+    const updated = await this.db.execute(sql`
+      UPDATE tasks SET situation = ${situation}, revision = revision + 1, updated_at = now()
+      WHERE id = ${taskId} AND user_id = ${userId} AND deleted_at IS NULL
+        AND actor = 'agent' AND kind NOT IN (${sqlList(KINDS_WITHOUT_SITUATION)})
+        AND status IN (${sqlList(FINAL_AGENT_STATUSES)})
+      RETURNING id`);
+    return updated.rows.length > 0;
   }
 
   async findById(taskId: string): Promise<Task | null> {

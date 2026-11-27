@@ -9,6 +9,7 @@ import {
   listAgenda,
   listTrackedTasks,
   newIdempotencyKey,
+  setTaskSituation,
   suggestTags,
   updateTask,
 } from "./tasks";
@@ -228,5 +229,28 @@ describe("tags", () => {
 
     expect(suggestions).toEqual([{ id: "saude", name: "saude" }]);
     expect(api.calls[0]).toMatchObject({ pathname: "/api/tags", query: { query: "sau" } });
+  });
+});
+
+describe("situação do pedido de agente", () => {
+  const finished = (overrides: Partial<Parameters<typeof taskFixture>[0]> = {}) =>
+    taskFixture({ id: "ag-1", actor: "agent", kind: "request", status: "completed", situation: "to_review", ...overrides });
+
+  test("PUT na rota da tarefa com só a situação no corpo, e devolve o cartão atualizado", async () => {
+    install({ tasks: [finished()] });
+
+    const card = await setTaskSituation("ag-1", "reviewed");
+
+    expect(api.calls[0]).toMatchObject({ method: "PUT", pathname: "/api/tasks/ag-1/situation", body: { situation: "reviewed" } });
+    expect(card).toMatchObject({ id: "ag-1", status: "completed", situation: "reviewed" });
+    expect((await listTrackedTasks()).find((item) => item.id === "ag-1")?.situation).toBe("reviewed");
+  });
+
+  test("tarefa de pessoa e tarefa aberta respondem conflito; tarefa que não existe, não encontrada", async () => {
+    install({ tasks: [taskFixture({ id: "h-1", status: "done" }), finished({ id: "ag-2", status: "running", situation: undefined })] });
+
+    await expect(setTaskSituation("h-1", "reviewed")).rejects.toMatchObject({ kind: "conflict" });
+    await expect(setTaskSituation("ag-2", "reviewed")).rejects.toMatchObject({ kind: "conflict" });
+    await expect(setTaskSituation("nao-existe", "reviewed")).rejects.toBeInstanceOf(ApiRequestError);
   });
 });

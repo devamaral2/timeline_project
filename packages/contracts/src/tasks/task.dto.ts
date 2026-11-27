@@ -1,6 +1,6 @@
 import type { ArtifactDto, ArtifactType } from "../artifacts/artifact.dto";
 import type { RecurrenceRule } from "../recurrences/recurrence-rule";
-import type { TaskActor, TaskArtifactRelation, TaskKind, TaskPriority, TaskStatus } from "./task-types";
+import type { TaskActor, TaskArtifactRelation, TaskKind, TaskPriority, TaskSituation, TaskStatus } from "./task-types";
 import type { ModelSelection } from "../agent/model.dto";
 import type { NotificationOffsetMinutes } from "./notification-offset-minutes";
 
@@ -38,6 +38,8 @@ export interface TaskCardDto {
   description: string;
   /** O projeto da tarefa: toda tarefa tem um, de pessoa ou de agente. */
   project: ProjectDto;
+  /** So no pedido de agente que terminou: o que o usuario decidiu dele. Ausente nas demais tarefas. */
+  situation?: TaskSituation;
   /** Onde acontece, como o texto que o Google Maps entende. Ausente sem local: so existe quando alguem o informou. */
   location?: string;
   /** Inicio planejado. A meia-noite local significa "o dia, sem hora". */

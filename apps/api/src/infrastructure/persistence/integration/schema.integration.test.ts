@@ -192,6 +192,26 @@ describe("banco novo: checks, restricoes e indices", () => {
       await expect(agentTask({ status: "missed" })).rejects.toThrow(/tasks_status_matches_actor/);
     });
 
+    test("a situacao so vale no pedido de agente que terminou, e e opcional", async () => {
+      for (const status of ["completed", "interrupted", "failed", "cancelled", "rolled_back"]) {
+        for (const situation of ["to_review", "reviewed", "bookmarked"]) await agentTask({ status, situation });
+        await agentTask({ status, situation: null });
+      }
+      await agentTask({ kind: "build_request", status: "completed", situation: "reviewed" });
+
+      for (const status of ["preparing", "queued", "starting", "running", "waiting"]) {
+        await expect(agentTask({ status, situation: "to_review" }), status).rejects.toThrow(/tasks_situation_shape/);
+      }
+      await expect(agentTask({ kind: "step", status: "completed", situation: "to_review" })).rejects.toThrow(/tasks_situation_shape/);
+      await expect(agentTask({ kind: "cron", status: "completed", situation: "to_review" })).rejects.toThrow(/tasks_situation_shape/);
+      await expect(task({ status: "done", situation: "reviewed" })).rejects.toThrow(/tasks_situation_shape/);
+      await expect(task({ status: null, situation: "reviewed" })).rejects.toThrow(/tasks_situation_shape/);
+    });
+
+    test("a situacao fora do conjunto e recusada", async () => {
+      await expect(agentTask({ status: "completed", situation: "archived" })).rejects.toThrow(/tasks_situation_valid/);
+    });
+
     test("executor e prioridade fora do conjunto sao recusados", async () => {
       await expect(task({ actor: "bot" })).rejects.toThrow(/tasks_actor_valid/);
       await expect(task({ priority: "normal" })).rejects.toThrow(/tasks_priority_valid/);

@@ -39,6 +39,12 @@ export type AgentTaskStatus =
 
 export type TaskStatus = HumanTaskStatus | AgentTaskStatus;
 
+/**
+ * O que o usuario decidiu do pedido de agente que terminou: ainda por olhar, revisado ou guardado. So o pedido
+ * (nem passo, nem execucao agendada) num status final tem.
+ */
+export type TaskSituation = "to_review" | "reviewed" | "bookmarked";
+
 export type TaskPriority = "urgent" | "high" | "medium" | "low";
 
 /** O que uma tarefa faz com um artefato. */

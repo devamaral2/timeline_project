@@ -3,11 +3,12 @@ import {
   createArtifactRequestSchema,
   createProjectInputSchema,
   createTaskInputSchema,
+  setTaskSituationInputSchema,
   updateArtifactRequestSchema,
   updateTaskInputSchema,
 } from "@repo/contracts/schemas";
 import type { ZodType } from "zod";
-import { HUMAN_KINDS, HUMAN_STATUSES, PRIORITIES, isNotificationOffsetMinutes } from "../domain";
+import { HUMAN_KINDS, HUMAN_STATUSES, PRIORITIES, SITUATIONS, isNotificationOffsetMinutes } from "../domain";
 import { decodeAgendaCursor } from "../infrastructure/persistence";
 
 /** Os tipos de artefato que o usuario cria e edita. Os demais sao do servidor. */
@@ -28,6 +29,7 @@ export function bodyFieldsOf(schema: ZodType): Set<string> {
 const CREATE_TASK_FIELDS = bodyFieldsOf(createTaskInputSchema);
 const UPDATE_TASK_FIELDS = bodyFieldsOf(updateTaskInputSchema);
 const CREATE_PROJECT_FIELDS = bodyFieldsOf(createProjectInputSchema);
+const SET_SITUATION_FIELDS = bodyFieldsOf(setTaskSituationInputSchema);
 const CREATE_ARTIFACT_FIELDS = bodyFieldsOf(createArtifactRequestSchema);
 const UPDATE_ARTIFACT_FIELDS = bodyFieldsOf(updateArtifactRequestSchema);
 
@@ -101,6 +103,13 @@ export function assertTaskFields(body: Record<string, unknown>, editing: boolean
 export function assertProjectFields(body: Record<string, unknown>): void {
   if (typeof body !== "object" || body === null || Array.isArray(body)) throw new BadRequestException("Invalid body");
   assertKnownFields(body, CREATE_PROJECT_FIELDS);
+}
+
+/** O que a rota da situacao confere: o corpo tem so `situation`, e um dos tres valores. Se a tarefa aceita e do dominio. */
+export function assertSituationBody(body: Record<string, unknown>): void {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new BadRequestException("Invalid body");
+  assertKnownFields(body, SET_SITUATION_FIELDS);
+  if (!isOneOf(SITUATIONS, body.situation)) throw new BadRequestException("Invalid situation");
 }
 
 export function assertExpectedRevision(body: { expectedRevision?: unknown }): void {
