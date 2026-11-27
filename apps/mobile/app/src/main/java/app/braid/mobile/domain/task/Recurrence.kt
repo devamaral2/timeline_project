@@ -3,10 +3,10 @@ package app.braid.mobile.domain.task
 import app.braid.mobile.domain.project.Project
 import app.braid.mobile.domain.timeline.shiftDayKey
 import app.braid.mobile.domain.timeline.shortDate
-import java.time.LocalDate
-import kotlin.math.roundToInt
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import java.time.LocalDate
+import kotlin.math.roundToInt
 
 /**
  * A regra da série como texto do formulário, o espelho do `RecurrenceDraft` do web (`task-recurrence-draft.ts`). Fica
