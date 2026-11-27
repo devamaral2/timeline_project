@@ -88,7 +88,7 @@ function NotificationsView({ userId }: { userId: string }) {
   return <section className={styles.notificationPanel} data-inline="true" aria-label="Notificações"><NotificationFeed userId={userId} state={state} /></section>;
 }
 
-export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = false, onThemeToggle = () => {} }: { userId?: string; hubRef?: RefObject<HubHandle | null>; onHubOpenChange?: (open: boolean) => void; darkMode?: boolean; onThemeToggle?: () => void }) {
+export function MobileNavigation({ userId, hubRef, onHubOpenChange, onMenuOpenChange, darkMode = false, onThemeToggle = () => {} }: { userId?: string; hubRef?: RefObject<HubHandle | null>; onHubOpenChange?: (open: boolean) => void; onMenuOpenChange?: (open: boolean) => void; darkMode?: boolean; onThemeToggle?: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -288,6 +288,8 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, darkMode = f
   }, [hubRef]);
 
   useEffect(() => { onHubOpenChange?.(panel === "hub"); }, [panel, onHubOpenChange]);
+  // O menu da seção sobe da barra por cima dela: quem fica acima da barra (a gaveta de execução) precisa saber.
+  useEffect(() => { onMenuOpenChange?.(menuOpen); }, [menuOpen, onMenuOpenChange]);
 
   // Trocar de tela fecha o menu de opções.
   // biome-ignore lint/correctness/useExhaustiveDependencies: o caminho é o gatilho.

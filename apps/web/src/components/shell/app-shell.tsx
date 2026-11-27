@@ -35,6 +35,8 @@ export function AppShell({
   // abri-lo e mostra se está aberto.
   const hubRef = useRef<HubHandle | null>(null);
   const [hubOpen, setHubOpen] = useState(false);
+  // O menu da seção (filtros e modos) sobe da barra por cima dela, e a gaveta de execução sai de vista com ele.
+  const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
   // O tema ja chega resolvido no <html> pelo script do layout raiz (sistema ou
@@ -70,9 +72,9 @@ export function AppShell({
         </div>
       </header>
       {children}
-      <MobileNavigation userId={userId} hubRef={hubRef} onHubOpenChange={setHubOpen} darkMode={darkMode} onThemeToggle={toggleTheme} />
+      <MobileNavigation userId={userId} hubRef={hubRef} onHubOpenChange={setHubOpen} onMenuOpenChange={setMenuOpen} darkMode={darkMode} onThemeToggle={toggleTheme} />
       {/* Depois da barra no DOM, para ficar por cima do degradê que apaga o conteúdo atrás dela. */}
-      {userId ? <ExecutionDrawer userId={userId} active={isTabRoot(pathname, userId)} covered={hubOpen} /> : null}
+      {userId ? <ExecutionDrawer userId={userId} active={isTabRoot(pathname, userId)} covered={hubOpen || menuOpen} /> : null}
     </div>
   );
 }
