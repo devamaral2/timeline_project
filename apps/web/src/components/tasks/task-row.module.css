@@ -120,20 +120,14 @@
   gap: 8px;
 }
 .status {
+  composes: tone from "./agent-status-icon.module.css";
   flex: none;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   line-height: 22px;
-  color: var(--muted-foreground);
 }
-.status[data-status="starting"],
-.status[data-status="running"] { color: var(--brand-accent); }
-.status[data-status="waiting"],
-.status[data-status="interrupted"] { color: var(--warning); }
-.status[data-status="completed"] { color: var(--success); }
-.status[data-status="failed"] { color: var(--destructive); }
 
 .provider {
   display: grid;

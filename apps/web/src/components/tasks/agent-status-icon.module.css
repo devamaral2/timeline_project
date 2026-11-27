@@ -2,7 +2,22 @@
    em volta do centro (10, 10). Nada de borda nem pseudo-elemento de CSS, que o
    navegador arredonda e tira do centro. Cores só por token. */
 
+/* A cor de cada status: apagada, destaque, aviso, sucesso ou erro. É a única tabela de cores do status: o ícone, o nome
+   dele na linha da lista e na gaveta de execução a compõem e leem o `data-status` do próprio elemento. */
+.tone { color: var(--muted-foreground); }
+.tone[data-status="queued"],
+.tone[data-status="preparing"],
+.tone[data-status="cancelled"],
+.tone[data-status="rolled_back"] { color: var(--muted-foreground); }
+.tone[data-status="starting"],
+.tone[data-status="running"] { color: var(--brand-accent); }
+.tone[data-status="waiting"],
+.tone[data-status="interrupted"] { color: var(--warning); }
+.tone[data-status="completed"] { color: var(--success); }
+.tone[data-status="failed"] { color: var(--destructive); }
+
 .icon {
+  composes: tone;
   flex: none;
   display: block;
   fill: none;
@@ -10,20 +25,7 @@
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
-  color: var(--muted-foreground);
 }
-
-/* A cor de cada status: apagada, destaque, aviso, sucesso ou erro. */
-.icon[data-status="queued"],
-.icon[data-status="preparing"],
-.icon[data-status="cancelled"],
-.icon[data-status="rolled_back"] { color: var(--muted-foreground); }
-.icon[data-status="starting"],
-.icon[data-status="running"] { color: var(--brand-accent); }
-.icon[data-status="waiting"],
-.icon[data-status="interrupted"] { color: var(--warning); }
-.icon[data-status="completed"] { color: var(--success); }
-.icon[data-status="failed"] { color: var(--destructive); }
 
 /* Os pontos e o quadrado de dentro são cheios, sem contorno. */
 .icon [data-part="dot"],

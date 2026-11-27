@@ -242,16 +242,14 @@
 
 /* O nome e o ícone quadrado do status, no tom do ícone (o mesmo da linha da lista). */
 .status {
+  composes: tone from "../tasks/agent-status-icon.module.css";
   flex: none;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
   line-height: 22px;
-  color: var(--muted-foreground);
 }
-.status[data-status="starting"],
-.status[data-status="running"] { color: var(--brand-accent); }
 
 /* Tocar na linha recolhida volta a três: o botão cobre a linha inteira. */
 .expand {
