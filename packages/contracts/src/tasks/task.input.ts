@@ -47,6 +47,8 @@ interface TaskFields {
 }
 
 export interface CreateTaskInput extends TaskFields {
+  /** O projeto da tarefa, que precisa ser do usuario. Ausente, a tarefa fica em `personal`. */
+  projectId?: string;
   /**
    * Onde acontece, como o texto que o Google Maps entende. So a tarefa de pessoa tem, e so quando alguem informa:
    * ausente (ou vazio), a tarefa nasce sem local. A API nunca deduz o local de onde a pessoa esta.
@@ -72,6 +74,8 @@ export interface CreateTaskInput extends TaskFields {
 export interface UpdateTaskInput extends TaskFields {
   taskId: string;
   expectedRevision: number;
+  /** O projeto da tarefa, que precisa ser do usuario. Ausente nao muda; `null` devolve a tarefa a `personal`. */
+  projectId?: string | null;
   /** Ausente nao muda; `null` ou vazio tira o local. */
   location?: string | null;
   kind?: HumanTaskKind;
@@ -81,4 +85,10 @@ export interface UpdateTaskInput extends TaskFields {
   finishedAt?: string | null;
   /** A lista completa de artefatos da tarefa, na ordem. Os que saem dela deixam de aparecer, mas nao sao apagados. */
   artifacts?: UpdateTaskArtifactInput[];
+}
+
+/** `POST /api/projects`: o projeto novo, pelo nome. Responde com o `ProjectDto` criado. */
+export interface CreateProjectInput {
+  /** De 1 a 60 caracteres depois de tirar os espacos das pontas; unico por usuario, sem distinguir maiusculas. */
+  name: string;
 }

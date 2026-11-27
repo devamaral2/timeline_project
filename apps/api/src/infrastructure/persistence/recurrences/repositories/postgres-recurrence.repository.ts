@@ -23,9 +23,18 @@ const errors = {
   conflict: (message: string) => new RecurrenceRevisionConflictError(message),
 };
 
+/**
+ * O projeto que o modelo da serie escolheu, ou `null` quando nao escolheu nenhum: a serie fica em `personal`. A coluna
+ * `recurrences.project_id` guarda a resolucao; o `projectId` do modelo e de onde ela sai.
+ */
+function projectOfTemplate(recurrence: Recurrence): string | null {
+  const { projectId } = recurrence.template as { projectId?: unknown };
+  return typeof projectId === "string" ? projectId : null;
+}
+
 /** A regra. Os artefatos que o template aponta ja precisam estar gravados. */
 export async function insertRecurrenceAggregate(tx: Tx, recurrence: Recurrence): Promise<void> {
-  const projectId = await resolveProjectId(tx, { userId: recurrence.userId });
+  const projectId = await resolveProjectId(tx, { userId: recurrence.userId, projectId: projectOfTemplate(recurrence) });
   await tx.insert(schema.recurrences).values({ ...recurrenceColumnsOf(recurrence), projectId });
 }
 
@@ -45,9 +54,11 @@ export async function updateRecurrenceAggregate(
   await writeArtifacts(tx, artifacts);
 
   const { id: _id, userId: _userId, createdAt: _createdAt, ...columns } = recurrenceColumnsOf(recurrence);
+  // O modelo e trocado inteiro: sem `projectId` nele, a serie volta a `personal`, como qualquer outro campo ausente.
+  const projectId = await resolveProjectId(tx, { userId: actorUserId, projectId: projectOfTemplate(recurrence) });
   const updated = await tx
     .update(schema.recurrences)
-    .set(columns)
+    .set({ ...columns, projectId })
     .where(
       and(
         eq(schema.recurrences.id, recurrence.id),

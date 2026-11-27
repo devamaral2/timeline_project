@@ -141,6 +141,35 @@ describe("fields", () => {
   });
 });
 
+describe("project", () => {
+  const inProject = () => taskWith({ id: "task-1", userId, name: "Reunião", startedAt, projectId: "project-1" });
+
+  test("absent keeps the project, a projectId swaps it and null goes back to personal", async () => {
+    const { merge } = setup([inProject()]);
+
+    expect((await merge("task-1", { name: "Outro" })).task.projectId).toBe("project-1");
+    expect((await merge("task-1", { projectId: "project-2" })).task.projectId).toBe("project-2");
+    expect((await merge("task-1", { projectId: null })).task.projectId).toBeNull();
+  });
+
+  test("changing the project is an ordinary edit: it bumps the revision and detaches the occurrence", async () => {
+    const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
+    const { merge } = setup([taskWith({ id: "task-1", userId, name: "Reunião", startedAt, projectId: "project-1", occurrence })]);
+
+    const { task } = await merge("task-1", { projectId: "project-2" });
+
+    expect(task).toMatchObject({ revision: 2, projectId: "project-2", occurrence: { detached: true } });
+  });
+
+  test("the batch carries the revised task with its project, against the revision that was read", async () => {
+    const { merge } = setup([inProject()]);
+
+    const merged = await merge("task-1", { projectId: null });
+
+    expect(toUpdateBatch(merged, 1).tasks).toMatchObject([{ op: "update", expectedRevision: 1, entity: { projectId: null } }]);
+  });
+});
+
 describe("list of artifacts", () => {
   const twoNotes = () => meeting([
     { id: "note-1", type: "text", data: { body: "pauta" } },

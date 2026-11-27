@@ -33,6 +33,8 @@ export interface StoredTemplate {
   artifactIds: string[];
   /** A tarefa principal de que cada ocorrencia nasce subtarefa. */
   parentTaskId?: string;
+  /** O projeto da serie, onde cada ocorrencia nasce. Ausente, a serie fica em `personal`. */
+  projectId?: string;
 }
 
 export interface PreparedTemplate {
@@ -70,6 +72,7 @@ export function storedTemplateOf(recurrence: Recurrence): StoredTemplate {
     notifyOffsetsMinutes: template.notifyOffsetsMinutes ?? [],
     artifactIds: template.artifactIds ?? [],
     ...(template.parentTaskId ? { parentTaskId: template.parentTaskId } : {}),
+    ...(template.projectId ? { projectId: template.projectId } : {}),
   };
 }
 
@@ -110,6 +113,7 @@ export async function prepareTemplate(
       notifyOffsetsMinutes: [...task.notifyOffsetsMinutes],
       artifactIds: task.artifactLinks.map((link) => link.artifactId),
       ...(parentTaskId ? { parentTaskId } : {}),
+      ...(typeof task.projectId === "string" ? { projectId: task.projectId } : {}),
     },
     artifacts,
     derivations,

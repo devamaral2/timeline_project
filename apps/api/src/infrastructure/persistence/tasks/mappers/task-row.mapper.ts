@@ -34,6 +34,7 @@ export function mapTaskRow(row: TaskRow, parts: TaskRowParts = {}): Task {
     parentId: parts.parentId,
     subtaskIds: [...(parts.subtaskIds ?? [])],
     occurrence: occurrenceLinkOf(row),
+    projectId: row.projectId,
     revision: row.revision,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
