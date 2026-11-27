@@ -3,6 +3,7 @@ package app.braid.mobile.ui.documents
 import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
 import app.braid.mobile.domain.artifact.ArtifactType
+import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
@@ -89,8 +90,8 @@ class DocumentsViewModelTest {
             assertEquals("Artefatos", viewModel.state.value.caption)
             val state = viewModel.loaded()
 
-            assertEquals(ArtifactType.entries.toList(), state.shown!!.map { it.type })
-            assertEquals("${ArtifactType.entries.size} artefatos", state.caption)
+            assertEquals(ArtifactType.known, state.shown!!.map { it.type })
+            assertEquals("${ArtifactType.known.size} artefatos", state.caption)
             assertTrue(state.hasArtifacts)
             assertFalse(state.failed)
             assertNull(
@@ -135,11 +136,101 @@ class DocumentsViewModelTest {
 
             chooseMode(viewModel, ViewMode.All)
             assertEquals(
-                ArtifactType.entries.size,
+                ArtifactType.known.size,
                 viewModel.state.value.shown!!
                     .size,
             )
             assertEquals(1, reads())
+        }
+
+    private val newTypes = listOf(ArtifactType.News, ArtifactType.EmailSummary, ArtifactType.YoutubeTranscript)
+
+    @Test
+    fun `the list shows the three new types with their own label and icon, the person's own`() =
+        runTest {
+            backend.route("GET", path, fixture("documents-list"))
+            val viewModel = newViewModel()
+            val shown = viewModel.loaded().shown!!.filter { it.type in newTypes }
+
+            assertEquals(
+                listOf("Notícias da manhã", "Resumo da caixa de entrada", "Aula de jardinagem"),
+                shown.map { it.name },
+            )
+            assertEquals(listOf("Notícias", "Resumo de e-mail", "Transcrição"), shown.map { artifactTypeLabel(it.type) })
+            assertEquals(
+                listOf(DocumentIcons.newspaper, DocumentIcons.letter, DocumentIcons.youtube),
+                shown.map { DocumentIcons.glyph(it.type) },
+            )
+            // Nenhum cai na letra da nota de texto, e os três são diferentes entre si.
+            assertEquals(3, shown.map { DocumentIcons.glyph(it.type) }.distinct().size)
+            assertTrue(shown.none { DocumentIcons.glyph(it.type) == DocumentIcons.letterA })
+
+            chooseMode(viewModel, ViewMode.Human)
+            assertTrue(
+                viewModel.state.value.shown!!
+                    .map { it.type }
+                    .containsAll(newTypes),
+            )
+            chooseMode(viewModel, ViewMode.Agent)
+            assertTrue(
+                viewModel.state.value.shown!!
+                    .none { it.type in newTypes },
+            )
+        }
+
+    @Test
+    fun `searching the artifacts finds the new types and shows them the same way`() =
+        runTest {
+            backend.route("GET", path) { request ->
+                if (request.requestUrl!!.queryParameter("q") == null) fixture("documents-list") else fixture("documents-list-unknown")
+            }
+            val viewModel = newViewModel()
+            viewModel.loaded()
+
+            viewModel.search("manhã")
+            advanceTimeBy(250)
+            runCurrent()
+            awaitReads(2)
+            val state = viewModel.state.first { it.shown?.size == 4 }
+
+            assertEquals(
+                "manhã",
+                backend
+                    .requestsTo("GET", path)
+                    .last()
+                    .requestUrl!!
+                    .queryParameter("q"),
+            )
+            assertTrue(state.filtered)
+            assertEquals(ArtifactType.News, state.shown!!.last().type)
+            assertEquals(DocumentIcons.newspaper, DocumentIcons.glyph(state.shown!!.last().type))
+        }
+
+    @Test
+    fun `an unknown type stays on the list with the generic label and the text sheet icon`() =
+        runTest {
+            backend.route("GET", path, fixture("documents-list-unknown"))
+            val viewModel = newViewModel()
+
+            val state = viewModel.loaded()
+            val unknown = state.shown!!.filter { it.type == ArtifactType.Unknown }
+
+            assertEquals(4, state.shown!!.size)
+            assertEquals(listOf("Mapa do futuro", "Projeção sem texto"), unknown.map { it.name })
+            assertEquals(listOf("Artefato", "Artefato"), unknown.map { artifactTypeLabel(it.type) })
+            assertEquals(listOf(DocumentIcons.letterA, DocumentIcons.letterA), unknown.map { DocumentIcons.glyph(it.type) })
+            // O desconhecido é da pessoa: aparece em "Você", nunca em "Agentes".
+            chooseMode(viewModel, ViewMode.Human)
+            assertEquals(
+                4,
+                viewModel.state.value.shown!!
+                    .size,
+            )
+            chooseMode(viewModel, ViewMode.Agent)
+            assertTrue(
+                viewModel.state.value.shown!!
+                    .isEmpty(),
+            )
         }
 
     private suspend fun chooseMode(
@@ -301,7 +392,7 @@ class DocumentsViewModelTest {
             awaitReads(2)
 
             assertEquals(
-                ArtifactType.entries.size,
+                ArtifactType.known.size,
                 viewModel.state.value.shown!!
                     .size,
             )

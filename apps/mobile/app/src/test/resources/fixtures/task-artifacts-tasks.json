@@ -368,5 +368,165 @@
     "artifacts": [],
     "subtaskIds": [],
     "requests": []
+  },
+  "freeText": {
+    "id": "task-free-text",
+    "actor": "human",
+    "kind": "common",
+    "status": "todo",
+    "priority": "medium",
+    "name": "Leitura da manhã",
+    "description": "",
+    "startedAt": "2026-09-14T15:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 2,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z",
+    "artifacts": [
+      {
+        "relation": "uses",
+        "fromRecurrence": false,
+        "artifact": {
+          "id": "doc-news",
+          "name": "Notícias da manhã",
+          "schemaVersion": 1,
+          "global": false,
+          "derived": false,
+          "tags": [
+            "leitura"
+          ],
+          "revision": 1,
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "updatedAt": "2026-09-14T12:12:00.000Z",
+          "type": "news",
+          "data": {
+            "body": "# Notícias da manhã\n\n- [Chuva no fim de semana](https://example.com/chuva)"
+          }
+        }
+      },
+      {
+        "relation": "creates",
+        "fromRecurrence": false,
+        "artifact": {
+          "id": "doc-email",
+          "name": "Resumo da caixa de entrada",
+          "schemaVersion": 1,
+          "global": false,
+          "derived": false,
+          "tags": [],
+          "revision": 1,
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "updatedAt": "2026-09-14T12:12:00.000Z",
+          "type": "email_summary",
+          "data": {
+            "body": "Três mensagens pedem resposta.\n\n- A fatura vence amanhã"
+          }
+        }
+      },
+      {
+        "relation": "updates",
+        "fromRecurrence": false,
+        "artifact": {
+          "id": "doc-youtube",
+          "name": "Aula de jardinagem",
+          "schemaVersion": 1,
+          "global": false,
+          "derived": false,
+          "tags": [],
+          "revision": 1,
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "updatedAt": "2026-09-14T12:12:00.000Z",
+          "type": "youtube_transcript",
+          "data": {
+            "body": "# Aula de jardinagem\n\n00:00 Como podar roseiras"
+          }
+        }
+      }
+    ],
+    "subtaskIds": [],
+    "requests": []
+  },
+  "futureTask": {
+    "id": "task-future",
+    "actor": "human",
+    "kind": "common",
+    "status": "todo",
+    "priority": "medium",
+    "name": "Revisar a projeção",
+    "description": "",
+    "startedAt": "2026-09-14T15:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 2,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z",
+    "artifacts": [
+      {
+        "relation": "uses",
+        "fromRecurrence": false,
+        "artifact": {
+          "id": "doc-note",
+          "name": "Ideias para o projeto",
+          "schemaVersion": 1,
+          "global": false,
+          "derived": false,
+          "tags": [
+            "trabalho"
+          ],
+          "revision": 1,
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "updatedAt": "2026-09-14T12:12:00.000Z",
+          "type": "text",
+          "data": {
+            "body": "# Ideias para o projeto\n\nCorpo da nota **Ideias para o projeto**."
+          }
+        }
+      },
+      {
+        "relation": "uses",
+        "fromRecurrence": false,
+        "artifact": {
+          "id": "doc-future",
+          "name": "Mapa do futuro",
+          "schemaVersion": 1,
+          "global": false,
+          "derived": false,
+          "tags": [],
+          "revision": 1,
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "updatedAt": "2026-09-14T12:12:00.000Z",
+          "type": "hologram",
+          "data": {
+            "body": "# Mapa do futuro\n\nTexto de um tipo novo."
+          }
+        }
+      },
+      {
+        "relation": "creates",
+        "fromRecurrence": false,
+        "artifact": {
+          "id": "doc-future-bare",
+          "name": "Projeção sem texto",
+          "schemaVersion": 1,
+          "global": false,
+          "derived": false,
+          "tags": [],
+          "revision": 1,
+          "createdAt": "2026-09-10T12:00:00.000Z",
+          "updatedAt": "2026-09-14T12:12:00.000Z",
+          "type": "hologram",
+          "data": {
+            "frames": 3
+          }
+        }
+      }
+    ],
+    "subtaskIds": [],
+    "requests": []
   }
 }

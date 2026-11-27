@@ -54,7 +54,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
-import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.ui.picker.EntityPickerState
 import app.braid.mobile.ui.picker.PickerSearchStatus
 
@@ -186,12 +185,12 @@ private fun ResultRow(
     onOpen: (SearchResult) -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val (icon, title, kind) =
+    val (icon, title) =
         when (result) {
-            is SearchResult.Task -> Triple(BraidIcons.calendarDays, result.card.name, "Tarefa")
-            is SearchResult.Document ->
-                Triple(BraidIcons.fileText, result.artifact.name, "Artefato · ${artifactTypeLabel(result.artifact.type)}")
+            is SearchResult.Task -> BraidIcons.calendarDays to result.card.name
+            is SearchResult.Document -> BraidIcons.fileText to result.artifact.name
         }
+    val kind = searchKindLabel(result)
     Column {
         Row(
             Modifier

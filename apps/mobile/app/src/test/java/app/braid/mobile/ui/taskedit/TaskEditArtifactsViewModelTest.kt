@@ -14,10 +14,12 @@ import app.braid.mobile.data.tasks.RecurrenceApi
 import app.braid.mobile.data.tasks.TaskDetailApi
 import app.braid.mobile.data.tasks.TaskEditApi
 import app.braid.mobile.data.tasks.TaskPickerApi
+import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.task.ArtifactRelation
 import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.TestBackend
+import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.serveArtifactChoices
 import app.braid.mobile.support.serveArtifactTasks
@@ -220,6 +222,58 @@ class TaskEditArtifactsViewModelTest {
             )
             assertNull(viewModel.artifactPicker.state.value)
             assertTrue(backend.requests.none { it.method != "GET" })
+        }
+
+    @Test
+    fun `the picker of the edit form lists the three new types and links the ones chosen, in order, with uses`() =
+        runTest {
+            backend.route("GET", "/api/artifacts", fixture("task-artifacts-picker-free-text"))
+            backend.route("PATCH", "/api/tasks/task-common-empty", noContent())
+            val viewModel = newViewModel("task-common-empty").opened()
+
+            viewModel.openArtifactPicker()
+            val picker = viewModel.picker()
+            assertEquals(listOf("doc-news", "doc-email", "doc-youtube"), picker.search.results.map { it.id })
+            viewModel.artifactPicker.pick(picker.search.results.first { it.id == "doc-youtube" })
+            viewModel.openArtifactPicker()
+            viewModel.artifactPicker.pick(
+                viewModel
+                    .picker()
+                    .search.results
+                    .first { it.id == "doc-news" },
+            )
+
+            // Os já ligados saem da lista; o rascunho guarda o tipo de cada um.
+            assertEquals(listOf("doc-youtube", "doc-news"), ids(viewModel))
+            assertEquals(listOf(ArtifactType.YoutubeTranscript, ArtifactType.News), viewModel.draft.artifacts.map { it.type })
+            viewModel.save()
+            viewModel.state.first { (it as? TaskEditUiState.Form)?.done == true }
+
+            assertEquals(
+                listOf(link("doc-youtube", "uses"), link("doc-news", "uses")),
+                patchBody("task-common-empty").getValue("artifacts").jsonArray.toList(),
+            )
+        }
+
+    @Test
+    fun `the form opens a task with a type this app does not know without breaking, and keeps the link as it was`() =
+        runTest {
+            backend.route("PATCH", "/api/tasks/task-future", noContent())
+            val viewModel = newViewModel("task-future").opened()
+
+            assertEquals(listOf("doc-note", "doc-future", "doc-future-bare"), ids(viewModel))
+            assertEquals(
+                listOf(ArtifactType.Text, ArtifactType.Unknown, ArtifactType.Unknown),
+                viewModel.draft.artifacts.map { it.type },
+            )
+            viewModel.removeArtifact("doc-note")
+            viewModel.save()
+            viewModel.state.first { (it as? TaskEditUiState.Form)?.done == true }
+
+            assertEquals(
+                listOf(link("doc-future", "uses"), link("doc-future-bare", "creates")),
+                patchBody("task-future").getValue("artifacts").jsonArray.toList(),
+            )
         }
 
     @Test

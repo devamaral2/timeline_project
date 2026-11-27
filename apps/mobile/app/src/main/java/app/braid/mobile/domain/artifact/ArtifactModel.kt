@@ -17,6 +17,7 @@ fun artifactTypeLabel(type: ArtifactType): String =
         ArtifactType.Skill -> "Skill"
         ArtifactType.Agent -> "Agente"
         ArtifactType.Router -> "Roteador"
+        ArtifactType.Unknown -> "Artefato"
     }
 
 /**
@@ -40,12 +41,12 @@ fun artifactCountLabel(count: Int): String =
 private val HEADING_MARKER = Regex("^\\s*#{1,6}\\s+")
 
 /**
- * O corpo em markdown de um artefato com corpo em markdown (texto livre ou roteador), sem o título repetido na primeira linha
+ * O corpo em markdown de um artefato com corpo em markdown (texto livre, roteador ou um tipo desconhecido que traz `body`), sem o título repetido na primeira linha
  * (a tela já o mostra). Os outros tipos não têm markdown: vazio.
  */
 fun markdownBodyOf(artifact: Artifact): String {
     val body = (artifact.data as? TextData)?.body ?: return ""
-    if (!artifact.type.hasTextBody) return ""
+    if (!artifact.type.showsBody) return ""
     val lines = body.split(Regex("\r?\n")).toMutableList()
     val firstIndex = lines.indexOfFirst { it.isNotBlank() }
     if (firstIndex >= 0 && lines[firstIndex].trim().replace(HEADING_MARKER, "") == artifact.name) {

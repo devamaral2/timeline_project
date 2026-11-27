@@ -137,6 +137,25 @@ const common = task({
   artifacts: [link(note, "uses"), link(skillDoc, "updates"), link(routerDoc, "creates", true), link(sleepDoc, "uses")],
 });
 
+/** As tarefas com os tipos de texto livre que não são a nota, uma por relação. */
+const news = artifact({ id: "doc-news", name: "Notícias da manhã", type: "news", tags: ["leitura"], data: { body: "# Notícias da manhã\n\n- [Chuva no fim de semana](https://example.com/chuva)" } });
+const emailSummary = artifact({ id: "doc-email", name: "Resumo da caixa de entrada", type: "email_summary", data: { body: "Três mensagens pedem resposta.\n\n- A fatura vence amanhã" } });
+const transcript = artifact({ id: "doc-youtube", name: "Aula de jardinagem", type: "youtube_transcript", data: { body: "# Aula de jardinagem\n\n00:00 Como podar roseiras" } });
+const freeText = task({
+  id: "task-free-text",
+  name: "Leitura da manhã",
+  revision: 2,
+  artifacts: [link(news, "uses"), link(emailSummary, "creates"), link(transcript, "updates")],
+});
+
+/** Artefatos de um tipo que o contrato de hoje não tem: o artefato é válido como texto e o tipo é trocado depois. */
+const futureWithBody = { ...artifact({ id: "doc-future", name: "Mapa do futuro", type: "text", data: { body: "# Mapa do futuro\n\nTexto de um tipo novo." } }), type: "hologram" };
+const futureWithoutBody = { ...artifact({ id: "doc-future-bare", name: "Projeção sem texto", type: "text", data: { body: "" } }), type: "hologram", data: { frames: 3 } };
+const futureTask = {
+  ...task({ id: "task-future", name: "Revisar a projeção", revision: 2 }),
+  artifacts: [link(note, "uses"), link(futureWithBody as never, "uses"), link(futureWithoutBody as never, "creates")],
+};
+
 const commonEmpty = task({ id: "task-common-empty", name: "Ligar para o banco", revision: 5 });
 
 /** A tarefa depois que outro lugar a mudou: a releitura que o conflito traz. */
@@ -211,7 +230,8 @@ const draftCases = Object.entries({ meal, mealEmpty, training, common, commonEmp
 
 export function taskArtifactsFixtures(): Record<string, unknown> {
   return {
-    "task-artifacts-tasks": { meal, mealEmpty, training, common, commonEmpty, reference },
+    "task-artifacts-tasks": { meal, mealEmpty, training, common, commonEmpty, reference, freeText, futureTask },
+    "task-artifacts-picker-free-text": [news, emailSummary, transcript],
     "task-artifacts-common-empty": commonEmpty,
     "task-artifacts-reloaded": reloaded,
     "task-artifacts-common-linked": { ...commonEmpty, revision: 6, artifacts: [link(other, "uses")] },

@@ -7,7 +7,12 @@ import app.braid.mobile.data.tasks.DefaultTaskDetailRepository
 import app.braid.mobile.data.tasks.TaskDetailApi
 import app.braid.mobile.data.transcription.DefaultTranscriptionRepository
 import app.braid.mobile.data.transcription.TranscriptionApi
+import app.braid.mobile.domain.artifact.ArtifactType
+import app.braid.mobile.domain.artifact.markdownBodyOf
 import app.braid.mobile.domain.task.ArtifactRelation
+import app.braid.mobile.domain.task.artifactMetaLine
+import app.braid.mobile.domain.task.artifactPositions
+import app.braid.mobile.domain.task.hasInlineContent
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
@@ -16,6 +21,7 @@ import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.serveArtifactChoices
 import app.braid.mobile.support.serveArtifactTasks
 import app.braid.mobile.support.stopAndJoin
+import app.braid.mobile.ui.documents.DocumentIcons
 import app.braid.mobile.ui.picker.PickerSearchStatus
 import app.braid.mobile.ui.taskartifacts.ArtifactPicker
 import kotlinx.coroutines.Dispatchers
@@ -114,6 +120,93 @@ class TaskArtifactsViewModelTest {
                 links.map { it.relation },
             )
             assertEquals(listOf(false, false, true, false), links.map { it.fromRecurrence })
+        }
+
+    private fun TaskDetailUiState.Content.rows(): List<Triple<String, String, Boolean>> {
+        val links = task.artifacts
+        val positions = artifactPositions(links.map { it.relation })
+        return links.mapIndexed {
+            index,
+            link,
+            ->
+            Triple(link.artifact.name, artifactMetaLine(positions[index], link), hasInlineContent(link.artifact))
+        }
+    }
+
+    @Test
+    fun `news, email summary and transcript rows show the type icon, position, type code and relation, with the text below`() =
+        runTest {
+            val content = newViewModel("task-free-text").content()
+
+            val links = content.task.artifacts
+            assertEquals(
+                listOf(ArtifactType.News, ArtifactType.EmailSummary, ArtifactType.YoutubeTranscript),
+                links.map { it.artifact.type },
+            )
+            assertEquals(
+                listOf(DocumentIcons.newspaper, DocumentIcons.letter, DocumentIcons.youtube),
+                links.map { DocumentIcons.glyph(it.artifact.type) },
+            )
+            // O que a tarefa criou fica sem posição; os demais contam 1, 2.
+            assertEquals(
+                listOf(
+                    Triple("Notícias da manhã", "1 · news · uses", true),
+                    Triple("Resumo da caixa de entrada", "email_summary · creates", true),
+                    Triple("Aula de jardinagem", "2 · youtube_transcript · updates", true),
+                ),
+                content.rows(),
+            )
+            assertEquals(
+                "- [Chuva no fim de semana](https://example.com/chuva)",
+                markdownBodyOf(links.first().artifact),
+            )
+        }
+
+    @Test
+    fun `an unknown type does not break the task, its row shows the raw code and the text only when there is a body`() =
+        runTest {
+            val content = newViewModel("task-future").content()
+
+            assertEquals(
+                listOf(
+                    Triple("Ideias para o projeto", "1 · text · uses", true),
+                    Triple("Mapa do futuro", "2 · hologram · uses", true),
+                    Triple("Projeção sem texto", "hologram · creates", false),
+                ),
+                content.rows(),
+            )
+            val unknown =
+                content.task.artifacts
+                    .map { it.artifact }
+                    .filter { it.type == ArtifactType.Unknown }
+            assertEquals(2, unknown.size)
+            assertEquals(listOf(DocumentIcons.letterA, DocumentIcons.letterA), unknown.map { DocumentIcons.glyph(it.type) })
+            assertEquals("Texto de um tipo novo.", markdownBodyOf(unknown.first()))
+        }
+
+    @Test
+    fun `the picker offers the three new types and a chosen one is linked with uses`() =
+        runTest {
+            backend.route("GET", "/api/artifacts", fixture("task-artifacts-picker-free-text"))
+            backend.route("PATCH", "/api/tasks/task-common-empty", noContent())
+            val viewModel = newViewModel("task-common-empty")
+            viewModel.content()
+
+            viewModel.openArtifactPicker()
+            val picker = viewModel.picker()
+            assertEquals(listOf("doc-news", "doc-email", "doc-youtube"), picker.ids())
+            assertEquals(
+                listOf(ArtifactType.News, ArtifactType.EmailSummary, ArtifactType.YoutubeTranscript),
+                picker.search.results.map { it.type },
+            )
+
+            viewModel.artifactPicker.pick(picker.search.results.first { it.id == "doc-email" })
+            viewModel.state.first { backend.requestsTo("PATCH", "/api/tasks/task-common-empty").isNotEmpty() }
+
+            assertEquals(
+                listOf(link("doc-email", "uses")),
+                patchBody("task-common-empty").getValue("artifacts").jsonArray.toList(),
+            )
         }
 
     @Test

@@ -120,4 +120,36 @@ class SearchViewModelTest {
 
             assertEquals(PickerSearchStatus.Failed, state.status)
         }
+
+    private fun documentKinds(results: List<SearchResult>) =
+        results.filterIsInstance<SearchResult.Document>().associate { it.artifact.name to searchKindLabel(it) }
+
+    @Test
+    fun `the new types appear among the results with the type label`() =
+        runTest {
+            val viewModel = newViewModel()
+            viewModel.start("")
+
+            val kinds = documentKinds(viewModel.ready().results)
+
+            assertEquals("Artefato · Notícias", kinds["Notícias da manhã"])
+            assertEquals("Artefato · Resumo de e-mail", kinds["Resumo da caixa de entrada"])
+            assertEquals("Artefato · Transcrição", kinds["Aula de jardinagem"])
+            assertEquals("Artefato · Nota", kinds["Ideias para o projeto"])
+        }
+
+    @Test
+    fun `an unknown type is a result too, with the generic label`() =
+        runTest {
+            backend.route("GET", artifactsPath, fixture("documents-list-unknown"))
+            val viewModel = newViewModel()
+            viewModel.start("")
+
+            val kinds = documentKinds(viewModel.ready().results)
+
+            assertEquals("Artefato · Artefato", kinds["Mapa do futuro"])
+            assertEquals("Artefato · Artefato", kinds["Projeção sem texto"])
+            assertEquals("Artefato · Notícias", kinds["Notícias da manhã"])
+            assertEquals("Tarefa", searchKindLabel(viewModel.ready().results.first()))
+        }
 }
