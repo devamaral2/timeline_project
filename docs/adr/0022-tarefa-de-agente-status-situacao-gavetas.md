@@ -81,3 +81,50 @@ trabalha, nem a execução que parou no meio da que falhou.
 3. **O cartão da tarefa de agente traz `model` (provedor, modelo e esforço)** quando o pedido levou a escolha, lida de
    `tasks.data.model`. No Hermes, que responde com o modelo dele, e na tarefa de pessoa o campo não vai, como no
    `RequestDto`. A lista só desenha o símbolo do provedor.
+
+## A gaveta de execução
+
+### Contexto
+
+O que o agente está fazendo agora só aparecia dentro da lista de tarefas. Na Agenda e nos Documentos não havia sinal de
+que algo rodava, e a execução em andamento não pertence a nenhuma gaveta da lista (ela ainda não pede ação).
+
+### Decisão
+
+1. **Mora no shell, junto da barra inferior** (`components/shell/execution-drawer.tsx`, montada por `AppShell`), e não em
+   cada tela: o estado dela (altura, leitura) sobrevive à troca de aba. Existe nas três abas e não existe no detalhe, na
+   edição, na criação nem com o chat aberto (a rota decide pelo caminho; o chat a esconde sem desmontá-la). Sem usuário
+   (telas de mockup) não existe. No desktop, onde não há barra inferior, fica presa ao pé da coluna de conteúdo, com a
+   largura dela.
+2. **O que mostra:** as tarefas de agente em andamento (grupo `IN_PROGRESS_AGENT_STATUSES` dos contratos, nunca uma lista
+   solta) que não são passo nem execução agendada (`cron`), da mais recente para a mais antiga pelo início. A API só
+   devolve passo fora da lista acompanhada; a execução agendada é descartada no cliente. Sem nenhuma, não é desenhada.
+3. **Três alturas**, escolhidas pela pessoa e guardadas no aparelho (`braid-execution-drawer`, valem em todas as abas;
+   padrão três): uma linha de 44 px (a execução mais recente, com a seta para cima e o "+N" das demais), três linhas de
+   40 px sob um cabeçalho de 44 px, ou todas (passando de 60% da altura da tela a lista rola por dentro). Tocar no
+   cabeçalho alterna três e todas, a seta dupla recolhe a uma linha e tocar na linha recolhida volta a três.
+4. **Movimento:** abrir leva 420 ms em `cubic-bezier(.22, 1, .36, 1)` e fechar 300 ms em `cubic-bezier(.5, 0, .2, 1)`.
+   As linhas que entram sobem 8 px e ganham opacidade, uma depois da outra (40 ms de intervalo), e só ao crescer.
+   Com `prefers-reduced-motion` a altura muda de uma vez. As linhas escondidas ficam `inert` e `aria-hidden`; o cabeçalho
+   diz `aria-expanded`.
+5. **A tela por baixo reserva o fim:** um espaçador no fluxo, depois do conteúdo, tem a mesma altura da gaveta e anima
+   com as mesmas curvas, de modo que a última linha da lista, da agenda ou dos documentos nunca fica coberta. A altura é
+   calculada em CSS a partir do número de linhas à mostra (`--exec-rows`) e do modo.
+6. **Leitura:** `GET /api/tasks/tracked` com `actor=agent` e os status em andamento, a cada 3 s (o intervalo das listas,
+   `useOpenAgentRefresh`) enquanto houver alguma. Parada, relê quando a janela volta ao foco, logo depois de o próprio
+   cliente abrir um pedido (`REQUEST_STARTED_EVENT`, avisado pelas funções de `lib/api/requests.ts`) e a cada 30 s. Não há
+   canal de empurrão: a releitura é o único meio. A Lista de tarefas e a Agenda continuam relendo enquanto têm tarefa de
+   agente aberta, e por isso a execução que termina sai da gaveta e entra na gaveta certa da lista no mesmo ciclo.
+
+### Alternativas rejeitadas
+
+- Uma faixa no alto de cada tela: ocupa o espaço de leitura e teria de ser repetida em três telas.
+- Guardar a altura por aba: a pessoa escolhe uma vez quanto espaço quer dar às execuções.
+- Reservar o espaço no fim com um valor fixo: a altura muda a cada toque, e a última linha ficaria coberta ou
+  sobraria vão.
+
+### Consequências
+
+- Enquanto as quatro gavetas da lista não entram, a execução em andamento aparece na gaveta de execução e também na
+  lista de tarefas. É esperado.
+- O Android ganha a mesma gaveta em ticket próprio (spec 51).

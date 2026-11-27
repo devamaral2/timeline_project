@@ -118,6 +118,10 @@ _Avoid_: cron (como nome do conceito), automação, rotina do agente
 Tarefa de agente em que um pedido se desdobra, executada por um agente interno. Liga-se ao pedido pela relação de passo e não aparece na lista de pedidos do usuário nem na agenda.
 _Avoid_: etapa, step do processo, processo
 
+**Gaveta de execução**:
+Gaveta presa acima da barra de navegação, em Tarefas, Agenda e Documentos, que mostra o que os agentes estão fazendo agora: as tarefas de agente em andamento (`preparing`, `queued`, `starting`, `running`) que não são passo nem execução agendada, da mais recente para a mais antiga. Tem três alturas (uma linha, três linhas e todas) e não existe quando nada está em andamento.
+_Avoid_: gaveta (sozinha), barra de progresso, fila de execução
+
 **Sessão**:
 O primeiro pedido e todos os pedidos que continuam a mesma conversa. Não é uma entidade: é a relação que parte do primeiro pedido para cada continuação.
 _Avoid_: conversa (como entidade), thread, chat
