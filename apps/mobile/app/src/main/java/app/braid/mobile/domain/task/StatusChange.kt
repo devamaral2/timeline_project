@@ -55,7 +55,5 @@ fun statusPatch(
             },
     )
 
-private val OPEN_AGENT_STATUSES = setOf(TaskStatus.Queued, TaskStatus.Running, TaskStatus.Waiting)
-
 /** Há tarefa de agente na fila, executando ou aguardando você? Só ela faz a lista se reler sozinha; tarefa de pessoa nunca conta. */
-fun hasOpenAgentTask(cards: List<TaskCard>): Boolean = cards.any { it.actor == TaskActor.Agent && it.status in OPEN_AGENT_STATUSES }
+fun hasOpenAgentTask(cards: List<TaskCard>): Boolean = cards.any { it.actor == TaskActor.Agent && isOpenAgentStatus(it.status) }

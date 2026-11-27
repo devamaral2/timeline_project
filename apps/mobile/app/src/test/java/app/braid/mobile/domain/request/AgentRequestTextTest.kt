@@ -4,6 +4,7 @@ import app.braid.mobile.core.network.BraidJson
 import app.braid.mobile.data.requests.RequestDto
 import app.braid.mobile.data.requests.toDomain
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isOpenAgentStatus
 import app.braid.mobile.support.Fixtures
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -53,7 +54,7 @@ class AgentRequestTextTest {
     fun `only queued, running and waiting requests are open`() {
         for (case in cases("open")) {
             val status = TaskStatus.fromCode(case.getValue("status").jsonPrimitive.content)
-            assertEquals("$status", case.getValue("open").jsonPrimitive.boolean, isOpenRequest(status))
+            assertEquals("$status", case.getValue("open").jsonPrimitive.boolean, isOpenAgentStatus(status))
         }
     }
 

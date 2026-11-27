@@ -24,6 +24,7 @@ import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.domain.speech.MicrophonePermission
 import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.ui.chat.VoiceUiState
 import dagger.assisted.Assisted
@@ -210,7 +211,7 @@ class EntityEditViewModel
         }
 
         private fun finish(view: AgentRequest) {
-            if (view.status == TaskStatus.Done) {
+            if (isSuccessAgentStatus(view.status)) {
                 mutableState.update { it.copy(phase = EditPhase.Done) }
                 if (view.entities.isNotEmpty()) mutableEdited.tryEmit(Unit)
             } else {
