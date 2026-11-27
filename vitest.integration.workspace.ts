@@ -5,9 +5,9 @@ const resolve = (relativePath: string) =>
   fileURLToPath(new URL(relativePath, import.meta.url));
 
 /**
- * Como no workspace unitario, os packages sao resolvidos direto do fonte. A
- * linha de base HTTP da API sobe o app de verdade e importa os contratos em
- * runtime, entao nao pode depender de um `dist/` ja construido.
+ * Como no workspace unitario, os packages sao resolvidos direto do fonte. As
+ * linhas de base HTTP da API e do Auth sobem os apps de verdade e importam os
+ * contratos em runtime, entao nao podem depender de um `dist/` ja construido.
  */
 const packageAliases = {
   "@repo/contracts/schemas": resolve("./packages/contracts/src/schemas.ts"),
