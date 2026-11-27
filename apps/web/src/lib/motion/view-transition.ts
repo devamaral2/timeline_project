@@ -10,7 +10,7 @@ import { flushSync } from "react-dom";
  */
 export type NavKind = "next" | "prev" | "open" | "close";
 
-type ViewTransitionHandle = { finished: Promise<void> };
+type ViewTransitionHandle = { finished: Promise<void>; ready?: Promise<void> };
 type TransitionDocument = Document & { startViewTransition?: (update: () => void | Promise<void>) => ViewTransitionHandle };
 
 /** Quanto se espera a tela nova chegar antes de soltar a foto da antiga. */
@@ -23,8 +23,13 @@ const NAV_TIMEOUT_MS = 800;
 const FRAME_TIMEOUT_MS = 300;
 const ORIGIN_PROPERTIES = ["--nav-top", "--nav-right", "--nav-bottom", "--nav-left"] as const;
 
+/**
+ * Falso também na aba escondida: ali o navegador aborta a transição com
+ * `InvalidStateError` ("Document hidden"), e não há quem veja o movimento.
+ */
 export function canTransition(): boolean {
-  return typeof document !== "undefined" && typeof (document as TransitionDocument).startViewTransition === "function";
+  if (typeof document === "undefined" || document.visibilityState === "hidden") return false;
+  return typeof (document as TransitionDocument).startViewTransition === "function";
 }
 
 /** Falso para quem pediu menos movimento: sobra a troca de opacidade. */
@@ -35,7 +40,11 @@ export function motionAllowed(): boolean {
 
 function startViewTransition(update: () => void | Promise<void>): ViewTransitionHandle {
   // biome-ignore lint/style/noNonNullAssertion: quem chama já passou por `canTransition`.
-  return (document as TransitionDocument).startViewTransition!(update);
+  const transition = (document as TransitionDocument).startViewTransition!(update);
+  // O navegador pode abortar a transição (a aba some no meio, outra começa);
+  // a mudança acontece do mesmo jeito, então a recusa de `ready` não é erro.
+  transition.ready?.catch(() => {});
+  return transition;
 }
 
 /** Onde um caminho fica no app: a seção e quantos níveis abaixo da lista dela. */
