@@ -1,0 +1,181 @@
+[
+  {
+    "id": "sit-person",
+    "actor": "human",
+    "kind": "common",
+    "status": "todo",
+    "priority": "medium",
+    "name": "Tarefa minha",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T12:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "sit-review",
+    "actor": "agent",
+    "kind": "review_request",
+    "status": "completed",
+    "priority": "medium",
+    "name": "Resumo para revisar",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "situation": "to_review",
+    "startedAt": "2026-09-14T11:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "sit-reviewed",
+    "actor": "agent",
+    "kind": "review_request",
+    "status": "completed",
+    "priority": "medium",
+    "name": "Resumo revisado",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "situation": "reviewed",
+    "startedAt": "2026-09-14T10:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "sit-bookmarked",
+    "actor": "agent",
+    "kind": "search_request",
+    "status": "failed",
+    "priority": "medium",
+    "name": "Busca guardada",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "situation": "bookmarked",
+    "startedAt": "2026-09-14T09:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "sit-waiting",
+    "actor": "agent",
+    "kind": "inquiry_request",
+    "status": "waiting",
+    "priority": "medium",
+    "name": "Qual hotel prefere?",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T13:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "sit-cron",
+    "actor": "agent",
+    "kind": "cron",
+    "status": "completed",
+    "priority": "medium",
+    "name": "Backup da noite",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T02:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "sit-running",
+    "actor": "agent",
+    "kind": "search_request",
+    "status": "running",
+    "priority": "medium",
+    "name": "Buscar passagens",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:48:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "sit-legacy",
+    "actor": "agent",
+    "kind": "request",
+    "status": "completed",
+    "priority": "medium",
+    "name": "Concluído de antes",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-01T10:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  }
+]

@@ -8,6 +8,7 @@ import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskChanges
 import app.braid.mobile.domain.task.TaskFilters
 import app.braid.mobile.domain.task.TaskRepository
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.trackedQuery
 import app.braid.mobile.domain.timeline.toIsoMillis
 import retrofit2.HttpException
@@ -43,6 +44,13 @@ class DefaultTaskRepository
             return api
                 .tracked(actor?.code, query.priorities.takeIf { it.isNotEmpty() }?.joinToString(",") { it.code }, query.tag, query.query)
                 .map(TaskCardDto::toDomain)
+        }
+
+        override suspend fun setSituation(
+            taskId: String,
+            situation: TaskSituation,
+        ) {
+            api.setSituation(taskId, SetSituationBody(situation.code))
         }
 
         override suspend fun changeStatus(

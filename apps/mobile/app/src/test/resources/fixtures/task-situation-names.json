@@ -1,0 +1,14 @@
+[
+  {
+    "situation": "to_review",
+    "name": "Para revisar"
+  },
+  {
+    "situation": "reviewed",
+    "name": "Revisada"
+  },
+  {
+    "situation": "bookmarked",
+    "name": "Guardada"
+  }
+]
