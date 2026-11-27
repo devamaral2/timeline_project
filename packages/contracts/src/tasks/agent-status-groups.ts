@@ -6,19 +6,22 @@ import type { AgentTaskStatus, HumanTaskStatus, TaskActor, TaskStatus } from "./
  */
 
 /** O pedido ainda nao terminou: a tela continua relendo. */
-export const OPEN_AGENT_STATUSES: readonly AgentTaskStatus[] = ["queued", "running", "waiting"];
+export const OPEN_AGENT_STATUSES: readonly AgentTaskStatus[] = ["preparing", "queued", "starting", "running", "waiting"];
 
-/** O pedido esta na fila ou executando, sem esperar o usuario. */
-export const IN_PROGRESS_AGENT_STATUSES: readonly AgentTaskStatus[] = ["queued", "running"];
+/** O pedido esta sendo preparado, na fila, iniciando ou executando, sem esperar o usuario. */
+export const IN_PROGRESS_AGENT_STATUSES: readonly AgentTaskStatus[] = ["preparing", "queued", "starting", "running"];
 
 /** O pedido terminou, por qualquer motivo. */
-export const FINAL_AGENT_STATUSES: readonly AgentTaskStatus[] = ["done", "failed", "cancel"];
+export const FINAL_AGENT_STATUSES: readonly AgentTaskStatus[] = ["completed", "interrupted", "failed", "cancelled", "rolled_back"];
 
 /** O pedido terminou bem. */
-export const SUCCESS_AGENT_STATUSES: readonly AgentTaskStatus[] = ["done"];
+export const SUCCESS_AGENT_STATUSES: readonly AgentTaskStatus[] = ["completed"];
 
-/** O usuario cancelou o pedido. */
-export const CANCELLED_AGENT_STATUSES: readonly AgentTaskStatus[] = ["cancel"];
+/** A execucao parou no meio: pode haver trabalho pela metade. */
+export const INTERRUPTED_AGENT_STATUSES: readonly AgentTaskStatus[] = ["interrupted"];
+
+/** O usuario cancelou o pedido antes de ele trabalhar. */
+export const CANCELLED_AGENT_STATUSES: readonly AgentTaskStatus[] = ["cancelled"];
 
 export function isOpenAgentStatus(status: AgentTaskStatus): boolean {
   return OPEN_AGENT_STATUSES.includes(status);
@@ -36,6 +39,10 @@ export function isSuccessAgentStatus(status: AgentTaskStatus): boolean {
   return SUCCESS_AGENT_STATUSES.includes(status);
 }
 
+export function isInterruptedAgentStatus(status: AgentTaskStatus): boolean {
+  return INTERRUPTED_AGENT_STATUSES.includes(status);
+}
+
 export function isCancelledAgentStatus(status: AgentTaskStatus): boolean {
   return CANCELLED_AGENT_STATUSES.includes(status);
 }
@@ -47,10 +54,10 @@ export function isCancelledAgentStatus(status: AgentTaskStatus): boolean {
 
 const HUMAN_CLOSED: readonly HumanTaskStatus[] = ["done", "cancel", "missed"];
 
-/** O lembrete da tarefa se cala: feita ou cancelada. */
+/** O lembrete da tarefa se cala: de pessoa, feita ou cancelada; de agente, qualquer status final. */
 export function endsReminders(actor: TaskActor, status: TaskStatus | undefined): boolean {
   if (status === undefined) return false;
-  if (actor === "agent") return isSuccessAgentStatus(status as AgentTaskStatus) || isCancelledAgentStatus(status as AgentTaskStatus);
+  if (actor === "agent") return isFinalAgentStatus(status as AgentTaskStatus);
   return status === "done" || status === "cancel";
 }
 

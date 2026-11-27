@@ -253,7 +253,7 @@ export interface RequestStore {
     links: readonly LinkRecord[],
   ): Promise<void>;
   /** Encerra o pedido se ele ainda esta aberto. */
-  finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void>;
+  finish(requestId: string, status: "completed" | "failed", outcome: RequestOutcome): Promise<void>;
   /**
    * O pedido e uma tarefa de agente, ou caiu no fallback: passa para a rota do Hermes, guarda o que o despacho
    * escolheu e o job do Hermes entra na fila, na mesma transacao. Nada acontece se o pedido ja terminou.

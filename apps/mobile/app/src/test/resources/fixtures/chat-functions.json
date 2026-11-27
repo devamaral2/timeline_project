@@ -3163,7 +3163,7 @@
                   "id": "1",
                   "agent": "task-create",
                   "label": "Criando tarefas",
-                  "status": "done"
+                  "status": "completed"
                 },
                 {
                   "id": "2",
@@ -3215,7 +3215,7 @@
                   "id": "1",
                   "agent": "task-create",
                   "label": "Criando tarefas",
-                  "status": "done"
+                  "status": "completed"
                 },
                 {
                   "id": "3",
@@ -3261,7 +3261,7 @@
                   "id": "1",
                   "agent": "task-create",
                   "label": "Criando tarefas",
-                  "status": "done"
+                  "status": "completed"
                 },
                 {
                   "id": "3",
@@ -3307,7 +3307,7 @@
                   "id": "1",
                   "agent": "task-create",
                   "label": "Criando tarefas",
-                  "status": "done"
+                  "status": "completed"
                 }
               ],
               "entities": []

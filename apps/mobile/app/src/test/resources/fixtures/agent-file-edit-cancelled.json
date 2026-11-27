@@ -2,7 +2,7 @@
   "id": "req-edit",
   "kind": "request",
   "route": "hermes",
-  "status": "cancel",
+  "status": "cancelled",
   "title": "Editar pesquisar/SKILL.md",
   "project": {
     "id": "project-personal",

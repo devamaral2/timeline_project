@@ -54,8 +54,8 @@ describe("PostgresScopedSqlQuery", () => {
         ('${A_TRAINING}', '${id("PA", 1)}', 'user-a', 'human', 'training', NULL, 'Treino', '2026-09-15T12:00:00Z'),
         ('${A_DELETED}', '${id("PA", 1)}', 'user-a', 'human', 'common', NULL, 'Apagado', '2026-09-15T13:00:00Z'),
         ('${A_TRACKED}', '${id("PA", 1)}', 'user-a', 'human', 'common', 'todo', 'Tarefa do A', NULL),
-        ('${A_REQUEST}', '${id("PA", 1)}', 'user-a', 'agent', 'request', 'done', 'Pedido do A', '2026-09-15T14:00:00Z'),
-        ('${A_STEP}', '${id("PA", 1)}', 'user-a', 'agent', 'step', 'done', 'Passo do A', '2026-09-15T14:00:01Z');
+        ('${A_REQUEST}', '${id("PA", 1)}', 'user-a', 'agent', 'request', 'completed', 'Pedido do A', '2026-09-15T14:00:00Z'),
+        ('${A_STEP}', '${id("PA", 1)}', 'user-a', 'agent', 'step', 'completed', 'Passo do A', '2026-09-15T14:00:01Z');
       UPDATE tasks SET deleted_at = now() WHERE id = '${A_DELETED}';
 
       INSERT INTO task_entries (id, task_id, user_id, kind, role, content) VALUES

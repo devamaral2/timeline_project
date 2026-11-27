@@ -175,11 +175,18 @@ describe("banco novo: checks, restricoes e indices", () => {
       await expect(agentTask({ status: null })).rejects.toThrow(/tasks_status_matches_actor/);
     });
 
-    test("cada executor so aceita os seus status; done e cancel valem para os dois", async () => {
-      for (const status of ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]) await task({ status });
-      for (const status of ["queued", "running", "waiting", "done", "failed", "cancel"]) await agentTask({ status });
+    test("cada executor so aceita os seus status, e os dois conjuntos nao tem valor em comum", async () => {
+      const humanStatuses = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"];
+      const agentStatuses = ["preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back"];
+      expect(agentStatuses.filter((status) => humanStatuses.includes(status))).toEqual([]);
 
-      await expect(task({ status: "queued" })).rejects.toThrow(/tasks_status_matches_actor/);
+      for (const status of humanStatuses) await task({ status });
+      for (const status of agentStatuses) await agentTask({ status });
+
+      for (const status of agentStatuses) await expect(task({ status }), status).rejects.toThrow(/tasks_status_matches_actor/);
+      for (const status of ["done", "cancel", "scheduled"]) {
+        await expect(agentTask({ status }), status).rejects.toThrow(/tasks_status_matches_actor/);
+      }
       await expect(task({ status: "scheduled" })).rejects.toThrow(/tasks_status_matches_actor/);
       await expect(agentTask({ status: "todo" })).rejects.toThrow(/tasks_status_matches_actor/);
       await expect(agentTask({ status: "missed" })).rejects.toThrow(/tasks_status_matches_actor/);

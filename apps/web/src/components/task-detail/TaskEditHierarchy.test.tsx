@@ -44,7 +44,7 @@ const AGENT = taskFixture({
   id: "ag-1",
   actor: "agent",
   kind: "request",
-  status: "done",
+  status: "completed",
   name: "Monitorar a aplicação",
   startedAt: "2026-11-14T08:00:00-03:00",
 });
@@ -276,7 +276,7 @@ describe("tarefa principal e subtarefas na edição", () => {
     search(PARENT_SEARCH, "Monitorar");
     await choose("Monitorar a aplicação");
     expect(within(parentSection()).getByText("Monitorar a aplicação")).toBeInTheDocument();
-    expect(within(parentSection()).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument();
+    expect(within(parentSection()).getByRole("img", { name: "Agente, concluído" })).toBeInTheDocument();
     save();
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
@@ -445,7 +445,7 @@ describe("criar a tarefa ligada pelo modal de seleção", () => {
 
     const entity = (taskId: string, name: string) => ({ kind: "task" as const, id: taskId, name, operation: "create" as const, linkedTo: [] });
     advanceRequest(api, id, {
-      status: "done",
+      status: "completed",
       entities: [entity("ev-5", "Comprar tinta"), entity("ev-6", "Pintar a sala"), entity("ev-7", "Afastar os móveis")],
     });
     await vi.advanceTimersByTimeAsync(3000);
@@ -464,7 +464,7 @@ describe("criar a tarefa ligada pelo modal de seleção", () => {
     search(SUBTASK_SEARCH, "o que tenho hoje?");
     fireEvent.click(screen.getByRole("button", { name: "Pedir ao Hermes" }));
     const id = await openedRequestId();
-    advanceRequest(api, id, { status: "done", entities: [] });
+    advanceRequest(api, id, { status: "completed", entities: [] });
     await vi.advanceTimersByTimeAsync(3000);
 
     expect(await screen.findByRole("alert")).toHaveTextContent("O Hermes não criou nenhuma tarefa com esse pedido.");

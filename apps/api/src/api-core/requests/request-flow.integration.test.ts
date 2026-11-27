@@ -169,10 +169,10 @@ test("o exemplo-guia: um passo so grava tudo, a refeicao nasce com o alimento li
   expect((await jobStatuses()).every((job) => job.status === "succeeded")).toBe(true);
 
   const view = await operations.view(requestId, actor);
-  expect(view).toMatchObject({ status: "done", title: "comendo 300g de arroz, depois vou nadar", text: "comendo 300g de arroz, depois vou nadar" });
+  expect(view).toMatchObject({ status: "completed", title: "comendo 300g de arroz, depois vou nadar", text: "comendo 300g de arroz, depois vou nadar" });
   expect(view.message).toBeUndefined();
   expect(view.steps.map((step) => [step.agent, step.label, step.status])).toEqual([
-    ["entity", "Criando e atualizando registros", "done"],
+    ["entity", "Criando e atualizando registros", "completed"],
   ]);
   const meal = view.entities.find((entity) => entity.kind === "task" && entity.name === "Refeição");
   const swim = view.entities.find((entity) => entity.name === "Nadar na praia");
@@ -196,7 +196,7 @@ test("o exemplo-guia: um passo so grava tudo, a refeicao nasce com o alimento li
   expect(foodParsing.texts).toEqual(["300g de arroz"]);
   const list = await operations.list(actor);
   expect(list.map((request) => [request.route, request.kind, request.status]).sort()).toEqual([
-    ["food", "build_request", "done"], ["steps", "request", "done"],
+    ["food", "build_request", "completed"], ["steps", "request", "completed"],
   ]);
   const build = list.find((request) => request.route === "food");
   expect(build).toMatchObject({ text: "300g de arroz", entities: [{ kind: "artifact", id: food?.id, operation: "update" }] });
@@ -217,7 +217,7 @@ test("a nota que o agente liga a tarefa nova nasce ligada, no mesmo lote, sem ou
   await drain();
 
   const view = await operations.view(requestId, actor);
-  expect(view.status).toBe("done");
+  expect(view.status).toBe("completed");
   const meeting = view.entities.find((entity) => entity.kind === "task");
   const agenda = view.entities.find((entity) => entity.kind === "artifact");
   expect(meeting).toMatchObject({ name: "Reunião com a Ana", linkedTo: [{ kind: "artifact", id: agenda?.id }] });
@@ -241,8 +241,8 @@ test("edicao: o agente de escrita recebe os candidatos do servidor e muda so o q
 
   const view = await operations.view(second, actor);
   expect(view).toMatchObject({
-    status: "done", sessionId: first,
-    steps: [{ agent: "entity", status: "done" }],
+    status: "completed", sessionId: first,
+    steps: [{ agent: "entity", status: "completed" }],
     entities: [{ kind: "task", id: meeting?.id, name: "Reunião", operation: "update" }],
   });
   expect((await operations.view(first, actor)).sessionId).toBeUndefined();
@@ -265,8 +265,8 @@ test("consulta: as linhas ficam no passo e so enxergam as tarefas de pessoa do u
   await drain();
 
   const view = await operations.view(requestId, actor);
-  expect(view.status).toBe("done");
-  expect(view.steps).toMatchObject([{ agent: "query", status: "done", result: { columns: ["name"], rows: [["Reunião"]], truncated: false } }]);
+  expect(view.status).toBe("completed");
+  expect(view.steps).toMatchObject([{ agent: "query", status: "completed", result: { columns: ["name"], rows: [["Reunião"]], truncated: false } }]);
   expect(gateway.calls.at(-1)?.user).toContain("Esquema:");
 });
 
@@ -289,7 +289,7 @@ test("o modelo recebe a escolha e as trocas anteriores da sessao, lidas do Postg
   expect(histories).toEqual([[], [{ role: "user", text: "oi" }, { role: "assistant", text: "Modelo: oi" }]]);
   expect(selections).toEqual([model, model]);
   expect(await operations.view(second.id, actor)).toMatchObject({
-    route: "model", status: "done", message: "Modelo: e agora?", sessionId: first.id, trace: { route: "model" }, model,
+    route: "model", status: "completed", message: "Modelo: e agora?", sessionId: first.id, trace: { route: "model" }, model,
   });
 });
 
@@ -310,7 +310,7 @@ test("configuracao do app vai ao modo modelo, com o modelo padrao do ambiente; s
   // O pedido nasceu na rota do chat e o despacho o passou a rota do modelo, com a escolha gravada nele.
   const view = await operations.view(first, actor);
   expect(view).toMatchObject({
-    route: "model", status: "done", message: "Modelo: qual modelo você está usando?", steps: [], model: configModel,
+    route: "model", status: "completed", message: "Modelo: qual modelo você está usando?", steps: [], model: configModel,
   });
   expect(selections).toEqual([configModel]);
   expect(gateway.calls).toEqual([]);
@@ -319,7 +319,7 @@ test("configuracao do app vai ao modo modelo, com o modelo padrao do ambiente; s
   configModel = undefined;
   const second = await operations.start({ userId: "user-1", text: "troca para o Claude" }, actor);
   await drain();
-  expect(await operations.view(second, actor)).toMatchObject({ route: "hermes", status: "done", message: "Hermes: troca para o Claude" });
+  expect(await operations.view(second, actor)).toMatchObject({ route: "hermes", status: "completed", message: "Hermes: troca para o Claude" });
 });
 
 test("tarefa de agente e `fallback:` vao ao Hermes, na sessao da conversa", async () => {
@@ -335,13 +335,13 @@ test("tarefa de agente e `fallback:` vao ao Hermes, na sessao da conversa", asyn
   const first = await operations.start({ userId: "user-1", text: "me conta uma piada" }, actor);
   await drain();
   const view = await operations.view(first, actor);
-  expect(view).toMatchObject({ route: "hermes", status: "done", message: "Hermes: me conta uma piada", steps: [] });
+  expect(view).toMatchObject({ route: "hermes", status: "completed", message: "Hermes: me conta uma piada", steps: [] });
   expect(gateway.calls).toEqual([]);
 
   // `fallback:` pula o JEV e vai direto, sem o prefixo, na mesma sessao do Hermes.
   const second = await operations.start({ userId: "user-1", text: "fallback: e outra", sessionId: first }, actor);
   await drain();
-  expect(await operations.view(second, actor)).toMatchObject({ route: "hermes", status: "done", message: "Hermes: e outra" });
+  expect(await operations.view(second, actor)).toMatchObject({ route: "hermes", status: "completed", message: "Hermes: e outra" });
   expect(seen).toEqual([
     { text: "me conta uma piada", sessionId: `braid-user-1-${first}` },
     { text: "e outra", sessionId: `braid-user-1-${first}` },
@@ -385,7 +385,7 @@ test("edicao pela tela de detalhe: o alvo escolhe o agente, sem JEV; alvo que na
 
   const view = await operations.view(requestId, actor);
   expect(view).toMatchObject({
-    status: "done", steps: [{ agent: "sleep-edit", label: "Editando o sono", status: "done" }],
+    status: "completed", steps: [{ agent: "sleep-edit", label: "Editando o sono", status: "completed" }],
     entities: [{ kind: "artifact", id: sleep.id, artifactType: "sleep", operation: "update", linkedTo: [] }],
   });
   expect(view.trace?.entries.map((entry) => entry.kind)).toEqual(["request", "agent", "answer"]);
@@ -405,7 +405,7 @@ test("voz: o pedido gera a tarefa de pessoa; reenviar a mesma fala nao cria outr
 
   const view = await operations.view(requestId, actor);
   expect(view).toMatchObject({
-    route: "voice", status: "done", text: "comecei a estudar", steps: [],
+    route: "voice", status: "completed", text: "comecei a estudar", steps: [],
     entities: [{ kind: "task", name: "Estudar", operation: "create" }],
   });
   expect(view.trace).toBeUndefined();
@@ -454,8 +454,8 @@ test("Hermes: o rastro vem do progresso enquanto roda e das entradas depois que 
   await ctx.pool.query("DELETE FROM jobs");
   const view = await operations.view(accepted.id, actor);
   expect(view).toMatchObject({
-    status: "done", message: "Você tem uma reunião.", trace: final,
-    steps: [{ id: "t1", label: "Listou a agenda", status: "done" }],
+    status: "completed", message: "Você tem uma reunião.", trace: final,
+    steps: [{ id: "t1", label: "Listou a agenda", status: "completed" }],
   });
   expect(view.progress).toBeUndefined();
 });
@@ -467,14 +467,14 @@ test("cancelar: os jobs vivos param, o pedido e os passos abertos ficam cancelad
   await jobs.idle();
 
   const cancelled = await operations.cancel(requestId, actor);
-  expect(cancelled).toMatchObject({ status: "cancel", errorCode: "cancelled" });
-  expect(cancelled.steps.map((step) => step.status)).toEqual(["cancel"]);
+  expect(cancelled).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
+  expect(cancelled.steps.map((step) => step.status)).toEqual(["cancelled"]);
   await drain();
 
   expect((await jobStatuses()).filter((job) => job.kind === "request-step").map((job) => job.status)).toEqual(["cancelled"]);
   expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(0);
   expect(gateway.calls).toHaveLength(0);
-  expect(await operations.view(requestId, actor)).toMatchObject({ status: "cancel", entities: [] });
+  expect(await operations.view(requestId, actor)).toMatchObject({ status: "cancelled", entities: [] });
 });
 
 test("o modelo fora do ar vira passo vermelho com codigo, e o texto do usuario so aparece em mensagens, pensamentos e insumos", async () => {

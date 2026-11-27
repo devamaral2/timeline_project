@@ -59,6 +59,7 @@ private val FAILURE_TEXTS =
         "conflict" to "Os dados mudaram enquanto eu preparava a resposta. Nada foi gravado; tente de novo.",
         "unavailable" to "A IA está indisponível agora. Tente de novo em instantes.",
         "cancelled" to "Pedido cancelado.",
+        "interrupted" to "Pedido interrompido.",
         "internal" to "Algo deu errado. Tente de novo.",
         "connection_lost" to "A conexão caiu antes da resposta. Se o pedido gravava algo, confira a agenda antes de reenviar.",
         "connection_failed" to "Não consegui conectar ao assistente. Tente de novo.",
@@ -75,6 +76,7 @@ fun requestStatusLine(tracked: AgentRequest?): String =
         isOpenAgentStatus(tracked.status) -> tracked.progress ?: runningStepLabel(tracked.steps) ?: "Entendendo o pedido…"
         isSuccessAgentStatus(tracked.status) -> "Pronto"
         tracked.status == TaskStatus.Failed -> "Não deu certo"
-        tracked.status == TaskStatus.Cancel -> "Pedido cancelado"
+        tracked.status == TaskStatus.Cancelled -> "Pedido cancelado"
+        tracked.status == TaskStatus.Interrupted -> "Pedido interrompido"
         else -> "Esperando o seu pedido"
     }

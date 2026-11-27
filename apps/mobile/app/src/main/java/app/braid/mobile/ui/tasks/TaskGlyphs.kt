@@ -34,12 +34,16 @@ fun taskStatusName(
 ): String =
     if (actor == TaskActor.Agent) {
         when (status) {
+            TaskStatus.Preparing -> "Agente, preparando"
             TaskStatus.Queued -> "Agente, na fila"
-            TaskStatus.Running -> "Agente, executando"
-            TaskStatus.Waiting -> "Agente, aguardando você"
-            TaskStatus.Done -> "Agente, feito"
+            TaskStatus.Starting -> "Agente, iniciando"
+            TaskStatus.Running -> "Agente, trabalhando"
+            TaskStatus.Waiting -> "Agente, esperando"
+            TaskStatus.Completed -> "Agente, concluído"
+            TaskStatus.Interrupted -> "Agente, interrompido"
             TaskStatus.Failed -> "Agente, falhou"
-            TaskStatus.Cancel -> "Agente, cancelado"
+            TaskStatus.Cancelled -> "Agente, cancelado"
+            TaskStatus.RolledBack -> "Agente, revertido"
             // O status desconhecido não tem nome próprio: o leitor de tela só diz quem executa.
             else -> "Agente"
         }
@@ -68,8 +72,10 @@ private fun glyphColor(status: TaskStatus?): Color {
     val tokens = braidTokens()
     return when (status) {
         null -> tokens.routine
-        TaskStatus.Doing, TaskStatus.InHold, TaskStatus.Running, TaskStatus.Waiting -> tokens.warning
-        TaskStatus.Done -> tokens.success
+        TaskStatus.Doing, TaskStatus.InHold, TaskStatus.Starting, TaskStatus.Running, TaskStatus.Waiting,
+        TaskStatus.Interrupted,
+        -> tokens.warning
+        TaskStatus.Done, TaskStatus.Completed -> tokens.success
         TaskStatus.Failed -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -78,7 +84,7 @@ private fun glyphColor(status: TaskStatus?): Color {
 /**
  * O glifo do status: um círculo, e o que fica dentro diz qual. Tarefa de pessoa
  * sem status é o ponto azul "Só agenda"; os status de agente usam o mesmo
- * contorno e o "executando" ganha o ponto verde-água.
+ * contorno e o "trabalhando" ganha o ponto verde-água.
  */
 @Composable
 fun TaskStatusGlyph(
@@ -104,12 +110,14 @@ fun TaskStatusGlyph(
                         add(SvgPart("M10 9v6"))
                         add(SvgPart("M14 9v6"))
                     }
-                    TaskStatus.Done -> add(SvgPart("m8.5 12.2 2.4 2.4 4.6-4.9"))
+                    TaskStatus.Done, TaskStatus.Completed -> add(SvgPart("m8.5 12.2 2.4 2.4 4.6-4.9"))
+                    TaskStatus.Interrupted -> add(SvgPart("M9 12h6"))
+                    TaskStatus.RolledBack -> add(SvgPart("m13.5 9-3.5 3 3.5 3"))
                     TaskStatus.Failed -> {
                         add(SvgPart("M12 8v5"))
                         add(SvgPart("M12 16.2h.01"))
                     }
-                    TaskStatus.Cancel -> {
+                    TaskStatus.Cancel, TaskStatus.Cancelled -> {
                         add(SvgPart("m9.5 9.5 5 5"))
                         add(SvgPart("m14.5 9.5-5 5"))
                     }

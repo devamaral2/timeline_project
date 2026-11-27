@@ -17,7 +17,7 @@
       "id": "s1",
       "agent": "router",
       "label": "Entendendo o pedido",
-      "status": "done"
+      "status": "completed"
     },
     {
       "id": "s2",

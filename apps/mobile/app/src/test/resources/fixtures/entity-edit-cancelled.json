@@ -2,7 +2,7 @@
   "id": "req-ed",
   "kind": "request",
   "route": "steps",
-  "status": "cancel",
+  "status": "cancelled",
   "title": "Editar a tarefa",
   "project": {
     "id": "project-personal",

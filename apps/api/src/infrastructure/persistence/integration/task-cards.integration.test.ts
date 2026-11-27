@@ -94,7 +94,7 @@ describe("PostgresTaskCardQuery", () => {
           estimatedFinishAt: at("2027-01-10T13:00:00Z"),
         }),
       );
-      await saved(agentTask(USER, "Passo", { kind: "step", status: "done" }));
+      await saved(agentTask(USER, "Passo", { kind: "step", status: "completed" }));
       await tracked("Sem inicio", { estimatedFinishAt: at("2026-11-10T20:00:00Z") });
       const removed = await reference("Apagado", "2026-11-10T16:00:00Z");
       await tasks.delete(removed.id, USER);
@@ -107,7 +107,7 @@ describe("PostgresTaskCardQuery", () => {
       const running = await saved(agentTask(USER, "Em andamento", { startedAt: at("2026-11-10T12:00:00Z") }));
       const finishedInside = await saved(
         agentTask(USER, "Terminou dentro", {
-          status: "done",
+          status: "completed",
           startedAt: at("2026-11-10T02:30:00Z"),
           finishedAt: at("2026-11-10T03:30:00Z"),
         }),
@@ -203,7 +203,7 @@ describe("PostgresTaskCardQuery", () => {
     test("traz so tarefas com status, com as longas e os pedidos, pela data e com os sem data no fim", async () => {
       const { timed, request, deadline, long, undated } = await seed();
       await reference("De referencia", "2026-11-10T15:00:00Z");
-      await saved(agentTask(USER, "Passo", { kind: "step", status: "done" }));
+      await saved(agentTask(USER, "Passo", { kind: "step", status: "completed" }));
       const removed = await tracked("Apagado");
       await tasks.delete(removed.id, USER);
       await saved(trackedTask(OTHER_USER, "Do outro"));

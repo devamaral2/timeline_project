@@ -26,7 +26,9 @@ isso produz ou usa.
    - Pessoa: tipos `common`, `meal`, `sleep`, `training`; status `todo`, `toDefine`, `doing`, `inHold`, `done`,
      `cancel`, `missed`.
    - Agente: tipos `request`, `search_request`, `build_request`, `inquiry_request`, `review_request`, `cron`, `step`;
-     status `queued`, `running`, `waiting`, `done`, `failed`, `cancel`.
+     status `queued`, `running`, `waiting`, `done`, `failed`, `cancel`. **Os status de agente foram substituídos pela
+     ADR 0022:** são `preparing`, `queued`, `starting`, `running`, `waiting`, `completed`, `interrupted`, `failed`,
+     `cancelled` e `rolled_back`.
 4. **Evento de referência.** Um evento de pessoa pode não ter status: só marca um horário na agenda. Continua
    editável e pode passar a ter status a qualquer momento. Evento de agente sempre tem status.
 5. **Datas.** `started_at` é o início planejado, `estimated_finish_at` é o fim planejado (o bloco da agenda) e

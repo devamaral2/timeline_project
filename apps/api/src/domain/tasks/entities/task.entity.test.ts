@@ -144,7 +144,7 @@ describe("Task.create", () => {
       for (const kind of kinds) {
         expect(Task.create(props({ actor: "agent", kind, status: "queued", startedAt: undefined })).kind).toBe(kind);
       }
-      for (const status of ["queued", "running", "waiting", "done", "failed", "cancel"] as const) {
+      for (const status of ["preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back"] as const) {
         expect(Task.create(props({ actor: "agent", kind: "request", status })).status).toBe(status);
       }
     });

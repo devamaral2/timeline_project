@@ -9,14 +9,20 @@
 }
 .statusGlyph[data-status="todo"],
 .statusGlyph[data-status="toDefine"],
+.statusGlyph[data-status="preparing"],
 .statusGlyph[data-status="queued"],
 .statusGlyph[data-status="cancel"],
+.statusGlyph[data-status="cancelled"],
+.statusGlyph[data-status="rolled_back"],
 .statusGlyph[data-status="missed"] { color: var(--muted-foreground); }
 .statusGlyph[data-status="doing"],
 .statusGlyph[data-status="inHold"],
+.statusGlyph[data-status="starting"],
 .statusGlyph[data-status="running"],
-.statusGlyph[data-status="waiting"] { color: var(--warning); }
-.statusGlyph[data-status="done"] { color: var(--success); }
+.statusGlyph[data-status="waiting"],
+.statusGlyph[data-status="interrupted"] { color: var(--warning); }
+.statusGlyph[data-status="done"],
+.statusGlyph[data-status="completed"] { color: var(--success); }
 .statusGlyph[data-status="failed"] { color: var(--destructive); }
 .statusGlyph[data-status="reference"] { color: var(--routine); }
 

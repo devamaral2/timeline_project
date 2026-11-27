@@ -139,11 +139,11 @@ export function agentFileFixtures({ z }: FixtureContext): Record<string, unknown
       steps: [{ id: "s1", agent: "hermes", label: "Reescrevendo o arquivo", status: "running" }],
     }),
     "agent-file-edit-done": edit({
-      id: "req-edit", status: "done", message: "Pronto: acrescentei a regra de responder em português.",
+      id: "req-edit", status: "completed", message: "Pronto: acrescentei a regra de responder em português.",
     }),
-    "agent-file-edit-done-bare": edit({ id: "req-edit", status: "done" }),
+    "agent-file-edit-done-bare": edit({ id: "req-edit", status: "completed" }),
     "agent-file-edit-failed": edit({ id: "req-edit", status: "failed", errorCode: "unavailable" }),
-    "agent-file-edit-cancelled": edit({ id: "req-edit", status: "cancel" }),
+    "agent-file-edit-cancelled": edit({ id: "req-edit", status: "cancelled" }),
     "agent-file-model": {
       frontmatter: TEXTS.map((text) => {
         const { summary, body } = splitFrontmatter(text);

@@ -169,7 +169,7 @@ export class PostgresArtifactRepository implements ArtifactRepository, FoodGener
       // O pedido de construcao que altera este alimento termina junto com a escrita.
       const requests = await tx.execute<{ id: string }>(sql`
         UPDATE tasks e
-        SET status = ${final === "failed" ? "failed" : "done"}, finished_at = now(), updated_at = now()
+        SET status = ${final === "failed" ? "failed" : "completed"}, finished_at = now(), updated_at = now()
         FROM task_artifact_relation r
         WHERE r.artifact_id = ${payload.artifactId} AND r.task_id = e.id
           AND e.actor = 'agent' AND e.kind = 'build_request' AND e.status IN (${sqlList(IN_PROGRESS_AGENT_STATUSES)})

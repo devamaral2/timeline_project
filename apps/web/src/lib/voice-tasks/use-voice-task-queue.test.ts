@@ -42,7 +42,7 @@ test("a lost submission response is retried under the same message id and tracks
   expect(voicePosts().every((call) => (call.body as { clientMessageId?: string }).clientMessageId === "stable-voice")).toBe(true);
   expect(requests().size).toBe(1);
 
-  advanceRequest(api, accepted.requestId, { status: "done", entities: [createdTask] });
+  advanceRequest(api, accepted.requestId, { status: "completed", entities: [createdTask] });
   await waitFor(() => expect(onCreated).toHaveBeenCalledWith(createdTask), { timeout: 4000 });
   expect(result.current.jobs).toEqual([]);
 });
@@ -90,7 +90,7 @@ test("the pending queue survives a reload: the stored request id is polled, not 
 
   await waitFor(() => expect(result.current.jobs).toHaveLength(1));
   expect(voicePosts()).toHaveLength(0);
-  advanceRequest(api, seeded.id, { status: "done", entities: [createdTask] });
+  advanceRequest(api, seeded.id, { status: "completed", entities: [createdTask] });
   await waitFor(() => expect(onCreated).toHaveBeenCalledWith(createdTask), { timeout: 4000 });
 });
 

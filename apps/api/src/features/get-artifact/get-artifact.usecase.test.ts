@@ -32,8 +32,8 @@ test("returns the artifact of the actor with the tasks it appears in, oldest fir
       linked("undated", "uses"),
       linked("later", "uses", { startedAt: new Date("2026-08-18T15:00:00.000Z") }),
       linked("first", "creates", { startedAt: new Date("2026-08-17T15:00:00.000Z"), estimatedFinishAt: new Date("2026-08-17T16:00:00.000Z") }),
-      linked("request", "updates", { actor: "agent", kind: "request", status: "done", startedAt: new Date("2026-08-19T15:00:00.000Z") }),
-      linked("step", "updates", { actor: "agent", kind: "step", status: "done", startedAt: new Date("2026-08-16T15:00:00.000Z") }),
+      linked("request", "updates", { actor: "agent", kind: "request", status: "completed", startedAt: new Date("2026-08-19T15:00:00.000Z") }),
+      linked("step", "updates", { actor: "agent", kind: "step", status: "completed", startedAt: new Date("2026-08-16T15:00:00.000Z") }),
     ],
   );
 

@@ -190,7 +190,7 @@ export class InMemoryRequestStore implements RequestStore {
   async recordStepSuccess(_tx: unknown, input: {
     requestId: string; stepId: string; entities: readonly NewEntity[]; timings: Record<string, number>;
   }): Promise<void> {
-    if (!this.closeStep(input.stepId, "done", input.timings)) throw new Error("Step is no longer open");
+    if (!this.closeStep(input.stepId, "completed", input.timings)) throw new Error("Step is no longer open");
     for (const entity of input.entities) this.touched.push({ ...entity, requestId: input.requestId, stepId: input.stepId });
     this.jobs.push({ kind: REQUEST_JOBS.finalize, requestId: input.requestId, stepId: input.stepId });
   }
@@ -198,7 +198,7 @@ export class InMemoryRequestStore implements RequestStore {
   async recordQueryResult(input: {
     requestId: string; stepId: string; result: RequestQueryResult; timings: Record<string, number>;
   }): Promise<void> {
-    if (!this.closeStep(input.stepId, "done", input.timings)) return;
+    if (!this.closeStep(input.stepId, "completed", input.timings)) return;
     this.stepOf(input.stepId).result = input.result;
     this.jobs.push({ kind: REQUEST_JOBS.finalize, requestId: input.requestId, stepId: input.stepId });
   }
@@ -209,7 +209,7 @@ export class InMemoryRequestStore implements RequestStore {
     this.jobs.push({ kind: REQUEST_JOBS.finalize, requestId: input.requestId, stepId: input.stepId });
   }
 
-  private closeStep(stepId: string, status: "done" | "failed", timings?: Record<string, number>): boolean {
+  private closeStep(stepId: string, status: "completed" | "failed", timings?: Record<string, number>): boolean {
     const step = this.stepOf(stepId);
     if (!isInProgressAgentStatus(step.status)) return false;
     step.status = status;
@@ -226,7 +226,7 @@ export class InMemoryRequestStore implements RequestStore {
     this.finalized.push({ kind: entity.kind, id: entity.id, links: [...links] });
   }
 
-  async finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void> {
+  async finish(requestId: string, status: "completed" | "failed", outcome: RequestOutcome): Promise<void> {
     const request = this.requests.get(requestId);
     if (!request || !isOpenAgentStatus(request.status)) return;
     request.status = status;
@@ -243,17 +243,17 @@ export class InMemoryRequestStore implements RequestStore {
     const request = this.requests.get(input.requestId);
     if (!request || !isOpenAgentStatus(request.status)) throw new Error("Request is no longer open");
     this.touched.push({ kind: "task", id: input.taskId, operation: "create", requestId: input.requestId, stepId: input.requestId });
-    await this.finish(input.requestId, "done", {});
+    await this.finish(input.requestId, "completed", {});
   }
 
   async cancel(requestId: string): Promise<string[]> {
     const request = this.requests.get(requestId);
     if (!request || !isOpenAgentStatus(request.status)) return [];
-    request.status = "cancel";
+    request.status = "cancelled";
     request.errorCode = "cancelled";
     request.finishedAt = this.clock();
     const steps = this.stepRecords.filter((step) => step.requestId === requestId);
-    for (const step of steps) if (isInProgressAgentStatus(step.status)) step.status = "cancel";
+    for (const step of steps) if (isInProgressAgentStatus(step.status)) step.status = "cancelled";
     return [requestId, ...steps.map((step) => step.id)];
   }
 

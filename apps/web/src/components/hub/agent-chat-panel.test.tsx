@@ -33,7 +33,7 @@ async function answer(count: number, change: Partial<RequestDto>) {
   advanceRequest(api, id, change);
 }
 
-const finished = { status: "done" as const, message: "Você tem um treino às 7h." };
+const finished = { status: "completed" as const, message: "Você tem um treino às 7h." };
 
 function Harness({
   live = true,
@@ -281,7 +281,7 @@ test("while a request runs the send button becomes the one that cancels it in th
   expect(screen.queryByText("Realizando processos:")).not.toBeInTheDocument();
 
   await waitFor(() => expect(screen.getByText("Pedido cancelado.")).toBeInTheDocument());
-  expect([...requests().values()][0]).toMatchObject({ status: "cancel" });
+  expect([...requests().values()][0]).toMatchObject({ status: "cancelled" });
   expect(screen.queryByRole("button", { name: "Cancelar pedido" })).not.toBeInTheDocument();
 });
 
@@ -314,7 +314,7 @@ test("com o Hermes ligado, /hermes manda a mensagem a ele: a linha de status diz
   expect(within(log).getAllByRole("listitem")).toHaveLength(1);
   expect(screen.queryByRole("button", { name: "Copiar a resposta" })).not.toBeInTheDocument();
 
-  advanceRequest(api, id, { status: "done", message: "São 18h." });
+  advanceRequest(api, id, { status: "completed", message: "São 18h." });
   await waitFor(() => expect(within(log).getByText("São 18h.")).toBeInTheDocument());
   expect(screen.getByRole("status")).toHaveTextContent("Esperando o seu pedido");
   expect(screen.getByText("Hermes", { selector: "span" })).toBeInTheDocument();
@@ -537,7 +537,7 @@ test("reopening the chat picks up a request that is still running and shows its 
   expect(within(log).getByText("comi arroz no almoço")).toBeInTheDocument();
   expect(requestPosts()).toHaveLength(0);
 
-  advanceRequest(api, id, { status: "done", message: "Anotei o almoço." });
+  advanceRequest(api, id, { status: "completed", message: "Anotei o almoço." });
   await waitFor(() => expect(within(log).getByText("Anotei o almoço.")).toBeInTheDocument());
   expect(screen.getByRole("textbox", { name: "Mensagem para a IA" })).toBeEnabled();
 });
@@ -556,7 +556,7 @@ test("reopening the chat picks up a Hermes request still running and shows its a
 
   const log = await screen.findByRole("log");
   expect(within(log).getByText("resume o meu dia")).toBeInTheDocument();
-  advanceRequest(api, id, { status: "done", message: "Seu dia está livre à tarde." });
+  advanceRequest(api, id, { status: "completed", message: "Seu dia está livre à tarde." });
   await waitFor(() => expect(within(log).getByText("Seu dia está livre à tarde.")).toBeInTheDocument());
   expect(requestPosts()).toHaveLength(0);
 });
@@ -565,7 +565,7 @@ test("a request that already finished is not reopened when the chat opens", asyn
   api = createFakeApi({
     areas: [requestsArea()],
     seed: {
-      requests: [requestFixture({ id: requestIdOf(2), text: "comi arroz", title: "comi arroz", status: "done", message: "Anotado." })],
+      requests: [requestFixture({ id: requestIdOf(2), text: "comi arroz", title: "comi arroz", status: "completed", message: "Anotado." })],
     },
   });
   net.authedFetch.mockImplementation(api.authedFetch);
@@ -599,7 +599,7 @@ test("closing and reopening the chat does not follow twice a request it already 
 
   // Um pedido que a própria tela enviou: depois de fechar e reabrir, a lista também o devolve, e ele não se repete.
   // Antes, o pedido recuperado termina: enquanto ele roda, a conversa não aceita outro envio.
-  advanceRequest(api, requestIdOf(3), { status: "done", message: "Anotado." });
+  advanceRequest(api, requestIdOf(3), { status: "completed", message: "Anotado." });
   await waitFor(() => expect(within(screen.getByRole("log")).getByText("Anotado.")).toBeInTheDocument());
   ask("o que tenho hoje?");
   await waitFor(() => expect(requestPosts()).toHaveLength(1));

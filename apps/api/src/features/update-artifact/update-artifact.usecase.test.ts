@@ -184,7 +184,7 @@ describe("tasks the artifact appears in", () => {
     const request = task("request", [], {
       actor: "agent",
       kind: "build_request",
-      status: "done",
+      status: "completed",
       artifactLinks: [{ artifactId: "note-1", relation: "updates", fromRecurrence: false }],
     });
     const { useCase, taskRepository } = setup([note()], [task("e1", ["note-1"]), request]);

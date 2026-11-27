@@ -95,7 +95,7 @@ test("o dono manda o pedido: o campo acompanha o andamento, mostra a resposta e 
 
   // O Hermes editou o arquivo e terminou: a tela mostra a resposta e relê o texto atual.
   api.store.table<AgentFileRow>("agentFiles").set(SKILL, { id: SKILL, path: SKILL, text: TEXT_EDITED, missing: false });
-  advanceRequest(api, openedRequest(), { status: "done", message: "Troquei o passo 1." });
+  advanceRequest(api, openedRequest(), { status: "completed", message: "Troquei o passo 1." });
   expect(await screen.findByText("Troquei o passo 1.")).toBeInTheDocument();
   await waitFor(() => expect(screen.getByLabelText("Texto do arquivo").textContent).toContain("ler o contrato"));
   expect(api.calls.filter((call) => call.pathname === "/api/ai/config/file").length).toBeGreaterThan(1);
@@ -109,6 +109,19 @@ test("um pedido que falha mostra o motivo traduzido pelo código", async () => {
   await waitFor(() => openedRequest());
   advanceRequest(api, openedRequest(), { status: "failed", errorCode: "unavailable" });
   expect(await screen.findByText(agentFailureText("unavailable"))).toBeInTheDocument();
+});
+
+test.each([
+  ["cancelled", "Pedido cancelado"],
+  ["interrupted", "Pedido interrompido"],
+] as const)("um pedido %s diz %s", async (status, text) => {
+  install({ owner: true, hermes: "on" });
+  render(<NoteDetailScreen userId="user-1" noteId="skill-1" />);
+
+  await sendRequest("Troque o passo 1");
+  await waitFor(() => openedRequest());
+  advanceRequest(api, openedRequest(), { status, errorCode: "cancelled" });
+  expect(await screen.findByText(text)).toBeInTheDocument();
 });
 
 test("com o Hermes desligado, o envio diz isso e o campo some", async () => {

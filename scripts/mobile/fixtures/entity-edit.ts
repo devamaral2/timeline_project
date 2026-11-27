@@ -35,16 +35,16 @@ export function entityEditFixtures(): Record<string, unknown> {
     "entity-edit-running-steps": edit({
       id: "req-ed",
       steps: [
-        { id: "s1", agent: "router", label: "Entender o pedido", status: "done" },
+        { id: "s1", agent: "router", label: "Entender o pedido", status: "completed" },
         { id: "s2", agent: "tasks", label: "Mudar o horário", status: "running" },
         { id: "s3", agent: "writer", label: "Conferir a agenda", status: "queued" },
       ],
     }),
-    "entity-edit-done": edit({ id: "req-ed", status: "done", message: "Pronto: movi a reunião para as 15h.", entities: changed }),
-    "entity-edit-done-bare": edit({ id: "req-ed", status: "done", message: "Nada a mudar." }),
+    "entity-edit-done": edit({ id: "req-ed", status: "completed", message: "Pronto: movi a reunião para as 15h.", entities: changed }),
+    "entity-edit-done-bare": edit({ id: "req-ed", status: "completed", message: "Nada a mudar." }),
     "entity-edit-failed": edit({ id: "req-ed", status: "failed", errorCode: "limit_reached" }),
     "entity-edit-failed-bare": edit({ id: "req-ed", status: "failed" }),
-    "entity-edit-cancelled": edit({ id: "req-ed", status: "cancel" }),
+    "entity-edit-cancelled": edit({ id: "req-ed", status: "cancelled" }),
     "entity-edit-model": {
       targets: Object.entries(EDIT_TARGET_LABELS).map(([type, label]) => ({ type, label })),
       artifacts: ARTIFACT_TYPES.flatMap((type) =>

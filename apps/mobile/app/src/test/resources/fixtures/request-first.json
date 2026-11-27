@@ -2,7 +2,7 @@
   "id": "req-first",
   "kind": "search_request",
   "route": "steps",
-  "status": "done",
+  "status": "completed",
   "title": "Planejar a viagem",
   "project": {
     "id": "project-personal",

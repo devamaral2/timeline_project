@@ -36,7 +36,7 @@ describe("o modelo que o usuario escolheu roda todo agente do pedido", () => {
 
     await ctx.targetEditWorker.run("food-edit", payload);
 
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     expect(ctx.gateway.calls.map((call) => call.model)).toEqual([CHOSEN]);
   });
 

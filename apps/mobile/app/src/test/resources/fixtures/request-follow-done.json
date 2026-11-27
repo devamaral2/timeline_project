@@ -2,7 +2,7 @@
   "id": "req-new",
   "kind": "search_request",
   "route": "steps",
-  "status": "done",
+  "status": "completed",
   "title": "Só voos diretos",
   "project": {
     "id": "project-personal",

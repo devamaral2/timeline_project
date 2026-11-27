@@ -50,7 +50,7 @@ const running = request({
   ...queued,
   status: "running",
   steps: [
-    { id: "s1", agent: "router", label: "Entendendo o pedido", status: "done" },
+    { id: "s1", agent: "router", label: "Entendendo o pedido", status: "completed" },
     { id: "s2", agent: "task", label: "Criando a tarefa", status: "running" },
     { id: "s3", agent: "writer", label: "Escrevendo a resposta", status: "queued" },
   ],
@@ -59,12 +59,12 @@ const running = request({
 
 const done = request({
   ...queued,
-  status: "done",
+  status: "completed",
   updatedAt: "2026-09-14T14:48:09.000Z",
   steps: [
-    { id: "s1", agent: "router", label: "Entendendo o pedido", status: "done" },
-    { id: "s2", agent: "task", label: "Criando a tarefa", status: "done" },
-    { id: "s3", agent: "writer", label: "Escrevendo a resposta", status: "done" },
+    { id: "s1", agent: "router", label: "Entendendo o pedido", status: "completed" },
+    { id: "s2", agent: "task", label: "Criando a tarefa", status: "completed" },
+    { id: "s3", agent: "writer", label: "Escrevendo a resposta", status: "completed" },
   ],
   entities: [
     { kind: "task", id: "task-new", name: "Reunião de sexta", operation: "create", linkedTo: [] },
@@ -77,7 +77,7 @@ const done = request({
 const queryDone = request({
   ...queued,
   id: SECOND,
-  status: "done",
+  status: "completed",
   title: "O que tenho amanhã?",
   text: "O que tenho amanhã?",
   steps: [
@@ -85,7 +85,7 @@ const queryDone = request({
       id: "q1",
       agent: "query",
       label: "Consultando a agenda",
-      status: "done",
+      status: "completed",
       result: { columns: ["Tarefa", "Início"], rows: [["Dentista", "09:00"], ["Almoço", null]], truncated: true },
     },
   ],
@@ -99,7 +99,7 @@ const failed = request({
   steps: [{ id: "s1", agent: "router", label: "Entendendo o pedido", status: "failed" }],
 });
 
-const cancelled = request({ ...queued, status: "cancel", errorCode: "cancelled", steps: [{ id: "s1", agent: "router", label: "Entendendo o pedido", status: "cancel" }] });
+const cancelled = request({ ...queued, status: "cancelled", errorCode: "cancelled", steps: [{ id: "s1", agent: "router", label: "Entendendo o pedido", status: "cancelled" }] });
 
 const hermesTrace = (status: "running" | "done", withAnswer: boolean) => ({
   route: "hermes",
@@ -119,7 +119,7 @@ const hermesTrace = (status: "running" | "done", withAnswer: boolean) => ({
 const hermesAccepted = request({ id: FIRST, route: "hermes", status: "running", title: "Oi Hermes", text: "Oi Hermes", trace: hermesTrace("running", false) });
 const hermesDone = request({
   ...hermesAccepted,
-  status: "done",
+  status: "completed",
   message: 'Quer o resumo completo? Diga "só gmail" ou "com calendar e drive".',
   trace: hermesTrace("done", true),
 });
@@ -138,7 +138,7 @@ const modelTrace = (status: "running" | "done") => ({
   ],
 });
 const modelAccepted = request({ id: FIRST, route: "model", status: "running", title: "O que tenho amanhã?", text: "O que tenho amanhã?", model: MODEL_SELECTION, trace: modelTrace("running") });
-const modelDone = request({ ...modelAccepted, status: "done", message: "Amanhã você tem dentista às 9h.", trace: modelTrace("done") });
+const modelDone = request({ ...modelAccepted, status: "completed", message: "Amanhã você tem dentista às 9h.", trace: modelTrace("done") });
 // `GET /api/requests/model/options`: o que o servidor oferece (a OpenAI não tem chave neste ambiente).
 const modelOptions = modelOptionsSchema.parse({
   providers: [
@@ -165,7 +165,7 @@ const hermesFailed = request({ id: FIRST, route: "hermes", status: "failed", err
 const listed = [
   request({ id: "R00000000000000000000000C3", status: "running", title: "Criar nota de compras", text: "Criar nota de compras", steps: [{ id: "c1", agent: "note", label: "Criando a nota", status: "running" }] }),
   request({ id: "R00000000000000000000000C2", route: "hermes", status: "running", title: "Resumir meu e-mail", text: "Resumir meu e-mail" }),
-  request({ id: "R00000000000000000000000C1", status: "done", title: "Já terminou", text: "Já terminou" }),
+  request({ id: "R00000000000000000000000C1", status: "completed", title: "Já terminou", text: "Já terminou" }),
   request({ id: "R00000000000000000000000C0", route: "voice", status: "running", title: "Voz aberta" }),
   request({ id: "R00000000000000000000000B9", route: "steps", status: "waiting", title: "Sem texto" }),
 ];
@@ -320,12 +320,12 @@ const PENDING_STEP_CASES: { messages: AgentChatMessage[]; pending: AgentChatPend
   { messages: [{ id: "m1-process", role: "process", request: null }], pending: STEP_PENDING },
   { messages: [stepsProcess([])], pending: STEP_PENDING },
   {
-    messages: [stepsProcess([STEP("1", "Criando tarefas", "done"), STEP("2", "Criando notas", "running"), STEP("3", "Editando tarefas", "queued")])],
+    messages: [stepsProcess([STEP("1", "Criando tarefas", "completed"), STEP("2", "Criando notas", "running"), STEP("3", "Editando tarefas", "queued")])],
     pending: STEP_PENDING,
   },
-  { messages: [stepsProcess([STEP("1", "Criando tarefas", "done"), STEP("3", "Editando tarefas", "queued")])], pending: STEP_PENDING },
-  { messages: [stepsProcess([STEP("1", "Criando tarefas", "done"), STEP("3", "Esperando o agente", "waiting")])], pending: STEP_PENDING },
-  { messages: [stepsProcess([STEP("1", "Criando tarefas", "done")])], pending: STEP_PENDING },
+  { messages: [stepsProcess([STEP("1", "Criando tarefas", "completed"), STEP("3", "Editando tarefas", "queued")])], pending: STEP_PENDING },
+  { messages: [stepsProcess([STEP("1", "Criando tarefas", "completed"), STEP("3", "Esperando o agente", "waiting")])], pending: STEP_PENDING },
+  { messages: [stepsProcess([STEP("1", "Criando tarefas", "completed")])], pending: STEP_PENDING },
   { messages: [hermesSteps("m1-steps", "running")], pending: { id: "m1", label: "Hermes" } },
   { messages: [hermesSteps("m1-steps", "done")], pending: { id: "m1", label: "Hermes" } },
   { messages: [{ id: "m1-steps", role: "hermes-steps", running: true, steps: [] }], pending: { id: "m1", label: "Hermes" } },

@@ -365,7 +365,7 @@ export class PostgresRequestStore implements RequestStore {
     timings: Record<string, number>;
   }): Promise<void> {
     await this.inTransaction(tx, async (run) => {
-      const userId = await this.closeStep(run, input.stepId, "done", { timings: input.timings });
+      const userId = await this.closeStep(run, input.stepId, "completed", { timings: input.timings });
       // O passo foi cancelado enquanto o agente trabalhava: o erro desfaz as entidades do lote.
       if (!userId) throw new Error("Step is no longer open");
       for (const entity of input.entities) {
@@ -395,7 +395,7 @@ export class PostgresRequestStore implements RequestStore {
     timings: Record<string, number>;
   }): Promise<void> {
     await this.inTransaction(undefined, async (tx) => {
-      const userId = await this.closeStep(tx, input.stepId, "done", { timings: input.timings });
+      const userId = await this.closeStep(tx, input.stepId, "completed", { timings: input.timings });
       if (!userId) return;
       await this.append(tx, input.stepId, { kind: "result", data: { type: "query", ...input.result } });
       await this.enqueueFinalize(tx, input.requestId, input.stepId, userId);
@@ -414,7 +414,7 @@ export class PostgresRequestStore implements RequestStore {
   private async closeStep(
     tx: Tx,
     stepId: string,
-    status: "done" | "failed",
+    status: "completed" | "failed",
     detail: { timings?: Record<string, number>; errorCode?: string } = {},
   ): Promise<string | undefined> {
     const closed = await tx.execute<{ user_id: string }>(sql`
@@ -450,7 +450,7 @@ export class PostgresRequestStore implements RequestStore {
     });
   }
 
-  async finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void> {
+  async finish(requestId: string, status: "completed" | "failed", outcome: RequestOutcome): Promise<void> {
     await this.inTransaction(undefined, (tx) => this.closeRequest(tx, requestId, status, outcome));
   }
 
@@ -461,12 +461,12 @@ export class PostgresRequestStore implements RequestStore {
         VALUES (${input.requestId}, ${input.taskId}, 'generates')`);
       await this.append(run, input.requestId, { kind: "result", data: { type: "voice", taskId: input.taskId } });
       // O pedido foi cancelado enquanto o modelo trabalhava: o erro desfaz a tarefa.
-      if (!(await this.closeRequest(run, input.requestId, "done", {}))) throw new Error("Request is no longer open");
+      if (!(await this.closeRequest(run, input.requestId, "completed", {}))) throw new Error("Request is no longer open");
     });
   }
 
   /** Encerra o pedido se ele ainda esta aberto. A resposta final e a ultima entrada. */
-  private async closeRequest(tx: Tx, requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<boolean> {
+  private async closeRequest(tx: Tx, requestId: string, status: "completed" | "failed", outcome: RequestOutcome): Promise<boolean> {
     const patch = {
       ...(outcome.failedSteps?.length ? { failedSteps: outcome.failedSteps } : {}),
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
@@ -494,13 +494,13 @@ export class PostgresRequestStore implements RequestStore {
   async cancel(requestId: string): Promise<string[]> {
     return this.inTransaction(undefined, async (tx) => {
       const cancelled = await tx.execute(sql`
-        UPDATE tasks SET status = 'cancel', finished_at = now(), updated_at = now(),
+        UPDATE tasks SET status = 'cancelled', finished_at = now(), updated_at = now(),
           data = data || ${json({ errorCode: "cancelled" satisfies RequestErrorCode })}::jsonb
         WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
         RETURNING id`);
       if (cancelled.rows.length === 0) return [];
       await tx.execute(sql`
-        UPDATE tasks s SET status = 'cancel', finished_at = now(), updated_at = now()
+        UPDATE tasks s SET status = 'cancelled', finished_at = now(), updated_at = now()
         FROM task_task_relation r
         WHERE r.from_task_id = ${requestId} AND r.relation = 'step' AND r.to_task_id = s.id
           AND s.kind = 'step' AND s.status IN ${IN_PROGRESS}`);

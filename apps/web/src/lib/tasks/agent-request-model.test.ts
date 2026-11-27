@@ -8,11 +8,11 @@ function agentCard(status: TaskCardDto["status"]): TaskCardDto {
 }
 
 describe("hasOpenAgentTask", () => {
-  it.each(["queued", "running", "waiting"] as const)("uma tarefa de agente em %s deixa a lista aberta", (status) => {
+  it.each(["preparing", "queued", "starting", "running", "waiting"] as const)("uma tarefa de agente em %s deixa a lista aberta", (status) => {
     expect(hasOpenAgentTask([agentCard(status)])).toBe(true);
   });
 
-  it.each(["done", "failed", "cancel"] as const)("uma tarefa de agente em %s não conta", (status) => {
+  it.each(["completed", "interrupted", "failed", "cancelled", "rolled_back"] as const)("uma tarefa de agente em %s não conta", (status) => {
     expect(hasOpenAgentTask([agentCard(status)])).toBe(false);
   });
 
@@ -26,6 +26,6 @@ describe("hasOpenAgentTask", () => {
   });
 
   it("basta uma tarefa de agente em aberto no meio de muitos fechados", () => {
-    expect(hasOpenAgentTask([agentCard("done"), taskFixture({ id: "luz", status: "todo" }) as TaskCardDto, agentCard("running")])).toBe(true);
+    expect(hasOpenAgentTask([agentCard("completed"), taskFixture({ id: "luz", status: "todo" }) as TaskCardDto, agentCard("running")])).toBe(true);
   });
 });

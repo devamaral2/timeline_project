@@ -2,7 +2,7 @@
   "id": "R00000000000000000000000A1",
   "kind": "request",
   "route": "hermes",
-  "status": "done",
+  "status": "completed",
   "title": "Oi Hermes",
   "project": {
     "id": "project-personal",

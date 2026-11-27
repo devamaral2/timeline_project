@@ -9,7 +9,15 @@ const MAX_SUMMARY = 160;
 const RESULT_PREVIEW_ROWS = 10;
 
 const STEP_STATUS: Record<StepRecord["status"], AgentTraceStatus> = {
-  queued: "pending", running: "running", done: "done", failed: "failed", cancel: "failed",
+  preparing: "pending",
+  queued: "pending",
+  starting: "pending",
+  running: "running",
+  completed: "done",
+  failed: "failed",
+  cancelled: "failed",
+  interrupted: "failed",
+  rolled_back: "failed",
 };
 
 /** Por que o pedido foi ao Hermes sem ser uma tarefa de agente. `no_step` e `unsupported` so existem em pedidos antigos. */
@@ -103,7 +111,7 @@ function routingEntry(request: RequestRecord, steps: readonly StepRecord[]): Age
   const dispatch: DispatchRecord | undefined = request.dispatch;
   if (!dispatch) {
     // Ainda escolhendo, ou a edicao pela tela de detalhe: ali o agente sai de uma tabela, sem modelo.
-    if (request.status === "queued") return { ...base, status: "running", summary: "Entendendo o pedido" };
+    if (request.status === "preparing" || request.status === "queued") return { ...base, status: "running", summary: "Entendendo o pedido" };
     return undefined;
   }
   const fields: AgentTraceField[] = [];
@@ -262,7 +270,7 @@ function answerEntry(
     : entities.length === 1 ? "1 registro gravado" : `${entities.length} registros gravados`;
   return {
     id: `${request.id}-answer`, kind: "answer",
-    label: request.status === "cancel" ? "Cancelado" : failed ? "Encerrou com falha" : message ? "Resposta" : "Concluiu",
+    label: request.status === "cancelled" ? "Cancelado" : request.status === "interrupted" ? "Interrompido" : failed ? "Encerrou com falha" : message ? "Resposta" : "Concluiu",
     summary, status: failed ? "failed" : "done",
     ...(request.finishedAt ? { startedAt: request.finishedAt.toISOString() } : {}),
     fields,

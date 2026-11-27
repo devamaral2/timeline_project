@@ -467,7 +467,7 @@ describe("PostgresTaskRepository", () => {
         userId: USER,
         actor: "agent",
         kind: "request",
-        status: "done",
+        status: "completed",
         name: "Forjado",
         startedAt: request.startedAt,
         revision: 2,

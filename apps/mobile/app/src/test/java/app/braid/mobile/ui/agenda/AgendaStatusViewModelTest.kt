@@ -298,7 +298,7 @@ class AgendaStatusViewModelTest {
             advanceTimeBy(60_000)
             runCurrent()
 
-            assertEquals(TaskStatus.Done, card(state, "task-3").status)
+            assertEquals(TaskStatus.Completed, card(state, "task-3").status)
             assertEquals(reads, weekReads())
         }
 

@@ -74,7 +74,7 @@ const FREE_CARDS = [
   card({ id: "free-6", name: "Lacuna de 10 min", startedAt: iso(FREE_DAY, "14:10"), estimatedFinishAt: iso(FREE_DAY, "14:20") }),
   card({ id: "free-7", name: "Lacuna de 15 min", startedAt: iso(FREE_DAY, "14:35"), estimatedFinishAt: iso(FREE_DAY, "15:00") }),
   card({ id: "free-8", name: "Noite", startedAt: iso(FREE_DAY, "21:00"), estimatedFinishAt: iso(FREE_DAY, "23:50") }),
-  card({ id: "free-9", name: "Passo da pesquisa", actor: "agent", kind: "step", status: "done", startedAt: iso(FREE_DAY, "16:00") }),
+  card({ id: "free-9", name: "Passo da pesquisa", actor: "agent", kind: "step", status: "completed", startedAt: iso(FREE_DAY, "16:00") }),
   card({ id: "free-10", name: "Tarefa longa", longRunning: true, startedAt: iso("2026-09-01", "12:00"), estimatedFinishAt: iso("2026-11-30", "12:00") }),
 ];
 

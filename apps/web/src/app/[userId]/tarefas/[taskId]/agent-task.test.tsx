@@ -20,8 +20,8 @@ const { default: TaskPage } = await import("./page");
 const ID = "01HZX4R5Q7M8N9P0T1V2W3Y4Z5";
 
 const STEPS: RequestDto["steps"] = [
-  { id: "s1", agent: "planner", label: "Entender o pedido", status: "done" },
-  { id: "s2", agent: "searcher", label: "Buscar voos", status: "done" },
+  { id: "s1", agent: "planner", label: "Entender o pedido", status: "completed" },
+  { id: "s2", agent: "searcher", label: "Buscar voos", status: "completed" },
   { id: "s3", agent: "comparer", label: "Comparar preços", status: "running" },
   { id: "s4", agent: "writer", label: "Montar o resumo", status: "queued" },
 ];
@@ -94,7 +94,7 @@ test("uma tarefa de agente abre na forma do agente: tipo, título, status e o ro
   const top = screen.getByRole("region", { name: "Resumo da tarefa" });
   expect(within(top).getByRole("heading", { level: 1, name: "Pesquisar voos para novembro" })).toBeInTheDocument();
   expect(within(top).getByText("request")).toBeInTheDocument();
-  expect(within(top).getByText("Agente, executando")).toBeInTheDocument();
+  expect(within(top).getByText("Agente, trabalhando")).toBeInTheDocument();
   expect(top.querySelector("[data-agent-mark]")).not.toBeNull();
   expect(within(top).queryByText("2 de 4 passos")).not.toBeInTheDocument();
   expect(within(top).queryByText("Média")).not.toBeInTheDocument();
@@ -180,22 +180,22 @@ test("com o pedido em aberto, a tela relê o pedido e a tarefa até o estado fin
   await loaded();
   await screen.findByRole("region", { name: "Passos" });
 
-  advanceRequest(api, ID, { status: "done", steps: STEPS.map((step) => ({ ...step, status: "done" })) });
-  api.store.table<TaskDto>("tasks").set(ID, agentTask({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" }));
+  advanceRequest(api, ID, { status: "completed", steps: STEPS.map((step) => ({ ...step, status: "completed" })) });
+  api.store.table<TaskDto>("tasks").set(ID, agentTask({ status: "completed", finishedAt: "2026-11-14T09:58:00-03:00" }));
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(3000);
   });
 
   const top = screen.getByRole("region", { name: "Resumo da tarefa" });
-  expect(await within(top).findByText("Agente, feito")).toBeInTheDocument();
+  expect(await within(top).findByText("Agente, concluído")).toBeInTheDocument();
   const info = screen.getByRole("region", { name: "Informações" });
   expect(within(info).getByText(/09:58/)).toBeInTheDocument();
   expect(within(info).queryByText("ainda não concluído")).not.toBeInTheDocument();
 });
 
 test("um pedido no estado final não é relido", async () => {
-  install([agentTask({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" })], [agentRequest({ status: "done" })]);
+  install([agentTask({ status: "completed", finishedAt: "2026-11-14T09:58:00-03:00" })], [agentRequest({ status: "completed" })]);
   renderPage();
   await loaded();
   await screen.findByRole("region", { name: "Passos" });
@@ -275,7 +275,7 @@ test("Sessão mostra de qual pedido este continua, e Continuações não aparece
   const first = requestFixture({
     id: FIRST_ID,
     title: "Planejar viagem a Lisboa",
-    status: "done",
+    status: "completed",
     createdAt: "2026-11-12T10:00:00-03:00",
     updatedAt: "2026-11-12T10:05:00-03:00",
   });
@@ -299,7 +299,7 @@ test("Sessão diz que o pedido anterior não foi encontrado quando ele não carr
 });
 
 test("um pedido com entradas, entidades e sessão mostra as três seções na ordem do desenho", async () => {
-  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "done", createdAt: "2026-11-12T10:00:00-03:00", updatedAt: "2026-11-12T10:05:00-03:00" });
+  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "completed", createdAt: "2026-11-12T10:00:00-03:00", updatedAt: "2026-11-12T10:05:00-03:00" });
   install([agentTask()], [first, agentRequest({ trace: TRACE, entities: ENTITIES, sessionId: FIRST_ID })]);
   renderPage();
   await loaded();
@@ -340,7 +340,7 @@ test("com o pedido em aberto, a linha de status do campo mostra o andamento e Ca
 });
 
 test("um pedido terminado não mostra Cancelar pedido no campo", async () => {
-  install([agentTask({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" })], [agentRequest({ status: "done" })]);
+  install([agentTask({ status: "completed", finishedAt: "2026-11-14T09:58:00-03:00" })], [agentRequest({ status: "completed" })]);
   renderPage();
   await loaded();
 
@@ -393,7 +393,7 @@ function continuationId(): string {
 }
 
 test("enviar pelo campo abre um pedido na mesma sessão, e a linha de status passa a acompanhá-lo", async () => {
-  install([agentTask()], [agentRequest({ status: "done" })]);
+  install([agentTask()], [agentRequest({ status: "completed" })]);
   renderPage();
   await loaded();
 
@@ -414,7 +414,7 @@ test("enviar pelo campo abre um pedido na mesma sessão, e a linha de status pas
   });
   expect(within(field).getByText("Lendo o calendário…")).toBeInTheDocument();
 
-  advanceRequest(api, continuationId(), { status: "done" });
+  advanceRequest(api, continuationId(), { status: "completed" });
   await act(async () => {
     await vi.advanceTimersByTimeAsync(3000);
   });
@@ -423,8 +423,8 @@ test("enviar pelo campo abre um pedido na mesma sessão, e a linha de status pas
 });
 
 test("continuar um pedido que já tem sessão abre o pedido com o sessionId dele", async () => {
-  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "done" });
-  install([agentTask()], [first, agentRequest({ status: "done", sessionId: FIRST_ID })]);
+  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "completed" });
+  install([agentTask()], [first, agentRequest({ status: "completed", sessionId: FIRST_ID })]);
   renderPage();
   await loaded();
 

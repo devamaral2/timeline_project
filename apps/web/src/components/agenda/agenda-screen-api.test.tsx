@@ -82,7 +82,7 @@ test("each task is drawn as the single row: the agent card, the reference dot an
 
   expect(today.getByRole("button", { name: "Só agenda. Mudar status de “Almoço no escritório”" })).toBeInTheDocument();
   expect(today.getByRole("button", { name: "Não realizado. Mudar status de “Café da manhã”" })).toBeInTheDocument();
-  expect(today.getByRole("img", { name: "Agente, executando" })).toBeInTheDocument();
+  expect(today.getByRole("img", { name: "Agente, trabalhando" })).toBeInTheDocument();
   expect(today.getByText("há 12 min")).toBeInTheDocument();
   expect(today.getByText("Hoje, 09:00")).toBeInTheDocument();
   expect(today.getByText("#trabalho")).toBeInTheDocument();
@@ -233,22 +233,22 @@ function agendaReads(api: ReturnType<typeof installApi>) {
   return () => api.calls.filter((call) => call.method === "GET" && call.pathname === "/api/tasks").length;
 }
 
-test("com tarefa de agente em aberto, a agenda se relê sozinha e a linha vira 'Agente, feito'", async () => {
+test("com tarefa de agente em aberto, a agenda se relê sozinha e a linha vira 'Agente, concluído'", async () => {
   const api = installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
-  expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, executando" })).toBeInTheDocument();
+  expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, trabalhando" })).toBeInTheDocument();
 
   const table = api.store.table<TaskDto>("tasks");
-  table.set("ev-3", { ...(table.get("ev-3") as TaskDto), status: "done" });
+  table.set("ev-3", { ...(table.get("ev-3") as TaskDto), status: "completed" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
-  await waitFor(() => expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument());
-  expect(within(dayOf(TODAY)).queryByRole("img", { name: "Agente, executando" })).not.toBeInTheDocument();
+  await waitFor(() => expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, concluído" })).toBeInTheDocument());
+  expect(within(dayOf(TODAY)).queryByRole("img", { name: "Agente, trabalhando" })).not.toBeInTheDocument();
 });
 
 test("sem tarefa de agente em aberto, a agenda não se relê em intervalo", async () => {
-  const api = installApi(tasks.map((task) => (task.id === "ev-3" ? { ...task, status: "done" as const } : task)));
+  const api = installApi(tasks.map((task) => (task.id === "ev-3" ? { ...task, status: "completed" as const } : task)));
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
   const reads = agendaReads(api);
@@ -263,20 +263,20 @@ test("a recarga troca os dados sem o carregando e mantém a mesma linha na tela"
   const api = installApi();
   render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
-  const rowBefore = within(dayOf(TODAY)).getByRole("img", { name: "Agente, executando" }).closest("li");
+  const rowBefore = within(dayOf(TODAY)).getByRole("img", { name: "Agente, trabalhando" }).closest("li");
 
   const loadingSeen: boolean[] = [];
   const observer = new MutationObserver(() => loadingSeen.push(screen.queryByText("Carregando sua agenda…") !== null));
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
   const table = api.store.table<TaskDto>("tasks");
-  table.set("ev-3", { ...(table.get("ev-3") as TaskDto), status: "done" });
+  table.set("ev-3", { ...(table.get("ev-3") as TaskDto), status: "completed" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
-  await waitFor(() => expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument());
+  await waitFor(() => expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, concluído" })).toBeInTheDocument());
   observer.disconnect();
 
   expect(loadingSeen.some(Boolean)).toBe(false);
-  expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, feito" }).closest("li")).toBe(rowBefore);
+  expect(within(dayOf(TODAY)).getByRole("img", { name: "Agente, concluído" }).closest("li")).toBe(rowBefore);
 });
 
 test("uma releitura que falha mantém a agenda na tela, sem o aviso de erro", async () => {

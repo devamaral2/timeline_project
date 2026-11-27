@@ -548,7 +548,17 @@
   "openAgent": [
     {
       "actor": "agent",
+      "status": "preparing",
+      "open": true
+    },
+    {
+      "actor": "agent",
       "status": "queued",
+      "open": true
+    },
+    {
+      "actor": "agent",
+      "status": "starting",
       "open": true
     },
     {
@@ -563,7 +573,12 @@
     },
     {
       "actor": "agent",
-      "status": "done",
+      "status": "completed",
+      "open": false
+    },
+    {
+      "actor": "agent",
+      "status": "interrupted",
       "open": false
     },
     {
@@ -573,7 +588,12 @@
     },
     {
       "actor": "agent",
-      "status": "cancel",
+      "status": "cancelled",
+      "open": false
+    },
+    {
+      "actor": "agent",
+      "status": "rolled_back",
       "open": false
     },
     {
