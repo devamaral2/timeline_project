@@ -1,12 +1,6 @@
 package app.braid.mobile.domain.project
 
-import java.text.Normalizer
-import java.util.Locale
-
-private val Marks = Regex("\\p{M}")
-
-/** Sem maiúsculas nem acentos: "Açaí" acha "acai". */
-private fun plain(text: String): String = Normalizer.normalize(text, Normalizer.Form.NFD).replace(Marks, "").lowercase(Locale("pt", "BR"))
+import app.braid.mobile.domain.task.plainText
 
 /**
  * Os projetos de [projects] (já na ordem da API: `personal` primeiro, os outros por nome) cujo nome tem o texto da
@@ -16,6 +10,6 @@ fun searchProjects(
     projects: List<Project>,
     query: String,
 ): List<Project> {
-    val needle = plain(query)
-    return if (needle.isEmpty()) projects else projects.filter { plain(it.name).contains(needle) }
+    val needle = plainText(query)
+    return if (needle.isEmpty()) projects else projects.filter { plainText(it.name).contains(needle) }
 }
