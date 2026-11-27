@@ -6,7 +6,7 @@ import { agentFilesRoutes, listAgentFiles, listAgentFileBackups, readAgentFileTe
 import { createArtifact, deleteArtifact, editArtifact, getArtifact, listArtifacts, artifactsRoutes } from "./artifacts";
 import { placesRoutes, searchPlaces } from "./places";
 import { createProject, listProjects, projectsRoutes } from "./projects";
-import { createTask, deleteTask, tasksRoutes, getTask, listAgenda, listTrackedTasks, suggestTags, updateTask } from "./tasks";
+import { createTask, deleteTask, tasksRoutes, getTask, listAgenda, listTrackedTasks, setTaskSituation, suggestTags, updateTask } from "./tasks";
 import { cancelRequest, getRequest, listRequests, getModelOptions, requestsRoutes, sendHermesMessage, sendModelMessage, startEditRequest, startRequest, startVoiceRequest } from "./requests";
 import { createRecurrence, deleteRecurrence, editRecurrence, getRecurrence, listRecurrences, recurrencesRoutes } from "./recurrences";
 
@@ -121,6 +121,7 @@ const cases: Case[] = [
     getTask: () => getTask("ID"),
     updateTask: () => updateTask("ID", anyBody()),
     deleteTask: () => deleteTask("ID"),
+    setTaskSituation: () => setTaskSituation("ID", "reviewed"),
     suggestTags: () => suggestTags("a"),
   }),
   ...casesOf("locais", placesRoutes, {

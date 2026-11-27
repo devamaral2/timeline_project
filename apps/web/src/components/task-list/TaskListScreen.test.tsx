@@ -295,6 +295,90 @@ test("o glifo de uma tarefa de agente não aparece como botão e não muda statu
   expect(api.calls.some((call) => call.method === "PATCH")).toBe(false);
 });
 
+const reviewable = [
+  taskFixture({ id: "voos", name: "Pesquisar voos", actor: "agent", kind: "request", status: "completed", situation: "to_review" }),
+  taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo" }),
+];
+
+/** O glifo da esquerda de uma tarefa de agente final: abre as três situações. */
+const situationButton = (name: string) => screen.findByRole("button", { name: new RegExp(`Mudar situação de “${name}”`) });
+
+async function openFinished(): Promise<HTMLElement> {
+  fireEvent.click(await screen.findByRole("button", { name: /Feitas/ }));
+  return within(screen.getByRole("region", { name: /Feitas/ })).getByRole("link", { name: /Pesquisar voos/ }).closest("li") as HTMLElement;
+}
+
+test("tocar no glifo de uma tarefa de agente final e escolher Revisada muda o glifo, grava e continua assim ao recarregar", async () => {
+  const api = serve(reviewable);
+  const { unmount } = render(<TaskListScreen userId="user-1" />);
+  await openFinished();
+
+  expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Para revisar. Mudar situação de “Pesquisar voos”");
+  fireEvent.click(await situationButton("Pesquisar voos"));
+  const menu = screen.getByRole("group", { name: "Situação da tarefa" });
+  expect(within(menu).getAllByRole("button").map((button) => button.textContent)).toEqual(["Para revisar", "Revisada", "Guardada"]);
+  fireEvent.click(within(menu).getByRole("button", { name: "Revisada" }));
+
+  expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Revisada. Mudar situação de “Pesquisar voos”");
+  expect(screen.queryByRole("group", { name: "Situação da tarefa" })).not.toBeInTheDocument();
+  await waitFor(() => expect(api.calls.filter((call) => call.method === "PUT")).toHaveLength(1));
+  expect(api.calls.find((call) => call.method === "PUT")).toMatchObject({ pathname: "/api/tasks/voos/situation", body: { situation: "reviewed" } });
+
+  unmount();
+  render(<TaskListScreen userId="user-1" />);
+  await openFinished();
+  expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Revisada. Mudar situação de “Pesquisar voos”");
+});
+
+test("a mudança aparece na hora, antes de a API responder", async () => {
+  const api = serve(reviewable);
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  net.authedFetch.mockImplementation(async (path: string, init?: RequestInit) => {
+    if (init?.method === "PUT") await held;
+    return api.authedFetch(path, init);
+  });
+  render(<TaskListScreen userId="user-1" />);
+  await openFinished();
+
+  fireEvent.click(await situationButton("Pesquisar voos"));
+  fireEvent.click(screen.getByRole("button", { name: "Guardada" }));
+
+  expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Guardada. Mudar situação de “Pesquisar voos”");
+  expect(api.calls.some((call) => call.method === "PUT")).toBe(false);
+  release();
+  await waitFor(() => expect(api.calls.some((call) => call.method === "PUT")).toBe(true));
+});
+
+test("com a API falhando, a mudança é desfeita e a tela avisa", async () => {
+  const api = serve(reviewable);
+  render(<TaskListScreen userId="user-1" />);
+  await openFinished();
+  api.failNext("PUT", "/api/tasks/voos/situation", 500);
+
+  fireEvent.click(await situationButton("Pesquisar voos"));
+  fireEvent.click(screen.getByRole("button", { name: "Revisada" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível mudar a situação");
+  expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Para revisar. Mudar situação de “Pesquisar voos”");
+});
+
+test("a tarefa de agente esperando você e a execução agendada têm ponto inerte, sem botão", async () => {
+  serve([
+    taskFixture({ id: "espera", name: "Aguardando resposta", actor: "agent", kind: "request", status: "waiting" }),
+    taskFixture({ id: "rotina", name: "Rotina da manhã", actor: "agent", kind: "cron", status: "completed" }),
+  ]);
+  render(<TaskListScreen userId="user-1" />);
+
+  const waiting = (await screen.findByRole("link", { name: /Aguardando resposta/ })).closest("li") as HTMLElement;
+  expect(within(waiting).queryByRole("button")).not.toBeInTheDocument();
+  expect(waiting.querySelector("[data-row-lead]")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Feitas/ }));
+  const cron = screen.getByRole("link", { name: /Rotina da manhã/ }).closest("li") as HTMLElement;
+  expect(within(cron).queryByRole("button")).not.toBeInTheDocument();
+  expect(cron.querySelector("[data-row-lead]")).toBeInTheDocument();
+});
+
 test("revisão desatualizada: a tela avisa, relê a lista e não grava nada", async () => {
   const api = serve([taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", revision: 1 })]);
   render(<TaskListScreen userId="user-1" />);

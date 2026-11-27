@@ -1,4 +1,4 @@
-import type { AgentTaskStatus } from "./sets";
+import type { Actor, AgentTaskStatus, Situation, TaskKind } from "./sets";
 
 /**
  * Os quatro grupos de status de agente. E aqui, e so aqui, que se decide se um pedido ou um passo
@@ -33,4 +33,23 @@ export function isFinalAgentStatus(status: string | null | undefined): boolean {
 
 export function isSuccessAgentStatus(status: string | null | undefined): boolean {
   return isIn(SUCCESS_AGENT_STATUSES, status);
+}
+
+/**
+ * A politica de revisao, num lugar so: a gravacao que fecha um pedido, em qualquer status final, deixa nele esta
+ * situacao. O check do banco vale so num sentido (uma tarefa final pode ficar sem situacao), para que mudar a
+ * politica depois nao peca migration.
+ */
+export const REVIEW_SITUATION_ON_CLOSE = "to_review" as const satisfies Situation;
+
+/** Os tipos de tarefa de agente que nunca tem situacao: o passo de um pedido e a execucao agendada. */
+export const KINDS_WITHOUT_SITUATION = ["step", "cron"] as const satisfies readonly TaskKind[];
+
+/** A tarefa aceita situacao: e um pedido de agente (nao passo nem execucao agendada) num status final. */
+export function acceptsSituation(task: { actor: Actor; kind: string; status: string | null | undefined }): boolean {
+  return (
+    task.actor === "agent" &&
+    !(KINDS_WITHOUT_SITUATION as readonly string[]).includes(task.kind) &&
+    isFinalAgentStatus(task.status)
+  );
 }

@@ -3,7 +3,9 @@ import {
   TaskNotFoundError,
   TaskOwnershipError,
   TaskRevisionConflictError,
+  acceptsSituation,
   type ArtifactWrites,
+  type Situation,
   type Task,
 } from "../../../domain/index";
 import type { InMemoryTaskDatabase } from "./in-memory-task-database";
@@ -37,6 +39,14 @@ export class InMemoryTaskRepository implements TaskRepository {
     if (!task) throw new TaskNotFoundError(`Task not found: ${taskId}`);
     if (task.userId !== actorUserId) throw new TaskOwnershipError();
     this.database.tasks = this.database.tasks.filter((storedTask) => storedTask.id !== taskId);
+  }
+
+  async setSituation(taskId: string, userId: string, situation: Situation): Promise<boolean> {
+    const index = this.database.tasks.findIndex((stored) => stored.id === taskId && stored.userId === userId);
+    const stored = this.database.tasks[index];
+    if (!stored || !acceptsSituation(stored)) return false;
+    this.database.tasks[index] = stored.withSituation(situation);
+    return true;
   }
 
   async findById(taskId: string): Promise<Task | null> {

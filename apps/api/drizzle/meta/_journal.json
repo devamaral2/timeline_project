@@ -78,6 +78,13 @@
       "when": 1795770253527,
       "tag": "0010_status_de_agente_proprios",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795772784187,
+      "tag": "0011_situacao_da_tarefa_de_agente",
+      "breakpoints": true
     }
   ]
 }

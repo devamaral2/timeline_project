@@ -1,5 +1,5 @@
 import type { ArtifactDataInput, CreateArtifactInput } from "../artifacts/artifact.input";
-import type { TaskArtifactRelation, TaskPriority, HumanTaskKind, HumanTaskStatus } from "./task-types";
+import type { TaskArtifactRelation, TaskPriority, TaskSituation, HumanTaskKind, HumanTaskStatus } from "./task-types";
 import type { NotificationOffsetMinutes } from "./notification-offset-minutes";
 
 /**
@@ -91,4 +91,9 @@ export interface UpdateTaskInput extends TaskFields {
 export interface CreateProjectInput {
   /** De 1 a 60 caracteres depois de tirar os espacos das pontas; unico por usuario, sem distinguir maiusculas. */
   name: string;
+}
+
+/** `PUT /api/tasks/:taskId/situation`: aceita qualquer um dos tres valores a partir de qualquer um. Responde com o cartao. */
+export interface SetTaskSituationInput {
+  situation: TaskSituation;
 }

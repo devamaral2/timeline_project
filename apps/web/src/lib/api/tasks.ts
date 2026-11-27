@@ -4,6 +4,7 @@ import type {
   TaskCardDto,
   TaskDto,
   TaskPriority,
+  TaskSituation,
   TaskStatus,
   TagSuggestionDto,
   UpdateTaskInput,
@@ -21,6 +22,7 @@ export const tasksRoutes = {
   getTask: "GET /api/tasks/{taskId}",
   updateTask: "PATCH /api/tasks/{taskId}",
   deleteTask: "DELETE /api/tasks/{taskId}",
+  setTaskSituation: "PUT /api/tasks/{taskId}/situation",
   suggestTags: "GET /api/tags",
 } as const;
 
@@ -95,6 +97,11 @@ export function updateTask(taskId: string, input: EditTaskInput): Promise<void> 
 
 export function deleteTask(taskId: string): Promise<void> {
   return apiRequest<void>("DELETE", `/api/tasks/${encodeURIComponent(taskId)}`);
+}
+
+/** O usuário decide o que fazer do pedido que terminou. Vale a última gravação; devolve o cartão atualizado. */
+export function setTaskSituation(taskId: string, situation: TaskSituation): Promise<TaskCardDto> {
+  return apiRequest<TaskCardDto>("PUT", `/api/tasks/${encodeURIComponent(taskId)}/situation`, { body: { situation } });
 }
 
 export function suggestTags(query: string, limit?: number): Promise<TagSuggestionDto[]> {

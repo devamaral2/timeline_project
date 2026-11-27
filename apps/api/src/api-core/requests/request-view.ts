@@ -62,6 +62,7 @@ export function toRequestDto(
     status: request.status,
     title: request.title,
     project: { ...request.project },
+    ...(request.situation ? { situation: request.situation } : {}),
     ...(request.sessionId ? { sessionId: request.sessionId } : {}),
     createdAt: request.createdAt.toISOString(),
     updatedAt: request.updatedAt.toISOString(),

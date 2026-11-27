@@ -1,6 +1,6 @@
 import type { ArtifactType } from "../artifacts/artifact.dto";
 import type { ProjectDto } from "../tasks/task.dto";
-import type { AgentTaskStatus, AgentRequestKind } from "../tasks/task-types";
+import type { AgentTaskStatus, AgentRequestKind, TaskSituation } from "../tasks/task-types";
 import type { AgentTraceDto } from "./agent-trace.dto";
 import type { ModelSelection } from "./model.dto";
 
@@ -72,6 +72,8 @@ export interface RequestDto {
   title: string;
   /** O projeto do pedido: todo pedido tem um. */
   project: ProjectDto;
+  /** Quando o pedido termina, o que o usuario decidiu dele; nasce `to_review`. Ausente enquanto esta aberto. */
+  situation?: TaskSituation;
   /** O primeiro pedido da sessao; ausente quando este e o primeiro. */
   sessionId?: string;
   createdAt: string;

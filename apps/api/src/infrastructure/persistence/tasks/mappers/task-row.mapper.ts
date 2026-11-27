@@ -19,6 +19,7 @@ export function mapTaskRow(row: TaskRow, parts: TaskRowParts = {}): Task {
     actor: row.actor,
     kind: row.kind,
     status: row.status ?? undefined,
+    situation: row.situation ?? undefined,
     priority: row.priority,
     name: row.name,
     description: row.description,
