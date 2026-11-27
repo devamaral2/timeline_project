@@ -31,6 +31,7 @@ import app.braid.mobile.domain.request.ModelOffException
 import app.braid.mobile.domain.request.ModelProvider
 import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.request.appendTranscript
+import app.braid.mobile.domain.request.endCode
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.domain.speech.GrantedMicrophone
@@ -41,7 +42,6 @@ import app.braid.mobile.domain.speech.SpeechError
 import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.speech.isStopSpeech
 import app.braid.mobile.domain.speech.speechErrorMessage
-import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.isOpenAgentStatus
 import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.time.AppClock
@@ -618,13 +618,7 @@ class ChatViewModel
             if (view.entities.isNotEmpty()) mutableEntitiesChanged.tryEmit(Unit)
             // O agente desligado: o servidor escreve o aviso, que diz mais que o texto do código.
             val notice = if (ChatAgent.of(view.route) != null && view.errorCode == "unavailable") view.message else null
-            val code =
-                when (view.status) {
-                    TaskStatus.Cancelled -> ChatFailureCode.Cancelled
-                    TaskStatus.Interrupted -> ChatFailureCode.Interrupted
-                    else -> ChatFailureCode.fromCode(view.errorCode)
-                }
-            fail(id, code, notice)
+            fail(id, ChatFailureCode.fromCode(endCode(view.status) ?: view.errorCode), notice)
         }
 
         /** [text] troca o texto do código pelo que o servidor escreveu (o aviso do agente desligado). */

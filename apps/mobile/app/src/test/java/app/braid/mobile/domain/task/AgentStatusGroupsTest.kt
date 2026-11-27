@@ -84,15 +84,15 @@ class AgentStatusGroupsTest {
     @Test
     fun `a person card is silenced by done and cancel and an agent card by any final status`() {
         for (actor in TaskActor.entries) {
-            assertFalse("$actor todo", silencesReminder(actor, TaskStatus.Todo))
-            assertFalse("$actor none", silencesReminder(actor, null))
-            assertFalse("$actor unknown", silencesReminder(actor, TaskStatus.Unknown))
+            assertFalse("$actor todo", endsReminders(actor, TaskStatus.Todo))
+            assertFalse("$actor none", endsReminders(actor, null))
+            assertFalse("$actor unknown", endsReminders(actor, TaskStatus.Unknown))
         }
-        assertTrue(silencesReminder(TaskActor.Human, TaskStatus.Done))
-        assertTrue(silencesReminder(TaskActor.Human, TaskStatus.Cancel))
-        assertFalse(silencesReminder(TaskActor.Human, TaskStatus.Missed))
+        assertTrue(endsReminders(TaskActor.Human, TaskStatus.Done))
+        assertTrue(endsReminders(TaskActor.Human, TaskStatus.Cancel))
+        assertFalse(endsReminders(TaskActor.Human, TaskStatus.Missed))
         for (status in TaskStatus.entries) {
-            assertEquals("agent $status", status in FINAL_AGENT_STATUSES, silencesReminder(TaskActor.Agent, status))
+            assertEquals("agent $status", status in FINAL_AGENT_STATUSES, endsReminders(TaskActor.Agent, status))
         }
     }
 
@@ -102,18 +102,18 @@ class AgentStatusGroupsTest {
         val agent = FINAL_AGENT_STATUSES
 
         for (status in TaskStatus.entries) {
-            assertEquals("human $status", status in human, isSubtaskClosed(TaskActor.Human, status))
-            assertEquals("agent $status", status in agent, isSubtaskClosed(TaskActor.Agent, status))
+            assertEquals("human $status", status in human, isClosedStatus(TaskActor.Human, status))
+            assertEquals("agent $status", status in agent, isClosedStatus(TaskActor.Agent, status))
         }
-        assertFalse(isSubtaskClosed(TaskActor.Human, null))
+        assertFalse(isClosedStatus(TaskActor.Human, null))
     }
 
     @Test
     fun `a subtask is done only by its success status`() {
         for (status in TaskStatus.entries) {
-            assertEquals("human $status", status == TaskStatus.Done, isSubtaskDone(TaskActor.Human, status))
-            assertEquals("agent $status", status == TaskStatus.Completed, isSubtaskDone(TaskActor.Agent, status))
+            assertEquals("human $status", status == TaskStatus.Done, countsAsDone(TaskActor.Human, status))
+            assertEquals("agent $status", status == TaskStatus.Completed, countsAsDone(TaskActor.Agent, status))
         }
-        for (actor in TaskActor.entries) assertFalse(isSubtaskDone(actor, null))
+        for (actor in TaskActor.entries) assertFalse(countsAsDone(actor, null))
     }
 }

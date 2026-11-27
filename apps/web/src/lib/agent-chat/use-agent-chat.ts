@@ -131,7 +131,6 @@ const ERROR_TEXTS: Record<ChatFailureCode, string> = {
   session_expired: "Sua sessão acabou. Entre de novo para continuar.",
 };
 
-/** O texto que o usuário lê para um código de falha. O detalhe de agente usa o mesmo, sem outra tradução. */
 /** O pedido que o usuario cancelou ou que o servidor interrompeu termina com o seu proprio aviso; os demais, com o codigo de erro. */
 export function endCode(status: AgentTaskStatus): "cancelled" | "interrupted" | undefined {
   if (isCancelledAgentStatus(status)) return "cancelled";
@@ -139,8 +138,20 @@ export function endCode(status: AgentTaskStatus): "cancelled" | "interrupted" | 
   return undefined;
 }
 
+/** O texto que o usuário lê para um código de falha. O detalhe de agente usa o mesmo, sem outra tradução. */
 export function agentFailureText(code: ChatFailureCode): string {
   return ERROR_TEXTS[code];
+}
+
+/** O aviso do pedido que terminou cancelado ou interrompido ("Pedido cancelado."); `undefined` para os demais status. */
+export function agentEndText(status: AgentTaskStatus): string | undefined {
+  const code = endCode(status);
+  return code ? agentFailureText(code) : undefined;
+}
+
+/** O mesmo aviso sem o ponto final, para a linha de estado ("Pedido cancelado"). */
+export function agentEndLabel(status: AgentTaskStatus): string | undefined {
+  return agentEndText(status)?.replace(/\.$/, "");
 }
 
 /**

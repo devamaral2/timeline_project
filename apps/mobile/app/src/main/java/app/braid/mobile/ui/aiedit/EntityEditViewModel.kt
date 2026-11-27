@@ -17,13 +17,13 @@ import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.RequestFollow
 import app.braid.mobile.domain.request.agentFailureText
 import app.braid.mobile.domain.request.appendTranscript
+import app.braid.mobile.domain.request.endCode
 import app.braid.mobile.domain.request.followRequest
 import app.braid.mobile.domain.request.runningStepLabel
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.domain.speech.MicrophonePermission
 import app.braid.mobile.domain.speech.SpeechRecognizer
-import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.ui.chat.VoiceUiState
@@ -215,13 +215,7 @@ class EntityEditViewModel
                 mutableState.update { it.copy(phase = EditPhase.Done) }
                 if (view.entities.isNotEmpty()) mutableEdited.tryEmit(Unit)
             } else {
-                val code =
-                    when (view.status) {
-                        TaskStatus.Cancelled -> "cancelled"
-                        TaskStatus.Interrupted -> "interrupted"
-                        else -> view.errorCode ?: "internal"
-                    }
-                fail(agentFailureText(code))
+                fail(agentFailureText(endCode(view.status) ?: view.errorCode))
             }
         }
 
