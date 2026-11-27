@@ -13,12 +13,16 @@ test("a medida vai da borda de cima da gaveta até o pé da janela, e é zero se
 const sourceRoot = join(__dirname, "..", "..");
 const css = (path: string) => readFileSync(join(sourceRoot, path), "utf8");
 
-/** As regras do pé da tela da lista, com a cauda do celular separada. */
-test.each([
-  ["a escolha de status", "components/tasks/task-glyphs.module.css", /\.statusPicker \{ --picker-bottom:[^}]*\}/g],
-  ["o aviso", "components/task-list/tasks.module.css", /\.toast \{[^}]*bottom:[^;]*;/g],
-])("%s sobe a altura que a gaveta de execução cobre, no desktop e no celular", (_name, path, rule) => {
-  const found = css(path).match(rule) ?? [];
-  expect(found).toHaveLength(2);
-  for (const declaration of found) expect(declaration).toContain("var(--execution-clearance, 0px)");
+/** O pé da tela do que fica fixo nele: uma propriedade só, com a medida da gaveta no desktop e no celular. */
+test("o afastamento do pé da tela sobe a altura que a gaveta de execução cobre, no desktop e no celular", () => {
+  const declarations = css("styles/globals.css").match(/--fixed-bottom-offset:[^;]*;/g) ?? [];
+  expect(declarations).toHaveLength(2);
+  for (const declaration of declarations) expect(declaration).toContain("var(--execution-clearance, 0px)");
+});
+
+test("a escolha de status da lista lê esse afastamento, sem repetir a medida", () => {
+  const picker = css("components/tasks/task-glyphs.module.css").match(/\.statusPicker \{ --picker-bottom:[^;]*;/g) ?? [];
+  expect(picker).toHaveLength(1);
+  expect(picker[0]).toContain("var(--fixed-bottom-offset)");
+  expect(css("components/tasks/task-glyphs.module.css")).not.toContain("--execution-clearance");
 });

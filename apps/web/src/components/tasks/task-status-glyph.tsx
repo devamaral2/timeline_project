@@ -1,9 +1,7 @@
 import type { AgentTaskStatus, TaskActor, HumanTaskStatus } from "@repo/contracts";
 import { AgentStatusIcon } from "./agent-status-icon";
-import { agentStatusAccessibleName, agentStatusNames } from "./agent-status-names";
+import { agentStatusAccessibleName } from "./agent-status-names";
 import styles from "./task-glyphs.module.css";
-
-export { agentStatusNames };
 
 type HumanStatusOrNone = HumanTaskStatus | null;
 
