@@ -18,6 +18,7 @@ import {
 } from "../../../apps/web/src/components/task-detail/task-artifact-draft";
 import { buildTaskPatch, draftFromTask, type TaskDraft } from "../../../apps/web/src/components/task-detail/task-draft";
 import { mealCaloriesKcal } from "../../../apps/web/src/lib/tasks/task-read-model";
+import { PERSONAL_PROJECT } from "./project";
 
 type Input = Record<string, unknown> & { id: string; name: string; type: string; data: unknown };
 
@@ -83,6 +84,7 @@ function task(input: Record<string, unknown> & { id: string; name: string }) {
     status: "todo",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],

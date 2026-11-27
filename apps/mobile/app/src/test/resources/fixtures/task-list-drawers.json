@@ -1,0 +1,2653 @@
+{
+  "now": "2026-09-14T15:00:00.000Z",
+  "rule": {
+    "cards": [
+      {
+        "id": "human-todo",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Pessoa todo",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-todo-long",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Pessoa todo, longa",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-toDefine",
+        "actor": "human",
+        "kind": "common",
+        "status": "toDefine",
+        "priority": "medium",
+        "name": "Pessoa toDefine",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-toDefine-long",
+        "actor": "human",
+        "kind": "common",
+        "status": "toDefine",
+        "priority": "medium",
+        "name": "Pessoa toDefine, longa",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-doing",
+        "actor": "human",
+        "kind": "common",
+        "status": "doing",
+        "priority": "medium",
+        "name": "Pessoa doing",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-doing-long",
+        "actor": "human",
+        "kind": "common",
+        "status": "doing",
+        "priority": "medium",
+        "name": "Pessoa doing, longa",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-inHold",
+        "actor": "human",
+        "kind": "common",
+        "status": "inHold",
+        "priority": "medium",
+        "name": "Pessoa inHold",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-inHold-long",
+        "actor": "human",
+        "kind": "common",
+        "status": "inHold",
+        "priority": "medium",
+        "name": "Pessoa inHold, longa",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-done",
+        "actor": "human",
+        "kind": "common",
+        "status": "done",
+        "priority": "medium",
+        "name": "Pessoa done",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-done-long",
+        "actor": "human",
+        "kind": "common",
+        "status": "done",
+        "priority": "medium",
+        "name": "Pessoa done, longa",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-cancel",
+        "actor": "human",
+        "kind": "common",
+        "status": "cancel",
+        "priority": "medium",
+        "name": "Pessoa cancel",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-cancel-long",
+        "actor": "human",
+        "kind": "common",
+        "status": "cancel",
+        "priority": "medium",
+        "name": "Pessoa cancel, longa",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-missed",
+        "actor": "human",
+        "kind": "common",
+        "status": "missed",
+        "priority": "medium",
+        "name": "Pessoa missed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "human-missed-long",
+        "actor": "human",
+        "kind": "common",
+        "status": "missed",
+        "priority": "medium",
+        "name": "Pessoa missed, longa",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-preparing",
+        "actor": "agent",
+        "kind": "request",
+        "status": "preparing",
+        "priority": "medium",
+        "name": "Agente preparing",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-queued",
+        "actor": "agent",
+        "kind": "request",
+        "status": "queued",
+        "priority": "medium",
+        "name": "Agente queued",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-starting",
+        "actor": "agent",
+        "kind": "request",
+        "status": "starting",
+        "priority": "medium",
+        "name": "Agente starting",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-running",
+        "actor": "agent",
+        "kind": "request",
+        "status": "running",
+        "priority": "medium",
+        "name": "Agente running",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-waiting",
+        "actor": "agent",
+        "kind": "request",
+        "status": "waiting",
+        "priority": "medium",
+        "name": "Agente waiting",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-awaiting_transcription",
+        "actor": "agent",
+        "kind": "request",
+        "status": "awaiting_transcription",
+        "priority": "medium",
+        "name": "Agente awaiting_transcription",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-completed",
+        "actor": "agent",
+        "kind": "request",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Agente completed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-completed-to_review",
+        "actor": "agent",
+        "kind": "request",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Agente completed, to_review",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "to_review",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-completed-bookmarked",
+        "actor": "agent",
+        "kind": "request",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Agente completed, bookmarked",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "bookmarked",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-completed-reviewed",
+        "actor": "agent",
+        "kind": "request",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Agente completed, reviewed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "reviewed",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-interrupted",
+        "actor": "agent",
+        "kind": "request",
+        "status": "interrupted",
+        "priority": "medium",
+        "name": "Agente interrupted",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-interrupted-to_review",
+        "actor": "agent",
+        "kind": "request",
+        "status": "interrupted",
+        "priority": "medium",
+        "name": "Agente interrupted, to_review",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "to_review",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-interrupted-bookmarked",
+        "actor": "agent",
+        "kind": "request",
+        "status": "interrupted",
+        "priority": "medium",
+        "name": "Agente interrupted, bookmarked",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "bookmarked",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-interrupted-reviewed",
+        "actor": "agent",
+        "kind": "request",
+        "status": "interrupted",
+        "priority": "medium",
+        "name": "Agente interrupted, reviewed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "reviewed",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-failed",
+        "actor": "agent",
+        "kind": "request",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Agente failed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-failed-to_review",
+        "actor": "agent",
+        "kind": "request",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Agente failed, to_review",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "to_review",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-failed-bookmarked",
+        "actor": "agent",
+        "kind": "request",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Agente failed, bookmarked",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "bookmarked",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-failed-reviewed",
+        "actor": "agent",
+        "kind": "request",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Agente failed, reviewed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "reviewed",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-cancelled",
+        "actor": "agent",
+        "kind": "request",
+        "status": "cancelled",
+        "priority": "medium",
+        "name": "Agente cancelled",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-cancelled-to_review",
+        "actor": "agent",
+        "kind": "request",
+        "status": "cancelled",
+        "priority": "medium",
+        "name": "Agente cancelled, to_review",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "to_review",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-cancelled-bookmarked",
+        "actor": "agent",
+        "kind": "request",
+        "status": "cancelled",
+        "priority": "medium",
+        "name": "Agente cancelled, bookmarked",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "bookmarked",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-cancelled-reviewed",
+        "actor": "agent",
+        "kind": "request",
+        "status": "cancelled",
+        "priority": "medium",
+        "name": "Agente cancelled, reviewed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "reviewed",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-rolled_back",
+        "actor": "agent",
+        "kind": "request",
+        "status": "rolled_back",
+        "priority": "medium",
+        "name": "Agente rolled_back",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-rolled_back-to_review",
+        "actor": "agent",
+        "kind": "request",
+        "status": "rolled_back",
+        "priority": "medium",
+        "name": "Agente rolled_back, to_review",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "to_review",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-rolled_back-bookmarked",
+        "actor": "agent",
+        "kind": "request",
+        "status": "rolled_back",
+        "priority": "medium",
+        "name": "Agente rolled_back, bookmarked",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "bookmarked",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "agent-rolled_back-reviewed",
+        "actor": "agent",
+        "kind": "request",
+        "status": "rolled_back",
+        "priority": "medium",
+        "name": "Agente rolled_back, reviewed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "reviewed",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-preparing",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "preparing",
+        "priority": "medium",
+        "name": "Agendada preparing",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-queued",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "queued",
+        "priority": "medium",
+        "name": "Agendada queued",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-starting",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "starting",
+        "priority": "medium",
+        "name": "Agendada starting",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-running",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "running",
+        "priority": "medium",
+        "name": "Agendada running",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-waiting",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "waiting",
+        "priority": "medium",
+        "name": "Agendada waiting",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-awaiting_transcription",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "awaiting_transcription",
+        "priority": "medium",
+        "name": "Agendada awaiting_transcription",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-completed",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Agendada completed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-interrupted",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "interrupted",
+        "priority": "medium",
+        "name": "Agendada interrupted",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-failed",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Agendada failed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-cancelled",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "cancelled",
+        "priority": "medium",
+        "name": "Agendada cancelled",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "cron-rolled_back",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "rolled_back",
+        "priority": "medium",
+        "name": "Agendada rolled_back",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-preparing",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "preparing",
+        "priority": "medium",
+        "name": "Guardado preparing",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-queued",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "queued",
+        "priority": "medium",
+        "name": "Guardado queued",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-starting",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "starting",
+        "priority": "medium",
+        "name": "Guardado starting",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-running",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "running",
+        "priority": "medium",
+        "name": "Guardado running",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-waiting",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "waiting",
+        "priority": "medium",
+        "name": "Guardado waiting",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-awaiting_transcription",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "awaiting_transcription",
+        "priority": "medium",
+        "name": "Guardado awaiting_transcription",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-completed",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Guardado completed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-interrupted",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "interrupted",
+        "priority": "medium",
+        "name": "Guardado interrupted",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-failed",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Guardado failed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-cancelled",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "cancelled",
+        "priority": "medium",
+        "name": "Guardado cancelled",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "saved-rolled_back",
+        "actor": "agent",
+        "kind": "save_content",
+        "status": "rolled_back",
+        "priority": "medium",
+        "name": "Guardado rolled_back",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-preparing",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "preparing",
+        "priority": "medium",
+        "name": "Vídeo preparing",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-queued",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "queued",
+        "priority": "medium",
+        "name": "Vídeo queued",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-starting",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "starting",
+        "priority": "medium",
+        "name": "Vídeo starting",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-running",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "running",
+        "priority": "medium",
+        "name": "Vídeo running",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-waiting",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "waiting",
+        "priority": "medium",
+        "name": "Vídeo waiting",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-awaiting_transcription",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "awaiting_transcription",
+        "priority": "medium",
+        "name": "Vídeo awaiting_transcription",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-completed",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Vídeo completed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-interrupted",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "interrupted",
+        "priority": "medium",
+        "name": "Vídeo interrupted",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-failed",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Vídeo failed",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-cancelled",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "cancelled",
+        "priority": "medium",
+        "name": "Vídeo cancelled",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "video-rolled_back",
+        "actor": "agent",
+        "kind": "save_content_with_transcription",
+        "status": "rolled_back",
+        "priority": "medium",
+        "name": "Vídeo rolled_back",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "reference",
+        "actor": "human",
+        "kind": "common",
+        "priority": "medium",
+        "name": "Referência sem status",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      }
+    ],
+    "drawers": [
+      {
+        "id": "human-todo",
+        "drawer": "now"
+      },
+      {
+        "id": "human-todo-long",
+        "drawer": "continuous"
+      },
+      {
+        "id": "human-toDefine",
+        "drawer": "later"
+      },
+      {
+        "id": "human-toDefine-long",
+        "drawer": "continuous"
+      },
+      {
+        "id": "human-doing",
+        "drawer": "now"
+      },
+      {
+        "id": "human-doing-long",
+        "drawer": "continuous"
+      },
+      {
+        "id": "human-inHold",
+        "drawer": "later"
+      },
+      {
+        "id": "human-inHold-long",
+        "drawer": "continuous"
+      },
+      {
+        "id": "human-done",
+        "drawer": "ended"
+      },
+      {
+        "id": "human-done-long",
+        "drawer": "ended"
+      },
+      {
+        "id": "human-cancel",
+        "drawer": "ended"
+      },
+      {
+        "id": "human-cancel-long",
+        "drawer": "ended"
+      },
+      {
+        "id": "human-missed",
+        "drawer": "ended"
+      },
+      {
+        "id": "human-missed-long",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-preparing",
+        "drawer": "execution"
+      },
+      {
+        "id": "agent-queued",
+        "drawer": "execution"
+      },
+      {
+        "id": "agent-starting",
+        "drawer": "execution"
+      },
+      {
+        "id": "agent-running",
+        "drawer": "execution"
+      },
+      {
+        "id": "agent-waiting",
+        "drawer": "now"
+      },
+      {
+        "id": "agent-awaiting_transcription",
+        "drawer": "execution"
+      },
+      {
+        "id": "agent-completed",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-completed-to_review",
+        "drawer": "now"
+      },
+      {
+        "id": "agent-completed-bookmarked",
+        "drawer": "later"
+      },
+      {
+        "id": "agent-completed-reviewed",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-interrupted",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-interrupted-to_review",
+        "drawer": "now"
+      },
+      {
+        "id": "agent-interrupted-bookmarked",
+        "drawer": "later"
+      },
+      {
+        "id": "agent-interrupted-reviewed",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-failed",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-failed-to_review",
+        "drawer": "now"
+      },
+      {
+        "id": "agent-failed-bookmarked",
+        "drawer": "later"
+      },
+      {
+        "id": "agent-failed-reviewed",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-cancelled",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-cancelled-to_review",
+        "drawer": "now"
+      },
+      {
+        "id": "agent-cancelled-bookmarked",
+        "drawer": "later"
+      },
+      {
+        "id": "agent-cancelled-reviewed",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-rolled_back",
+        "drawer": "ended"
+      },
+      {
+        "id": "agent-rolled_back-to_review",
+        "drawer": "now"
+      },
+      {
+        "id": "agent-rolled_back-bookmarked",
+        "drawer": "later"
+      },
+      {
+        "id": "agent-rolled_back-reviewed",
+        "drawer": "ended"
+      },
+      {
+        "id": "cron-preparing",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-queued",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-starting",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-running",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-waiting",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-awaiting_transcription",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-completed",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-interrupted",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-failed",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-cancelled",
+        "drawer": "continuous"
+      },
+      {
+        "id": "cron-rolled_back",
+        "drawer": "continuous"
+      },
+      {
+        "id": "saved-preparing",
+        "drawer": "execution"
+      },
+      {
+        "id": "saved-queued",
+        "drawer": "execution"
+      },
+      {
+        "id": "saved-starting",
+        "drawer": "execution"
+      },
+      {
+        "id": "saved-running",
+        "drawer": "execution"
+      },
+      {
+        "id": "saved-waiting",
+        "drawer": "now"
+      },
+      {
+        "id": "saved-awaiting_transcription",
+        "drawer": "execution"
+      },
+      {
+        "id": "saved-completed",
+        "drawer": "ended"
+      },
+      {
+        "id": "saved-interrupted",
+        "drawer": "ended"
+      },
+      {
+        "id": "saved-failed",
+        "drawer": "ended"
+      },
+      {
+        "id": "saved-cancelled",
+        "drawer": "ended"
+      },
+      {
+        "id": "saved-rolled_back",
+        "drawer": "ended"
+      },
+      {
+        "id": "video-preparing",
+        "drawer": "execution"
+      },
+      {
+        "id": "video-queued",
+        "drawer": "execution"
+      },
+      {
+        "id": "video-starting",
+        "drawer": "execution"
+      },
+      {
+        "id": "video-running",
+        "drawer": "execution"
+      },
+      {
+        "id": "video-waiting",
+        "drawer": "now"
+      },
+      {
+        "id": "video-awaiting_transcription",
+        "drawer": "execution"
+      },
+      {
+        "id": "video-completed",
+        "drawer": "ended"
+      },
+      {
+        "id": "video-interrupted",
+        "drawer": "ended"
+      },
+      {
+        "id": "video-failed",
+        "drawer": "ended"
+      },
+      {
+        "id": "video-cancelled",
+        "drawer": "ended"
+      },
+      {
+        "id": "video-rolled_back",
+        "drawer": "ended"
+      },
+      {
+        "id": "reference",
+        "drawer": null
+      }
+    ]
+  },
+  "pipeline": {
+    "cards": [
+      {
+        "id": "ag-review",
+        "actor": "agent",
+        "kind": "request",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Resumo para revisar",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "to_review",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "pe-todo",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Reunião",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "startedAt": "2026-09-14T12:00:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "ag-waiting",
+        "actor": "agent",
+        "kind": "inquiry_request",
+        "status": "waiting",
+        "priority": "medium",
+        "name": "Qual hotel?",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "ag-cron",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Backup da noite",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "pe-long",
+        "actor": "human",
+        "kind": "common",
+        "status": "doing",
+        "priority": "medium",
+        "name": "Projeto longo",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": true,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "ag-run",
+        "actor": "agent",
+        "kind": "search_request",
+        "status": "running",
+        "priority": "medium",
+        "name": "Buscar passagens",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "startedAt": "2026-09-14T14:48:00.000Z",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "pe-child-of-run",
+        "actor": "human",
+        "kind": "common",
+        "status": "todo",
+        "priority": "medium",
+        "name": "Conferir datas",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "parentTaskId": "ag-run",
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "ag-queued",
+        "actor": "agent",
+        "kind": "build_request",
+        "status": "queued",
+        "priority": "medium",
+        "name": "Montar relatório",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "pe-hold",
+        "actor": "human",
+        "kind": "common",
+        "status": "inHold",
+        "priority": "medium",
+        "name": "Esperando o banco",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "ag-bookmark",
+        "actor": "agent",
+        "kind": "request",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Resumo guardado",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "bookmarked",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "pe-trip",
+        "actor": "human",
+        "kind": "common",
+        "status": "doing",
+        "priority": "medium",
+        "name": "Planejar viagem",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "pe-trip-done",
+        "actor": "human",
+        "kind": "common",
+        "status": "done",
+        "priority": "medium",
+        "name": "Reservar hotel",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "parentTaskId": "pe-trip",
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "pe-done",
+        "actor": "human",
+        "kind": "meal",
+        "status": "done",
+        "priority": "medium",
+        "name": "Almoço",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "ag-reviewed",
+        "actor": "agent",
+        "kind": "request",
+        "status": "completed",
+        "priority": "medium",
+        "name": "Resumo revisado",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "situation": "reviewed",
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "ag-failed",
+        "actor": "agent",
+        "kind": "request",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Pedido que falhou",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      },
+      {
+        "id": "pe-cancel",
+        "actor": "human",
+        "kind": "common",
+        "status": "cancel",
+        "priority": "medium",
+        "name": "Trocar o plano",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      }
+    ],
+    "rowIds": [
+      "ag-review",
+      "pe-todo",
+      "ag-waiting",
+      "ag-cron",
+      "pe-long",
+      "pe-child-of-run",
+      "pe-hold",
+      "ag-bookmark",
+      "pe-trip",
+      "pe-trip-done",
+      "pe-done",
+      "ag-reviewed",
+      "ag-failed",
+      "pe-cancel"
+    ],
+    "roots": [
+      "ag-review",
+      "pe-todo",
+      "ag-waiting",
+      "ag-cron",
+      "pe-long",
+      "pe-child-of-run",
+      "pe-hold",
+      "ag-bookmark",
+      "pe-trip",
+      "pe-done",
+      "ag-reviewed",
+      "ag-failed",
+      "pe-cancel"
+    ],
+    "subtasks": {
+      "ag-review": [],
+      "pe-todo": [],
+      "ag-waiting": [],
+      "ag-cron": [],
+      "pe-long": [],
+      "pe-child-of-run": [],
+      "pe-hold": [],
+      "ag-bookmark": [],
+      "pe-trip": [
+        "pe-trip-done"
+      ],
+      "pe-trip-done": [],
+      "pe-done": [],
+      "ag-reviewed": [],
+      "ag-failed": [],
+      "pe-cancel": []
+    },
+    "drawers": [
+      {
+        "key": "now",
+        "title": "Para agora",
+        "collapsedByDefault": false,
+        "ids": [
+          "pe-todo",
+          "pe-child-of-run",
+          "pe-trip",
+          "ag-review",
+          "ag-waiting"
+        ]
+      },
+      {
+        "key": "continuous",
+        "title": "Contínuas",
+        "collapsedByDefault": false,
+        "ids": [
+          "pe-long",
+          "ag-cron"
+        ]
+      },
+      {
+        "key": "later",
+        "title": "Para depois",
+        "collapsedByDefault": true,
+        "ids": [
+          "pe-hold",
+          "ag-bookmark"
+        ]
+      },
+      {
+        "key": "ended",
+        "title": "Finalizadas",
+        "collapsedByDefault": true,
+        "ids": [
+          "pe-done",
+          "pe-cancel",
+          "ag-reviewed",
+          "ag-failed"
+        ]
+      }
+    ],
+    "toNow": 5,
+    "summary": "5 tarefas para agora"
+  },
+  "empty": {
+    "cards": [
+      {
+        "id": "ag-cron",
+        "actor": "agent",
+        "kind": "cron",
+        "status": "failed",
+        "priority": "medium",
+        "name": "Backup da noite",
+        "description": "",
+        "project": {
+          "id": "project-personal",
+          "name": "personal",
+          "personal": true
+        },
+        "longRunning": false,
+        "notifyOffsetsMinutes": [],
+        "tags": [],
+        "artifactTypes": [],
+        "revision": 1,
+        "createdAt": "2026-09-01T12:00:00.000Z",
+        "updatedAt": "2026-09-01T12:00:00.000Z"
+      }
+    ],
+    "rowIds": [
+      "ag-cron"
+    ],
+    "roots": [
+      "ag-cron"
+    ],
+    "subtasks": {
+      "ag-cron": []
+    },
+    "drawers": [
+      {
+        "key": "continuous",
+        "title": "Contínuas",
+        "collapsedByDefault": false,
+        "ids": [
+          "ag-cron"
+        ]
+      }
+    ],
+    "toNow": 0,
+    "summary": "Nenhuma tarefa para agora"
+  },
+  "situationChanges": [
+    {
+      "situation": "to_review",
+      "rowIds": [
+        "ag-review",
+        "pe-todo",
+        "ag-waiting",
+        "ag-cron",
+        "pe-long",
+        "pe-child-of-run",
+        "pe-hold",
+        "ag-bookmark",
+        "pe-trip",
+        "pe-trip-done",
+        "pe-done",
+        "ag-reviewed",
+        "ag-failed",
+        "pe-cancel"
+      ],
+      "roots": [
+        "ag-review",
+        "pe-todo",
+        "ag-waiting",
+        "ag-cron",
+        "pe-long",
+        "pe-child-of-run",
+        "pe-hold",
+        "ag-bookmark",
+        "pe-trip",
+        "pe-done",
+        "ag-reviewed",
+        "ag-failed",
+        "pe-cancel"
+      ],
+      "subtasks": {
+        "ag-review": [],
+        "pe-todo": [],
+        "ag-waiting": [],
+        "ag-cron": [],
+        "pe-long": [],
+        "pe-child-of-run": [],
+        "pe-hold": [],
+        "ag-bookmark": [],
+        "pe-trip": [
+          "pe-trip-done"
+        ],
+        "pe-trip-done": [],
+        "pe-done": [],
+        "ag-reviewed": [],
+        "ag-failed": [],
+        "pe-cancel": []
+      },
+      "drawers": [
+        {
+          "key": "now",
+          "title": "Para agora",
+          "collapsedByDefault": false,
+          "ids": [
+            "pe-todo",
+            "pe-child-of-run",
+            "pe-trip",
+            "ag-review",
+            "ag-waiting"
+          ]
+        },
+        {
+          "key": "continuous",
+          "title": "Contínuas",
+          "collapsedByDefault": false,
+          "ids": [
+            "pe-long",
+            "ag-cron"
+          ]
+        },
+        {
+          "key": "later",
+          "title": "Para depois",
+          "collapsedByDefault": true,
+          "ids": [
+            "pe-hold",
+            "ag-bookmark"
+          ]
+        },
+        {
+          "key": "ended",
+          "title": "Finalizadas",
+          "collapsedByDefault": true,
+          "ids": [
+            "pe-done",
+            "pe-cancel",
+            "ag-reviewed",
+            "ag-failed"
+          ]
+        }
+      ],
+      "toNow": 5,
+      "summary": "5 tarefas para agora"
+    },
+    {
+      "situation": "bookmarked",
+      "rowIds": [
+        "ag-review",
+        "pe-todo",
+        "ag-waiting",
+        "ag-cron",
+        "pe-long",
+        "pe-child-of-run",
+        "pe-hold",
+        "ag-bookmark",
+        "pe-trip",
+        "pe-trip-done",
+        "pe-done",
+        "ag-reviewed",
+        "ag-failed",
+        "pe-cancel"
+      ],
+      "roots": [
+        "ag-review",
+        "pe-todo",
+        "ag-waiting",
+        "ag-cron",
+        "pe-long",
+        "pe-child-of-run",
+        "pe-hold",
+        "ag-bookmark",
+        "pe-trip",
+        "pe-done",
+        "ag-reviewed",
+        "ag-failed",
+        "pe-cancel"
+      ],
+      "subtasks": {
+        "ag-review": [],
+        "pe-todo": [],
+        "ag-waiting": [],
+        "ag-cron": [],
+        "pe-long": [],
+        "pe-child-of-run": [],
+        "pe-hold": [],
+        "ag-bookmark": [],
+        "pe-trip": [
+          "pe-trip-done"
+        ],
+        "pe-trip-done": [],
+        "pe-done": [],
+        "ag-reviewed": [],
+        "ag-failed": [],
+        "pe-cancel": []
+      },
+      "drawers": [
+        {
+          "key": "now",
+          "title": "Para agora",
+          "collapsedByDefault": false,
+          "ids": [
+            "pe-todo",
+            "pe-child-of-run",
+            "pe-trip",
+            "ag-waiting"
+          ]
+        },
+        {
+          "key": "continuous",
+          "title": "Contínuas",
+          "collapsedByDefault": false,
+          "ids": [
+            "pe-long",
+            "ag-cron"
+          ]
+        },
+        {
+          "key": "later",
+          "title": "Para depois",
+          "collapsedByDefault": true,
+          "ids": [
+            "pe-hold",
+            "ag-review",
+            "ag-bookmark"
+          ]
+        },
+        {
+          "key": "ended",
+          "title": "Finalizadas",
+          "collapsedByDefault": true,
+          "ids": [
+            "pe-done",
+            "pe-cancel",
+            "ag-reviewed",
+            "ag-failed"
+          ]
+        }
+      ],
+      "toNow": 4,
+      "summary": "4 tarefas para agora"
+    },
+    {
+      "situation": "reviewed",
+      "rowIds": [
+        "ag-review",
+        "pe-todo",
+        "ag-waiting",
+        "ag-cron",
+        "pe-long",
+        "pe-child-of-run",
+        "pe-hold",
+        "ag-bookmark",
+        "pe-trip",
+        "pe-trip-done",
+        "pe-done",
+        "ag-reviewed",
+        "ag-failed",
+        "pe-cancel"
+      ],
+      "roots": [
+        "ag-review",
+        "pe-todo",
+        "ag-waiting",
+        "ag-cron",
+        "pe-long",
+        "pe-child-of-run",
+        "pe-hold",
+        "ag-bookmark",
+        "pe-trip",
+        "pe-done",
+        "ag-reviewed",
+        "ag-failed",
+        "pe-cancel"
+      ],
+      "subtasks": {
+        "ag-review": [],
+        "pe-todo": [],
+        "ag-waiting": [],
+        "ag-cron": [],
+        "pe-long": [],
+        "pe-child-of-run": [],
+        "pe-hold": [],
+        "ag-bookmark": [],
+        "pe-trip": [
+          "pe-trip-done"
+        ],
+        "pe-trip-done": [],
+        "pe-done": [],
+        "ag-reviewed": [],
+        "ag-failed": [],
+        "pe-cancel": []
+      },
+      "drawers": [
+        {
+          "key": "now",
+          "title": "Para agora",
+          "collapsedByDefault": false,
+          "ids": [
+            "pe-todo",
+            "pe-child-of-run",
+            "pe-trip",
+            "ag-waiting"
+          ]
+        },
+        {
+          "key": "continuous",
+          "title": "Contínuas",
+          "collapsedByDefault": false,
+          "ids": [
+            "pe-long",
+            "ag-cron"
+          ]
+        },
+        {
+          "key": "later",
+          "title": "Para depois",
+          "collapsedByDefault": true,
+          "ids": [
+            "pe-hold",
+            "ag-bookmark"
+          ]
+        },
+        {
+          "key": "ended",
+          "title": "Finalizadas",
+          "collapsedByDefault": true,
+          "ids": [
+            "pe-done",
+            "pe-cancel",
+            "ag-review",
+            "ag-reviewed",
+            "ag-failed"
+          ]
+        }
+      ],
+      "toNow": 4,
+      "summary": "4 tarefas para agora"
+    }
+  ]
+}

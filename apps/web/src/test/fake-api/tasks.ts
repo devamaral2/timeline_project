@@ -1,7 +1,9 @@
-import type { CreateTaskInput, TaskCardDto, TaskDto } from "@repo/contracts";
+import { isFinalAgentStatus } from "@repo/contracts";
+import type { AgentTaskStatus, CreateTaskInput, RequestDto, TaskCardDto, TaskDto, TaskSituation } from "@repo/contracts";
 import {
   agendaPageSchema,
   createTaskInputSchema,
+  setTaskSituationInputSchema,
   taskCardSchema,
   taskSchema,
   placeSuggestionSchema,
@@ -11,15 +13,16 @@ import {
 import { z } from "zod";
 import { isAgendaCard } from "@/components/agenda/agenda-data";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
+import { FAKE_PERSONAL_PROJECT, fakeProjectById } from "./projects";
 import { type ArtifactLink, type TaskArtifactEntry, artifactsOfTask, relinkTaskArtifacts } from "./artifacts";
 
 /** Área de tarefas: agenda, lista acompanhada, tarefa, hierarquia (tarefa principal e subtarefas) e tags. */
 
 const TASKS = "tasks";
 const CARD_KEYS = [
-  "id", "actor", "kind", "status", "priority", "name", "description", "location", "startedAt", "estimatedFinishAt",
+  "id", "actor", "kind", "status", "situation", "priority", "name", "description", "project", "location", "startedAt", "estimatedFinishAt",
   "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "parentTaskId",
-  "recurrence", "revision", "createdAt", "updatedAt",
+  "recurrence", "revision", "createdAt", "updatedAt", "model",
 ] as const;
 /**
  * Campos que a edição aceita e que o fake aplica; `artifacts` não está aqui porque os vínculos vivem no artefato, e
@@ -44,6 +47,7 @@ export function taskFixture(overrides: Partial<TaskDto> & { id: string }): TaskD
     priority: "medium",
     name: "Tarefa",
     description: "",
+    project: FAKE_PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
@@ -151,6 +155,9 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
   // A hierarquia que a API recusa (ponta que não existe, ciclo) é recusada antes de criar qualquer coisa.
   const plan = planHierarchy(store, NEW_TASK, [], { parentTaskId: input.parentTaskId, subtaskIds: input.subtaskIds });
   if ("status" in plan) return plan;
+  // O projeto escolhido tem de existir (e ser do usuário: a API falsa só tem um usuário); sem escolha, é o `personal`.
+  const project = input.projectId === undefined ? FAKE_PERSONAL_PROJECT : fakeProjectById(store, input.projectId);
+  if (!project) return { status: 404 };
   // O contador não sabe das tarefas semeadas: pula os ids já usados, para a nova não sobrescrever uma delas.
   let id = store.nextId("ev");
   while (table(store).has(id)) id = store.nextId("ev");
@@ -162,6 +169,7 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
     priority: input.priority ?? "medium",
     name: input.name ?? "",
     description: input.description ?? "",
+    project,
     // So o local informado entra na tarefa.
     ...(input.location?.trim() ? { location: input.location.trim() } : {}),
     startedAt: input.startedAt,
@@ -212,7 +220,12 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
     if (!relinkTaskArtifacts(store, task.id, entries as TaskArtifactEntry[])) return { status: 404 };
   }
 
-  const next: Record<string, unknown> = { ...task };
+  // Ausente não muda o projeto; `null` devolve a tarefa a `personal`; um id precisa existir.
+  const projectId = input.projectId as string | null | undefined;
+  const project = projectId === undefined ? task.project : projectId === null ? FAKE_PERSONAL_PROJECT : fakeProjectById(store, projectId);
+  if (!project) return { status: 404 };
+
+  const next: Record<string, unknown> = { ...task, project };
   for (const key of EDITABLE_KEYS) {
     if (!(key in input)) continue;
     const value = input[key];
@@ -298,6 +311,23 @@ function remove(request: FakeRequest, store: FakeStore): FakeResult {
   return { status: 204 };
 }
 
+/** A API aceita só o pedido de agente que terminou: pessoa, passo, execução agendada e tarefa aberta dão 409. */
+function setSituation(request: FakeRequest, store: FakeStore): FakeResult {
+  const task = table(store).get(request.params.taskId ?? "");
+  if (!task) return { status: 404 };
+  const accepts = task.actor === "agent" && task.kind !== "step" && task.kind !== "cron"
+    && task.status !== undefined && isFinalAgentStatus(task.status as AgentTaskStatus);
+  if (!accepts) return { status: 409 };
+  const { situation } = request.body as { situation: TaskSituation };
+  const next = taskSchema.parse({ ...task, situation, revision: task.revision + 1, updatedAt: new Date().toISOString() });
+  table(store).set(task.id, next);
+  // O pedido tem o mesmo id da tarefa: a leitura dele traz a mesma situação.
+  const requests = store.table<RequestDto>("requests");
+  const stored = requests.get(task.id);
+  if (stored) requests.set(task.id, { ...stored, situation });
+  return { status: 200, body: toCard(next) };
+}
+
 function suggestTags(request: FakeRequest, store: FakeStore): FakeResult {
   const prefix = (request.query.get("query") ?? "").toLocaleLowerCase("pt-BR");
   const limit = Math.min(Number(request.query.get("limit") ?? 10), 100);
@@ -332,6 +362,7 @@ export const tasksArea: FakeArea = {
     { method: "POST", path: "/api/tasks", input: createTaskInputSchema, output: createdTaskSchema, idempotent: true, handle: create },
     { method: "GET", path: "/api/tasks/:taskId", output: taskSchema, handle: read },
     { method: "PATCH", path: "/api/tasks/:taskId", input: updateTaskInputSchema.omit({ taskId: true }), handle: update },
+    { method: "PUT", path: "/api/tasks/:taskId/situation", input: setTaskSituationInputSchema, output: taskCardSchema, handle: setSituation },
     { method: "DELETE", path: "/api/tasks/:taskId", handle: remove },
     { method: "GET", path: "/api/tags", output: z.array(tagSuggestionSchema), handle: suggestTags },
     { method: "GET", path: "/api/places", output: z.array(placeSuggestionSchema), handle: searchPlaces },

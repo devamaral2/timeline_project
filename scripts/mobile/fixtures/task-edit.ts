@@ -28,6 +28,7 @@ import {
   reminderMinutes,
   type ReminderUnit,
 } from "../../../apps/web/src/components/task-detail/task-reminders-tags";
+import { AGENT_SKILLS_PROJECT, PERSONAL_PROJECT, TIMELINE_PROJECT } from "./project";
 
 type TaskInput = Record<string, unknown> & { id: string; name: string };
 
@@ -37,6 +38,7 @@ function task(input: TaskInput) {
     kind: "common",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
@@ -105,7 +107,13 @@ const occurrence = task({
   revision: 6,
 });
 
-const tasks = { full, reference, long, done, bare, occurrence };
+/** Uma tarefa que já está num projeto que não é o `personal`. */
+const inProject = task({ id: "task-p", name: "Revisar o contrato", status: "todo", project: TIMELINE_PROJECT, startedAt: "2026-09-14T21:30:00.000Z", revision: 2 });
+
+/** A ocorrência da série `rec-1` quando a série mora no projeto `timeline_project` (`weeklyInProject` de `recurrence.ts`). */
+const occurrenceInProject = task({ ...occurrence, id: "task-occ-p", project: TIMELINE_PROJECT });
+
+const tasks = { full, reference, long, done, bare, occurrence, inProject, occurrenceInProject };
 
 function edit(base: ReturnType<typeof task>, changes: Partial<TaskDraft>): TaskDraft {
   return { ...draftFromTask(base), ...changes };
@@ -134,6 +142,11 @@ const patchCases = [
   { name: "reminders cleared", task: full, draft: edit(full, { reminders: [] }) },
   { name: "tags", task: full, draft: edit(full, { tags: ["casa", "trabalho"] }) },
   { name: "tags same", task: full, draft: edit(full, { tags: ["trabalho", "saúde"] }) },
+  { name: "project chosen", task: full, draft: edit(full, { project: TIMELINE_PROJECT }) },
+  { name: "project same as the task", task: inProject, draft: edit(inProject, { project: { ...TIMELINE_PROJECT } }) },
+  { name: "project swapped", task: inProject, draft: edit(inProject, { project: AGENT_SKILLS_PROJECT }) },
+  { name: "project back to personal", task: inProject, draft: edit(inProject, { project: PERSONAL_PROJECT }) },
+  { name: "project and name", task: full, draft: edit(full, { name: "Reunião de revisão", project: AGENT_SKILLS_PROJECT }) },
   { name: "persistent on", task: full, draft: edit(full, { longRunning: true }) },
   { name: "persistent off", task: long, draft: edit(long, { longRunning: false }) },
   {
@@ -180,6 +193,8 @@ const createDrafts: { name: string; draft: TaskDraft }[] = [
       tags: ["trabalho", "casa"],
     },
   },
+  { name: "project chosen", draft: { ...emptyTaskDraft("No projeto"), project: TIMELINE_PROJECT } },
+  { name: "personal chosen leaves the project out", draft: { ...emptyTaskDraft("Em personal"), project: PERSONAL_PROJECT } },
   { name: "done", draft: { ...emptyTaskDraft("Já fiz"), status: "done" } },
   { name: "day only", draft: { ...emptyTaskDraft("Dia inteiro"), status: "toDefine", startDate: "2026-09-21", endDate: "2026-09-22" } },
   { name: "blank location", draft: { ...emptyTaskDraft("Sem local"), location: "   " } },
@@ -226,6 +241,13 @@ const rebaseCases = [
     next: edited,
     draft: edit(full, { priority: "high", description: "Pauta do trimestre." }),
   },
+  {
+    name: "project touched stays, project untouched follows",
+    previous: inProject,
+    next: task({ ...inProject, project: AGENT_SKILLS_PROJECT, name: "Revisar o contrato (v2)", revision: 3 }),
+    draft: edit(inProject, { name: "Meu título", project: AGENT_SKILLS_PROJECT }),
+  },
+  { name: "project untouched follows the new one", previous: inProject, next: task({ ...inProject, project: AGENT_SKILLS_PROJECT, revision: 3 }), draft: edit(inProject, {}) },
   { name: "dates and status", previous: full, next: task({ ...full, status: "doing", startedAt: "2026-09-15T12:00:00.000Z", revision: 5 }), draft: edit(full, { status: "done" }) },
 ].map((item) => ({ ...item, expected: rebaseDraft(item.draft, item.previous, item.next) }));
 

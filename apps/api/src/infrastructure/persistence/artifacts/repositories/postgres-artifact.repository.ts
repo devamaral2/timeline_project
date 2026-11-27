@@ -14,6 +14,8 @@ import type {
   FoodGenerationRepository,
 } from "../../../../domain/ports";
 import * as schema from "../../database/schema";
+import { sqlList } from "../../database/schema/sets";
+import { agentStatusesBefore, REVIEW_SITUATION_ON_CLOSE } from "../../../../domain/agent-status";
 import { completeCurrentJob } from "../../../jobs/job-context";
 import { appendEntry } from "../../requests/request-rows";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
@@ -164,13 +166,15 @@ export class PostgresArtifactRepository implements ArtifactRepository, FoodGener
       }
       const final = applied ? outcome : "skipped";
 
-      // O pedido de construcao que altera este alimento termina junto com a escrita.
+      // O pedido de construcao que altera este alimento termina junto com a escrita, so de onde a tabela deixa.
+      const closing = final === "failed" ? "failed" : "completed";
       const requests = await tx.execute<{ id: string }>(sql`
         UPDATE tasks e
-        SET status = ${final === "failed" ? "failed" : "done"}, finished_at = now(), updated_at = now()
+        SET status = ${closing}, situation = ${REVIEW_SITUATION_ON_CLOSE},
+            finished_at = now(), updated_at = now()
         FROM task_artifact_relation r
         WHERE r.artifact_id = ${payload.artifactId} AND r.task_id = e.id
-          AND e.actor = 'agent' AND e.kind = 'build_request' AND e.status IN ('queued', 'running')
+          AND e.actor = 'agent' AND e.kind = 'build_request' AND e.status IN (${sqlList(agentStatusesBefore(closing))})
           AND e.data->>'route' = 'food'
         RETURNING e.id
       `);

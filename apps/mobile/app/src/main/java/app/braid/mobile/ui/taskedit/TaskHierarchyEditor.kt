@@ -7,7 +7,6 @@ import app.braid.mobile.domain.request.EntityKind
 import app.braid.mobile.domain.request.RequestFollow
 import app.braid.mobile.domain.request.RequestOperation
 import app.braid.mobile.domain.request.followRequest
-import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.runningStepLabel
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
@@ -25,6 +24,8 @@ import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.draftWithPicked
 import app.braid.mobile.domain.task.draftWithoutParent
 import app.braid.mobile.domain.task.draftWithoutSubtask
+import app.braid.mobile.domain.task.isOpenAgentStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.task.pickerExclusions
 import app.braid.mobile.domain.task.topCreatedTasks
 import app.braid.mobile.domain.time.AppClock
@@ -220,7 +221,7 @@ class TaskHierarchyEditor(
                                 return@launch
                             }
                         }
-                    if (request.status != TaskStatus.Done) {
+                    if (!isSuccessAgentStatus(request.status)) {
                         setFooter(PickerFooter.Failed(request.message ?: HERMES_ASK_FAILED))
                         return@launch
                     }
@@ -257,9 +258,15 @@ class TaskHierarchyEditor(
         close()
     }
 
+    /**
+     * O texto do campo vem da própria busca, não do espelho dela em [state]: o espelho é atualizado por quem coleta a
+     * busca, que pode estar noutra thread terminando de gravar o resultado anterior. Lido do espelho, um toque em "Criar"
+     * ou "Pedir ao Hermes" logo depois de digitar às vezes via o campo ainda vazio e não fazia nada.
+     */
     private fun typedText(): String? =
-        mutableState.value.picker
-            ?.search
+        controller
+            ?.state
+            ?.value
             ?.typed
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
@@ -272,4 +279,4 @@ class TaskHierarchyEditor(
     private fun setFooter(footer: PickerFooter) = mutableState.update { it.copy(picker = it.picker?.copy(footer = footer)) }
 }
 
-private val AgentRequest.isOpen: Boolean get() = isOpenRequest(status)
+private val AgentRequest.isOpen: Boolean get() = isOpenAgentStatus(status)

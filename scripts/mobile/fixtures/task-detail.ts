@@ -7,6 +7,7 @@ import { taskSchema } from "../../../packages/contracts/src/schemas";
 import { cardDurationLabel, recurrenceRuleLabel } from "../../../apps/web/src/lib/tasks/card-text";
 import { mapsUrl } from "../../../apps/web/src/lib/tasks/maps-link";
 import { momentLabel, priorityPatch, recurrenceLines, reminderLabel } from "../../../apps/web/src/lib/tasks/task-read-model";
+import { AGENT_SKILLS_PROJECT, PERSONAL_PROJECT, TIMELINE_PROJECT } from "./project";
 
 type TaskInput = Record<string, unknown> & { id: string; name: string };
 
@@ -16,6 +17,7 @@ function task(input: TaskInput) {
     kind: "common",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
@@ -44,6 +46,7 @@ const weeklyRule = {
 /** Tudo que o detalhe lê: início com hora, fim, local, lembretes, tags, descrição, série, tarefa principal, subtarefas e pedidos. */
 const full = task({
   id: "task-1",
+  project: TIMELINE_PROJECT,
   name: "Reunião de planejamento",
   status: "todo",
   priority: "high",
@@ -105,6 +108,7 @@ const detachedYearly = task({
 
 const agent = task({
   id: "task-agent",
+  project: AGENT_SKILLS_PROJECT,
   name: "Buscar passagens",
   actor: "agent",
   kind: "search_request",

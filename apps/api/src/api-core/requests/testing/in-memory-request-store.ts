@@ -1,16 +1,15 @@
 import type { TokenUsage } from "../../agent/gateways/structured-completion.gateway";
 import type { ModelSelection, RequestQueryResult } from "@repo/contracts";
-import type { Artifact, Task } from "../../../domain";
+import { canTransitionAgentStatus, isInProgressAgentStatus, isOpenAgentStatus, situationOnClose, stoppedStatusOf, type Artifact, type Task } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
 import { requestTitleOf } from "../../../infrastructure/persistence/requests/postgres-request.store";
+import { personalProjectOf } from "../../projects/testing/in-memory-project.query";
 import { stepLabel } from "../request-config";
 import { REQUEST_JOBS } from "../request-steps";
 import type {
   DispatchRecord, EntitySummary, LinkRecord, NewEntity, NewRequest, NewStep, RequestEntityRecord,
   RequestOutcome, RequestRecord, RequestStore, StepRecord, StepThought,
 } from "../request-store";
-
-const OPEN = new Set(["queued", "running", "waiting", "awaiting_transcription"]);
 
 /**
  * O `RequestStore` em memoria: o que o Postgres grava na mesma transacao aqui fica em listas conferiveis. O
@@ -39,8 +38,8 @@ export class InMemoryRequestStore implements RequestStore {
     const id = newOrderedId();
     if (key) this.accepted.set(key, id);
     this.requests.set(id, {
-      id, userId: input.userId, kind: "request", route: input.route, status: "queued",
-      title: requestTitleOf(input.text), prompt: input.text,
+      id, userId: input.userId, kind: "request", route: input.route, status: input.route === "steps" ? "preparing" : "queued",
+      title: requestTitleOf(input.text), project: personalProjectOf(input.userId), prompt: input.text,
       ...(input.context ? { context: input.context } : {}),
       ...(input.target ? { target: input.target } : {}),
       ...(input.forceFallback ? { forceFallback: true } : {}),
@@ -56,6 +55,7 @@ export class InMemoryRequestStore implements RequestStore {
   seed(partial: Partial<RequestRecord> & Pick<RequestRecord, "id" | "prompt">): RequestRecord {
     const record: RequestRecord = {
       userId: "user-1", kind: "request", route: "steps", status: "running", title: requestTitleOf(partial.prompt),
+      project: personalProjectOf(partial.userId ?? "user-1"),
       createdAt: this.clock(), updatedAt: this.clock(), failedSteps: [], ...partial,
     };
     this.requests.set(record.id, record);
@@ -129,14 +129,19 @@ export class InMemoryRequestStore implements RequestStore {
     return { name: artifact.name, artifactType: artifact.type, ...(text ? { text } : {}) };
   }
 
+  async markStarting(requestId: string): Promise<void> {
+    const request = this.requests.get(requestId);
+    if (request && canTransitionAgentStatus(request.status, "starting")) request.status = "starting";
+  }
+
   async markRunning(requestId: string): Promise<void> {
     const request = this.requests.get(requestId);
-    if (request?.status === "queued") request.status = "running";
+    if (request && canTransitionAgentStatus(request.status, "running")) request.status = "running";
   }
 
   async beginSteps(requestId: string, steps: readonly NewStep[], dispatch?: DispatchRecord): Promise<void> {
     const request = this.requests.get(requestId);
-    if (!request || !OPEN.has(request.status)) return;
+    if (!request || !isOpenAgentStatus(request.status)) return;
     this.insertSteps(requestId, steps);
     if (dispatch) request.dispatch = dispatch;
     request.status = "running";
@@ -144,16 +149,18 @@ export class InMemoryRequestStore implements RequestStore {
 
   async handToHermes(requestId: string, dispatch: DispatchRecord): Promise<void> {
     const request = this.requests.get(requestId);
-    if (!request || !OPEN.has(request.status)) return;
+    if (!request || !canTransitionAgentStatus(request.status, "queued")) return;
     request.route = "hermes";
+    request.status = "queued";
     request.dispatch = dispatch;
     this.jobs.push({ kind: REQUEST_JOBS.hermes, requestId });
   }
 
   async handToModel(requestId: string, dispatch: DispatchRecord, model: ModelSelection): Promise<void> {
     const request = this.requests.get(requestId);
-    if (!request || !OPEN.has(request.status)) return;
+    if (!request || !canTransitionAgentStatus(request.status, "queued")) return;
     request.route = "model";
+    request.status = "queued";
     request.model = model;
     request.dispatch = dispatch;
     this.jobs.push({ kind: REQUEST_JOBS.model, requestId });
@@ -171,7 +178,7 @@ export class InMemoryRequestStore implements RequestStore {
 
   async markStepRunning(stepId: string): Promise<void> {
     const step = this.stepRecords.find((candidate) => candidate.id === stepId);
-    if (step && (step.status === "queued" || step.status === "running")) {
+    if (step && isInProgressAgentStatus(step.status)) {
       if (step.status === "queued") step.startedAt = this.clock();
       step.status = "running";
     }
@@ -190,7 +197,7 @@ export class InMemoryRequestStore implements RequestStore {
   async recordStepSuccess(_tx: unknown, input: {
     requestId: string; stepId: string; entities: readonly NewEntity[]; timings: Record<string, number>;
   }): Promise<void> {
-    if (!this.closeStep(input.stepId, "done", input.timings)) throw new Error("Step is no longer open");
+    if (!this.closeStep(input.stepId, "completed", input.timings)) throw new Error("Step is no longer open");
     for (const entity of input.entities) this.touched.push({ ...entity, requestId: input.requestId, stepId: input.stepId });
     this.jobs.push({ kind: REQUEST_JOBS.finalize, requestId: input.requestId, stepId: input.stepId });
   }
@@ -198,7 +205,7 @@ export class InMemoryRequestStore implements RequestStore {
   async recordQueryResult(input: {
     requestId: string; stepId: string; result: RequestQueryResult; timings: Record<string, number>;
   }): Promise<void> {
-    if (!this.closeStep(input.stepId, "done", input.timings)) return;
+    if (!this.closeStep(input.stepId, "completed", input.timings)) return;
     this.stepOf(input.stepId).result = input.result;
     this.jobs.push({ kind: REQUEST_JOBS.finalize, requestId: input.requestId, stepId: input.stepId });
   }
@@ -209,9 +216,9 @@ export class InMemoryRequestStore implements RequestStore {
     this.jobs.push({ kind: REQUEST_JOBS.finalize, requestId: input.requestId, stepId: input.stepId });
   }
 
-  private closeStep(stepId: string, status: "done" | "failed", timings?: Record<string, number>): boolean {
+  private closeStep(stepId: string, status: "completed" | "failed", timings?: Record<string, number>): boolean {
     const step = this.stepOf(stepId);
-    if (step.status !== "queued" && step.status !== "running") return false;
+    if (!canTransitionAgentStatus(step.status, status)) return false;
     step.status = status;
     step.finishedAt = this.clock();
     if (timings) step.timings = timings;
@@ -226,10 +233,11 @@ export class InMemoryRequestStore implements RequestStore {
     this.finalized.push({ kind: entity.kind, id: entity.id, links: [...links] });
   }
 
-  async finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void> {
+  async finish(requestId: string, status: "completed" | "failed" | "interrupted", outcome: RequestOutcome): Promise<void> {
     const request = this.requests.get(requestId);
-    if (!request || !OPEN.has(request.status)) return;
+    if (!request || !canTransitionAgentStatus(request.status, status)) return;
     request.status = status;
+    request.situation = situationOnClose(request.kind);
     request.finishedAt = this.clock();
     request.updatedAt = this.clock();
     if (outcome.failedSteps?.length) request.failedSteps = outcome.failedSteps;
@@ -241,19 +249,24 @@ export class InMemoryRequestStore implements RequestStore {
 
   async completeVoice(_tx: unknown, input: { requestId: string; taskId: string }): Promise<void> {
     const request = this.requests.get(input.requestId);
-    if (!request || !OPEN.has(request.status)) throw new Error("Request is no longer open");
+    if (!request || !canTransitionAgentStatus(request.status, "completed")) throw new Error("Request is no longer open");
     this.touched.push({ kind: "task", id: input.taskId, operation: "create", requestId: input.requestId, stepId: input.requestId });
-    await this.finish(input.requestId, "done", {});
+    await this.finish(input.requestId, "completed", {});
   }
 
   async cancel(requestId: string): Promise<string[]> {
     const request = this.requests.get(requestId);
-    if (!request || !OPEN.has(request.status)) return [];
-    request.status = "cancel";
+    if (!request || !isOpenAgentStatus(request.status)) return [];
+    request.status = stoppedStatusOf(request.status);
+    request.situation = situationOnClose(request.kind);
     request.errorCode = "cancelled";
     request.finishedAt = this.clock();
     const steps = this.stepRecords.filter((step) => step.requestId === requestId);
-    for (const step of steps) if (step.status === "queued" || step.status === "running") step.status = "cancel";
+    for (const step of steps) {
+      if (!isInProgressAgentStatus(step.status)) continue;
+      step.status = stoppedStatusOf(step.status);
+      step.finishedAt = this.clock();
+    }
     return [requestId, ...steps.map((step) => step.id)];
   }
 

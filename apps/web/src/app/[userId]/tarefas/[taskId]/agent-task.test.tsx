@@ -20,8 +20,8 @@ const { default: TaskPage } = await import("./page");
 const ID = "01HZX4R5Q7M8N9P0T1V2W3Y4Z5";
 
 const STEPS: RequestDto["steps"] = [
-  { id: "s1", agent: "planner", label: "Entender o pedido", status: "done" },
-  { id: "s2", agent: "searcher", label: "Buscar voos", status: "done" },
+  { id: "s1", agent: "planner", label: "Entender o pedido", status: "completed" },
+  { id: "s2", agent: "searcher", label: "Buscar voos", status: "completed" },
   { id: "s3", agent: "comparer", label: "Comparar preços", status: "running" },
   { id: "s4", agent: "writer", label: "Montar o resumo", status: "queued" },
 ];
@@ -94,12 +94,80 @@ test("uma tarefa de agente abre na forma do agente: tipo, título, status e o ro
   const top = screen.getByRole("region", { name: "Resumo da tarefa" });
   expect(within(top).getByRole("heading", { level: 1, name: "Pesquisar voos para novembro" })).toBeInTheDocument();
   expect(within(top).getByText("request")).toBeInTheDocument();
-  expect(within(top).getByText("Agente, executando")).toBeInTheDocument();
+  expect(within(top).getByText("Agente, trabalhando")).toBeInTheDocument();
   expect(top.querySelector("[data-agent-mark]")).not.toBeNull();
   expect(within(top).queryByText("2 de 4 passos")).not.toBeInTheDocument();
   expect(within(top).queryByText("Média")).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: "Editar tarefa" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Trocar status/ })).not.toBeInTheDocument();
+});
+
+const finishedTask = (overrides: Partial<TaskDto> = {}) => agentTask({ status: "completed", situation: "to_review", ...overrides });
+const finishedRequest = (overrides: Partial<RequestDto> = {}) =>
+  agentRequest({ status: "completed", situation: "to_review", steps: STEPS.map((step) => ({ ...step, status: "completed" })), ...overrides });
+const situationControl = () => screen.findByRole("button", { name: /Mudar situação/ });
+
+test("o cabeçalho do pedido terminado mostra o status, o controle de situação com o nome acessível e o projeto", async () => {
+  install([finishedTask()], [finishedRequest()]);
+  renderPage();
+  await loaded();
+
+  const top = screen.getByRole("region", { name: "Resumo da tarefa" });
+  expect(within(top).getByText("Agente, concluído")).toBeInTheDocument();
+  expect(await situationControl()).toHaveAccessibleName("Para revisar. Mudar situação");
+  expect(within(top).getByRole("button", { name: /Mudar situação/ })).toHaveTextContent("Para revisar");
+});
+
+test.each([
+  ["to_review", "Para revisar"],
+  ["reviewed", "Revisada"],
+  ["bookmarked", "Guardada"],
+] as const)("a situação %s tem o nome acessível %s no detalhe", async (situation, name) => {
+  install([finishedTask({ situation })], [finishedRequest({ situation })]);
+  renderPage();
+  await loaded();
+
+  expect(await situationControl()).toHaveAccessibleName(`${name}. Mudar situação`);
+});
+
+test("o detalhe do pedido muda a situação: grava na API e continua assim ao recarregar", async () => {
+  install([finishedTask()], [finishedRequest()]);
+  const { unmount } = renderPage();
+  await loaded();
+
+  fireEvent.click(await situationControl());
+  fireEvent.click(within(screen.getByRole("group", { name: "Situação da tarefa" })).getByRole("button", { name: "Guardada" }));
+
+  expect(await situationControl()).toHaveAccessibleName("Guardada. Mudar situação");
+  expect(screen.queryByRole("group", { name: "Situação da tarefa" })).not.toBeInTheDocument();
+  await waitFor(() => expect(api.calls.some((call) => call.method === "PUT")).toBe(true));
+  expect(api.calls.find((call) => call.method === "PUT")).toMatchObject({ pathname: `/api/tasks/${ID}/situation`, body: { situation: "bookmarked" } });
+
+  unmount();
+  renderPage();
+  await loaded();
+  expect(await situationControl()).toHaveAccessibleName("Guardada. Mudar situação");
+});
+
+test("com a API falhando, a situação volta ao que era e o detalhe avisa", async () => {
+  install([finishedTask()], [finishedRequest()]);
+  renderPage();
+  await loaded();
+  api.failNext("PUT", `/api/tasks/${ID}/situation`, 500);
+
+  fireEvent.click(await situationControl());
+  fireEvent.click(within(screen.getByRole("group", { name: "Situação da tarefa" })).getByRole("button", { name: "Revisada" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível mudar a situação");
+  expect(await situationControl()).toHaveAccessibleName("Para revisar. Mudar situação");
+});
+
+test("o pedido ainda aberto não tem controle de situação", async () => {
+  install([agentTask()], [agentRequest()]);
+  renderPage();
+  await loaded();
+
+  expect(screen.queryByRole("button", { name: /Mudar situação/ })).not.toBeInTheDocument();
 });
 
 test("Informações mostra o início com o tempo decorrido e 'ainda não concluído'; sem fim estimado nem job", async () => {
@@ -114,6 +182,20 @@ test("Informações mostra o início com o tempo decorrido e 'ainda não conclu�
   expect(within(info).getByText("ainda não concluído")).toBeInTheDocument();
   expect(screen.queryByText("Fim estimado")).not.toBeInTheDocument();
   expect(screen.queryByText("Job")).not.toBeInTheDocument();
+});
+
+test("o detalhe do pedido mostra o projeto no cabeçalho, só para leitura, e não repete nas Informações", async () => {
+  install([agentTask({ project: { id: "p-tp", name: "timeline_project", personal: false } })], [agentRequest()]);
+  renderPage();
+  await loaded();
+
+  const top = await screen.findByRole("region", { name: "Resumo da tarefa" });
+  expect(within(top).getByText("timeline_project")).toBeInTheDocument();
+  expect(within(top).getByText("TP")).toBeInTheDocument();
+  expect(within(top).queryByRole("button", { name: /timeline_project/ })).not.toBeInTheDocument();
+  const info = screen.getByRole("region", { name: "Informações" });
+  expect(within(info).queryByText("Projeto")).not.toBeInTheDocument();
+  expect(within(info).queryByText("timeline_project")).not.toBeInTheDocument();
 });
 
 test("a tarefa de agente mostra a tarefa principal e as subtarefas, somente leitura, com pontas de pessoa e de agente", async () => {
@@ -168,22 +250,22 @@ test("com o pedido em aberto, a tela relê o pedido e a tarefa até o estado fin
   await loaded();
   await screen.findByRole("region", { name: "Passos" });
 
-  advanceRequest(api, ID, { status: "done", steps: STEPS.map((step) => ({ ...step, status: "done" })) });
-  api.store.table<TaskDto>("tasks").set(ID, agentTask({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" }));
+  advanceRequest(api, ID, { status: "completed", steps: STEPS.map((step) => ({ ...step, status: "completed" })) });
+  api.store.table<TaskDto>("tasks").set(ID, agentTask({ status: "completed", finishedAt: "2026-11-14T09:58:00-03:00" }));
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(3000);
   });
 
   const top = screen.getByRole("region", { name: "Resumo da tarefa" });
-  expect(await within(top).findByText("Agente, feito")).toBeInTheDocument();
+  expect(await within(top).findByText("Agente, concluído")).toBeInTheDocument();
   const info = screen.getByRole("region", { name: "Informações" });
   expect(within(info).getByText(/09:58/)).toBeInTheDocument();
   expect(within(info).queryByText("ainda não concluído")).not.toBeInTheDocument();
 });
 
 test("um pedido no estado final não é relido", async () => {
-  install([agentTask({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" })], [agentRequest({ status: "done" })]);
+  install([agentTask({ status: "completed", finishedAt: "2026-11-14T09:58:00-03:00" })], [agentRequest({ status: "completed" })]);
   renderPage();
   await loaded();
   await screen.findByRole("region", { name: "Passos" });
@@ -263,7 +345,7 @@ test("Sessão mostra de qual pedido este continua, e Continuações não aparece
   const first = requestFixture({
     id: FIRST_ID,
     title: "Planejar viagem a Lisboa",
-    status: "done",
+    status: "completed",
     createdAt: "2026-11-12T10:00:00-03:00",
     updatedAt: "2026-11-12T10:05:00-03:00",
   });
@@ -287,7 +369,7 @@ test("Sessão diz que o pedido anterior não foi encontrado quando ele não carr
 });
 
 test("um pedido com entradas, entidades e sessão mostra as três seções na ordem do desenho", async () => {
-  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "done", createdAt: "2026-11-12T10:00:00-03:00", updatedAt: "2026-11-12T10:05:00-03:00" });
+  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "completed", createdAt: "2026-11-12T10:00:00-03:00", updatedAt: "2026-11-12T10:05:00-03:00" });
   install([agentTask()], [first, agentRequest({ trace: TRACE, entities: ENTITIES, sessionId: FIRST_ID })]);
   renderPage();
   await loaded();
@@ -328,7 +410,7 @@ test("com o pedido em aberto, a linha de status do campo mostra o andamento e Ca
 });
 
 test("um pedido terminado não mostra Cancelar pedido no campo", async () => {
-  install([agentTask({ status: "done", finishedAt: "2026-11-14T09:58:00-03:00" })], [agentRequest({ status: "done" })]);
+  install([agentTask({ status: "completed", finishedAt: "2026-11-14T09:58:00-03:00" })], [agentRequest({ status: "completed" })]);
   renderPage();
   await loaded();
 
@@ -381,7 +463,7 @@ function continuationId(): string {
 }
 
 test("enviar pelo campo abre um pedido na mesma sessão, e a linha de status passa a acompanhá-lo", async () => {
-  install([agentTask()], [agentRequest({ status: "done" })]);
+  install([agentTask()], [agentRequest({ status: "completed" })]);
   renderPage();
   await loaded();
 
@@ -402,7 +484,7 @@ test("enviar pelo campo abre um pedido na mesma sessão, e a linha de status pas
   });
   expect(within(field).getByText("Lendo o calendário…")).toBeInTheDocument();
 
-  advanceRequest(api, continuationId(), { status: "done" });
+  advanceRequest(api, continuationId(), { status: "completed" });
   await act(async () => {
     await vi.advanceTimersByTimeAsync(3000);
   });
@@ -411,8 +493,8 @@ test("enviar pelo campo abre um pedido na mesma sessão, e a linha de status pas
 });
 
 test("continuar um pedido que já tem sessão abre o pedido com o sessionId dele", async () => {
-  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "done" });
-  install([agentTask()], [first, agentRequest({ status: "done", sessionId: FIRST_ID })]);
+  const first = requestFixture({ id: FIRST_ID, title: "Planejar viagem a Lisboa", status: "completed" });
+  install([agentTask()], [first, agentRequest({ status: "completed", sessionId: FIRST_ID })]);
   renderPage();
   await loaded();
 

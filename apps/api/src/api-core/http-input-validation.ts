@@ -1,13 +1,15 @@
 import { BadRequestException } from "@nestjs/common";
 import {
   createArtifactRequestSchema,
+  createProjectInputSchema,
   createTaskInputSchema,
+  setTaskSituationInputSchema,
   updateArtifactRequestSchema,
   updateTaskInputSchema,
 } from "@repo/contracts/schemas";
 import { FREE_TEXT_ARTIFACT_TYPES, isFreeTextArtifactType } from "@repo/contracts/artifact-types";
 import type { ZodType } from "zod";
-import { HUMAN_KINDS, HUMAN_STATUSES, PRIORITIES, isNotificationOffsetMinutes } from "../domain";
+import { HUMAN_KINDS, HUMAN_STATUSES, PRIORITIES, SITUATIONS, isNotificationOffsetMinutes } from "../domain";
 import { decodeAgendaCursor } from "../infrastructure/persistence";
 
 /** Os tipos de artefato que o usuario cria e edita. Os demais sao do servidor. */
@@ -27,6 +29,8 @@ export function bodyFieldsOf(schema: ZodType): Set<string> {
 /** Os campos que cada corpo conhece: os dos esquemas do contrato. Qualquer outro, inclusive nome antigo, e recusado. */
 const CREATE_TASK_FIELDS = bodyFieldsOf(createTaskInputSchema);
 const UPDATE_TASK_FIELDS = bodyFieldsOf(updateTaskInputSchema);
+const CREATE_PROJECT_FIELDS = bodyFieldsOf(createProjectInputSchema);
+const SET_SITUATION_FIELDS = bodyFieldsOf(setTaskSituationInputSchema);
 const CREATE_ARTIFACT_FIELDS = bodyFieldsOf(createArtifactRequestSchema);
 const UPDATE_ARTIFACT_FIELDS = bodyFieldsOf(updateArtifactRequestSchema);
 
@@ -89,7 +93,24 @@ export function assertTaskFields(body: Record<string, unknown>, editing: boolean
     throw new BadRequestException("Invalid parentTaskId");
   }
   if (body?.artifacts !== undefined && !Array.isArray(body.artifacts)) throw new BadRequestException("Invalid artifacts");
+  // Na edicao, `null` devolve a tarefa a `personal`; ausente nao muda.
+  if (body?.projectId !== undefined && !(editing && body.projectId === null) && typeof body.projectId !== "string") {
+    throw new BadRequestException("Invalid projectId");
+  }
   for (const field of ["startedAt", "estimatedFinishAt", "finishedAt"]) assertInstant(body?.[field], field, editing);
+}
+
+/** O que a rota de projetos confere antes do dominio: o corpo e um objeto so com os campos do contrato. O nome e do dominio. */
+export function assertProjectFields(body: Record<string, unknown>): void {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new BadRequestException("Invalid body");
+  assertKnownFields(body, CREATE_PROJECT_FIELDS);
+}
+
+/** O que a rota da situacao confere: o corpo tem so `situation`, e um dos tres valores. Se a tarefa aceita e do dominio. */
+export function assertSituationBody(body: Record<string, unknown>): void {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new BadRequestException("Invalid body");
+  assertKnownFields(body, SET_SITUATION_FIELDS);
+  if (!isOneOf(SITUATIONS, body.situation)) throw new BadRequestException("Invalid situation");
 }
 
 export function assertExpectedRevision(body: { expectedRevision?: unknown }): void {

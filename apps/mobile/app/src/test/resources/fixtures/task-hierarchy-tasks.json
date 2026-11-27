@@ -7,6 +7,11 @@
     "priority": "medium",
     "name": "Planejar a viagem",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-20T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -31,6 +36,11 @@
     "priority": "medium",
     "name": "Tarefa solta",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-20T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -51,6 +61,11 @@
     "priority": "medium",
     "name": "Viagem de setembro",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-20T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -73,6 +88,11 @@
     "priority": "medium",
     "name": "Projeto do trimestre",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "longRunning": false,
     "notifyOffsetsMinutes": [],
     "tags": [],
@@ -92,6 +112,11 @@
     "priority": "medium",
     "name": "Comprar passagens",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-20T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -113,6 +138,11 @@
     "priority": "medium",
     "name": "Reservar hotel",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-20T12:00:00.000Z",
     "finishedAt": "2026-09-13T20:00:00.000Z",
     "longRunning": false,
@@ -135,6 +165,11 @@
     "priority": "medium",
     "name": "Buscar voos",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T14:48:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -155,6 +190,11 @@
     "priority": "medium",
     "name": "Alugar um carro",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-20T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -175,6 +215,11 @@
     "priority": "medium",
     "name": "Preparar a mala",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-20T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -195,6 +240,11 @@
     "priority": "medium",
     "name": "Separar os casacos",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-20T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -216,6 +266,11 @@
     "priority": "medium",
     "name": "Carregar os aparelhos",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-20T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],

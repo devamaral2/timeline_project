@@ -1,0 +1,23 @@
+{
+  "id": "sit-review",
+  "actor": "agent",
+  "kind": "review_request",
+  "status": "completed",
+  "priority": "medium",
+  "name": "Resumo para revisar",
+  "description": "",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
+  "situation": "bookmarked",
+  "startedAt": "2026-09-14T11:00:00.000Z",
+  "longRunning": false,
+  "notifyOffsetsMinutes": [],
+  "tags": [],
+  "artifactTypes": [],
+  "revision": 1,
+  "createdAt": "2026-09-01T12:00:00.000Z",
+  "updatedAt": "2026-09-01T12:00:00.000Z"
+}

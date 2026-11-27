@@ -15,6 +15,7 @@ import {
   stepProgress,
 } from "../../../apps/web/src/lib/tasks/agent-request-model";
 import { taskDetailFixtures } from "./task-detail";
+import { AGENT_SKILLS_PROJECT, PERSONAL_PROJECT } from "./project";
 
 type RequestInput = Record<string, unknown> & { id: string };
 
@@ -24,6 +25,7 @@ function request(input: RequestInput) {
     route: "steps",
     status: "running",
     title: "Buscar passagens",
+    project: PERSONAL_PROJECT,
     createdAt: "2026-09-14T14:48:00.000Z",
     updatedAt: "2026-09-14T14:52:00.000Z",
     steps: [],
@@ -33,7 +35,7 @@ function request(input: RequestInput) {
 }
 
 const steps = [
-  { id: "s1", agent: "router", label: "Entender o pedido", status: "done" },
+  { id: "s1", agent: "router", label: "Entender o pedido", status: "completed" },
   { id: "s2", agent: "search", label: "Buscar voos", status: "running" },
   { id: "s3", agent: "writer", label: "Montar o resumo", status: "queued" },
 ];
@@ -54,6 +56,7 @@ const entities = [
 
 const running = request({
   id: "task-agent",
+  project: AGENT_SKILLS_PROJECT,
   sessionId: "req-first",
   text: "Buscar passagens para sexta",
   steps,
@@ -64,21 +67,23 @@ const running = request({
 
 const done = request({
   ...running,
-  status: "done",
+  status: "completed",
   updatedAt: "2026-09-14T14:58:00.000Z",
-  steps: steps.map((step) => ({ ...step, status: "done" })),
+  steps: steps.map((step) => ({ ...step, status: "completed" })),
   progress: undefined,
   trace: { route: "steps", status: "done", fields: [], entries: [...entries.map((entry) => ({ ...entry, status: "done" })), { id: "e4", kind: "answer", label: "Resposta", summary: "Achei três voos.", status: "done", startedAt: "2026-09-14T14:57:50.000Z" }] },
 });
 
-const first = request({ id: "req-first", status: "done", title: "Planejar a viagem", createdAt: "2026-09-13T12:00:00.000Z", updatedAt: "2026-09-13T12:05:00.000Z" });
+const first = request({ id: "req-first", status: "completed", title: "Planejar a viagem", createdAt: "2026-09-13T12:00:00.000Z", updatedAt: "2026-09-13T12:05:00.000Z" });
 const follow = request({ id: "req-new", sessionId: "req-first", title: "Só voos diretos", createdAt: "2026-09-14T15:01:00.000Z", progress: "Filtrando os voos…" });
 
-const statuses = ["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"] as const;
+const statuses = [
+  "preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+] as const;
 const stepCases = [
   [],
   steps,
-  steps.map((step) => ({ ...step, status: "done" })),
+  steps.map((step) => ({ ...step, status: "completed" })),
   [{ id: "s1", agent: "router", label: "Só um passo", status: "running" }],
   [{ id: "s1", agent: "router", label: "Falhou aqui", status: "failed" }, { id: "s2", agent: "writer", label: "Nem começou", status: "queued" }],
 ];
@@ -109,20 +114,22 @@ export function agentRequestFixtures(): Record<string, unknown> {
   return {
     "request-running": running,
     "request-done": done,
+    /** O pedido que terminou, com a situação com que nasce, e as respostas do `PUT` que a muda. */
+    "request-done-to-review": request({ ...done, situation: "to_review" }),
     "request-failed": request({ ...running, status: "failed", errorCode: "limit_reached", progress: undefined }),
     "request-failed-bare": request({ ...running, status: "failed", progress: undefined }),
-    "request-cancelled": request({ ...running, status: "cancel", progress: undefined }),
+    "request-cancelled": request({ ...running, status: "cancelled", progress: undefined }),
     "request-waiting": request({ ...running, status: "waiting", progress: undefined }),
     "request-queued": request({ id: "task-agent", status: "queued" }),
     "request-bare": request({ id: "task-agent", status: "running", trace: undefined }),
     "request-no-progress": request({ ...running, progress: undefined }),
     "request-first": first,
     "request-follow-running": follow,
-    "request-follow-done": request({ ...follow, status: "done", progress: undefined }),
+    "request-follow-done": request({ ...follow, status: "completed", progress: undefined }),
     "request-follow-failed": request({ ...follow, status: "failed", errorCode: "unavailable", progress: undefined }),
     "request-accepted": { requestId: "req-new" },
     "task-detail-agent-linked": { ...agentTask, parentTaskId: "task-parent", subtaskIds: ["task-sub-1"] },
-    "task-detail-agent-done": { ...agentTask, status: "done", finishedAt: "2026-09-14T14:58:00.000Z", revision: 2 },
+    "task-detail-agent-done": { ...agentTask, status: "completed", finishedAt: "2026-09-14T14:58:00.000Z", revision: 2 },
     "agent-request-text": {
       open: statuses.map((status) => ({ status, open: isOpenRequest(status) })),
       steps: stepCases.map((list) => {

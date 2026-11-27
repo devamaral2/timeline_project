@@ -4,6 +4,7 @@ import kotlinx.serialization.json.JsonObject
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -25,6 +26,8 @@ interface TasksApi {
         @Query("priority") priority: String?,
         @Query("tag") tag: String?,
         @Query("q") q: String?,
+        /** Um ou mais status separados por vírgula (`queued,running`); ausente traz todos. */
+        @Query("status") status: String?,
     ): List<TaskCardDto>
 
     /** `PATCH /api/tasks/{id}` responde 204; o corpo é o `UpdateTaskInput` sem o id. */
@@ -33,4 +36,11 @@ interface TasksApi {
         @Path("id") id: String,
         @Body body: JsonObject,
     )
+
+    /** `PUT /api/tasks/{id}/situation` devolve o cartão atualizado; a última gravação vale, sem revisão. */
+    @PUT("api/tasks/{id}/situation")
+    suspend fun setSituation(
+        @Path("id") id: String,
+        @Body body: SetSituationBody,
+    ): TaskCardDto
 }

@@ -1,4 +1,5 @@
 import type { AgentTraceDto, AgentTraceEntryDto, AgentTraceField, AgentTraceSection, AgentTraceStatus } from "@repo/contracts";
+import { isCancelledAgentStatus, isFinalAgentStatus, isInterruptedAgentStatus, isSuccessAgentStatus } from "../../domain/agent-status";
 import { dispatchConfig, stepLabel } from "./request-config";
 import { ENTITY_AGENT } from "./request-steps";
 import type { DispatchRecord, RequestEntityRecord, RequestRecord, StepRecord } from "./request-store";
@@ -8,7 +9,15 @@ const MAX_SUMMARY = 160;
 const RESULT_PREVIEW_ROWS = 10;
 
 const STEP_STATUS: Record<StepRecord["status"], AgentTraceStatus> = {
-  queued: "pending", running: "running", done: "done", failed: "failed", cancel: "failed",
+  preparing: "pending",
+  queued: "pending",
+  starting: "pending",
+  running: "running",
+  completed: "done",
+  failed: "failed",
+  cancelled: "failed",
+  interrupted: "failed",
+  rolled_back: "failed",
 };
 
 /** Por que o pedido foi ao Hermes sem ser uma tarefa de agente. `no_step` e `unsupported` so existem em pedidos antigos. */
@@ -36,7 +45,6 @@ const ENTITY_LABELS: Record<RequestEntityRecord["kind"], Record<RequestEntityRec
   task: { create: "Tarefa criada", update: "Tarefa alterada", delete: "Tarefa apagada" },
   artifact: { create: "Artefato criado", update: "Artefato alterado", delete: "Artefato apagado" },
 };
-const CLOSED = new Set<RequestRecord["status"]>(["done", "failed", "cancel"]);
 
 function clip(text: string, max = MAX_TEXT): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
@@ -103,7 +111,7 @@ function routingEntry(request: RequestRecord, steps: readonly StepRecord[]): Age
   const dispatch: DispatchRecord | undefined = request.dispatch;
   if (!dispatch) {
     // Ainda escolhendo, ou a edicao pela tela de detalhe: ali o agente sai de uma tabela, sem modelo.
-    if (request.status === "queued") return { ...base, status: "running", summary: "Entendendo o pedido" };
+    if (request.status === "preparing" || request.status === "queued") return { ...base, status: "running", summary: "Entendendo o pedido" };
     return undefined;
   }
   const fields: AgentTraceField[] = [];
@@ -245,8 +253,8 @@ function answerEntry(
   entities: readonly RequestEntityRecord[],
   message: string | undefined,
 ): AgentTraceEntryDto | undefined {
-  if (!CLOSED.has(request.status)) return undefined;
-  const failed = request.status !== "done";
+  if (!isFinalAgentStatus(request.status)) return undefined;
+  const failed = !isSuccessAgentStatus(request.status);
   const links = new Set(entities.flatMap((entity) => entity.links.map((link) => `${link.from.id}>${link.to.id}`))).size;
   const fields: AgentTraceField[] = [{ label: "Registros", value: String(entities.length) }];
   if (links > 0) fields.push({ label: "Vínculos", value: String(links) });
@@ -262,7 +270,7 @@ function answerEntry(
     : entities.length === 1 ? "1 registro gravado" : `${entities.length} registros gravados`;
   return {
     id: `${request.id}-answer`, kind: "answer",
-    label: request.status === "cancel" ? "Cancelado" : failed ? "Encerrou com falha" : message ? "Resposta" : "Concluiu",
+    label: isCancelledAgentStatus(request.status) ? "Cancelado" : isInterruptedAgentStatus(request.status) ? "Interrompido" : failed ? "Encerrou com falha" : message ? "Resposta" : "Concluiu",
     summary, status: failed ? "failed" : "done",
     ...(request.finishedAt ? { startedAt: request.finishedAt.toISOString() } : {}),
     fields,
@@ -301,7 +309,7 @@ export function toRequestTrace(
   )));
   return {
     route: "steps",
-    status: request.status === "done" ? "done" : CLOSED.has(request.status) ? "failed" : "running",
+    status: isSuccessAgentStatus(request.status) ? "done" : isFinalAgentStatus(request.status) ? "failed" : "running",
     startedAt: request.createdAt.toISOString(),
     ...(durationMs !== undefined ? { durationMs } : {}),
     fields,

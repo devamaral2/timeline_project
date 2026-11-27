@@ -1,5 +1,7 @@
 package app.braid.mobile.domain.task
 
+import app.braid.mobile.domain.project.Project
+import app.braid.mobile.domain.request.ModelSelection
 import java.time.Instant
 
 /** Quem executa a tarefa: a pessoa ou um agente. */
@@ -35,7 +37,10 @@ enum class TaskKind(
     }
 }
 
-/** Os status das duas pontas; `Done` e `Cancel` valem para pessoa e agente, o resto para uma só. */
+/**
+ * Os status das duas pontas; nenhum status de agente é igual a um de pessoa. [Unknown] é o valor
+ * que a API mandou e este app não conhece: lê-se sem erro e se desenha neutro, sem nome próprio.
+ */
 enum class TaskStatus(
     val code: String,
 ) {
@@ -51,10 +56,18 @@ enum class TaskStatus(
     Waiting("waiting"),
     AwaitingTranscription("awaiting_transcription"),
     Failed("failed"),
+    Preparing("preparing"),
+    Starting("starting"),
+    Completed("completed"),
+    Interrupted("interrupted"),
+    Cancelled("cancelled"),
+    RolledBack("rolled_back"),
+    Unknown("unknown"),
     ;
 
     companion object {
-        fun fromCode(code: String): TaskStatus = entries.firstOrNull { it.code == code } ?: error("Status de tarefa desconhecido: $code")
+        /** Um código fora do enum (um status novo da API) vira [Unknown] em vez de derrubar a leitura. */
+        fun fromCode(code: String): TaskStatus = entries.firstOrNull { it.code == code } ?: Unknown
     }
 }
 
@@ -131,4 +144,10 @@ data class TaskCard(
     val parentTaskId: String? = null,
     /** Quantos minutos antes do início (ou do prazo, na tarefa longa) cada lembrete avisa. */
     val notifyOffsetsMinutes: List<Int> = emptyList(),
+    /** O projeto da tarefa: a lista o mostra abaixo do título; o formulário da pessoa o troca. */
+    val project: Project = Project.Personal,
+    /** A situação da tarefa de agente que terminou; ausente em pessoa, passo, execução agendada e pedido aberto. */
+    val situation: TaskSituation? = null,
+    /** A escolha de provedor, modelo e esforço do pedido; só o cartão de agente a traz, e a linha só desenha o provedor com ela. */
+    val model: ModelSelection? = null,
 )

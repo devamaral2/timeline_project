@@ -375,12 +375,12 @@ describe("entregar o resultado", () => {
     const request = await kit.taskRepository.findById(created.requestId);
     if (!request) throw new Error("sem pedido");
     kit.database.tasks = kit.database.tasks.map((task) =>
-      task.id === request.id ? Task.rehydrate({ ...request, status: "cancel", notifyOffsetsMinutes: [], tags: [], data: { ...request.data }, artifactLinks: [...request.artifactLinks], subtaskIds: [] }) : task,
+      task.id === request.id ? Task.rehydrate({ ...request, status: "cancelled", notifyOffsetsMinutes: [], tags: [], data: { ...request.data }, artifactLinks: [...request.artifactLinks], subtaskIds: [] }) : task,
     );
 
     await expect(
       kit.worker.deliver({ requestId: created.requestId, leaseToken: reservation.leaseToken, outcome: "completed", result: RESULT }, actor),
     ).rejects.toThrow(/lease/i);
-    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "cancel" });
+    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "cancelled" });
   });
 });

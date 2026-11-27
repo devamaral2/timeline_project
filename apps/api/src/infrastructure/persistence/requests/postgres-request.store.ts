@@ -30,10 +30,14 @@ import type {
   StepRecord,
   StepThought,
 } from "../../../api-core/requests/request-store";
-import type { EntryKind, EntryRole } from "../../../domain";
+import type { EntryKind, EntryRole, Situation } from "../../../domain";
 import { enqueueJobInTransaction } from "../../jobs/job-context";
 import type { PostgresDatabase } from "../database/postgres-database";
 import type { Tx } from "../shared/tx";
+import { agentStatusesBefore, OPEN_AGENT_STATUSES } from "../../../domain/agent-status";
+import type { AgentTaskStatus } from "../../../domain/sets";
+import { sqlList } from "../database/schema/sets";
+import { IN_PROGRESS, ON_CLOSE_SITUATION, OPEN_REQUEST, STOPPED_STATUS, STOPPED_STATUS_OF_STEP, before } from "./agent-status-sql";
 import { insertAgentTask, newOrderedId } from "./request-rows";
 
 type Row = Record<string, unknown>;
@@ -57,7 +61,6 @@ export const REQUEST_IDEMPOTENCY_SCOPE = "request";
 
 const TITLE_CHARS = 80;
 const TEXT_PREVIEW_CHARS = 200;
-const OPEN_REQUEST = sql`('queued', 'running', 'waiting', 'awaiting_transcription')`;
 
 const TASK_RELATION = { create: "generates", update: "updates", delete: "deletes" } as const;
 const ARTIFACT_RELATION = { create: "creates", update: "updates", delete: "deletes" } as const;
@@ -118,7 +121,8 @@ export class PostgresRequestStore implements RequestStore {
         id: requestId,
         userId: input.userId,
         kind: "request",
-        status: "queued",
+        // O pedido que passa pelo agente de roteamento (e a edicao por alvo) nasce `preparing`: ainda nao tem destino.
+        status: input.route === "steps" ? "preparing" : "queued",
         name: requestTitleOf(input.text),
         data: {
           route: input.route,
@@ -127,6 +131,12 @@ export class PostgresRequestStore implements RequestStore {
           ...(input.forceFallback ? { forceFallback: true } : {}),
           ...(input.model ? { model: input.model } : {}),
           ...(input.clientMessageId ? { clientMessageId: input.clientMessageId } : {}),
+        },
+        project: {
+          ...(input.projectId ? { projectId: input.projectId } : {}),
+          ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+          // So a tarefa tem projeto: o alvo que e artefato nao decide nada.
+          ...(input.target?.entityType === "task" ? { targetTaskId: input.target.entityId } : {}),
         },
       });
       await this.append(tx, requestId, { kind: "message", role: "user", content: input.text });
@@ -237,15 +247,22 @@ export class PostgresRequestStore implements RequestStore {
     return [...records.values()];
   }
 
+  async markStarting(requestId: string): Promise<void> {
+    await this.db.execute(sql`
+      UPDATE tasks SET status = 'starting', updated_at = now()
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${before("starting")}`);
+  }
+
   async markRunning(requestId: string): Promise<void> {
     await this.db.execute(sql`
       UPDATE tasks SET status = 'running', updated_at = now()
-      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status = 'queued'`);
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${before("running")}`);
   }
 
   async beginSteps(requestId: string, steps: readonly NewStep[], dispatch?: DispatchRecord): Promise<void> {
     await this.inTransaction(undefined, async (tx) => {
-      const userId = await this.lockOpenRequest(tx, requestId);
+      // Qualquer pedido aberto se desdobra: o status so vira `running` (o que ja roda segue rodando).
+      const userId = await this.lockRequest(tx, requestId, OPEN_AGENT_STATUSES);
       if (!userId) return;
       await this.insertSteps(tx, requestId, userId, steps);
       await this.recordDispatch(tx, requestId, { status: "running" }, dispatch, steps.length);
@@ -254,10 +271,10 @@ export class PostgresRequestStore implements RequestStore {
 
   async handToHermes(requestId: string, dispatch: DispatchRecord): Promise<void> {
     await this.inTransaction(undefined, async (tx) => {
-      const userId = await this.lockOpenRequest(tx, requestId);
+      const userId = await this.lockRequest(tx, requestId, agentStatusesBefore("queued"));
       if (!userId) return;
-      // Continua `queued`: quem o passa a `running` e o job do Hermes, como num pedido que nasce na rota dele.
-      await this.recordDispatch(tx, requestId, { route: "hermes" }, dispatch, 0);
+      // `queued`: quem o passa a `starting` e a `running` e o job do Hermes, como num pedido que nasce na rota dele.
+      await this.recordDispatch(tx, requestId, { status: "queued", route: "hermes" }, dispatch, 0);
       await enqueueJobInTransaction(tx, {
         kind: REQUEST_JOBS.hermes, userId, actorId: userId, taskId: requestId,
         payload: { requestId }, dedupeKey: `hermes:${requestId}`,
@@ -267,10 +284,10 @@ export class PostgresRequestStore implements RequestStore {
 
   async handToModel(requestId: string, dispatch: DispatchRecord, model: ModelSelection): Promise<void> {
     await this.inTransaction(undefined, async (tx) => {
-      const userId = await this.lockOpenRequest(tx, requestId);
+      const userId = await this.lockRequest(tx, requestId, agentStatusesBefore("queued"));
       if (!userId) return;
-      // Continua `queued`: quem o passa a `running` e o job do modelo, como num pedido que nasce na rota dele.
-      await this.recordDispatch(tx, requestId, { route: "model", model }, dispatch, 0);
+      // `queued`: quem o passa a `starting` e a `running` e o job do modelo, como num pedido que nasce na rota dele.
+      await this.recordDispatch(tx, requestId, { status: "queued", route: "model", model }, dispatch, 0);
       await enqueueJobInTransaction(tx, {
         kind: REQUEST_JOBS.model, userId, actorId: userId, taskId: requestId,
         payload: { requestId }, dedupeKey: `model:${requestId}`,
@@ -282,7 +299,7 @@ export class PostgresRequestStore implements RequestStore {
   private async recordDispatch(
     tx: Tx,
     requestId: string,
-    patch: { status?: "running"; route?: "hermes" | "model"; model?: ModelSelection },
+    patch: { status?: "queued" | "running"; route?: "hermes" | "model"; model?: ModelSelection },
     dispatch: DispatchRecord | undefined,
     steps: number,
   ): Promise<void> {
@@ -303,11 +320,11 @@ export class PostgresRequestStore implements RequestStore {
     }
   }
 
-  /** O dono do pedido, com a linha travada; nada se o pedido nao existe ou ja terminou. */
-  private async lockOpenRequest(tx: Tx, requestId: string): Promise<string | undefined> {
+  /** O dono do pedido, com a linha travada; nada se o pedido nao existe ou nao esta num dos status `from`. */
+  private async lockRequest(tx: Tx, requestId: string, from: readonly AgentTaskStatus[]): Promise<string | undefined> {
     const found = await tx.execute<{ user_id: string }>(sql`
       SELECT user_id FROM tasks
-      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN (${sqlList(from)})
       FOR UPDATE`);
     return found.rows[0]?.user_id;
   }
@@ -318,6 +335,7 @@ export class PostgresRequestStore implements RequestStore {
       await insertAgentTask(tx, {
         id: step.id, userId, kind: "step", status: "queued", name: stepLabel(step.agent),
         data: { agent: step.agent, expected: step.expected },
+        project: { requestId },
       });
       await tx.execute(sql`
         INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
@@ -335,7 +353,7 @@ export class PostgresRequestStore implements RequestStore {
     await this.db.execute(sql`
       UPDATE tasks SET status = 'running', updated_at = now(),
         started_at = CASE WHEN status = 'queued' THEN now() ELSE started_at END
-      WHERE id = ${stepId} AND kind = 'step' AND status IN ('queued', 'running')`);
+      WHERE id = ${stepId} AND kind = 'step' AND status IN ${IN_PROGRESS}`);
   }
 
   async recordThought(stepId: string, thought: StepThought): Promise<void> {
@@ -355,7 +373,7 @@ export class PostgresRequestStore implements RequestStore {
     timings: Record<string, number>;
   }): Promise<void> {
     await this.inTransaction(tx, async (run) => {
-      const userId = await this.closeStep(run, input.stepId, "done", { timings: input.timings });
+      const userId = await this.closeStep(run, input.stepId, "completed", { timings: input.timings });
       // O passo foi cancelado enquanto o agente trabalhava: o erro desfaz as entidades do lote.
       if (!userId) throw new Error("Step is no longer open");
       for (const entity of input.entities) {
@@ -385,7 +403,7 @@ export class PostgresRequestStore implements RequestStore {
     timings: Record<string, number>;
   }): Promise<void> {
     await this.inTransaction(undefined, async (tx) => {
-      const userId = await this.closeStep(tx, input.stepId, "done", { timings: input.timings });
+      const userId = await this.closeStep(tx, input.stepId, "completed", { timings: input.timings });
       if (!userId) return;
       await this.append(tx, input.stepId, { kind: "result", data: { type: "query", ...input.result } });
       await this.enqueueFinalize(tx, input.requestId, input.stepId, userId);
@@ -404,13 +422,13 @@ export class PostgresRequestStore implements RequestStore {
   private async closeStep(
     tx: Tx,
     stepId: string,
-    status: "done" | "failed",
+    status: "completed" | "failed",
     detail: { timings?: Record<string, number>; errorCode?: string } = {},
   ): Promise<string | undefined> {
     const closed = await tx.execute<{ user_id: string }>(sql`
       UPDATE tasks SET status = ${status}, finished_at = now(), updated_at = now(),
         data = data || ${json(detail.errorCode ? { errorCode: detail.errorCode } : {})}::jsonb
-      WHERE id = ${stepId} AND kind = 'step' AND status IN ('queued', 'running')
+      WHERE id = ${stepId} AND kind = 'step' AND status IN ${before(status)}
       RETURNING user_id`);
     const userId = closed.rows[0]?.user_id;
     if (userId && (detail.timings || detail.errorCode)) {
@@ -440,7 +458,7 @@ export class PostgresRequestStore implements RequestStore {
     });
   }
 
-  async finish(requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<void> {
+  async finish(requestId: string, status: "completed" | "failed" | "interrupted", outcome: RequestOutcome): Promise<void> {
     await this.inTransaction(undefined, (tx) => this.closeRequest(tx, requestId, status, outcome));
   }
 
@@ -451,19 +469,20 @@ export class PostgresRequestStore implements RequestStore {
         VALUES (${input.requestId}, ${input.taskId}, 'generates')`);
       await this.append(run, input.requestId, { kind: "result", data: { type: "voice", taskId: input.taskId } });
       // O pedido foi cancelado enquanto o modelo trabalhava: o erro desfaz a tarefa.
-      if (!(await this.closeRequest(run, input.requestId, "done", {}))) throw new Error("Request is no longer open");
+      if (!(await this.closeRequest(run, input.requestId, "completed", {}))) throw new Error("Request is no longer open");
     });
   }
 
   /** Encerra o pedido se ele ainda esta aberto. A resposta final e a ultima entrada. */
-  private async closeRequest(tx: Tx, requestId: string, status: "done" | "failed", outcome: RequestOutcome): Promise<boolean> {
+  private async closeRequest(tx: Tx, requestId: string, status: "completed" | "failed" | "interrupted", outcome: RequestOutcome): Promise<boolean> {
     const patch = {
       ...(outcome.failedSteps?.length ? { failedSteps: outcome.failedSteps } : {}),
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
     };
     const closed = await tx.execute(sql`
-      UPDATE tasks SET status = ${status}, finished_at = now(), updated_at = now(), data = data || ${json(patch)}::jsonb
-      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
+      UPDATE tasks SET status = ${status}, situation = ${ON_CLOSE_SITUATION}, finished_at = now(), updated_at = now(),
+        data = data || ${json(patch)}::jsonb
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${before(status)}
       RETURNING id`);
     if (closed.rows.length === 0) return false;
 
@@ -484,16 +503,16 @@ export class PostgresRequestStore implements RequestStore {
   async cancel(requestId: string): Promise<string[]> {
     return this.inTransaction(undefined, async (tx) => {
       const cancelled = await tx.execute(sql`
-        UPDATE tasks SET status = 'cancel', finished_at = now(), updated_at = now(),
+        UPDATE tasks SET status = ${STOPPED_STATUS}, situation = ${ON_CLOSE_SITUATION}, finished_at = now(), updated_at = now(),
           data = data || ${json({ errorCode: "cancelled" satisfies RequestErrorCode })}::jsonb
         WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
         RETURNING id`);
       if (cancelled.rows.length === 0) return [];
       await tx.execute(sql`
-        UPDATE tasks s SET status = 'cancel', finished_at = now(), updated_at = now()
+        UPDATE tasks s SET status = ${STOPPED_STATUS_OF_STEP}, finished_at = now(), updated_at = now()
         FROM task_task_relation r
         WHERE r.from_task_id = ${requestId} AND r.relation = 'step' AND r.to_task_id = s.id
-          AND s.kind = 'step' AND s.status IN ('queued', 'running')`);
+          AND s.kind = 'step' AND s.status IN ${IN_PROGRESS}`);
       const steps = await tx.execute<{ id: string }>(sql`
         SELECT to_task_id AS id FROM task_task_relation WHERE from_task_id = ${requestId} AND relation = 'step'`);
       return [requestId, ...steps.rows.map((row) => row.id)];
@@ -527,9 +546,10 @@ export class PostgresRequestStore implements RequestStore {
 // `tasks_requests_idx`: pedidos do usuario, nunca passos.
 const REQUEST_FILTER = "e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL";
 const REQUEST_SELECT = `
-  SELECT e.id, e.user_id, e.kind, e.status, e.name, e.data, e.created_at, e.updated_at, e.finished_at,
-    s.from_task_id AS session_id
+  SELECT e.id, e.user_id, e.kind, e.status, e.situation, e.name, e.data, e.created_at, e.updated_at, e.finished_at,
+    s.from_task_id AS session_id, p.id AS project_id, p.name AS project_name, p.personal AS project_personal
   FROM tasks e
+  JOIN projects p ON p.id = e.project_id
   LEFT JOIN task_task_relation s ON s.to_task_id = e.id AND s.relation = 'follow_up'`;
 
 function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord {
@@ -560,6 +580,8 @@ function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord 
     route: data.route ?? "steps",
     status: row.status as RequestRecord["status"],
     title: String(row.name),
+    project: { id: String(row.project_id), name: String(row.project_name), personal: Boolean(row.project_personal) },
+    ...(row.situation ? { situation: row.situation as Situation } : {}),
     prompt: messages.find((entry) => entry.role === "user")?.content ?? "",
     ...(data.context ? { context: data.context } : {}),
     ...(data.target ? { target: data.target } : {}),

@@ -2,8 +2,13 @@
   "id": "R00000000000000000000000A1",
   "kind": "request",
   "route": "model",
-  "status": "done",
+  "status": "completed",
   "title": "O que tenho amanhã?",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
   "createdAt": "2026-09-14T14:48:00.000Z",
   "updatedAt": "2026-09-14T14:48:00.000Z",
   "text": "O que tenho amanhã?",

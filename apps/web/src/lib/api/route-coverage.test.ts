@@ -5,7 +5,8 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { agentFilesRoutes, listAgentFiles, listAgentFileBackups, readAgentFileText, requestAgentFileEdit, restoreAgentFileBackup } from "./agent-files";
 import { createArtifact, deleteArtifact, editArtifact, getArtifact, listArtifacts, artifactsRoutes } from "./artifacts";
 import { placesRoutes, searchPlaces } from "./places";
-import { createTask, deleteTask, tasksRoutes, getTask, listAgenda, listTrackedTasks, suggestTags, updateTask } from "./tasks";
+import { createProject, listProjects, projectsRoutes } from "./projects";
+import { createTask, deleteTask, tasksRoutes, getTask, listAgenda, listTrackedTasks, setTaskSituation, suggestTags, updateTask } from "./tasks";
 import { cancelRequest, getRequest, listRequests, getModelOptions, requestsRoutes, sendHermesMessage, sendModelMessage, startEditRequest, startRequest, startVoiceRequest } from "./requests";
 import { requestTranscription, transcriptionRoutes } from "./transcription";
 import { createRecurrence, deleteRecurrence, editRecurrence, getRecurrence, listRecurrences, recurrencesRoutes } from "./recurrences";
@@ -35,6 +36,7 @@ const declaredRoutes: string[] = [
   ...Object.values(artifactsRoutes),
   ...Object.values(tasksRoutes),
   ...Object.values(placesRoutes),
+  ...Object.values(projectsRoutes),
   ...Object.values(recurrencesRoutes),
   ...Object.values(requestsRoutes),
   ...Object.values(transcriptionRoutes),
@@ -127,10 +129,15 @@ const cases: Case[] = [
     getTask: () => getTask("ID"),
     updateTask: () => updateTask("ID", anyBody()),
     deleteTask: () => deleteTask("ID"),
+    setTaskSituation: () => setTaskSituation("ID", "reviewed"),
     suggestTags: () => suggestTags("a"),
   }),
   ...casesOf("locais", placesRoutes, {
     searchPlaces: () => searchPlaces("av paulista"),
+  }),
+  ...casesOf("projetos", projectsRoutes, {
+    listProjects: () => listProjects(),
+    createProject: () => createProject("braid"),
   }),
   ...casesOf("artefatos", artifactsRoutes, {
     listArtifacts: () => listArtifacts(),

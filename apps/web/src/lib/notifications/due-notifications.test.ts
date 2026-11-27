@@ -14,6 +14,7 @@ function source(startsInMinutes: number, overrides: Partial<NotificationSource> 
   return {
     id: "task-1",
     name: "Corrida",
+    actor: "human",
     longRunning: false,
     startedAt: new Date(NOW + minutes(startsInMinutes)).toISOString(),
     notifyOffsetsMinutes: [5],

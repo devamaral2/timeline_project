@@ -1,4 +1,4 @@
-import type { TaskArtifactDto, TaskDto } from "@repo/contracts";
+import type { ProjectDto, TaskArtifactDto, TaskDto } from "@repo/contracts";
 import { describe, expect, it } from "vitest";
 import { taskFixture } from "@/test/fake-api/tasks";
 import { buildCreateTaskInput, buildTaskPatch, draftFromTask, emptyTaskDraft, instantFromDraft, rebaseDraft, validateTaskDraft } from "./task-draft";
@@ -8,7 +8,7 @@ describe("emptyTaskDraft e buildCreateTaskInput", () => {
     expect(emptyTaskDraft("comprar pão")).toEqual({
       kind: "common", name: "comprar pão", status: null, priority: "medium",
       startDate: "", startTime: "", endDate: "", endTime: "", description: "", location: "", reminders: [], tags: [], longRunning: false,
-      parentTaskId: null, subtaskIds: [], artifacts: [],
+      parentTaskId: null, subtaskIds: [], artifacts: [], project: null,
     });
   });
 
@@ -50,6 +50,8 @@ describe("emptyTaskDraft e buildCreateTaskInput", () => {
     expect(body).toMatchObject({ status: "done", finishedAt: "2026-11-14T13:00:00.000Z" });
   });
 });
+
+const BRAID: ProjectDto = { id: "project-braid", name: "braid", personal: false };
 
 /** 10:00 em São Paulo: o relógio da edição não entra no corpo, só o instante de conclusão. */
 const NOW = new Date("2026-11-14T13:00:00.000Z");
@@ -449,5 +451,38 @@ describe("rebaseDraft", () => {
     const typed = { ...draftFromTask(before), name: "Meu título" };
 
     expect(rebaseDraft(typed, before, after)).toMatchObject({ name: "Meu título", priority: "high" });
+  });
+});
+
+describe("projeto", () => {
+  it("a edição começa no projeto que a tarefa tem", () => {
+    expect(draftFromTask(training({ project: BRAID })).project).toEqual(BRAID);
+    expect(draftFromTask(training()).project).toMatchObject({ personal: true, name: "personal" });
+  });
+
+  it("a criação só manda projectId quando a pessoa escolheu um projeto que não é o personal", () => {
+    expect(buildCreateTaskInput({ ...emptyTaskDraft("Treino"), project: BRAID }, NOW)).toMatchObject({ projectId: "project-braid" });
+    expect(buildCreateTaskInput(emptyTaskDraft("Treino"), NOW)).not.toHaveProperty("projectId");
+    const personal: ProjectDto = { id: "project-personal", name: "personal", personal: true };
+    expect(buildCreateTaskInput({ ...emptyTaskDraft("Treino"), project: personal }, NOW)).not.toHaveProperty("projectId");
+  });
+
+  it("trocar de projeto manda o id, voltar ao personal manda null e deixar como está não manda nada", () => {
+    const inBraid = training({ project: BRAID });
+    const personal: ProjectDto = { id: "project-personal", name: "personal", personal: true };
+    const other: ProjectDto = { id: "project-other", name: "outro", personal: false };
+
+    expect(buildTaskPatch(inBraid, { ...draftFromTask(inBraid), project: other }, NOW)).toEqual({ expectedRevision: 3, projectId: "project-other" });
+    expect(buildTaskPatch(inBraid, { ...draftFromTask(inBraid), project: personal }, NOW)).toEqual({ expectedRevision: 3, projectId: null });
+    expect(buildTaskPatch(inBraid, draftFromTask(inBraid), NOW)).toBeNull();
+    expect(buildTaskPatch(training(), { ...draftFromTask(training()), project: BRAID }, NOW)).toEqual({ expectedRevision: 3, projectId: "project-braid" });
+  });
+
+  it("o projeto que a pessoa não mexeu acompanha a versão nova, e o que ela escolheu fica", () => {
+    const before = training();
+    const movedElsewhere = training({ revision: 4, project: BRAID });
+
+    expect(rebaseDraft(draftFromTask(before), before, movedElsewhere).project).toEqual(BRAID);
+    expect(rebaseDraft({ ...draftFromTask(before), project: { id: "p9", name: "escolhido", personal: false } }, before, movedElsewhere).project).toMatchObject({ id: "p9" });
   });
 });

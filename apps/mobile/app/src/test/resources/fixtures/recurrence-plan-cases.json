@@ -395,5 +395,78 @@
       "expectedRevision": 3,
       "byMonth": 4
     }
+  },
+  {
+    "name": "series in a project, unchanged",
+    "series": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-1",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium",
+        "tags": [
+          "saúde"
+        ],
+        "projectId": "project-timeline"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 42,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": ""
+    },
+    "patch": null
+  },
+  {
+    "name": "series in a project, rule changed",
+    "series": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 42,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "id": "rec-1",
+      "template": {
+        "kind": "common",
+        "name": "Treino",
+        "description": "",
+        "priority": "medium",
+        "tags": [
+          "saúde"
+        ],
+        "projectId": "project-timeline"
+      },
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-02T12:00:00.000Z"
+    },
+    "draft": {
+      "frequency": "weekly",
+      "interval": 2,
+      "weekdays": 42,
+      "monthDay": 1,
+      "month": 1,
+      "endsOn": ""
+    },
+    "patch": {
+      "expectedRevision": 3,
+      "interval": 2
+    }
   }
 ]

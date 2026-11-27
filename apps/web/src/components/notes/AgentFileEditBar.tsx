@@ -1,5 +1,6 @@
 "use client";
 
+import { isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto } from "@repo/contracts";
 import { ArrowUp, FileText, X } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -7,7 +8,7 @@ import styles from "@/components/detail/entity-ai-edit-bar.module.css";
 import { useHermesDock } from "@/components/ui/hermes-flight";
 import { HermesGlyph } from "@/components/ui/hermes-glyph";
 import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
-import { agentFailureText, startFailureCode } from "@/lib/agent-chat/use-agent-chat";
+import { agentEndLabel, agentEndText, agentFailureText, startFailureCode } from "@/lib/agent-chat/use-agent-chat";
 import { requestAgentFileEdit } from "@/lib/api/agent-files";
 import { operationId } from "@/lib/api/operation-id";
 import { HermesOffError, getRequest } from "@/lib/api/requests";
@@ -139,25 +140,23 @@ export function AgentFileEditBar({ path, onDone, pollMs = AGENT_REQUEST_POLL_MS 
 
   const failed = followed?.status === "failed";
   const message = lost ? LOST_TEXT
-    : followed?.status === "done" ? (followed.message ?? null)
+    : followed && isSuccessAgentStatus(followed.status) ? (followed.message ?? null)
     : failed ? agentFailureText(followed.errorCode ?? "internal")
-    : followed?.status === "cancel" ? agentFailureText("cancelled")
-    : null;
+    : (followed && agentEndText(followed.status)) || null;
   const shown = error ?? message;
   const hasFailure = error !== null || failed || lost;
   const state: HermesState = speech.listening ? "listening"
     : sending || open ? "thinking"
-    : followed?.status === "done" ? "done"
+    : followed && isSuccessAgentStatus(followed.status) ? "done"
     : hasFailure ? "error"
     : "idle";
   const statusText = speech.listening ? "Ouvindo…"
     : sending ? "Enviando o pedido…"
     : lost ? "Não consegui acompanhar o pedido"
     : open ? (followed?.progress ?? (followed ? runningStepLabel(followed) : undefined) ?? "Entendendo o pedido…")
-    : followed?.status === "done" ? "Pronto"
+    : followed && isSuccessAgentStatus(followed.status) ? "Pronto"
     : failed ? "Não deu certo"
-    : followed?.status === "cancel" ? "Pedido cancelado"
-    : "Esperando o seu pedido";
+    : (followed && agentEndLabel(followed.status)) || "Esperando o seu pedido";
   const canDismiss = finished || lost;
 
   return (

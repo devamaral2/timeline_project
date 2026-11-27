@@ -7,6 +7,11 @@
     "priority": "medium",
     "name": "Escolher quarto",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-15T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -25,6 +30,11 @@
     "priority": "medium",
     "name": "Reservar hotel",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-12T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -43,6 +53,11 @@
     "priority": "medium",
     "name": "Comprar passagens",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-13T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -61,6 +76,11 @@
     "priority": "medium",
     "name": "Buscar roteiro",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T14:48:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -79,6 +99,11 @@
     "priority": "medium",
     "name": "Pagar o quarto",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "longRunning": false,
     "notifyOffsetsMinutes": [],
     "tags": [],
@@ -96,6 +121,11 @@
     "priority": "medium",
     "name": "Sem dia ainda",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "longRunning": false,
     "notifyOffsetsMinutes": [],
     "tags": [],
@@ -113,6 +143,11 @@
     "priority": "medium",
     "name": "Conferir seguro",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-16T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -131,6 +166,11 @@
     "priority": "medium",
     "name": "Mudança concluída",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-10T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -148,6 +188,11 @@
     "priority": "medium",
     "name": "Devolver a chave",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-11T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -166,6 +211,11 @@
     "priority": "medium",
     "name": "Subtarefa solta",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T18:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -184,6 +234,11 @@
     "priority": "medium",
     "name": "Ciclo A",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "longRunning": false,
     "notifyOffsetsMinutes": [],
     "tags": [],
@@ -201,6 +256,11 @@
     "priority": "medium",
     "name": "Ciclo B",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "longRunning": false,
     "notifyOffsetsMinutes": [],
     "tags": [],
@@ -218,6 +278,11 @@
     "priority": "medium",
     "name": "Fim do ciclo",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "longRunning": false,
     "notifyOffsetsMinutes": [],
     "tags": [],
@@ -235,6 +300,11 @@
     "priority": "medium",
     "name": "Principal de si",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "longRunning": false,
     "notifyOffsetsMinutes": [],
     "tags": [],

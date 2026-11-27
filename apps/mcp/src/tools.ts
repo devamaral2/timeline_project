@@ -10,7 +10,10 @@ const WEEKDAY_CODES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const
 const HUMAN_KINDS = ["common", "meal", "sleep", "training"] as const;
 const REQUEST_KINDS = ["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"] as const;
 const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
-const AGENT_ONLY_STATUSES = ["queued", "running", "waiting", "awaiting_transcription", "failed"] as const;
+// Nenhum status de agente e igual a um de pessoa: o filtro aceita os dois conjuntos.
+const AGENT_STATUSES = [
+  "preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+] as const;
 const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 /**
  * Os tipos de texto livre (`FREE_TEXT_ARTIFACT_TYPES` do contrato): o mesmo dado da nota, um texto em markdown.
@@ -223,7 +226,7 @@ export function registerTools(server: McpServer, api: ApiClient): void {
       description:
         "List the owner's tracked tasks: the ones with a status (to-dos and requests to the agent), long-running ones included; a recurring series appears once, by its next open occurrence. All of them unless filtered; filters combine with AND. 'from'/'to' compare against the planned start, or the planned end when there is no start; tasks with neither date never match a window.",
       inputSchema: {
-        status: z.array(z.enum([...HUMAN_STATUSES, ...AGENT_ONLY_STATUSES])).min(1).optional().describe("Match any of these statuses."),
+        status: z.array(z.enum([...HUMAN_STATUSES, ...AGENT_STATUSES])).min(1).optional().describe("Match any of these statuses."),
         priority: z.array(z.enum(PRIORITIES)).min(1).optional().describe("Match any of these priorities."),
         actor,
         tag: z.string().optional().describe("Exact tag, ignoring case."),

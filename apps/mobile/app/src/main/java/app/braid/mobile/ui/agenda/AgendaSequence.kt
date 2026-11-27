@@ -41,6 +41,7 @@ import app.braid.mobile.domain.agenda.FreeWindow
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.timeline.relativeDayLabel
 import app.braid.mobile.domain.timeline.shortDate
+import app.braid.mobile.ui.shell.ExecutionReserveSpacer
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
@@ -101,20 +102,32 @@ fun AgendaSequence(
             }
         }
         item(key = "status") {
-            when {
-                state.load == AgendaLoad.Loading -> {
-                    Text(
-                        text = "Carregando sua agenda…",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontFamily = BraidMonoFont,
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        letterSpacing = 0.08.em,
-                    )
-                }
-                state.load == AgendaLoad.Failed -> LoadFailed(onRetry)
+            Column {
+                SequenceStatus(state, onRetry)
+                // A gaveta de execução, quando há, ocupa o pé da tela: o último dia continua alcançável acima dela.
+                ExecutionReserveSpacer()
             }
         }
+    }
+}
+
+@Composable
+private fun SequenceStatus(
+    state: AgendaUiState,
+    onRetry: () -> Unit,
+) {
+    when {
+        state.load == AgendaLoad.Loading -> {
+            Text(
+                text = "Carregando sua agenda…",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = BraidMonoFont,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                letterSpacing = 0.08.em,
+            )
+        }
+        state.load == AgendaLoad.Failed -> LoadFailed(onRetry)
     }
 }
 

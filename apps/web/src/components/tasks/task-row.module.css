@@ -1,14 +1,17 @@
 /* Linha única das listas (agenda e lista de tarefas). Pessoa e agente usam a
-   mesma grade, soltos no fundo; o agente leva o robô como assinatura à direita.
+   mesma grade, soltos no fundo: texto à esquerda (título, tipo e quando, tags) e
+   duas linhas na ponta direita (duração ou status; prioridade ou provedor, e projeto).
    Cores só por token. */
 
 /* Quebra a linha só para o que vem embaixo (a gaveta das subtarefas, com largura toda). */
 .row {
+  /* O mesmo respiro entre as linhas do texto e as da ponta direita, para as segundas linhas caírem na mesma altura. */
+  --row-line-gap: 8px;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: 0 12px;
-  padding: 10px 0;
+  gap: 0 14px;
+  padding: 16px 0;
   list-style: none;
 }
 
@@ -46,7 +49,7 @@
   flex: 1;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   min-width: 0;
   color: inherit;
   text-decoration: none;
@@ -61,7 +64,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--row-line-gap);
   min-width: 0;
 }
 
@@ -78,7 +81,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 10px;
+  gap: 6px 14px;
   min-width: 0;
   color: var(--muted-foreground);
   font-size: 13px;
@@ -87,6 +90,16 @@
 
 .when[data-overdue="true"] {
   color: var(--destructive);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-width: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .tag {
@@ -103,9 +116,51 @@
   white-space: nowrap;
 }
 
-/* A assinatura do agente: fecha a linha, na borda direita. */
-.agentMark {
+/* O ponto inerte que ocupa o lugar do glifo na tarefa de agente. */
+.idleDot {
+  display: block;
+  color: var(--muted-foreground);
+  opacity: 0.4;
+}
+
+/* A ponta direita: no alto a duração (pessoa) ou o nome do status à esquerda do ícone quadrado (agente),
+   na altura do título; embaixo a marca do projeto, com a prioridade (pessoa) ou o provedor (agente) à esquerda dela. */
+.side {
   flex: none;
-  margin-top: 2px;
-  color: var(--brand-accent);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--row-line-gap);
+}
+.sideTop {
+  display: grid;
+  place-items: center end;
+  height: 22px;
+}
+.marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 18px;
+}
+.status {
+  composes: tone from "./agent-status-icon.module.css";
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.provider {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 16px;
+  color: var(--muted-foreground);
+}
+.provider svg {
+  width: 15px;
+  height: 13px;
 }

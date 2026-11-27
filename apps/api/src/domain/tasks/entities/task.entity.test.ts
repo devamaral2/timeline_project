@@ -146,7 +146,7 @@ describe("Task.create", () => {
       for (const kind of kinds) {
         expect(Task.create(props({ actor: "agent", kind, status: "queued", startedAt: undefined })).kind).toBe(kind);
       }
-      for (const status of ["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"] as const) {
+      for (const status of ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back"] as const) {
         expect(Task.create(props({ actor: "agent", kind: "request", status })).status).toBe(status);
       }
     });
@@ -332,6 +332,41 @@ describe("Task.rehydrate", () => {
     expect(() => Task.rehydrate(stored({ actor: "agent", kind: "step" }))).toThrow(TaskValidationError);
   });
 
+  describe("situation", () => {
+    const agent = (overrides: Partial<TaskRehydrateProps> = {}) =>
+      stored({ actor: "agent", kind: "request", status: "completed", ...overrides });
+
+    test("a finished agent request carries the situation it was stored with", () => {
+      expect(Task.rehydrate(agent({ situation: "bookmarked" })).situation).toBe("bookmarked");
+      expect(Task.rehydrate(agent()).situation).toBeUndefined();
+    });
+
+    test.each(["completed", "interrupted", "failed", "cancelled", "rolled_back"] as const)(
+      "accepts a situation when the request is %s",
+      (status) => {
+        expect(Task.rehydrate(agent({ status, situation: "reviewed" })).situation).toBe("reviewed");
+      },
+    );
+
+    test.each([
+      ["a human task", stored({ situation: "reviewed" })],
+      ["a finished human task", stored({ status: "done", situation: "reviewed" })],
+      ["a step", agent({ kind: "step", situation: "to_review" })],
+      ["a scheduled execution", agent({ kind: "cron", situation: "to_review" })],
+      ["an open agent request", agent({ status: "running", situation: "to_review" })],
+      ["a waiting agent request", agent({ status: "waiting", situation: "to_review" })],
+    ])("refuses a situation on %s", (_, input) => {
+      expect(() => Task.rehydrate(input)).toThrow(TaskValidationError);
+    });
+
+    test("a new task can carry a situation under the same rule", () => {
+      expect(Task.create(props({ actor: "agent", kind: "request", status: "failed", situation: "to_review" })).situation).toBe("to_review");
+      expect(() => Task.create(props({ actor: "agent", kind: "request", status: "queued", situation: "to_review" }))).toThrow(
+        TaskValidationError,
+      );
+    });
+  });
+
   test("rejects a revision that is not an integer >= 1", () => {
     expect(() => Task.rehydrate(stored({ revision: 0 }))).toThrow("Task revision must be an integer >= 1");
     expect(() => Task.rehydrate(stored({ revision: 1.5 }))).toThrow(TaskValidationError);
@@ -462,6 +497,28 @@ describe("Task.revise", () => {
     expect(task.revise({ description: "editada" }).occurrence).toEqual({ ...occurrence, detached: true });
     expect(task.revise({ name: "Outro" }).occurrence?.detached).toBe(true);
     expect(task.occurrence?.detached).toBe(false);
+  });
+
+  test("the project is the one chosen, and absent when nobody chose: the writer then resolves it", () => {
+    expect(Task.create(props({ projectId: "project-1" })).projectId).toBe("project-1");
+    expect(Task.create(props()).projectId).toBeUndefined();
+    expect(Task.rehydrate(stored({ projectId: "project-2" })).projectId).toBe("project-2");
+  });
+
+  test("revising keeps the project, swaps it for another and null means back to personal", () => {
+    const task = Task.rehydrate(stored({ projectId: "project-1" }));
+
+    expect(task.revise({ name: "Outro" }).projectId).toBe("project-1");
+    expect(task.revise({ projectId: "project-2" }).projectId).toBe("project-2");
+    expect(task.revise({ projectId: null }).projectId).toBeNull();
+    expect(task.revise({ projectId: "project-2" }).revision).toBe(task.revision + 1);
+  });
+
+  test("changing only the project detaches the occurrence like any other field", () => {
+    const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-31", detached: false };
+    const task = Task.rehydrate(stored({ occurrence, projectId: "project-1" }));
+
+    expect(task.revise({ projectId: "project-2" }).occurrence?.detached).toBe(true);
   });
 
   test("a task that is not an occurrence stays without a series", () => {

@@ -284,8 +284,10 @@ describe("PostgresArtifactRepository", () => {
       return { food, payload: job.payload, requestId: job.task_id };
     }
 
+    /** O job pegou o pedido e o handler o marcou `running`: so de la ele conclui (ticket 56). */
+    const running = (requestId: string) => ctx.pool.query("UPDATE tasks SET status = 'running' WHERE id = $1", [requestId]);
     const requestOf = async (requestId: string) =>
-      (await selectRows(ctx.pool, "SELECT status, finished_at FROM tasks WHERE id = $1", [requestId]))[0];
+      (await selectRows(ctx.pool, "SELECT status, situation, finished_at FROM tasks WHERE id = $1", [requestId]))[0];
     const resultsOf = (requestId: string) =>
       selectRows(ctx.pool, "SELECT kind, role, content, data FROM task_entries WHERE task_id = $1 AND kind = 'result'", [requestId]);
 
@@ -353,6 +355,7 @@ describe("PostgresArtifactRepository", () => {
 
     test("concluir grava os nutrientes, encerra o pedido como done e acrescenta o resultado", async () => {
       const { food, payload, requestId } = await pendingFood();
+      await running(requestId);
 
       const applied = await artifacts.finishFoodGeneration(payload, generatedFood("feijoada completa"), "completed");
 
@@ -365,7 +368,8 @@ describe("PostgresArtifactRepository", () => {
         totals: { totalCaloriesKcal: 640 },
       });
       const request = await requestOf(requestId);
-      expect(request.status).toBe("done");
+      expect(request.status).toBe("completed");
+      expect(request.situation).toBe("to_review");
       expect(request.finished_at).toBeInstanceOf(Date);
       expect(await resultsOf(requestId)).toEqual([
         { kind: "result", role: null, content: null, data: { outcome: "completed", artifactId: food.id } },
@@ -379,7 +383,7 @@ describe("PostgresArtifactRepository", () => {
 
       expect(applied).toBe(true);
       expect((await found(food.id)).data).toMatchObject({ generation: { status: "failed" } });
-      expect((await requestOf(requestId)).status).toBe("failed");
+      expect(await requestOf(requestId)).toMatchObject({ status: "failed", situation: "to_review" });
       expect((await resultsOf(requestId)).map((entry) => entry.data)).toEqual([{ outcome: "failed", artifactId: food.id }]);
     });
 
@@ -392,13 +396,14 @@ describe("PostgresArtifactRepository", () => {
       for (const [what, change] of stale) {
         await ctx.reset();
         const { food, payload, requestId } = await pendingFood();
+      await running(requestId);
 
         const applied = await artifacts.finishFoodGeneration(change(payload), generatedFood("feijoada completa"), "completed");
 
         expect(applied, what).toBe(false);
         expect(await found(food.id), what).toMatchObject({ revision: 1, data: { generation: { status: "pending" } } });
         // O pedido termina mesmo assim: ninguem fica esperando, e o resultado diz que foi pulado.
-        expect((await requestOf(requestId)).status, what).toBe("done");
+        expect((await requestOf(requestId)).status, what).toBe("completed");
         expect((await resultsOf(requestId)).map((entry) => entry.data), what).toEqual([
           { outcome: "skipped", artifactId: food.id },
         ]);
@@ -407,16 +412,18 @@ describe("PostgresArtifactRepository", () => {
 
     test("sem data, so registra que a geracao foi pulada", async () => {
       const { food, payload, requestId } = await pendingFood();
+      await running(requestId);
 
       expect(await artifacts.finishFoodGeneration(payload, null, "skipped")).toBe(false);
 
       expect((await found(food.id)).revision).toBe(1);
-      expect((await requestOf(requestId)).status).toBe("done");
+      expect((await requestOf(requestId)).status).toBe("completed");
       expect((await resultsOf(requestId)).map((entry) => entry.data)).toEqual([{ outcome: "skipped", artifactId: food.id }]);
     });
 
     test("um pedido ja encerrado nao ganha um segundo resultado", async () => {
       const { payload, requestId } = await pendingFood();
+      await running(requestId);
       await artifacts.finishFoodGeneration(payload, generatedFood("feijoada completa"), "completed");
 
       expect(await artifacts.finishFoodGeneration(payload, generatedFood("feijoada completa"), "completed")).toBe(false);
@@ -425,7 +432,8 @@ describe("PostgresArtifactRepository", () => {
     });
 
     test("dentro do job, a escrita encerra o job na mesma transacao", async () => {
-      const { payload } = await pendingFood();
+      const { requestId, payload } = await pendingFood();
+      await running(requestId);
       const store = new PostgresJobStore(new PostgresDatabase(ctx.pool), 3000, 3);
       const [job] = await store.claim([FOOD_GENERATION_JOB], 1);
 
@@ -466,7 +474,7 @@ describe("PostgresArtifactRepository", () => {
       const noStart = trackedTask(USER, "Sem hora", { artifactLinks: [link(note.id)] });
       const removed = referenceTask(USER, "Apagado", "2026-11-10T09:00:00Z", { artifactLinks: [link(note.id)] });
       const request = agentTask(USER, "Pedido", { artifactLinks: [link(note.id, "updates")] });
-      const step = agentTask(USER, "Passo", { kind: "step", status: "done", artifactLinks: [link(note.id, "updates")] });
+      const step = agentTask(USER, "Passo", { kind: "step", status: "completed", artifactLinks: [link(note.id, "updates")] });
       for (const task of [late, early, noStart, removed, request, step]) await tasks.save(task);
       await tasks.delete(removed.id, USER);
 

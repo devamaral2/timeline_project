@@ -1,5 +1,7 @@
 package app.braid.mobile.data.requests
 
+import app.braid.mobile.data.projects.ProjectDto
+import app.braid.mobile.data.projects.toDomain
 import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentTrace
@@ -22,6 +24,7 @@ import app.braid.mobile.domain.request.TraceRunStatus
 import app.braid.mobile.domain.request.TraceSection
 import app.braid.mobile.domain.request.TraceStatus
 import app.braid.mobile.domain.task.TaskKind
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -39,6 +42,9 @@ data class RequestDto(
     val route: String,
     val status: String,
     val title: String,
+    val project: ProjectDto,
+    /** A situação do pedido que terminou; ausente enquanto ele está aberto. */
+    val situation: String? = null,
     /** O que o usuário escreveu ou falou. */
     val text: String? = null,
     val sessionId: String? = null,
@@ -231,12 +237,14 @@ fun RequestDto.toDomain(): AgentRequest =
         text = text,
         trace = trace?.toDomain(),
         model = model?.toDomain(),
+        project = project.toDomain(),
+        situation = TaskSituation.fromCode(situation),
     )
 
 fun ModelSelection.toDto() = ModelSelectionDto(provider.code, model, effort.code)
 
 /** Um provedor ou esforço que este app não conhece some (a seleção inteira, `null`) em vez de derrubar o pedido. */
-private fun ModelSelectionDto.toDomain(): ModelSelection? {
+fun ModelSelectionDto.toDomain(): ModelSelection? {
     val provider = ModelProvider.fromCodeOrNull(provider) ?: return null
     val effort = ModelEffort.fromCodeOrNull(effort) ?: return null
     return ModelSelection(provider, model, effort)

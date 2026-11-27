@@ -4,10 +4,15 @@
       "id": "task-3",
       "actor": "agent",
       "kind": "search_request",
-      "status": "done",
+      "status": "completed",
       "priority": "medium",
       "name": "Buscar passagens",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T14:48:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],

@@ -78,6 +78,7 @@ export class RequestEntityWorker {
 
       await this.deps.batchWriter.commit({
         ...session.toBatch(),
+        requestId: request.id,
         afterWrite: async (tx) => {
           await store.recordStepSuccess(tx, { requestId: request.id, stepId: step.id, entities, timings });
           // O agente ja disse a que tarefa cada artefato pertence: a ligacao nasce com o lote.

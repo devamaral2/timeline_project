@@ -1,0 +1,64 @@
+/* O ícone quadrado do status de agente: um SVG só, na grade de 20, tudo desenhado
+   em volta do centro (10, 10). Nada de borda nem pseudo-elemento de CSS, que o
+   navegador arredonda e tira do centro. Cores só por token. */
+
+/* A cor de cada status: apagada, destaque, aviso, sucesso ou erro. É a única tabela de cores do status: o ícone, o nome
+   dele na linha da lista e na gaveta de execução a compõem e leem o `data-status` do próprio elemento. */
+.tone { color: var(--muted-foreground); }
+.tone[data-status="queued"],
+.tone[data-status="preparing"],
+.tone[data-status="awaiting_transcription"],
+.tone[data-status="cancelled"],
+.tone[data-status="rolled_back"] { color: var(--muted-foreground); }
+.tone[data-status="starting"],
+.tone[data-status="running"] { color: var(--brand-accent); }
+.tone[data-status="waiting"],
+.tone[data-status="interrupted"] { color: var(--warning); }
+.tone[data-status="completed"] { color: var(--success); }
+.tone[data-status="failed"] { color: var(--destructive); }
+
+.icon {
+  composes: tone;
+  flex: none;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Os pontos e o quadrado de dentro são cheios, sem contorno. */
+.icon [data-part="dot"],
+.icon [data-part="pulse"] { fill: currentColor; stroke: none; }
+
+/* completed: o quadrado cheio, com o visto na cor do fundo. */
+.icon [data-part="solid"] { fill: currentColor; }
+.icon [data-part="tick"] { stroke: var(--background); }
+
+/* starting: o contorno a 40% e o arco girando. */
+.icon [data-part="dim"] { opacity: 0.4; }
+.icon [data-part="spin"] {
+  stroke-dasharray: 19 7.7;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: agentIconSpin 0.9s linear infinite;
+}
+
+/* preparing: o contorno tracejado, sem nada dentro. */
+.icon [data-part="dashed"] {
+  stroke-linecap: butt;
+  stroke-dasharray: 3.1 2.185;
+  stroke-dashoffset: -2.45;
+}
+
+/* running: o quadrado de dentro pulsa. */
+.icon [data-part="pulse"] { animation: agentIconPulse 1.4s ease-in-out infinite; }
+
+@keyframes agentIconSpin { to { transform: rotate(360deg); } }
+@keyframes agentIconPulse { 50% { opacity: 0.35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .icon [data-part="spin"],
+  .icon [data-part="pulse"] { animation: none; }
+}

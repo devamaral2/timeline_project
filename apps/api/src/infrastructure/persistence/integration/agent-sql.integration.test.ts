@@ -45,14 +45,17 @@ describe("PostgresScopedSqlQuery", () => {
   // As linhas de B entram primeiro, para que uma varredura que ignorasse o escopo as encontrasse antes das de A.
   async function seed(pool: Pool): Promise<void> {
     await pool.query(`
-      INSERT INTO tasks (id, user_id, actor, kind, status, name, started_at) VALUES
-        ('${B_TASK}', 'user-b', 'human', 'common', NULL, 'Segredo do B', '2026-09-15T12:00:00Z'),
-        ('${B_TRACKED}', 'user-b', 'human', 'common', 'todo', 'Tarefa do B', NULL),
-        ('${A_TRAINING}', 'user-a', 'human', 'training', NULL, 'Treino', '2026-09-15T12:00:00Z'),
-        ('${A_DELETED}', 'user-a', 'human', 'common', NULL, 'Apagado', '2026-09-15T13:00:00Z'),
-        ('${A_TRACKED}', 'user-a', 'human', 'common', 'todo', 'Tarefa do A', NULL),
-        ('${A_REQUEST}', 'user-a', 'agent', 'request', 'done', 'Pedido do A', '2026-09-15T14:00:00Z'),
-        ('${A_STEP}', 'user-a', 'agent', 'step', 'done', 'Passo do A', '2026-09-15T14:00:01Z');
+      INSERT INTO projects (id, user_id, name, personal) VALUES
+        ('${id("PB", 1)}', 'user-b', 'personal', true),
+        ('${id("PA", 1)}', 'user-a', 'personal', true);
+      INSERT INTO tasks (id, project_id, user_id, actor, kind, status, name, started_at) VALUES
+        ('${B_TASK}', '${id("PB", 1)}', 'user-b', 'human', 'common', NULL, 'Segredo do B', '2026-09-15T12:00:00Z'),
+        ('${B_TRACKED}', '${id("PB", 1)}', 'user-b', 'human', 'common', 'todo', 'Tarefa do B', NULL),
+        ('${A_TRAINING}', '${id("PA", 1)}', 'user-a', 'human', 'training', NULL, 'Treino', '2026-09-15T12:00:00Z'),
+        ('${A_DELETED}', '${id("PA", 1)}', 'user-a', 'human', 'common', NULL, 'Apagado', '2026-09-15T13:00:00Z'),
+        ('${A_TRACKED}', '${id("PA", 1)}', 'user-a', 'human', 'common', 'todo', 'Tarefa do A', NULL),
+        ('${A_REQUEST}', '${id("PA", 1)}', 'user-a', 'agent', 'request', 'completed', 'Pedido do A', '2026-09-15T14:00:00Z'),
+        ('${A_STEP}', '${id("PA", 1)}', 'user-a', 'agent', 'step', 'completed', 'Passo do A', '2026-09-15T14:00:01Z');
       UPDATE tasks SET deleted_at = now() WHERE id = '${A_DELETED}';
 
       INSERT INTO task_entries (id, task_id, user_id, kind, role, content) VALUES
@@ -128,6 +131,23 @@ describe("PostgresScopedSqlQuery", () => {
     expect(await rows("SELECT count(*)::int FROM tasks WHERE kind IN ('request', 'step') OR status = 'done'")).toEqual([[0]]);
   });
 
+  test("tasks traz o nome do projeto da tarefa de pessoa, e o projeto de outro usuario nao aparece", async () => {
+    await ctx.pool.query(`
+      INSERT INTO projects (id, user_id, name) VALUES ('${id("PA", 2)}', 'user-a', 'braid'), ('${id("PB", 2)}', 'user-b', 'segredo-do-b');
+      UPDATE tasks SET project_id = '${id("PA", 2)}' WHERE id = '${A_TRACKED}';
+      UPDATE tasks SET project_id = '${id("PB", 2)}' WHERE id = '${B_TRACKED}';
+    `);
+
+    expect(await rows("SELECT name, project FROM tasks ORDER BY name")).toEqual([
+      ["Tarefa do A", "braid"],
+      ["Treino", "personal"],
+    ]);
+    expect(await rows("SELECT name FROM tasks WHERE project = 'braid'")).toEqual([["Tarefa do A"]]);
+    expect(await rows("SELECT project FROM tasks WHERE project <> 'personal'", "user-b")).toEqual([["segredo-do-b"]]);
+    // Os pedidos do agente, que tambem tem projeto, continuam fora.
+    expect(await rows("SELECT count(*)::int FROM tasks WHERE kind IN ('request', 'step')")).toEqual([[0]]);
+  });
+
   test("artifacts mostra os artefatos vivos do usuario e os globais, sem os arquivos de agente", async () => {
     expect(await rows("SELECT name, type FROM artifacts WHERE NOT global ORDER BY name")).toEqual([
       ["Sono", "sleep"],
@@ -173,9 +193,9 @@ describe("PostgresScopedSqlQuery", () => {
 
   test("recurrences mostra so as series do proprio usuario, sem o template cru", async () => {
     await ctx.pool.query(`
-      INSERT INTO recurrences (id, user_id, freq, interval_count, byweekday, time_of_day, duration_minutes, starts_on, template) VALUES
-        ('${id("RB", 1)}', 'user-b', 'daily', 1, NULL, '06:00', NULL, '2026-09-01', '{"name": "Segredo do B", "kind": "common"}'),
-        ('${id("RA", 1)}', 'user-a', 'weekly', 1, 10, '07:00', 60, '2026-09-01',
+      INSERT INTO recurrences (id, project_id, user_id, freq, interval_count, byweekday, time_of_day, duration_minutes, starts_on, template) VALUES
+        ('${id("RB", 1)}', '${id("PB", 1)}', 'user-b', 'daily', 1, NULL, '06:00', NULL, '2026-09-01', '{"name": "Segredo do B", "kind": "common"}'),
+        ('${id("RA", 1)}', '${id("PA", 1)}', 'user-a', 'weekly', 1, 10, '07:00', 60, '2026-09-01',
           '{"name": "Corrida", "kind": "training", "status": "todo", "artifactIds": ["so o servidor ve"]}');
       UPDATE tasks SET recurrence_id = '${id("RA", 1)}', occurrence_on = '2026-09-15' WHERE id = '${A_TRAINING}';
     `);
@@ -318,8 +338,8 @@ describe("PostgresScopedSqlQuery", () => {
     const pool = new Pool({ connectionString: ctx.connectionString, max: 1 });
     try {
       await pool.query(`
-        INSERT INTO tasks (id, user_id, actor, kind, name, started_at)
-        SELECT lpad(n::text, 26, 'Z'), 'user-a', 'human', 'common', 'massa', now() FROM generate_series(1, 3000) AS n
+        INSERT INTO tasks (id, project_id, user_id, actor, kind, name, started_at)
+        SELECT lpad(n::text, 26, 'Z'), '${id("PA", 1)}', 'user-a', 'human', 'common', 'massa', now() FROM generate_series(1, 3000) AS n
       `);
       const slow = new PostgresScopedSqlQuery(pool, {
         rowCap: 10,

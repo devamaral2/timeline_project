@@ -27,22 +27,31 @@ import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.task.TaskStatus
 
+/** O nome curto do status de agente, o de `agentStatusNames` do web ("Na fila"); o status desconhecido não tem. */
+fun agentStatusLabel(status: TaskStatus?): String? =
+    when (status) {
+        TaskStatus.Preparing -> "Preparando"
+        TaskStatus.Queued -> "Na fila"
+        TaskStatus.Starting -> "Iniciando"
+        TaskStatus.Running -> "Trabalhando"
+        TaskStatus.Waiting -> "Esperando"
+        TaskStatus.AwaitingTranscription -> "Esperando transcrição"
+        TaskStatus.Completed -> "Concluído"
+        TaskStatus.Interrupted -> "Interrompido"
+        TaskStatus.Failed -> "Falhou"
+        TaskStatus.Cancelled -> "Cancelado"
+        TaskStatus.RolledBack -> "Revertido"
+        else -> null
+    }
+
 /** O nome que o leitor de tela anuncia para o glifo: o de `taskStatusName` do web. */
 fun taskStatusName(
     actor: TaskActor,
     status: TaskStatus?,
 ): String =
     if (actor == TaskActor.Agent) {
-        when (status) {
-            TaskStatus.Queued -> "Agente, na fila"
-            TaskStatus.Running -> "Agente, executando"
-            TaskStatus.Waiting -> "Agente, aguardando você"
-            TaskStatus.AwaitingTranscription -> "Agente, aguardando a transcrição"
-            TaskStatus.Done -> "Agente, feito"
-            TaskStatus.Failed -> "Agente, falhou"
-            TaskStatus.Cancel -> "Agente, cancelado"
-            else -> "Agente"
-        }
+        // O status desconhecido não tem nome próprio: o leitor de tela só diz quem executa.
+        agentStatusLabel(status)?.let { "Agente, ${it.lowercase()}" } ?: "Agente"
     } else {
         when (status) {
             null -> "Só agenda"
@@ -53,6 +62,7 @@ fun taskStatusName(
             TaskStatus.Done -> "Feito"
             TaskStatus.Cancel -> "Cancelado"
             TaskStatus.Missed -> "Não realizado"
+            TaskStatus.Unknown -> "Tarefa"
             else -> "A fazer"
         }
     }
@@ -61,23 +71,21 @@ private const val GLYPH_STROKE = 1.75f
 private const val ACTIVE_DOT_OUTLINE = 2f
 private val DASHED_CIRCLE = listOf(2.4f, 2.31f)
 
-/** A cor do glifo por status, a do `task-glyphs.module.css`. */
+/** A cor do glifo de pessoa por status, a do `task-glyphs.module.css`. */
 @Composable
 private fun glyphColor(status: TaskStatus?): Color {
     val tokens = braidTokens()
     return when (status) {
         null -> tokens.routine
-        TaskStatus.Doing, TaskStatus.InHold, TaskStatus.Running, TaskStatus.Waiting, TaskStatus.AwaitingTranscription -> tokens.warning
+        TaskStatus.Doing, TaskStatus.InHold -> tokens.warning
         TaskStatus.Done -> tokens.success
-        TaskStatus.Failed -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }
 
 /**
- * O glifo do status: um círculo, e o que fica dentro diz qual. Tarefa de pessoa
- * sem status é o ponto azul "Só agenda"; os status de agente usam o mesmo
- * contorno e o "executando" ganha o ponto verde-água.
+ * O glifo do status: o de pessoa é um círculo, e o que fica dentro diz qual; tarefa de pessoa sem status é o ponto azul
+ * "Só agenda". O de agente é o ícone quadrado ([AgentStatusIcon]), nos mesmos lugares em que o de pessoa seria desenhado.
  */
 @Composable
 fun TaskStatusGlyph(
@@ -86,6 +94,10 @@ fun TaskStatusGlyph(
     modifier: Modifier = Modifier,
     size: Dp = 22.dp,
 ) {
+    if (actor == TaskActor.Agent) {
+        AgentStatusIcon(status = status, modifier = modifier, size = size)
+        return
+    }
     val color = glyphColor(status)
     val background = MaterialTheme.colorScheme.background
     val brand = braidTokens().brand
@@ -98,17 +110,12 @@ fun TaskStatusGlyph(
                     add(SvgPart(svgCircle(12f, 12f, 9f), dash = DASHED_CIRCLE.takeIf { status == TaskStatus.ToDefine }))
                 }
                 when (status) {
-                    TaskStatus.Doing, TaskStatus.Running -> add(SvgPart("M12 6a6 6 0 0 1 0 12Z", fill = true))
-                    TaskStatus.InHold, TaskStatus.Waiting -> {
+                    TaskStatus.Doing -> add(SvgPart("M12 6a6 6 0 0 1 0 12Z", fill = true))
+                    TaskStatus.InHold -> {
                         add(SvgPart("M10 9v6"))
                         add(SvgPart("M14 9v6"))
                     }
-                    TaskStatus.AwaitingTranscription -> add(SvgPart("M12 7.5V12l3 2"))
                     TaskStatus.Done -> add(SvgPart("m8.5 12.2 2.4 2.4 4.6-4.9"))
-                    TaskStatus.Failed -> {
-                        add(SvgPart("M12 8v5"))
-                        add(SvgPart("M12 16.2h.01"))
-                    }
                     TaskStatus.Cancel -> {
                         add(SvgPart("m9.5 9.5 5 5"))
                         add(SvgPart("m14.5 9.5-5 5"))
@@ -116,7 +123,7 @@ fun TaskStatusGlyph(
                     TaskStatus.Missed -> add(SvgPart("m9 15 6-6"))
                     else -> Unit
                 }
-                if (status == TaskStatus.Doing || status == TaskStatus.Running) {
+                if (status == TaskStatus.Doing) {
                     add(
                         SvgPart(
                             svgCircle(19f, 5f, 3f),

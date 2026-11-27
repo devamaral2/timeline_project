@@ -41,7 +41,7 @@ export class RequestEditTargetWorker {
   async run(requestId: string): Promise<void> {
     const { store } = this.deps;
     const request = await store.find(requestId);
-    if (request?.status !== "queued" || !request.target) return;
+    if (request?.status !== "preparing" || !request.target) return;
 
     const { entityType, entityId } = request.target;
     const resolved = await this.resolve(request.userId, entityType, entityId);

@@ -44,6 +44,7 @@ import app.braid.mobile.domain.timeline.daysBetween
 import app.braid.mobile.domain.timeline.longDate
 import app.braid.mobile.domain.timeline.shiftDayKey
 import app.braid.mobile.ui.chat.OnEntitiesChanged
+import app.braid.mobile.ui.shell.ExecutionReserveSpacer
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.PublishSectionMenu
 import app.braid.mobile.ui.shell.SectionChoice
@@ -253,6 +254,7 @@ private fun DayPager(
                 onOpenTask = onOpenTask,
                 onPlanFreeWindow = onPlanFreeWindow,
             )
+            ExecutionReserveSpacer()
         }
     }
 }

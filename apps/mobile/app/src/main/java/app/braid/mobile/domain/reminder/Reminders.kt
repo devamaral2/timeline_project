@@ -2,7 +2,7 @@ package app.braid.mobile.domain.reminder
 
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskKind
-import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.endsReminders
 import app.braid.mobile.domain.timeline.toIsoMillis
 import java.time.Duration
 import java.time.Instant
@@ -53,7 +53,7 @@ data class DueReminders(
 
 /** O instante de que o lembrete conta; `null` sem data, sem prazo (tarefa longa) ou com a tarefa concluída ou cancelada. */
 fun reminderAnchorOf(card: TaskCard): Instant? {
-    if (card.status == TaskStatus.Done || card.status == TaskStatus.Cancel) return null
+    if (endsReminders(card.actor, card.status)) return null
     return if (card.longRunning) card.estimatedFinishAt else card.startedAt
 }
 

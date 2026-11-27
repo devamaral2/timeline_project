@@ -10,6 +10,7 @@ function process(steps: RequestDto["steps"]): AgentChatMessage {
     id: "m1-process", role: "process",
     request: {
       id: "r1", kind: "request", route: "steps", status: "running", title: "Criar",
+      project: { id: "project-1", name: "personal", personal: true },
       createdAt: "2026-11-14T12:00:00.000Z", updatedAt: "2026-11-14T12:00:01.000Z", steps, entities: [],
     },
   };
@@ -21,7 +22,7 @@ test("antes de o servidor desdobrar o pedido, a linha diz que ele está sendo en
 });
 
 test("no pedido por passos vale o passo que roda, senão o próximo da fila, senão o último", () => {
-  const done = { id: "1", agent: "task-create", label: "Criando tarefas", status: "done" as const };
+  const done = { id: "1", agent: "task-create", label: "Criando tarefas", status: "completed" as const };
   const running = { id: "2", agent: "note-create", label: "Criando notas", status: "running" as const };
   const queued = { id: "3", agent: "task-edit", label: "Editando tarefas", status: "queued" as const };
   expect(pendingStepLabel([process([done, running, queued])], pending)).toBe("Criando notas");

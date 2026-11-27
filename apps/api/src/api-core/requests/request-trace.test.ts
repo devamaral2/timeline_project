@@ -9,6 +9,7 @@ const plus = (ms: number) => new Date(CREATED.getTime() + ms);
 function request(partial: Partial<RequestRecord> = {}): RequestRecord {
   return {
     id: "r1", userId: "u1", kind: "request", route: "steps", title: "almoço ao meio-dia e o cardápio",
+    project: { id: "p1", name: "personal", personal: true },
     prompt: "almoço ao meio-dia e o cardápio", context: { screen: "agenda" }, status: "running", createdAt: CREATED,
     updatedAt: CREATED, failedSteps: [], ...partial,
   };
@@ -40,7 +41,7 @@ const routed: DispatchRecord = {
 
 const steps: StepRecord[] = [
   step({
-    id: "s1", agent: "task-create", expected: "one", status: "done",
+    id: "s1", agent: "task-create", expected: "one", status: "completed",
     startedAt: plus(500), finishedAt: plus(1700), timings: { total: 1150 },
   }),
   step({ id: "s2", agent: "artifact-create", expected: "many", status: "running", startedAt: plus(520) }),
@@ -218,7 +219,7 @@ describe("toRequestTrace", () => {
   test("a query step shows the rows it returned; a failed step shows its error code", () => {
     const trace = toRequestTrace(request({ dispatch }), [
       step({
-        id: "q1", agent: "query", expected: "one", status: "done",
+        id: "q1", agent: "query", expected: "one", status: "completed",
         result: { columns: ["name"], rows: [["Almoço"], ["Jantar"]], truncated: false },
       }),
       step({ id: "s2", agent: "artifact-create", expected: "one", status: "failed", errorCode: "agent_timeout" }),
@@ -232,7 +233,7 @@ describe("toRequestTrace", () => {
 
   test("a finished request closes with the answer and the total duration", () => {
     const done = toRequestTrace(
-      request({ dispatch, status: "done", finishedAt: plus(2500) }), steps, entities,
+      request({ dispatch, status: "completed", finishedAt: plus(2500) }), steps, entities,
     );
     expect(done).toMatchObject({ status: "done", durationMs: 2500 });
     expect(done.entries.at(-1)).toMatchObject({
@@ -269,8 +270,8 @@ describe("toRequestTrace", () => {
 describe("um pedido cancelado", () => {
   test("fecha o rastro como falha, com o passo cancelado em vermelho", () => {
     const trace = toRequestTrace(
-      request({ status: "cancel", errorCode: "cancelled", finishedAt: plus(300) }),
-      [step({ id: "s1", agent: "task-create", expected: "one", status: "cancel" })], [],
+      request({ status: "cancelled", errorCode: "cancelled", finishedAt: plus(300) }),
+      [step({ id: "s1", agent: "task-create", expected: "one", status: "cancelled" })], [],
     );
     expect(trace.status).toBe("failed");
     expect(trace.entries.at(-1)).toMatchObject({ kind: "answer", label: "Cancelado", status: "failed" });

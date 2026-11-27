@@ -46,7 +46,7 @@ test.each(["leitura nova", "leitura existente com o artefato", "leitura existent
       await gate.place({ actor, article: scenario === "leitura existente com o artefato" ? article : { ...article, sourceUrl: "https://outro.example/b", body: "Fonte: [x](https://outro.example/b)\n\nB\n" } });
     }
     const commits = batchWriter.commits.length;
-    const companionTask = Task.create({ userId: actor.userId, actor: "agent", kind: "save_content", status: "done", name: "Guardou", now });
+    const companionTask = Task.create({ userId: actor.userId, actor: "agent", kind: "save_content", status: "completed", name: "Guardou", now });
     const seen: unknown[] = [];
 
     const placed = await gate.place({

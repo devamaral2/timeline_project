@@ -54,12 +54,15 @@ import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.domain.task.SubtaskTree
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
-import app.braid.mobile.domain.task.TaskGroup
-import app.braid.mobile.domain.task.TaskGroupKey
+import app.braid.mobile.domain.task.TaskDrawer
+import app.braid.mobile.domain.task.TaskDrawerKey
 import app.braid.mobile.domain.task.TaskPriority
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.showsSeriesRule
+import app.braid.mobile.domain.task.toNowLabel
 import app.braid.mobile.ui.agenda.ListSkeleton
 import app.braid.mobile.ui.chat.OnEntitiesChanged
+import app.braid.mobile.ui.shell.ExecutionReserveSpacer
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.PublishSectionMenu
 import app.braid.mobile.ui.shell.SectionChoice
@@ -69,15 +72,10 @@ import app.braid.mobile.ui.shell.SectionSearch
 import app.braid.mobile.ui.shell.SectionSetting
 import java.time.Instant
 
-/** "9 tarefas abertas": a legenda em mono no topo da tela. */
-fun openTasksLabel(open: Int): String =
-    when (open) {
-        0 -> "Nenhuma tarefa aberta"
-        1 -> "1 tarefa aberta"
-        else -> "$open tarefas abertas"
-    }
-
-/** A lista de Tarefas: as tarefas com status, de pessoa e de agente, nos grupos por status. */
+/**
+ * A lista de Tarefas: as tarefas com status, de pessoa e de agente, em quatro gavetas pela ação que cada uma pede (Para agora,
+ * Contínuas, Para depois e Finalizadas). O trabalho que o agente ainda faz não está aqui: mora na gaveta de execução do shell.
+ */
 @Composable
 fun TasksScreen(
     onNewTask: () -> Unit,
@@ -98,7 +96,8 @@ fun TasksScreen(
     TasksContent(
         state = state,
         onStatusClick = viewModel::openStatusPicker,
-        onToggleGroup = viewModel::toggleGroup,
+        onSituationPick = viewModel::chooseSituation,
+        onToggleDrawer = viewModel::toggleDrawer,
         onToggleSubtasks = viewModel::toggleSubtasks,
         onRetry = viewModel::retry,
         onClearFilters = viewModel::clearFilters,
@@ -119,7 +118,7 @@ fun TasksScreen(
         tab = MainTab.Tasks,
         model =
             SectionMenuModel(
-                count = if (state.cards != null) state.openCount else null,
+                count = if (state.cards != null) state.toNowCount else null,
                 lists =
                     state.tags.map { name ->
                         SectionList(
@@ -157,7 +156,8 @@ fun TasksScreen(
 fun TasksContent(
     state: TasksUiState,
     onStatusClick: (TaskCard) -> Unit,
-    onToggleGroup: (TaskGroupKey) -> Unit,
+    onSituationPick: (TaskCard, TaskSituation) -> Unit,
+    onToggleDrawer: (TaskDrawerKey) -> Unit,
     onToggleSubtasks: (String) -> Unit,
     onRetry: () -> Unit,
     onClearFilters: () -> Unit,
@@ -172,7 +172,7 @@ fun TasksContent(
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         Text(
-            text = (if (state.cards != null) openTasksLabel(state.openCount) else "Tarefas").uppercase(),
+            text = (if (state.cards != null) toNowLabel(state.toNowCount) else "Tarefas").uppercase(),
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 10.dp).semantics { heading() },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontFamily = BraidMonoFont,
@@ -196,11 +196,11 @@ fun TasksContent(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 20.dp, end = 20.dp, bottom = 120.dp + bottomInset),
         ) {
-            val groups = state.groups
+            val drawers = state.drawers
             when {
                 state.failed -> LoadFailed(onRetry)
                 state.cards == null -> LoadingList()
-                groups.isEmpty() ->
+                drawers.isEmpty() ->
                     if (state.filters.count > 0) {
                         EmptyList(
                             title = "Nenhuma tarefa passou no filtro",
@@ -208,6 +208,8 @@ fun TasksContent(
                             action = "Limpar filtros",
                             onAction = onClearFilters,
                         )
+                    } else if (state.onlyAgentWork) {
+                        QuietLine("Nada pede a sua atenção agora.")
                     } else {
                         EmptyList(
                             title = "Nenhuma tarefa por aqui",
@@ -217,30 +219,33 @@ fun TasksContent(
                         )
                     }
                 else ->
-                    groups.forEach { group ->
-                        GroupSection(
-                            group = group,
+                    drawers.forEach { drawer ->
+                        DrawerSection(
+                            drawer = drawer,
                             tree = state.tree,
                             closedSubtasks = state.closedSubtasks,
-                            expanded = state.isExpanded(group),
+                            expanded = state.isExpanded(drawer),
                             now = state.now,
-                            onToggle = { onToggleGroup(group.key) },
+                            onToggle = { onToggleDrawer(drawer.key) },
                             onToggleSubtasks = onToggleSubtasks,
                             onStatusClick = onStatusClick,
+                            onSituationPick = onSituationPick,
                             onOpenTask = onOpenTask,
                         )
                     }
             }
+            // A gaveta de execução, quando há, ocupa o pé da tela: a última linha continua alcançável acima dela.
+            ExecutionReserveSpacer()
         }
     }
 }
 
-/** O hairline entre as linhas começa depois do glifo, como no web. */
-private val ROW_DIVIDER_INSET = 58.dp
+/** O hairline entre as linhas começa onde começa o texto (glifo de 24 dp e 14 dp de respiro), como no web. */
+private val ROW_DIVIDER_INSET = 38.dp
 
 @Composable
-private fun GroupSection(
-    group: TaskGroup,
+private fun DrawerSection(
+    drawer: TaskDrawer,
     tree: SubtaskTree,
     closedSubtasks: Set<String>,
     expanded: Boolean,
@@ -248,25 +253,25 @@ private fun GroupSection(
     onToggle: () -> Unit,
     onToggleSubtasks: (String) -> Unit,
     onStatusClick: (TaskCard) -> Unit,
+    onSituationPick: (TaskCard, TaskSituation) -> Unit,
     onOpenTask: (String) -> Unit,
 ) {
-    if (group.collapsedByDefault) {
-        CollapsibleHead(group, expanded, onToggle)
-    } else {
-        GroupHead(group.title, group.cards.size, Modifier.padding(top = 18.dp, bottom = 4.dp))
-    }
+    DrawerHead(drawer, expanded, onToggle)
     if (expanded) {
-        group.cards.forEachIndexed { index, card ->
+        drawer.cards.forEachIndexed { index, card ->
             if (index > 0) HorizontalDivider(Modifier.padding(start = ROW_DIVIDER_INSET), color = MaterialTheme.colorScheme.outline)
             // O glifo de uma tarefa de pessoa, com qualquer status, abre a folha; o de agente é só leitura.
             val opensPicker = card.actor == TaskActor.Human
             val subtasks = tree.subtasksOf(card.id)
             val drawerOpen = card.id !in closedSubtasks
+            // O glifo da tarefa de agente que terminou abre as três opções de situação logo abaixo da linha.
+            var situationMenuOpen by remember(card.id) { mutableStateOf(false) }
             TaskRow(
                 card = card,
                 now = now,
                 onClick = { onOpenTask(card.id) },
                 onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null,
+                onSituationClick = { situationMenuOpen = !situationMenuOpen },
                 ruleInPlaceOfTime = showsSeriesRule(card),
                 aside =
                     if (subtasks.isEmpty()) {
@@ -275,6 +280,17 @@ private fun GroupSection(
                         { SubtaskToggle(card = card, subtasks = subtasks, expanded = drawerOpen, onToggle = { onToggleSubtasks(card.id) }) }
                     },
             )
+            val situation = card.situation
+            if (situationMenuOpen && situation != null) {
+                SituationMenu(
+                    value = situation,
+                    onPick = {
+                        situationMenuOpen = false
+                        onSituationPick(card, it)
+                    },
+                    modifier = Modifier.padding(start = 36.dp, top = 2.dp, bottom = 10.dp),
+                )
+            }
             if (subtasks.isNotEmpty() && drawerOpen) {
                 SubtaskDrawer(
                     parent = card,
@@ -324,24 +340,24 @@ private fun GroupHead(
     }
 }
 
-/** Feitas e Encerradas: o cabeçalho é um botão que abre e fecha o grupo. */
+/** O cabeçalho de cada gaveta, com a contagem, é um botão que a abre e fecha. */
 @Composable
-private fun CollapsibleHead(
-    group: TaskGroup,
+private fun DrawerHead(
+    drawer: TaskDrawer,
     expanded: Boolean,
     onToggle: () -> Unit,
 ) {
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     GroupHead(
-        title = group.title,
-        count = group.cards.size,
+        title = drawer.title,
+        count = drawer.cards.size,
         modifier =
             Modifier
                 .defaultMinSize(minHeight = 44.dp)
                 .semantics(mergeDescendants = true) {
                     heading()
                     stateDescription = if (expanded) "Aberto" else "Recolhido"
-                    onClick(label = if (expanded) "Recolher ${group.title}" else "Abrir ${group.title}") {
+                    onClick(label = if (expanded) "Recolher ${drawer.title}" else "Abrir ${drawer.title}") {
                         onToggle()
                         true
                     }
@@ -355,6 +371,18 @@ private fun CollapsibleHead(
                 modifier = Modifier.clearAndSetSemantics {},
             )
         },
+    )
+}
+
+/** A lista sem nada para fazer enquanto o agente trabalha: uma linha só, no tom do texto de apoio. */
+@Composable
+private fun QuietLine(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
     )
 }
 

@@ -10,6 +10,7 @@ import {
   updateTaskInputSchema,
 } from "../../../packages/contracts/src/schemas";
 import { buildTaskPatch, draftFromTask, type TaskDraft } from "../../../apps/web/src/components/task-detail/task-draft";
+import { PERSONAL_PROJECT } from "./project";
 
 type TaskInput = Record<string, unknown> & { id: string; name: string };
 
@@ -20,6 +21,7 @@ function task(input: TaskInput) {
     status: "todo",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
@@ -87,6 +89,7 @@ function request(input: Record<string, unknown> & { id: string }) {
     route: "steps",
     status: "running",
     title: "Preparar a viagem",
+    project: PERSONAL_PROJECT,
     text: "Preparar a mala",
     createdAt: "2026-09-14T15:30:00.000Z",
     updatedAt: "2026-09-14T15:30:05.000Z",
@@ -109,9 +112,9 @@ const requests = {
   queued: request({ id: "req-hermes", status: "queued" }),
   running: request({ id: "req-hermes", status: "running", progress: "Criando as tarefas…" }),
   runningStep: request({ id: "req-hermes", status: "running", steps: [{ id: "s1", agent: "writer", label: "Montar as tarefas", status: "running" }] }),
-  done: request({ id: "req-hermes", status: "done", entities: createdEntities }),
-  doneNothing: request({ id: "req-hermes", status: "done", entities: createdEntities.slice(3), message: "Não encontrei o que criar." }),
-  doneNothingBare: request({ id: "req-hermes", status: "done", entities: [] }),
+  done: request({ id: "req-hermes", status: "completed", entities: createdEntities }),
+  doneNothing: request({ id: "req-hermes", status: "completed", entities: createdEntities.slice(3), message: "Não encontrei o que criar." }),
+  doneNothingBare: request({ id: "req-hermes", status: "completed", entities: [] }),
   failed: request({ id: "req-hermes", status: "failed", errorCode: "unavailable", message: "O Hermes está fora do ar." }),
   failedBare: request({ id: "req-hermes", status: "failed", errorCode: "internal" }),
 };

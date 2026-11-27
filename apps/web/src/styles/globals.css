@@ -168,6 +168,10 @@
   --z-overlay: 30;
   --z-toast: 40;
   --z-dialog: 50;
+  /* O afastamento do pe da tela do que fica fixo nele (a escolha de status da lista): 24px do fundo, ou, no celular,
+     acima da barra inferior (90px, mais a area segura). Com a gaveta de execucao a vista sobe a altura que ela cobre
+     (`--execution-clearance`, publicada por `ExecutionDrawer`). Quem fica no pe da tela le esta propriedade. */
+  --fixed-bottom-offset: max(24px, calc(var(--execution-clearance, 0px) + 12px));
   /* A sombra do que flutua (menus, avisos, paineis) e a mesma do cartao
      erguido; o veu e o que escurece a tela atras de uma folha ou dialogo. */
   --shadow-float: var(--card-shadow-hover);
@@ -186,6 +190,12 @@
   --hairline: oklch(0.82 0.016 218); /* divisores: mais firmes que --border para ler sobre o fundo Névoa */
   --on-primary-muted: color-mix(in oklab, var(--primary-foreground) 70%, var(--primary));
   --on-primary-brand: var(--strand-destaque);
+}
+
+@media (max-width: 720px) {
+  :root {
+    --fixed-bottom-offset: max(calc(90px + env(safe-area-inset-bottom, 0px)), calc(var(--execution-clearance, 0px) + 12px));
+  }
 }
 
 .dark {

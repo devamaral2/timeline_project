@@ -56,6 +56,9 @@
 .groupToggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
 
 .list { list-style: none; margin: 0; padding: 0; }
+/* O fio entre uma tarefa e a seguinte, o mesmo da agenda: começa onde começa o texto (glifo de 24px e 14px de respiro). */
+.list > li { position: relative; }
+.list > li + li::before { content: ""; position: absolute; top: 0; left: 38px; right: 0; height: 1px; background: var(--hairline); }
 .row { position: relative; display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; transition: opacity var(--duration-fast); animation: rowIn 300ms var(--ease-out) backwards; animation-delay: calc(5 * var(--stagger)); }
 .row:nth-child(1) { animation-delay: 0ms; }
 .row:nth-child(2) { animation-delay: var(--stagger); }
@@ -112,17 +115,12 @@
 .message { composes: message from "../ui/page.module.css"; }
 .retry { composes: retry from "../ui/page.module.css"; }
 .empty { composes: empty from "../ui/page.module.css"; }
+/* A lista sem nada para fazer enquanto o agente trabalha: uma linha só, no tom do texto de apoio. */
+.quiet { margin: 0; padding: 24px 0; font-size: var(--font-size-sm); line-height: 20px; color: var(--muted); }
 .emptyTitle { composes: emptyTitle from "../ui/page.module.css"; }
 .emptyText { composes: emptyText from "../ui/page.module.css"; }
 .emptyAction { composes: pill from "../ui/controls.module.css"; color: var(--ink); font-weight: 600; }
-.toast { position: fixed; inset-inline: 0; bottom: 24px; z-index: var(--z-toast); display: flex; align-items: center; gap: 16px; width: fit-content; max-width: calc(100vw - 32px); min-height: 56px; margin-inline: auto; padding: 6px 6px 6px 20px; border: 1px solid var(--line); border-radius: 28px; background: var(--card); box-shadow: var(--shadow-float); animation: rise var(--duration-slow) var(--ease-out); }
-/* O fio do aviso encolhe com o tempo que resta para desfazer. */
-.toast::after { content: ""; position: absolute; left: 24px; right: 24px; bottom: 0; height: 2px; border-radius: 1px; background: var(--brand); transform-origin: left; animation: toastLife var(--toast-ms, 5000ms) linear forwards; }
-@keyframes toastLife { to { transform: scaleX(0); } }
-.toastMessage { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.toastUndo { min-height: 44px; padding: 0 16px; border: 0; border-radius: 22px; background: transparent; color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; }
-@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .toast { animation: none; } .groupToggle svg { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .groupToggle svg { transition: none; } }
 
 /* Compartilhado com o detalhe: o círculo de status, a prioridade e e o botão do círculo. */
 .statusIcon { width: 18px; height: 18px; flex-shrink: 0; }
@@ -168,5 +166,4 @@ textarea.line { height: auto; min-height: 64px; padding: 10px 0; line-height: 1.
   .meta li + li::before { content: none; }
   .date { font-size: 22px; line-height: 22px; }
   .side .priorityText { display: none; }
-  .toast { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); }
 }

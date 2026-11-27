@@ -27,12 +27,30 @@ export const OFF_AGENDA_KINDS = ["step", "save_content", "save_content_with_tran
 export const AGENDA_KINDS = TASK_KINDS.filter((kind) => !(OFF_AGENDA_KINDS as readonly string[]).includes(kind));
 
 export const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
-export const AGENT_STATUSES = ["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"] as const;
-// `done` e `cancel` existem nos dois conjuntos; a coluna guarda a uniao.
+export const AGENT_STATUSES = [
+  "preparing",
+  "queued",
+  "starting",
+  "running",
+  "waiting",
+  "awaiting_transcription",
+  "completed",
+  "interrupted",
+  "failed",
+  "cancelled",
+  "rolled_back",
+] as const;
+// Os dois conjuntos nao tem valor em comum; a coluna guarda a uniao.
 export const TASK_STATUSES = [...new Set([...HUMAN_STATUSES, ...AGENT_STATUSES])] as [
   (typeof HUMAN_STATUSES)[number] | (typeof AGENT_STATUSES)[number],
   ...((typeof HUMAN_STATUSES)[number] | (typeof AGENT_STATUSES)[number])[],
 ];
+
+/**
+ * A situacao da tarefa de agente que terminou, que o usuario controla: para revisar, revisada ou guardada.
+ * So tem situacao o pedido (nem passo, nem execucao agendada) que esta num status final.
+ */
+export const SITUATIONS = ["to_review", "reviewed", "bookmarked"] as const;
 
 export const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 
@@ -62,6 +80,7 @@ export type TaskKind = (typeof TASK_KINDS)[number];
 export type HumanTaskStatus = (typeof HUMAN_STATUSES)[number];
 export type AgentTaskStatus = (typeof AGENT_STATUSES)[number];
 export type TaskStatus = HumanTaskStatus | AgentTaskStatus;
+export type Situation = (typeof SITUATIONS)[number];
 export type TaskPriority = (typeof PRIORITIES)[number];
 export type EntryKind = (typeof ENTRY_KINDS)[number];
 export type EntryRole = (typeof ENTRY_ROLES)[number];

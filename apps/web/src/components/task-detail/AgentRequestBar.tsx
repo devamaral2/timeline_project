@@ -1,5 +1,6 @@
 "use client";
 
+import { isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto } from "@repo/contracts";
 import { ArrowUp, MessageSquare } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -8,7 +9,7 @@ import { HermesMark, type HermesState } from "@/components/ui/hermes-mark";
 import { useHermesDock } from "@/components/ui/hermes-flight";
 import styles from "@/components/detail/entity-ai-edit-bar.module.css";
 import agentStyles from "./agent-task-detail.module.css";
-import { agentFailureText } from "@/lib/agent-chat/use-agent-chat";
+import { agentEndLabel, agentFailureText } from "@/lib/agent-chat/use-agent-chat";
 import { operationId } from "@/lib/api/operation-id";
 import { FoodCancelConflictError, cancelRequest, getRequest, startRequest } from "@/lib/api/requests";
 import { isOpenRequest, runningStepLabel } from "@/lib/tasks/agent-request-model";
@@ -77,7 +78,7 @@ export function AgentRequestBar({ userId, request, onRequestChange }: AgentReque
   const open = tracked !== null && isOpenRequest(tracked.status);
   const state: HermesState = speech.listening ? "listening"
     : open || (tracked === null) ? "thinking"
-    : tracked.status === "done" ? "done"
+    : isSuccessAgentStatus(tracked.status) ? "done"
     : tracked.status === "failed" ? "error"
     : "idle";
   const disabled = sending || cancelling || !tracked;
@@ -126,10 +127,9 @@ export function AgentRequestBar({ userId, request, onRequestChange }: AgentReque
   const statusText = speech.listening ? "Ouvindo…"
     : tracked === null ? "Enviando o pedido…"
     : open ? (tracked.progress ?? runningStepLabel(tracked) ?? "Entendendo o pedido…")
-    : tracked.status === "done" ? "Pronto"
+    : isSuccessAgentStatus(tracked.status) ? "Pronto"
     : tracked.status === "failed" ? "Não deu certo"
-    : tracked.status === "cancel" ? "Pedido cancelado"
-    : "Esperando o seu pedido";
+    : agentEndLabel(tracked.status) ?? "Esperando o seu pedido";
   const failureReason = followId && tracked?.status === "failed" ? agentFailureText(tracked.errorCode ?? "internal") : null;
 
   return (

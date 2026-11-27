@@ -13,3 +13,10 @@ export class TaskOwnershipError extends Error {
 }
 
 export class TaskRevisionConflictError extends Error {}
+
+/** A tarefa nao aceita situacao: e de pessoa, e passo ou execucao agendada, ou ainda esta aberta. */
+export class TaskSituationNotAllowedError extends Error {
+  constructor() {
+    super("The task does not take a situation");
+  }
+}

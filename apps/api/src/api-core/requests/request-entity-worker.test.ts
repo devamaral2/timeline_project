@@ -43,7 +43,7 @@ describe("tarefas novas", () => {
       { artifactId: food?.id, relation: "creates", fromRecurrence: false },
     ]);
 
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     const entities = await ctx.store.entities("r1");
     expect(entities.map((entity) => [entity.kind, entity.operation, entity.summary.name])).toEqual([
       ["task", "create", "Refeição"], ["artifact", "create", food?.name],
@@ -244,7 +244,7 @@ describe("tarefas novas", () => {
 
     await ctx.worker.run(payload);
 
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     // Tarefa de referencia sem inicio dito comeca no instante do pedido.
     expect(ctx.database.tasks[0]?.startedAt).toEqual(ctx.request.createdAt);
   });
@@ -416,7 +416,7 @@ describe("falha de passo", () => {
     await ctx.store.cancel("r1");
     await ctx.worker.run(second);
     expect(ctx.batchWriter.commits).toHaveLength(1);
-    expect(ctx.store.stepRecords[1]?.status).toBe("cancel");
+    expect(ctx.store.stepRecords[1]?.status).toBe("cancelled");
   });
 });
 
@@ -443,7 +443,7 @@ describe("mudancas em tarefas que ja existem", () => {
 
     await ctx.worker.run(payload);
 
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     const stored = await ctx.taskRepository.findById(task.id);
     expect(stored?.estimatedFinishAt?.toISOString()).toBe(new Date(iso(18)).toISOString());
     expect(stored?.name).toBe("Trabalhar");
@@ -528,7 +528,7 @@ describe("mudancas em tarefas que ja existem", () => {
     expect(ctx.sql.calls).toEqual([{ userId: "user-1", sql: "SELECT id, name FROM tasks" }]);
     expect(ctx.gateway.calls).toHaveLength(2);
     expect(ctx.gateway.calls[1]?.user).toContain("Resultado da consulta");
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
   });
 
   test("so uma rodada extra: depois da consulta, outra consulta nao e executada", async () => {
@@ -560,7 +560,7 @@ describe("mudancas em tarefas que ja existem", () => {
 
   test("um pedido ou passo do agente nunca e alvo de edicao", async () => {
     const ctx = setupRequest();
-    const agentTask = Task.create({ userId: "user-1", actor: "agent", kind: "request", status: "done", name: "pedido antigo" });
+    const agentTask = Task.create({ userId: "user-1", actor: "agent", kind: "request", status: "completed", name: "pedido antigo" });
     await ctx.taskRepository.save(agentTask);
     const payload = await addStep(ctx, "s1", "entity", "many", { candidates: [candidate("task", agentTask.id, "pedido antigo")] });
     ctx.gateway.outputs.set("entity", entityAnswer({ taskEdits: [{ ...noTask, id: agentTask.id, name: "Outro" }] }));
@@ -604,7 +604,7 @@ describe("mudancas em tarefas que ja existem", () => {
 
     await ctx.worker.run(payload);
 
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     expect(ctx.batchWriter.commits).toHaveLength(1);
     const parent = await ctx.taskRepository.findById(house.id);
     // So as arestas mudam: os campos da tarefa maior ficam como estavam.
@@ -664,7 +664,7 @@ describe("mudancas em artefatos que ja existem", () => {
 
     await ctx.worker.run(payload);
 
-    expect(ctx.store.stepRecords[0]?.status).toBe("done");
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
     expect((await ctx.artifactRepository.findById(artifact.id))?.data).toMatchObject({ body: "Visão semanal e mensal" });
     expect((await updated(ctx))[0]).toMatchObject({
       kind: "artifact", operation: "update", summary: { name: "Ideia", artifactType: "text", text: "Visão semanal e mensal" },

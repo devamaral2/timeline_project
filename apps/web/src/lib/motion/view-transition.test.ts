@@ -44,3 +44,48 @@ test("without the View Transitions API the change happens at once", () => {
   expect(update).toHaveBeenCalledOnce();
   expect(scope.dataset.reflow).toBeUndefined();
 });
+
+test("in a hidden tab the change happens at once, with no transition for the browser to abort", () => {
+  const startViewTransition = vi.fn();
+  Object.defineProperty(document, "startViewTransition", { configurable: true, value: startViewTransition });
+  const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+  try {
+    const navigate = vi.fn();
+    startNavigationTransition("open", navigate);
+    expect(navigate).toHaveBeenCalledOnce();
+    expect(document.documentElement.dataset.nav).toBeUndefined();
+
+    const update = vi.fn();
+    const scope = document.createElement("div");
+    reflow(scope, update);
+    expect(update).toHaveBeenCalledOnce();
+    expect(scope.dataset.reflow).toBeUndefined();
+    expect(startViewTransition).not.toHaveBeenCalled();
+  } finally {
+    visibility.mockRestore();
+    Reflect.deleteProperty(document, "startViewTransition");
+  }
+});
+
+test("a transition the browser aborts leaves no unhandled rejection", async () => {
+  const ready = Promise.reject(new DOMException("Transition was aborted because of invalid state", "InvalidStateError"));
+  const handled = vi.spyOn(ready, "catch");
+  Object.defineProperty(document, "startViewTransition", {
+    configurable: true,
+    value: (update: () => void) => {
+      update();
+      return { ready, finished: Promise.resolve() };
+    },
+  });
+  const motion = vi.spyOn(window, "matchMedia").mockReturnValue({ matches: false } as MediaQueryList);
+  try {
+    const update = vi.fn();
+    reflow(document.createElement("div"), update);
+    expect(update).toHaveBeenCalledOnce();
+    expect(handled).toHaveBeenCalledOnce();
+    await ready.catch(() => {});
+  } finally {
+    motion.mockRestore();
+    Reflect.deleteProperty(document, "startViewTransition");
+  }
+});

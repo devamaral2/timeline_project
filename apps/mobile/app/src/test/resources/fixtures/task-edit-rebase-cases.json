@@ -9,6 +9,11 @@
       "priority": "high",
       "name": "Reunião de planejamento",
       "description": "Pauta do trimestre.",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "location": "Rua Augusta, 100 - São Paulo",
       "startedAt": "2026-09-14T21:30:00.000Z",
       "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
@@ -37,6 +42,11 @@
       "priority": "urgent",
       "name": "Reunião (renomeada)",
       "description": "Pauta do trimestre.",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "location": "Novo endereço",
       "startedAt": "2026-09-14T21:30:00.000Z",
       "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
@@ -77,7 +87,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "expected": {
       "kind": "common",
@@ -99,7 +114,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -112,6 +132,11 @@
       "priority": "high",
       "name": "Reunião de planejamento",
       "description": "Pauta do trimestre.",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "location": "Rua Augusta, 100 - São Paulo",
       "startedAt": "2026-09-14T21:30:00.000Z",
       "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
@@ -140,6 +165,11 @@
       "priority": "urgent",
       "name": "Reunião (renomeada)",
       "description": "Pauta do trimestre.",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "location": "Novo endereço",
       "startedAt": "2026-09-14T21:30:00.000Z",
       "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
@@ -181,7 +211,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "expected": {
       "kind": "common",
@@ -204,7 +239,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -217,6 +257,11 @@
       "priority": "high",
       "name": "Reunião de planejamento",
       "description": "Pauta do trimestre.",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "location": "Rua Augusta, 100 - São Paulo",
       "startedAt": "2026-09-14T21:30:00.000Z",
       "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
@@ -245,6 +290,11 @@
       "priority": "urgent",
       "name": "Reunião (renomeada)",
       "description": "Pauta do trimestre.",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "location": "Novo endereço",
       "startedAt": "2026-09-14T21:30:00.000Z",
       "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
@@ -286,7 +336,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "expected": {
       "kind": "common",
@@ -309,7 +364,210 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
+    }
+  },
+  {
+    "name": "project touched stays, project untouched follows",
+    "previous": {
+      "id": "task-p",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Revisar o contrato",
+      "description": "",
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      },
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "next": {
+      "id": "task-p",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Revisar o contrato (v2)",
+      "description": "",
+      "project": {
+        "id": "project-skills",
+        "name": "agent-skills",
+        "personal": false
+      },
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Meu título",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-skills",
+        "name": "agent-skills",
+        "personal": false
+      }
+    },
+    "expected": {
+      "kind": "common",
+      "name": "Meu título",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-skills",
+        "name": "agent-skills",
+        "personal": false
+      }
+    }
+  },
+  {
+    "name": "project untouched follows the new one",
+    "previous": {
+      "id": "task-p",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Revisar o contrato",
+      "description": "",
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      },
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "next": {
+      "id": "task-p",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Revisar o contrato",
+      "description": "",
+      "project": {
+        "id": "project-skills",
+        "name": "agent-skills",
+        "personal": false
+      },
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 3,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Revisar o contrato",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      }
+    },
+    "expected": {
+      "kind": "common",
+      "name": "Revisar o contrato",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-skills",
+        "name": "agent-skills",
+        "personal": false
+      }
     }
   },
   {
@@ -322,6 +580,11 @@
       "priority": "high",
       "name": "Reunião de planejamento",
       "description": "Pauta do trimestre.",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "location": "Rua Augusta, 100 - São Paulo",
       "startedAt": "2026-09-14T21:30:00.000Z",
       "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
@@ -350,6 +613,11 @@
       "priority": "high",
       "name": "Reunião de planejamento",
       "description": "Pauta do trimestre.",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "location": "Rua Augusta, 100 - São Paulo",
       "startedAt": "2026-09-15T12:00:00.000Z",
       "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
@@ -392,7 +660,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "expected": {
       "kind": "common",
@@ -416,7 +689,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   }
 ]

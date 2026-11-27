@@ -4,6 +4,7 @@ import app.braid.mobile.core.network.BraidJson
 import app.braid.mobile.data.tasks.TaskDetailDto
 import app.braid.mobile.data.tasks.toDomain
 import app.braid.mobile.domain.artifact.ArtifactType
+import app.braid.mobile.domain.project.Project
 import app.braid.mobile.domain.task.ArtifactRelation
 import app.braid.mobile.domain.task.DraftArtifact
 import app.braid.mobile.domain.task.TaskDetail
@@ -53,6 +54,17 @@ object TaskEditFixtures {
                     ?.content,
             subtaskIds = fields.getValue("subtaskIds").jsonArray.map { it.jsonPrimitive.content },
             artifacts = fields.getValue("artifacts").jsonArray.map { draftArtifact(it) },
+            project = fields.getValue("project").takeUnless { it is JsonNull }?.let(::project),
+        )
+    }
+
+    /** Um `ProjectDto` do web, como o app o lê. */
+    fun project(element: JsonElement): Project {
+        val fields = element.jsonObject
+        return Project(
+            id = fields.getValue("id").jsonPrimitive.content,
+            name = fields.getValue("name").jsonPrimitive.content,
+            personal = fields.getValue("personal").jsonPrimitive.boolean,
         )
     }
 

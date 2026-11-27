@@ -67,9 +67,9 @@ test("uma tarefa: o pedido leva o tipo e o id da tarefa, mostra o andamento e re
   expect(await screen.findByText("Trocando o horário")).toBeInTheDocument();
 
   advanceRequest(api, openedRequest(), {
-    status: "done",
+    status: "completed",
     message: "Troquei para 19h.",
-    steps: [{ id: "s1", agent: "task-edit", label: "Editando tarefas", status: "done" }],
+    steps: [{ id: "s1", agent: "task-edit", label: "Editando tarefas", status: "completed" }],
     entities: [{ kind: "task", id: "e1", name: "Revisão semanal", operation: "update", linkedTo: [] }],
   });
   expect(await screen.findByText("Pronto")).toBeInTheDocument();
@@ -193,7 +193,7 @@ test("o pedido de edicao vai com a escolha, e a troca feita pelo /model vale no 
     userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "e1",
     model: { provider: "anthropic", model: "claude-sonnet-5-5", effort: "medium" },
   });
-  advanceRequest(api, openedRequest(), { status: "done", message: "Feito." });
+  advanceRequest(api, openedRequest(), { status: "completed", message: "Feito." });
   expect(await screen.findByText("Pronto")).toBeInTheDocument();
   api.calls.length = 0;
 

@@ -9,7 +9,7 @@ export const TRANSCRIPTION_CANCELLED_TEXT = "Transcrição cancelada";
 
 /**
  * A pessoa cancela o pedido de transcrição (spec #39), esperando o serviço local ou a formatação. Numa gravação só:
- * o pedido vai a `cancel`, o job do serviço local e o de formatação são cancelados, o documento passa a dizer
+ * o pedido vai a `cancelled` (ou `interrupted`, se a formatação já rodava), o job do serviço local e o de formatação são cancelados, o documento passa a dizer
  * "Transcrição cancelada" e a Leitura diária do dia do pedido volta para a fazer. O que o serviço local entregar
  * depois, com o lease que tinha, não vale mais.
  */

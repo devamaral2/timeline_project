@@ -32,7 +32,7 @@ test("a fala vira uma tarefa de pessoa, com a frase na descricao, e o pedido ter
   expect(calls).toEqual(["comecei a estudar"]);
   const [task] = kit.database.tasks;
   expect(task).toMatchObject({ actor: "human", userId: "user-1", name: "Estudar", description: "comecei a estudar", startedAt: ACCEPTED });
-  expect(store.require("v1").status).toBe("done");
+  expect(store.require("v1").status).toBe("completed");
   expect(await store.entities("v1")).toMatchObject([{ kind: "task", id: task?.id, operation: "create", stepId: "v1", finalized: true }]);
   // Uma transacao so: a tarefa e o fim do pedido saem do mesmo lote.
   expect(kit.batchWriter.commits).toHaveLength(1);
@@ -86,5 +86,6 @@ test("pedido cancelado nao chama o modelo; cancelado no meio, a tarefa nao e gra
     return original(...args);
   };
   await expect(racing.worker.run("v1")).rejects.toThrow("no longer open");
-  expect(racing.store.require("v1").status).toBe("cancel");
+  // O pedido ja rodava quando foi cancelado: fica `interrupted`.
+  expect(racing.store.require("v1").status).toBe("interrupted");
 });

@@ -76,7 +76,7 @@ import app.braid.mobile.domain.chat.start
 import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isModelCommand
-import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.timeline.briefDate
 import app.braid.mobile.ui.agenda.freeDurationLabel
 import kotlinx.coroutines.flow.Flow
@@ -480,7 +480,7 @@ private fun Conversation(
             is ChatMessage.Assistant -> last.text
             is ChatMessage.Process ->
                 last.request
-                    ?.takeIf { it.status == TaskStatus.Done }
+                    ?.takeIf { isSuccessAgentStatus(it.status) }
                     ?.message
                     .orEmpty()
             else -> ""

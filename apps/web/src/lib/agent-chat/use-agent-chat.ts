@@ -1,6 +1,7 @@
 "use client";
 
-import type { AgentTraceDto, ModelOptionsDto, ModelProvider, ModelSelection, RequestDto, RequestScreenContext } from "@repo/contracts";
+import { isCancelledAgentStatus, isInterruptedAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
+import type { AgentTaskStatus, AgentTraceDto, ModelOptionsDto, ModelProvider, ModelSelection, RequestDto, RequestScreenContext } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/api/authed-fetch";
 import { ApiRequestError } from "@/lib/api/client-request";
@@ -76,6 +77,7 @@ export type ChatFailureCode =
   | "conflict"
   | "unavailable"
   | "cancelled"
+  | "interrupted"
   | "internal"
   | "connection_lost"
   | "connection_failed"
@@ -125,6 +127,7 @@ const ERROR_TEXTS: Record<ChatFailureCode, string> = {
   conflict: "Os dados mudaram enquanto eu preparava a resposta. Nada foi gravado; tente de novo.",
   unavailable: "A IA está indisponível agora. Tente de novo em instantes.",
   cancelled: "Pedido cancelado.",
+  interrupted: "Pedido interrompido.",
   internal: "Algo deu errado. Tente de novo.",
   connection_lost:
     "A conexão caiu antes da resposta. Se o pedido gravava algo, confira a agenda antes de reenviar.",
@@ -132,9 +135,27 @@ const ERROR_TEXTS: Record<ChatFailureCode, string> = {
   session_expired: "Sua sessão acabou. Entre de novo para continuar.",
 };
 
+/** O pedido que o usuario cancelou ou que o servidor interrompeu termina com o seu proprio aviso; os demais, com o codigo de erro. */
+export function endCode(status: AgentTaskStatus): "cancelled" | "interrupted" | undefined {
+  if (isCancelledAgentStatus(status)) return "cancelled";
+  if (isInterruptedAgentStatus(status)) return "interrupted";
+  return undefined;
+}
+
 /** O texto que o usuário lê para um código de falha. O detalhe de agente usa o mesmo, sem outra tradução. */
 export function agentFailureText(code: ChatFailureCode): string {
   return ERROR_TEXTS[code];
+}
+
+/** O aviso do pedido que terminou cancelado ou interrompido ("Pedido cancelado."); `undefined` para os demais status. */
+export function agentEndText(status: AgentTaskStatus): string | undefined {
+  const code = endCode(status);
+  return code ? agentFailureText(code) : undefined;
+}
+
+/** O mesmo aviso sem o ponto final, para a linha de estado ("Pedido cancelado"). */
+export function agentEndLabel(status: AgentTaskStatus): string | undefined {
+  return agentEndText(status)?.replace(/\.$/, "");
 }
 
 /**
@@ -143,16 +164,11 @@ export function agentFailureText(code: ChatFailureCode): string {
  */
 const RESUMABLE: ReadonlySet<ChatFailureCode> = new Set(["connection_failed", "connection_lost", "session_expired"]);
 
-/** O pedido ainda não terminou: a API o entrega como fila, execução ou espera (a regra é `isOpenRequest`). */
-export function isRequestOpen(request: Pick<RequestDto, "status">): boolean {
-  return isOpenRequest(request.status);
-}
-
 /** Um pedido aberto que o chat mostra: a rota por passos, a do Hermes ou a do modelo. */
 type ChatRouteRequest = RequestDto & { route: "steps" | ChatAgent };
 
 function isOpenChatRequest(request: RequestDto): request is ChatRouteRequest {
-  return (request.route === "steps" || agentOf(request.route) !== null) && isRequestOpen(request);
+  return (request.route === "steps" || agentOf(request.route) !== null) && isOpenRequest(request.status);
 }
 
 /** Por que o envio do pedido falhou, do ponto de vista do chat. */
@@ -262,7 +278,7 @@ export function useAgentChat({
       const request = found?.role === "user" ? found : undefined;
       commitMessages((current) => [
         ...current.map((message) =>
-          message.id === id && message.role === "user" && code !== "cancelled" ? { ...message, failed: true } : message,
+          message.id === id && message.role === "user" && code !== "cancelled" && code !== "interrupted" ? { ...message, failed: true } : message,
         ),
         {
           id: `${id}-error`,
@@ -304,9 +320,9 @@ export function useAgentChat({
       const route = agent ?? "steps";
       commitTraces((current) =>
         current.map((entry) =>
-          entry.id === id ? { ...entry, route, running: isRequestOpen(view), trace: view.trace ?? null } : entry));
+          entry.id === id ? { ...entry, route, running: isOpenRequest(view.status), trace: view.trace ?? null } : entry));
       const label = agent ? pendingLabelOf(agent, view.model ?? currentModelSelection(), currentModelOptions()) : undefined;
-      if (label && isRequestOpen(view) && pendingRef.current?.id === id && pendingRef.current.label !== label) {
+      if (label && isOpenRequest(view.status) && pendingRef.current?.id === id && pendingRef.current.label !== label) {
         commitPending({ ...pendingRef.current, label });
       }
       // O Hermes e o modelo não gravam passos: os pensamentos e as ferramentas vêm do rastro, ao vivo e depois do fim.
@@ -314,7 +330,7 @@ export function useAgentChat({
         const steps = hermesStepsOf(view.trace?.entries);
         if (steps.length > 0) {
           const stepsId = `${id}-steps`;
-          const message: AgentChatMessage = { id: stepsId, role: "hermes-steps", steps, running: isRequestOpen(view) };
+          const message: AgentChatMessage = { id: stepsId, role: "hermes-steps", steps, running: isOpenRequest(view.status) };
           commitMessages((current) =>
             current.some((entry) => entry.id === stepsId)
               ? current.map((entry) => (entry.id === stepsId ? message : entry))
@@ -329,7 +345,7 @@ export function useAgentChat({
   const finishRequest = useCallback(
     (id: string, view: RequestDto) => {
       applyView(id, view);
-      if (view.status === "done") {
+      if (isSuccessAgentStatus(view.status)) {
         followingRef.current.delete(id);
         if (pendingRef.current?.id === id) commitPending(null);
         if (agentOf(view.route)) {
@@ -349,7 +365,7 @@ export function useAgentChat({
       if (view.entities.length > 0) onEntitiesChangedRef.current?.();
       // O agente desligado: o servidor escreve o aviso, que diz mais que o texto do codigo.
       const notice = agentOf(view.route) && view.errorCode === "unavailable" ? view.message : undefined;
-      fail(id, view.status === "cancel" ? "cancelled" : (view.errorCode ?? "internal"), notice);
+      fail(id, endCode(view.status) ?? view.errorCode ?? "internal", notice);
     },
     [applyView, commitMessages, commitPending, fail],
   );
@@ -367,7 +383,7 @@ export function useAgentChat({
           const view = await getRequest(requestId);
           failures = 0;
           if (disposedRef.current || !followingRef.current.has(id)) return;
-          if (!isRequestOpen(view)) {
+          if (!isOpenRequest(view.status)) {
             finishRequest(id, view);
             return;
           }

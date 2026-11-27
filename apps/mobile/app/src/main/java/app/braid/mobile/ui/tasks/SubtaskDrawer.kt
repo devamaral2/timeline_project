@@ -49,19 +49,17 @@ import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.task.SubtaskTree
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
-import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.cardIsOverdue
 import app.braid.mobile.domain.task.cardWhenLabel
+import app.braid.mobile.domain.task.countsAsDone
+import app.braid.mobile.domain.task.isClosedStatus
 import java.time.Instant
 
 /** O rótulo de `cardWhenLabel` para quem não tem dia: na gaveta ele só repetiria ruído. */
 private const val NO_DATE = "Sem data"
 
-/** Feita, cancelada, não realizada e falha: o nome sai riscado no tom apagado. */
-private val CLOSED_STATUSES = setOf(TaskStatus.Done, TaskStatus.Cancel, TaskStatus.Missed, TaskStatus.Failed)
-
-/** Quantas das subtarefas diretas estão feitas; as de agente contam quando `done`. */
-fun subtasksDone(subtasks: List<TaskCard>): Int = subtasks.count { it.status == TaskStatus.Done }
+/** Quantas das subtarefas diretas estão feitas, cada uma pelo seu executor. */
+fun subtasksDone(subtasks: List<TaskCard>): Int = subtasks.count { countsAsDone(it.actor, it.status) }
 
 /** O que o leitor de tela anuncia no botão da fração. */
 fun subtaskToggleLabel(
@@ -246,7 +244,8 @@ private fun SubtaskLine(
     val isAgent = card.actor == TaskActor.Agent
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val wire = MaterialTheme.colorScheme.outline
-    val closed = card.status in CLOSED_STATUSES
+    // Fechada (feita, cancelada, não realizada ou falha): o nome sai riscado no tom apagado.
+    val closed = isClosedStatus(card.actor, card.status)
     val whenLabel = subtaskWhenLabel(card, now)
     val overdue = cardIsOverdue(card, now)
     Row(

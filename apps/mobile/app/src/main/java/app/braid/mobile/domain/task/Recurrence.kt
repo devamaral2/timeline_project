@@ -59,6 +59,11 @@ data class SeriesTemplate(
     val priority: TaskPriority,
     val tags: List<String>? = null,
     val notifyOffsetsMinutes: List<Int>? = null,
+    /**
+     * O projeto da série: o da tarefa que a cria, e cada ocorrência nasce nele. O `personal` leva o id dele, como qualquer
+     * outro. Ausente, ninguém escolheu.
+     */
+    val projectId: String? = null,
 )
 
 /** O corpo de `POST /api/recurrences`: a regra completa e o modelo. */
@@ -90,7 +95,7 @@ data class NewSeries(
             )
 }
 
-/** O `PATCH` da série: só a regra que mudou, com a revisão lida. Campo `null` não muda. */
+/** O `PATCH` da série: só a regra que mudou, com a revisão lida. Campo `null` não muda. Nunca leva o modelo nem o projeto. */
 data class SeriesPatch(
     val expectedRevision: Int,
     val frequency: RecurrenceFrequency? = null,
@@ -239,6 +244,7 @@ fun buildNewSeries(
                 priority = form.priority,
                 tags = form.tags.ifEmpty { null },
                 notifyOffsetsMinutes = form.reminders.ifEmpty { null },
+                projectId = form.project?.id,
             ),
     )
 }

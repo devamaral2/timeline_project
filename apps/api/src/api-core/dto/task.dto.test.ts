@@ -7,6 +7,7 @@ const userId = "auth-user-1";
 const startedAt = new Date("2026-08-17T15:00:00.000Z");
 const rule = { frequency: "daily" as const, interval: 1, timeOfDay: "12:00", timeZone: "America/Sao_Paulo", startsOn: "2026-08-01" };
 const series = Recurrence.create({ id: "rec-1", userId, rule, template: { name: "Almoço" } });
+const project = { id: "project-1", name: "personal", personal: true };
 const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
 
 function artifact(id: string, body = id): Artifact {
@@ -25,6 +26,18 @@ function artifact(id: string, body = id): Artifact {
 }
 
 describe("toTaskCardDto", () => {
+  test("carries the project of the task as an id, a name and the personal flag", () => {
+    const task = Task.create({ userId, name: "Ler", startedAt });
+    const named = { id: "project-2", name: "timeline_project", personal: false, extra: "ignored" };
+
+    expect(toTaskCardDto({ task, project: named, artifactTypes: [] }).project).toEqual({
+      id: "project-2",
+      name: "timeline_project",
+      personal: false,
+    });
+    expect(toTaskDto(task, project).project).toEqual(project);
+  });
+
   test("maps a reference task as it is stored, without a status", () => {
     const now = new Date("2026-08-10T12:00:00.000Z");
     const task = Task.create({
@@ -32,7 +45,7 @@ describe("toTaskCardDto", () => {
       tags: ["trabalho"], now,
     });
 
-    const card = toTaskCardDto({ task, artifactTypes: ["text", "food"] });
+    const card = toTaskCardDto({ task, project, artifactTypes: ["text", "food"] });
 
     expect(card).toEqual({
       id: "task-1",
@@ -41,6 +54,7 @@ describe("toTaskCardDto", () => {
       priority: "medium",
       name: "Reunião",
       description: "Semanal",
+      project,
       location: "Sala 3, Av. Paulista, São Paulo",
       startedAt: "2026-08-17T15:00:00.000Z",
       estimatedFinishAt: "2026-08-17T16:00:00.000Z",
@@ -57,6 +71,46 @@ describe("toTaskCardDto", () => {
     expect(card).not.toHaveProperty("status");
     expect(card).not.toHaveProperty("recurrence");
     expect(card).not.toHaveProperty("missed");
+  });
+
+  describe("the model choice of an agent request", () => {
+    const choice = { provider: "openrouter", model: "google/gemini-4-neon", effort: "medium" };
+    const agentOf = (status: "queued" | "completed", data: Record<string, unknown>, actor: "agent" | "human" = "agent") =>
+      Task.rehydrate({
+        id: "req-1", userId, actor, kind: actor === "agent" ? "request" : "common", status: actor === "agent" ? status : "todo",
+        priority: "medium", name: "Pedido", data, revision: 1,
+        createdAt: new Date("2026-08-01T10:00:00.000Z"), updatedAt: new Date("2026-08-01T10:00:00.000Z"),
+      });
+
+    test("carries the choice the request took", () => {
+      const card = toTaskCardDto({ task: agentOf("completed", { route: "model", model: choice }), project, artifactTypes: [] });
+
+      expect(card.model).toEqual(choice);
+    });
+
+    test("leaves it out when the request took none", () => {
+      const card = toTaskCardDto({ task: agentOf("queued", { route: "steps" }), project, artifactTypes: [] });
+
+      expect(card).not.toHaveProperty("model");
+    });
+
+    test("leaves it out on the Hermes route, which answers with its own model", () => {
+      const card = toTaskCardDto({ task: agentOf("completed", { route: "hermes", model: choice }), project, artifactTypes: [] });
+
+      expect(card).not.toHaveProperty("model");
+    });
+
+    test("leaves it out when the stored choice is not a whole one", () => {
+      const card = toTaskCardDto({ task: agentOf("completed", { route: "model", model: { provider: "anthropic" } }), project, artifactTypes: [] });
+
+      expect(card).not.toHaveProperty("model");
+    });
+
+    test("never shows a choice on a person's task", () => {
+      const card = toTaskCardDto({ task: agentOf("queued", { model: choice }, "human"), project, artifactTypes: [] });
+
+      expect(card).not.toHaveProperty("model");
+    });
   });
 
   test("maps a tracked task without dates, with its status and its main task", () => {
@@ -76,7 +130,7 @@ describe("toTaskCardDto", () => {
       updatedAt: new Date("2026-08-02T10:00:00.000Z"),
     });
 
-    const card = toTaskCardDto({ task, artifactTypes: [] });
+    const card = toTaskCardDto({ task, project, artifactTypes: [] });
 
     expect(card).toMatchObject({
       status: "inHold",
@@ -97,7 +151,7 @@ describe("toTaskCardDto", () => {
   test("maps a agent task with the agent kind and status", () => {
     const task = Task.create({ userId, actor: "agent", kind: "search_request", status: "waiting", name: "Pesquisar voos" });
 
-    expect(toTaskCardDto({ task, artifactTypes: [] })).toMatchObject({
+    expect(toTaskCardDto({ task, project, artifactTypes: [] })).toMatchObject({
       actor: "agent",
       kind: "search_request",
       status: "waiting",
@@ -107,7 +161,7 @@ describe("toTaskCardDto", () => {
   test("shows the series of an occurrence, with its rule and whether it was detached", () => {
     const task = Task.create({ userId, name: "Almoço", startedAt, occurrence: { ...occurrence, detached: true } });
 
-    const card = toTaskCardDto({ task, artifactTypes: [], recurrence: series });
+    const card = toTaskCardDto({ task, project, artifactTypes: [], recurrence: series });
 
     expect(card.recurrence).toEqual({ id: "rec-1", occurrenceOn: "2026-08-17", detached: true, rule });
   });
@@ -116,8 +170,8 @@ describe("toTaskCardDto", () => {
     const plain = Task.create({ userId, name: "Almoço", startedAt });
     const orphan = Task.create({ userId, name: "Almoço", startedAt, occurrence });
 
-    expect(toTaskCardDto({ task: plain, artifactTypes: [], recurrence: series })).not.toHaveProperty("recurrence");
-    expect(toTaskCardDto({ task: orphan, artifactTypes: [] })).not.toHaveProperty("recurrence");
+    expect(toTaskCardDto({ task: plain, project, artifactTypes: [], recurrence: series })).not.toHaveProperty("recurrence");
+    expect(toTaskCardDto({ task: orphan, project, artifactTypes: [] })).not.toHaveProperty("recurrence");
   });
 
   test("the lists of the dto are copies of the lists of the task", () => {
@@ -126,7 +180,7 @@ describe("toTaskCardDto", () => {
       createdAt: startedAt, updatedAt: startedAt,
     });
 
-    const dto = toTaskDto(task);
+    const dto = toTaskDto(task, project);
     dto.subtaskIds.push("s2");
     dto.notifyOffsetsMinutes.push(10);
 
@@ -156,7 +210,7 @@ describe("toTaskDto", () => {
   });
 
   test("returns the artifacts in the order of the links, whatever the order they were loaded in", () => {
-    const dto = toTaskDto(linked, [artifact("a"), artifact("b")]);
+    const dto = toTaskDto(linked, project, [artifact("a"), artifact("b")]);
 
     expect(dto.artifacts.map((entry) => [entry.artifact.id, entry.relation, entry.fromRecurrence])).toEqual([
       ["b", "uses", true],
@@ -166,14 +220,14 @@ describe("toTaskDto", () => {
   });
 
   test("an artifact that was deleted simply does not appear", () => {
-    const dto = toTaskDto(linked, [artifact("a")]);
+    const dto = toTaskDto(linked, project, [artifact("a")]);
 
     expect(dto.artifacts.map((entry) => entry.artifact.id)).toEqual(["a"]);
     expect(dto.artifactTypes).toEqual(["text"]);
   });
 
   test("the artifacts inside a task come without the list of tasks they appear in", () => {
-    const [entry] = toTaskDto(linked, [artifact("a", "corpo")]).artifacts;
+    const [entry] = toTaskDto(linked, project, [artifact("a", "corpo")]).artifacts;
 
     expect(entry?.artifact).toEqual({
       id: "a",
@@ -191,7 +245,7 @@ describe("toTaskDto", () => {
   });
 
   test("adds the subtasks to the card fields", () => {
-    const dto = toTaskDto(linked);
+    const dto = toTaskDto(linked, project);
 
     expect(dto).toMatchObject({ id: "task-1", name: "Reunião", parentTaskId: "p1", subtaskIds: ["s1", "s2"], revision: 1 });
     expect(dto.artifacts).toEqual([]);
@@ -202,7 +256,7 @@ describe("toTaskDto", () => {
   test("includes the series when the task is an occurrence", () => {
     const task = Task.create({ userId, name: "Almoço", startedAt, occurrence });
 
-    expect(toTaskDto(task, [], series).recurrence).toEqual({ id: "rec-1", occurrenceOn: "2026-08-17", detached: false, rule });
+    expect(toTaskDto(task, project, [], series).recurrence).toEqual({ id: "rec-1", occurrenceOn: "2026-08-17", detached: false, rule });
   });
 });
 

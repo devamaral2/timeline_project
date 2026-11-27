@@ -17,7 +17,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {}
   },
@@ -39,7 +40,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {
       "name": "Dê um título à tarefa."
@@ -63,7 +65,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {
       "location": "O local tem no máximo 300 caracteres."
@@ -87,7 +90,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {}
   },
@@ -109,7 +113,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {
       "startTime": "Informe a data para marcar a hora.",
@@ -134,7 +139,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {
       "endDate": "O término não pode ser antes do início."
@@ -158,7 +164,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {}
   },
@@ -180,7 +187,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {}
   },
@@ -202,7 +210,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {
       "endDate": "Um bloco não dura mais de 31 dias. Para algo que segue por mais tempo, marque como tarefa persistente."
@@ -226,7 +235,8 @@
       "longRunning": true,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {
       "status": "Tarefa persistente precisa de um status: não pode ficar sem status nem como não realizado."
@@ -250,7 +260,8 @@
       "longRunning": true,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {
       "status": "Tarefa persistente precisa de um status: não pode ficar sem status nem como não realizado."
@@ -274,7 +285,8 @@
       "longRunning": true,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {}
   },
@@ -296,7 +308,8 @@
       "longRunning": true,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {}
   },
@@ -320,7 +333,8 @@
       "longRunning": true,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {
       "reminders": "Tarefa persistente sem previsão de entrega não tem lembrete."
@@ -346,7 +360,8 @@
       "longRunning": true,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {}
   },
@@ -368,7 +383,8 @@
       "longRunning": true,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "errors": {
       "name": "Dê um título à tarefa.",

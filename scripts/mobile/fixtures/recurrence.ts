@@ -9,6 +9,7 @@ import {
   recurrenceSchema,
   updateRecurrenceInputSchema,
 } from "../../../packages/contracts/src/schemas";
+import { AGENT_SKILLS_PROJECT, PERSONAL_PROJECT, TIMELINE_PROJECT } from "./project";
 import { emptyTaskDraft, type TaskDraft } from "../../../apps/web/src/components/task-detail/task-draft";
 import {
   buildCreateRecurrenceInput,
@@ -43,7 +44,11 @@ const daily = series({ id: "rec-3", frequency: "daily", interval: 3 });
 const monthly = series({ id: "rec-4", frequency: "monthly", byMonthDay: 5 });
 const yearly = series({ id: "rec-5", frequency: "yearly", byMonthDay: 5, byMonth: 3 });
 const reloaded = series({ id: "rec-1", frequency: "weekly", byWeekday: 0b0000100, durationMinutes: 60, revision: 4 });
-const all = { weekly, weeklyEnded, daily, monthly, yearly };
+const weeklyInProject = series({
+  id: "rec-1", frequency: "weekly", byWeekday: 0b0101010, durationMinutes: 60,
+  template: { kind: "common", name: "Treino", description: "", priority: "medium", tags: ["saúde"], projectId: TIMELINE_PROJECT.id },
+});
+const all = { weekly, weeklyEnded, daily, monthly, yearly, weeklyInProject };
 
 const base: RecurrenceDraft = { frequency: "weekly", interval: 1, weekdays: 0b0000010, monthDay: 5, month: 3, endsOn: "" };
 
@@ -108,6 +113,8 @@ const createCases = [
   { name: "yearly", draft: { ...base, frequency: "yearly", monthDay: 5, month: 3 }, form: scheduled },
   { name: "end equal to start has no duration", draft: base, form: form({ startDate: "2026-09-21", startTime: "10:30", endDate: "2026-09-21", endTime: "10:30" }) },
   { name: "name with spaces", draft: base, form: { ...scheduled, name: "  Corrida  " } },
+  { name: "project goes in the template", draft: base, form: { ...scheduled, project: AGENT_SKILLS_PROJECT } },
+  { name: "personal project goes in the template with its id", draft: base, form: { ...scheduled, project: PERSONAL_PROJECT } },
   { name: "joining task starts next day", draft: base, form: scheduleAfterTask(scheduled) },
 ].map((item) => {
   const input = buildCreateRecurrenceInput(item.draft, item.form, ZONE);
@@ -129,6 +136,9 @@ const planCases = [
   { name: "monthly to yearly", series: monthly, draft: planDrafts(monthly, { frequency: "yearly", month: 7 }) },
   { name: "monthly day", series: monthly, draft: planDrafts(monthly, { monthDay: 6 }) },
   { name: "yearly month", series: yearly, draft: planDrafts(yearly, { month: 4 }) },
+  // A série que mora num projeto: o `PATCH` leva só a regra, nunca o modelo nem o projeto.
+  { name: "series in a project, unchanged", series: weeklyInProject, draft: planDrafts(weeklyInProject, {}) },
+  { name: "series in a project, rule changed", series: weeklyInProject, draft: planDrafts(weeklyInProject, { interval: 2 }) },
 ].map((item) => {
   const patch = planSeriesEdit(item.series, item.draft);
   if (patch) updateRecurrenceInputSchema.parse({ recurrenceId: item.series.id, ...patch });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { acceptsSituation } from "./tasks/agent-status-groups";
 
 /**
  * Os contratos como esquemas, para os testes de contrato dos clientes. A forma
@@ -12,8 +13,11 @@ const agentRequestKindSchema = z.enum([
 ]);
 const taskKindSchema = z.enum([...humanTaskKindSchema.options, ...agentRequestKindSchema.options, "step"]);
 const humanTaskStatusSchema = z.enum(["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]);
-const agentTaskStatusSchema = z.enum(["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"]);
-const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, "queued", "running", "waiting", "awaiting_transcription", "failed"]);
+export const agentTaskStatusSchema = z.enum([
+  "preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+]);
+const taskSituationSchema = z.enum(["to_review", "reviewed", "bookmarked"]);
+const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, ...agentTaskStatusSchema.options]);
 const taskPrioritySchema = z.enum(["urgent", "high", "medium", "low"]);
 const taskArtifactRelationSchema = z.enum(["creates", "updates", "uses", "deletes"]);
 const artifactTypeSchema = z.enum([
@@ -187,19 +191,50 @@ const updateTaskArtifactSchema = z.union([
   foodCopySchema,
 ]);
 
+export const projectSchema = z.object({ id: z.string(), name: z.string(), personal: z.boolean() }).strict();
+
+/** `POST /api/projects`: o nome do projeto novo. A API tira os espacos das pontas e confere o tamanho. */
+export const createProjectInputSchema = z.object({ name: z.string() }).strict();
+
 const taskRecurrenceSchema = z.object({
   id: z.string(), occurrenceOn: z.string(), detached: z.boolean(), rule: z.object(recurrenceRuleShape).strict(),
 }).strict();
 
+const modelProviderSchema = z.enum(["anthropic", "openai", "openrouter"]);
+const modelEffortSchema = z.enum(["low", "medium", "high", "max"]);
+
+export const modelSelectionSchema = z.object({
+  provider: modelProviderSchema,
+  model: z.string().min(1).max(200),
+  effort: modelEffortSchema,
+}).strict();
+
 const taskCardShape = {
   id: z.string(), actor: taskActorSchema, kind: taskKindSchema, status: taskStatusSchema.optional(), priority: taskPrioritySchema,
-  name: z.string(), description: z.string(), location: z.string().optional(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
+  name: z.string(), description: z.string(), project: projectSchema, situation: taskSituationSchema.optional(), location: z.string().optional(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
   finishedAt: z.string().optional(), longRunning: z.boolean(), notifyOffsetsMinutes: notificationOffsetsSchema,
   tags: z.array(z.string()), artifactTypes: z.array(artifactTypeSchema), parentTaskId: z.string().optional(), recurrence: taskRecurrenceSchema.optional(), revision: z.number().int(),
   createdAt: z.string(), updatedAt: z.string(),
+  model: modelSelectionSchema.optional(),
 };
 
-export const taskCardSchema = z.object(taskCardShape).strict();
+/** O status de um cartao pertence ao executor dele: pessoa so tem os seus e agente so tem os seus. */
+function statusMatchesActor(card: { actor: "human" | "agent"; status?: string | undefined }): boolean {
+  if (card.status === undefined) return card.actor === "human";
+  const own: readonly string[] = card.actor === "agent" ? agentTaskStatusSchema.options : humanTaskStatusSchema.options;
+  return own.includes(card.status);
+}
+
+const STATUS_MATCHES_ACTOR = { message: "O status nao e do executor da tarefa", path: ["status"] };
+
+/** So o pedido de agente (nem passo, nem execucao agendada) num status final tem situacao. */
+function situationFitsTask(card: { actor: "human" | "agent"; kind: string; status?: string | undefined; situation?: string | undefined }): boolean {
+  return card.situation === undefined || acceptsSituation(card);
+}
+
+const SITUATION_FITS_TASK = { message: "A tarefa nao aceita situacao", path: ["situation"] };
+
+export const taskCardSchema = z.object(taskCardShape).strict().refine(statusMatchesActor, STATUS_MATCHES_ACTOR).refine(situationFitsTask, SITUATION_FITS_TASK);
 
 export const agendaPageSchema = z.object({ items: z.array(taskCardSchema), nextCursor: z.string().optional() }).strict();
 
@@ -212,7 +247,10 @@ export const taskSchema = z.object({
   artifacts: z.array(z.object({ relation: taskArtifactRelationSchema, fromRecurrence: z.boolean(), artifact: artifactSchema }).strict()),
   subtaskIds: z.array(z.string()),
   requests: z.array(taskRequestSchema),
-}).strict();
+}).strict().refine(statusMatchesActor, STATUS_MATCHES_ACTOR).refine(situationFitsTask, SITUATION_FITS_TASK);
+
+/** `PUT /api/tasks/:taskId/situation`: a situacao nova. Vale a ultima gravacao, sem `expectedRevision`. */
+export const setTaskSituationInputSchema = z.object({ situation: taskSituationSchema }).strict();
 
 const taskFieldsShape = {
   name: z.string().optional(), description: z.string().optional(),
@@ -224,13 +262,13 @@ const taskFieldsShape = {
 const locationSchema = z.string().max(300);
 
 export const createTaskInputSchema = z.object({
-  ...taskFieldsShape, location: locationSchema.optional(), kind: humanTaskKindSchema.optional(), status: humanTaskStatusSchema.optional(),
+  ...taskFieldsShape, projectId: z.string().optional(), location: locationSchema.optional(), kind: humanTaskKindSchema.optional(), status: humanTaskStatusSchema.optional(),
   startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(), finishedAt: z.string().optional(),
   artifacts: z.array(createTaskArtifactSchema).optional(), artifactIds: z.array(z.string()).optional(),
 }).strict();
 
 export const updateTaskInputSchema = z.object({
-  ...taskFieldsShape, location: locationSchema.nullable().optional(), taskId: z.string(), expectedRevision: z.number().int(), kind: humanTaskKindSchema.optional(),
+  ...taskFieldsShape, projectId: z.string().nullable().optional(), location: locationSchema.nullable().optional(), taskId: z.string(), expectedRevision: z.number().int(), kind: humanTaskKindSchema.optional(),
   status: humanTaskStatusSchema.nullable().optional(), startedAt: z.string().nullable().optional(),
   estimatedFinishAt: z.string().nullable().optional(), finishedAt: z.string().nullable().optional(),
   artifacts: z.array(updateTaskArtifactSchema).optional(),
@@ -360,15 +398,6 @@ export const agentTraceSchema = z.object({
   }).strict()),
 }).strict();
 
-const modelProviderSchema = z.enum(["anthropic", "openai", "openrouter"]);
-const modelEffortSchema = z.enum(["low", "medium", "high", "max"]);
-
-export const modelSelectionSchema = z.object({
-  provider: modelProviderSchema,
-  model: z.string().min(1).max(200),
-  effort: modelEffortSchema,
-}).strict();
-
 export const modelOptionsSchema = z.object({
   providers: z.array(z.object({
     id: modelProviderSchema,
@@ -386,6 +415,8 @@ export const requestSchema = z.object({
   route: z.enum(["steps", "hermes", "model", "voice", "food"]),
   status: agentTaskStatusSchema,
   title: z.string(),
+  project: projectSchema,
+  situation: taskSituationSchema.optional(),
   sessionId: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -418,8 +449,10 @@ export const requestSchema = z.object({
 export const contractSchemas = {
   modelOptions: modelOptionsSchema,
   agendaPage: agendaPageSchema,
+  project: projectSchema,
   taskCard: taskCardSchema,
   task: taskSchema,
+  setTaskSituationInput: setTaskSituationInputSchema,
   createTaskInput: createTaskInputSchema,
   updateTaskInput: updateTaskInputSchema,
   artifact: artifactSchema,

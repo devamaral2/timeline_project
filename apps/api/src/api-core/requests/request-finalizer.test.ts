@@ -44,7 +44,7 @@ describe("fila de finalizacao", () => {
     // A finalizacao nao grava entidade nenhuma nem chama modelo: so o passo escreveu.
     expect(ctx.batchWriter.commits).toHaveLength(commits);
     expect(ctx.gateway.calls).toHaveLength(1);
-    expect(ctx.store.require("r1").status).toBe("done");
+    expect(ctx.store.require("r1").status).toBe("completed");
   });
 
   test("com outro passo ainda aberto, o pedido segue aberto", async () => {
@@ -68,7 +68,7 @@ describe("fila de finalizacao", () => {
     await ctx.finalizer().run(query);
 
     expect(ctx.store.require("r1")).toMatchObject({
-      status: "done", failedSteps: [{ agent: "query", errorCode: "internal" }],
+      status: "completed", failedSteps: [{ agent: "query", errorCode: "internal" }],
     });
   });
 
@@ -85,7 +85,8 @@ describe("fila de finalizacao", () => {
     await ctx.worker.run(write);
     await ctx.store.cancel("r1");
     await ctx.finalizer().run(write);
-    expect(ctx.store.require("r1").status).toBe("cancel");
+    // O pedido rodava: cancelar o deixa `interrupted`, e a finalizacao nao o reabre nem o fecha de novo.
+    expect(ctx.store.require("r1").status).toBe("interrupted");
   });
 });
 
@@ -110,7 +111,7 @@ describe("explicacao da falha", () => {
     expect(call?.user).toContain("Consultando dados (código: internal)");
     expect(call?.user).toContain("Criando e atualizando registros");
     const request = ctx.store.require("r1");
-    expect(request).toMatchObject({ status: "done", answer: "Registrei tudo, mas não consegui consultar a agenda." });
+    expect(request).toMatchObject({ status: "completed", answer: "Registrei tudo, mas não consegui consultar a agenda." });
     expect(toRequestDto(request, ctx.store.stepRecords, []).message).toBe("Registrei tudo, mas não consegui consultar a agenda.");
   });
 
@@ -126,7 +127,7 @@ describe("explicacao da falha", () => {
     const { ctx, write } = await guideExample();
     await ctx.worker.run(write);
     await ctx.finalizer().run(write);
-    expect(ctx.store.require("r1").status).toBe("done");
+    expect(ctx.store.require("r1").status).toBe("completed");
     expect(ctx.gateway.calls.some((call) => call.schemaName === "failure_explainer")).toBe(false);
   });
 });

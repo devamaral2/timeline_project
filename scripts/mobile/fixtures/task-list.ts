@@ -1,15 +1,18 @@
 /**
  * Fixtures da lista de Tarefas: as respostas de `GET /api/tasks/tracked` validadas pelo schema do contrato e as
- * saídas das funções do web que a tela usa (`oneRowPerSeries`, `groupTrackedTasks`, `showsSeriesRule`,
+ * saídas das funções do web que a tela usa (`oneRowPerSeries`, `showsSeriesRule`,
  * `recurrenceRuleLabel`, `cardWhenLabel` com a regra no lugar do horário, `taskFilterCount`, `trackedFilters`,
  * `tagsByUse`) e a gaveta de subtarefas (`nestSubtasks`, ticket 08).
  */
 import { taskCardSchema } from "../../../packages/contracts/src/schemas";
 import { statusPatch } from "../../../apps/web/src/lib/tasks/task-read-model";
 import { cardIsOverdue, cardWhenLabel, recurrenceRuleLabel } from "../../../apps/web/src/lib/tasks/card-text";
-import { groupTrackedTasks, nestSubtasks, oneRowPerSeries, showsSeriesRule } from "../../../apps/web/src/lib/tasks/task-groups";
+import { nestSubtasks, oneRowPerSeries, showsSeriesRule } from "../../../apps/web/src/lib/tasks/task-groups";
+import { drawerOf, drawersOf, listedCards } from "../../../apps/web/src/lib/tasks/task-drawers";
 import { PRIORITY_ORDER, tagsByUse, taskFilterCount, trackedFilters } from "../../../apps/web/src/lib/tasks/task-filters";
+import { TASK_SITUATIONS, situationNames } from "../../../apps/web/src/components/tasks/task-situation";
 import { NOW } from "./tasks";
+import { PERSONAL_PROJECT } from "./project";
 
 type CardInput = Record<string, unknown> & { id: string; name: string };
 
@@ -19,6 +22,7 @@ function card(input: CardInput) {
     kind: "common",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
@@ -41,7 +45,7 @@ function occurrence(seriesId: string, occurrenceOn: string, ruleOverrides: Recor
 const WEEKLY = { frequency: "weekly", timeOfDay: "18:30", byWeekday: 2 + 8 + 32 };
 
 const savedContentCards = [
-  card({ id: "saved-1", name: "Página guardada", actor: "agent", kind: "save_content", status: "done", startedAt: "2026-09-14T13:30:00.000Z" }),
+  card({ id: "saved-1", name: "Página guardada", actor: "agent", kind: "save_content", status: "completed", startedAt: "2026-09-14T13:30:00.000Z" }),
   card({ id: "saved-2", name: "Vídeo guardado", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription", startedAt: "2026-09-14T14:10:00.000Z" }),
 ];
 
@@ -55,9 +59,9 @@ const cards = [
   card({ id: "task-6", name: "Ideia sem data", status: "toDefine", priority: "low", tags: ["casa"] }),
   card({ id: "task-7", name: "Esperando retorno do banco", status: "inHold", startedAt: "2026-09-16T12:00:00.000Z", tags: ["casa"] }),
   card({ id: "task-8", name: "Almoço", kind: "meal", status: "done", startedAt: "2026-09-14T15:00:00.000Z", estimatedFinishAt: "2026-09-14T16:30:00.000Z", tags: ["áurea"] }),
-  card({ id: "task-9", name: "Resumo pronto", actor: "agent", kind: "review_request", status: "done", startedAt: "2026-09-12T15:00:00.000Z" }),
+  card({ id: "task-9", name: "Resumo pronto", actor: "agent", kind: "review_request", status: "completed", startedAt: "2026-09-12T15:00:00.000Z" }),
   card({ id: "task-10", name: "Backup falhou", actor: "agent", kind: "cron", status: "failed", startedAt: "2026-09-14T02:00:00.000Z" }),
-  card({ id: "task-11", name: "Pedido cancelado", actor: "agent", kind: "request", status: "cancel", startedAt: "2026-09-14T10:00:00.000Z" }),
+  card({ id: "task-11", name: "Pedido cancelado", actor: "agent", kind: "request", status: "cancelled", startedAt: "2026-09-14T10:00:00.000Z" }),
   card({ id: "task-12", name: "Consulta perdida", status: "missed", startedAt: "2026-09-10T12:00:00.000Z" }),
   card({ id: "task-13", name: "Projeto longo", status: "doing", longRunning: true, startedAt: "2026-09-01T12:00:00.000Z", estimatedFinishAt: "2026-11-30T12:00:00.000Z", tags: ["trabalho"] }),
   // Série diária "Meditar": fica a aberta de menor `occurrenceOn`, na posição dela.
@@ -72,6 +76,21 @@ const cards = [
   // Uma série encerrada na fila de cancelamento também vira uma linha só.
   card({ id: "series-c-1", name: "Pagar a luz", status: "cancel", startedAt: "2026-09-05T12:00:00.000Z", recurrence: occurrence("series-c", "2026-09-05", { frequency: "monthly", byMonthDay: 5, timeOfDay: "09:00" }) }),
   card({ id: "series-c-2", name: "Pagar a luz", status: "inHold", startedAt: "2026-10-05T12:00:00.000Z", recurrence: occurrence("series-c", "2026-10-05", { frequency: "monthly", byMonthDay: 5, timeOfDay: "09:00" }) }),
+];
+
+/**
+ * A lista com situação (ticket 58): um cartão de cada situação, e os que não têm situação (esperando você, execução agendada,
+ * em andamento, e o concluído de antes da situação existir). O servidor só manda a situação no pedido de agente que terminou.
+ */
+const situationCards = [
+  card({ id: "sit-person", name: "Tarefa minha", status: "todo", startedAt: "2026-09-14T12:00:00.000Z" }),
+  card({ id: "sit-review", name: "Resumo para revisar", actor: "agent", kind: "review_request", status: "completed", situation: "to_review", startedAt: "2026-09-14T11:00:00.000Z" }),
+  card({ id: "sit-reviewed", name: "Resumo revisado", actor: "agent", kind: "review_request", status: "completed", situation: "reviewed", startedAt: "2026-09-14T10:00:00.000Z" }),
+  card({ id: "sit-bookmarked", name: "Busca guardada", actor: "agent", kind: "search_request", status: "failed", situation: "bookmarked", startedAt: "2026-09-14T09:00:00.000Z" }),
+  card({ id: "sit-waiting", name: "Qual hotel prefere?", actor: "agent", kind: "inquiry_request", status: "waiting", startedAt: "2026-09-14T13:00:00.000Z" }),
+  card({ id: "sit-cron", name: "Backup da noite", actor: "agent", kind: "cron", status: "completed", startedAt: "2026-09-14T02:00:00.000Z" }),
+  card({ id: "sit-running", name: "Buscar passagens", actor: "agent", kind: "search_request", status: "running", startedAt: "2026-09-14T14:48:00.000Z" }),
+  card({ id: "sit-legacy", name: "Concluído de antes", actor: "agent", kind: "request", status: "completed", startedAt: "2026-09-01T10:00:00.000Z" }),
 ];
 
 const pick = (...ids: string[]) => cards.filter((item) => ids.includes(item.id));
@@ -157,15 +176,21 @@ export function taskListFixtures(): Record<string, unknown> {
     "task-list-agents": cards.filter((item) => item.actor === "agent"),
     /** A lista depois que os três pedidos abertos do agente terminaram. */
     "task-list-agents-finished": reread({
-      "task-3": { status: "done" },
-      "task-4": { status: "done" },
-      "task-5": { status: "done" },
+      "task-3": { status: "completed" },
+      "task-4": { status: "completed" },
+      "task-5": { status: "completed" },
     }),
     /** Depois de "Reunião de planejamento" passar a "doing" (revisão 4) e a "done" (revisão 4), pelo próprio servidor. */
     "task-list-after-doing": reread({ "task-1": { status: "doing", revision: 4 } }),
     "task-list-after-done": reread({ "task-1": { status: "done", revision: 4 } }),
     /** A releitura de um conflito: outra pessoa já tinha cancelado a tarefa (revisão 9). */
     "task-list-after-conflict": reread({ "task-1": { status: "cancel", revision: 9 } }),
+    "task-list-situations": situationCards,
+    /** As três situações na ordem do menu e o nome de cada uma (`TASK_SITUATIONS` e `situationNames` do web). */
+    "task-situation-names": TASK_SITUATIONS.map((situation) => ({ situation, name: situationNames[situation] })),
+    /** A resposta do `PUT /api/tasks/:taskId/situation`: o cartão com a situação nova. */
+    "task-situation-reviewed": card({ ...situationCards[1], situation: "reviewed" }),
+    "task-situation-bookmarked": card({ ...situationCards[1], situation: "bookmarked" }),
     "task-list-subtasks": subtaskCards,
     /** A lista depois de "Comprar passagens" (revisão 3) passar a "done" (revisão 4), pelo próprio servidor. */
     "task-list-subtasks-after-done": subtaskCards.map((item) => (item.id === "sub-2" ? card({ ...item, status: "done", revision: 4 }) : item)),
@@ -175,11 +200,12 @@ export function taskListFixtures(): Record<string, unknown> {
     "task-list-subtasks-no-parent": subtaskCards.filter((item) => item.id !== "trip"),
     /** O filtro de executor "Agentes": só a subtarefa de agente chega, sem a principal de pessoa. */
     "task-list-subtasks-agents": subtaskCards.filter((item) => item.actor === "agent"),
-    /** Conteúdo guardado na lista: o vídeo à espera do serviço local cai em "Em espera" e a página guardada em "Feitas". */
+    /** Conteúdo guardado na lista: o vídeo à espera do serviço local fica na gaveta de execução (fora da lista) e a página guardada, sem situação, em Finalizadas. */
     "task-list-saved-content": {
       now: NOW,
       cards: savedContentCards,
-      groups: groupTrackedTasks(savedContentCards).map((group) => ({ key: group.key, ids: group.cards.map((item) => item.id) })),
+      drawers: drawersOf(listedCards(savedContentCards)).map((drawer) => ({ key: drawer.key, ids: drawer.cards.map((item) => item.id) })),
+      execution: savedContentCards.filter((item) => drawerOf(item) === "execution").map((item) => item.id),
       whens: savedContentCards.map((item) => ({ id: item.id, when: cardWhenLabel(item, new Date(NOW)) })),
     },
     "task-list-nesting": {
@@ -194,10 +220,6 @@ export function taskListFixtures(): Record<string, unknown> {
         nestingOf(subtaskCards.filter((item) => item.id !== "trip")),
         nestingOf(subtaskCards.filter((item) => item.id !== "sub-2")),
       ],
-      groups: groupTrackedTasks(nestSubtasks(oneRowPerSeries(subtaskCards)).roots).map((group) => ({
-        key: group.key,
-        ids: group.cards.map((item) => item.id),
-      })),
       /** O quando e o atraso de cada cartão na gaveta (sem a regra da série). */
       drawer: subtaskCards.map((item) => ({
         id: item.id,
@@ -205,16 +227,10 @@ export function taskListFixtures(): Record<string, unknown> {
         overdue: cardIsOverdue(item, new Date(NOW)),
       })),
     },
-    "task-list-pipeline": {
+    "task-list-rules": {
       now: NOW,
       cards,
       rowIds: rows.map((item) => item.id),
-      groups: groupTrackedTasks(rows).map((group) => ({
-        key: group.key,
-        title: group.title,
-        collapsedByDefault: group.collapsedByDefault,
-        ids: group.cards.map((item) => item.id),
-      })),
       whens: cards.map((item) => ({
         id: item.id,
         showsRule: showsSeriesRule(item),

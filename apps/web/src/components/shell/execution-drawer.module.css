@@ -1,0 +1,290 @@
+/* A gaveta de execução: presa acima da barra de navegação inferior (no desktop, ao pé da coluna de conteúdo), em três
+   alturas: uma linha (`one`), três linhas (`three`) e todas (`all`). Medidas e curvas vêm do canvas "Tarefas, Agenda e
+   Documentos": linha de 40 px, linha recolhida e cabeçalho de 44 px; abrir leva 420 ms em `--grow`, fechar 300 ms em
+   `--shrink`; as linhas que entram sobem 8 px e ganham opacidade, uma depois da outra. Cores só por token. */
+
+.host {
+  /* O número de linhas à mostra e o modo vêm do componente; o resto sai daqui, igual para a gaveta e para o espaçador. */
+  --grow: cubic-bezier(.22, 1, .36, 1);
+  --shrink: cubic-bezier(.5, 0, .2, 1);
+  --row: 40px;
+  --one: 44px;
+  --list: calc(var(--exec-rows, 3) * var(--row));
+  /* Borda de 1 px nos dois lados, 2 px de respiro em cima, 6 embaixo e o cabeçalho de 44. */
+  --chrome: 54px;
+  /* Passando de 60% da altura da tela, a lista rola por dentro. */
+  --list-cap: calc(60dvh - var(--chrome));
+  --list-height: min(var(--list), var(--list-cap));
+  --seam: 8px;
+  display: contents;
+}
+.host[data-mode="one"] {
+  --list: var(--one);
+  --chrome: 2px;
+}
+
+/* O que a tela por baixo reserva no fim: a altura atual da gaveta, animada junto com ela. */
+.spacer {
+  height: calc(var(--list-height) + var(--chrome) + var(--seam));
+  transition: height 300ms var(--shrink);
+  pointer-events: none;
+}
+.host[data-grow] .spacer { transition-duration: 420ms; transition-timing-function: var(--grow); }
+
+.dock {
+  position: fixed;
+  z-index: 19;
+  left: 0;
+  right: 0;
+  bottom: calc(74px + env(safe-area-inset-bottom));
+  padding: 0 16px 8px;
+  background: var(--background);
+}
+.dock[hidden] { display: none; }
+/* O fundo sobe junto com a gaveta, e o conteúdo se apaga em vez de cortar seco. */
+.dock::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 56px;
+  background: linear-gradient(to bottom, transparent, var(--background));
+  pointer-events: none;
+}
+
+.bar {
+  position: relative;
+  padding: 2px 16px 6px;
+  border: 1px solid var(--border);
+  border-radius: 23px;
+  background: var(--card);
+  color: var(--foreground);
+  transition: padding 300ms var(--shrink);
+}
+.bar[data-mode="one"] { padding: 0 16px; }
+
+.headerWrap {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  overflow: hidden;
+  transition: height 420ms var(--grow), opacity 200ms linear 100ms;
+}
+.bar[data-mode="one"] .headerWrap {
+  height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: height 300ms var(--shrink), opacity 120ms linear, visibility 0s 300ms;
+}
+.heading { flex: 1; min-width: 0; margin: 0; }
+
+/* O cabeçalho: o divisor em mono da lista, com a contagem e o "+N" das escondidas. Abre e fecha a gaveta. */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.toggle::after { content: ""; order: 1; flex: 1; height: 1px; background: var(--hairline); }
+.total { color: var(--faint); }
+.rest { order: 2; color: var(--faint); }
+.rest:empty { display: none; }
+.bar .chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 420ms var(--grow);
+}
+.toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+
+/* A seta dupla no fim do cabeçalho: recolhe a uma linha. */
+.collapse {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-right: -14px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.bar .collapse svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A altura da lista é o que anima: mais devagar para abrir, mais rápido para recolher. */
+.list {
+  display: flex;
+  flex-direction: column;
+  max-height: var(--list-height);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  transition: max-height 300ms var(--shrink);
+}
+.bar[data-mode="all"] .list { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.bar[data-mode="all"] .list::-webkit-scrollbar { display: none; }
+.bar[data-grow] .list { transition: max-height 420ms var(--grow); }
+
+.row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  background: linear-gradient(var(--hairline), var(--hairline)) no-repeat 0 0 / 100% 1px;
+  transition: height 300ms var(--shrink);
+}
+.row[data-tier="first"] { background: none; }
+.bar[data-mode="one"] .row[data-tier="first"] { height: 44px; }
+
+/* A segunda e a terceira linha somem na altura de uma linha; as demais só aparecem com a gaveta toda aberta. */
+.row[data-tier="peek"],
+.row[data-tier="more"] {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 120ms linear, transform 300ms var(--shrink);
+}
+.bar[data-mode="three"] .row[data-tier="peek"],
+.bar[data-mode="all"] .row[data-tier="peek"],
+.bar[data-mode="all"] .row[data-tier="more"] {
+  opacity: 1;
+  transform: none;
+  transition: opacity 200ms linear, transform 420ms var(--grow);
+}
+/* Ao crescer, as linhas que entram chegam uma depois da outra. */
+.bar[data-grow] .row[data-step="1"] { transition-delay: var(--stagger, 40ms); }
+.bar[data-grow] .row[data-step="2"] { transition-delay: calc(2 * var(--stagger, 40ms)); }
+.bar[data-grow] .row[data-step="3"] { transition-delay: calc(3 * var(--stagger, 40ms)); }
+
+.link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+.link:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Na altura de uma linha, a primeira ganha a seta de abrir e a contagem das outras. */
+.up {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 0;
+  margin-right: -10px;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--muted-foreground);
+  transition: width 300ms var(--shrink), margin-right 300ms var(--shrink), opacity 150ms linear;
+}
+.up svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.bar[data-mode="one"] .up { width: 14px; margin-right: 0; opacity: 1; }
+.count {
+  flex: none;
+  max-width: 0;
+  margin-left: -10px;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  transition: max-width 300ms var(--shrink), margin-left 300ms var(--shrink), opacity 150ms linear;
+}
+.bar[data-mode="one"] .count { max-width: 40px; margin-left: 0; opacity: 1; }
+
+/* O nome e o ícone quadrado do status, no tom do ícone (o mesmo da linha da lista). */
+.status {
+  composes: tone from "../tasks/agent-status-icon.module.css";
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 22px;
+}
+
+/* Tocar na linha recolhida volta a três: o botão cobre a linha inteira. */
+.expand {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 23px;
+  background: transparent;
+  cursor: pointer;
+}
+.expand:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+
+/* O chat cobre a tela; o menu de opções da barra abre por cima: a gaveta sai de vista. */
+:global(body):has(:global(nav[data-menu-open])) .dock { opacity: 0; pointer-events: none; }
+.dock { transition: opacity 200ms linear; }
+
+/* Desktop: a barra inferior não existe; a gaveta fica ao pé da coluna de conteúdo, com a largura dela. */
+@media (min-width: 721px) {
+  .host { --seam: 24px; }
+  .dock {
+    bottom: 0;
+    padding: 0 0 16px;
+    background: transparent;
+    pointer-events: none;
+  }
+  .dock::before { display: none; }
+  .bar {
+    width: min(1040px, calc(100% - 2 * clamp(16px, 4vw, 56px)));
+    margin: 0 auto;
+    box-shadow: var(--shadow-float);
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spacer, .dock, .bar, .headerWrap, .list, .row, .up, .count, .chevron { transition: none !important; }
+}

@@ -2,10 +2,15 @@
   "id": "task-agent",
   "actor": "agent",
   "kind": "search_request",
-  "status": "done",
+  "status": "completed",
   "priority": "medium",
   "name": "Buscar passagens",
   "description": "",
+  "project": {
+    "id": "project-skills",
+    "name": "agent-skills",
+    "personal": false
+  },
   "startedAt": "2026-09-14T14:48:00.000Z",
   "longRunning": false,
   "notifyOffsetsMinutes": [],

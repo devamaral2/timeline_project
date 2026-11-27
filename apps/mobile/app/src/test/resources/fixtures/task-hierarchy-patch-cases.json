@@ -9,6 +9,11 @@
       "priority": "medium",
       "name": "Planejar a viagem",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-20T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -44,7 +49,12 @@
         "task-sub-1",
         "task-sub-2"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": null
@@ -59,6 +69,11 @@
       "priority": "medium",
       "name": "Planejar a viagem",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-20T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -94,7 +109,12 @@
         "task-sub-1",
         "task-sub-2"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -112,6 +132,11 @@
       "priority": "medium",
       "name": "Planejar a viagem",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-20T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -147,7 +172,12 @@
         "task-sub-1",
         "task-sub-2"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -165,6 +195,11 @@
       "priority": "medium",
       "name": "Tarefa solta",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-20T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -193,7 +228,12 @@
       "longRunning": false,
       "parentTaskId": "task-parent",
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -211,6 +251,11 @@
       "priority": "medium",
       "name": "Planejar a viagem",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-20T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -247,7 +292,12 @@
         "task-sub-2",
         "task-created"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -269,6 +319,11 @@
       "priority": "medium",
       "name": "Planejar a viagem",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-20T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -303,7 +358,12 @@
       "subtaskIds": [
         "task-sub-2"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -323,6 +383,11 @@
       "priority": "medium",
       "name": "Planejar a viagem",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-20T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -355,7 +420,12 @@
       "longRunning": false,
       "parentTaskId": "task-parent",
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -373,6 +443,11 @@
       "priority": "medium",
       "name": "Planejar a viagem",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-20T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -408,7 +483,12 @@
         "task-sub-2",
         "task-sub-1"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -429,6 +509,11 @@
       "priority": "medium",
       "name": "Planejar a viagem",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-20T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -463,7 +548,12 @@
       "subtaskIds": [
         "task-created"
       ],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {

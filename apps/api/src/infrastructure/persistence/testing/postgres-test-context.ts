@@ -18,8 +18,8 @@ export interface PostgresTestContext {
   stop(): Promise<void>;
 }
 
-// Os filhos saem pelo CASCADE do TRUNCATE. `artifacts` fica de fora: os exercicios globais vem da migration.
-const ROOT_TABLES = ["tasks", "tags", "recurrences", "jobs", "idempotency_keys"] as const;
+// Os filhos saem pelo CASCADE do TRUNCATE (`projects` leva junto as tarefas e as series que apontam para ele). `artifacts` fica de fora: os exercicios globais vem da migration.
+const ROOT_TABLES = ["projects", "tasks", "tags", "recurrences", "jobs", "idempotency_keys"] as const;
 
 async function dropDatabase(adminUrl: string, databaseName: string): Promise<void> {
   const cleanup = new Client({ connectionString: adminUrl });

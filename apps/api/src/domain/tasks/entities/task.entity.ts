@@ -1,3 +1,4 @@
+import { acceptsSituation } from "../../agent-status";
 import {
   AGENT_KINDS,
   AGENT_STATUSES,
@@ -5,6 +6,7 @@ import {
   HUMAN_STATUSES,
   PRIORITIES,
   type Actor,
+  type Situation,
   type TaskKind,
   type TaskPriority,
   type TaskStatus,
@@ -37,6 +39,8 @@ export interface TaskCreateProps {
   kind?: TaskKind;
   /** Ausente numa tarefa de pessoa, ela e de referencia: so marca um horario. */
   status?: TaskStatus;
+  /** So o pedido de agente que terminou tem (`acceptsSituation`). */
+  situation?: Situation;
   priority?: TaskPriority;
   name: string;
   description?: string;
@@ -59,6 +63,11 @@ export interface TaskCreateProps {
   /** Os artefatos da tarefa, na ordem em que aparecem. */
   artifactLinks?: ArtifactLink[];
   occurrence?: OccurrenceLink;
+  /**
+   * O projeto escolhido (id). Ausente, quem grava resolve: a ocorrencia fica no projeto da serie e as demais, em
+   * `personal`; `null` pede o `personal` de proposito. Quem le uma tarefa gravada sempre recebe o id.
+   */
+  projectId?: string | null;
   /** Ausente, e o agora. */
   now?: Date;
 }
@@ -91,6 +100,8 @@ export interface TaskReviseChanges {
   tags?: string[];
   longRunning?: boolean;
   artifactLinks?: ArtifactLink[];
+  /** Ausente nao muda; `null` devolve a tarefa a `personal`. */
+  projectId?: string | null;
 }
 
 interface TaskBuildProps {
@@ -99,6 +110,7 @@ interface TaskBuildProps {
   actor: Actor;
   kind: TaskKind;
   status: TaskStatus | undefined;
+  situation: Situation | undefined;
   priority: TaskPriority;
   name: string;
   description: string;
@@ -114,6 +126,7 @@ interface TaskBuildProps {
   parentId: string | undefined;
   subtaskIds: string[];
   occurrence: OccurrenceLink | undefined;
+  projectId: string | null | undefined;
   revision: number;
   createdAt: Date;
   updatedAt: Date;
@@ -147,6 +160,8 @@ export class Task {
   readonly actor: Actor;
   readonly kind: TaskKind;
   readonly status: TaskStatus | undefined;
+  /** O que o usuario decidiu do pedido que terminou. Ausente nas demais tarefas. */
+  readonly situation: Situation | undefined;
   readonly priority: TaskPriority;
   readonly name: string;
   readonly description: string;
@@ -166,6 +181,11 @@ export class Task {
   readonly subtaskIds: readonly string[];
   /** Presente quando a tarefa e uma ocorrencia de uma serie. */
   readonly occurrence: OccurrenceLink | undefined;
+  /**
+   * O projeto, pelo id. Ausente numa tarefa que ainda nao foi gravada e que ninguem pos num projeto (quem grava
+   * resolve); `null` numa tarefa revisada para voltar a `personal`.
+   */
+  readonly projectId: string | null | undefined;
   readonly revision: number;
   readonly createdAt: Date;
   /** A ultima gravacao: cada revisao a avanca. */
@@ -177,6 +197,7 @@ export class Task {
     this.actor = props.actor;
     this.kind = props.kind;
     this.status = props.status;
+    this.situation = props.situation;
     this.priority = props.priority;
     this.name = props.name;
     this.description = props.description;
@@ -192,6 +213,7 @@ export class Task {
     this.parentId = props.parentId;
     this.subtaskIds = props.subtaskIds;
     this.occurrence = props.occurrence;
+    this.projectId = props.projectId;
     this.revision = props.revision;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
@@ -223,6 +245,10 @@ export class Task {
       if (!includes(AGENT_STATUSES, props.status)) {
         throw new TaskValidationError("A agent task always has one of the agent statuses");
       }
+    }
+
+    if (props.situation !== undefined && !acceptsSituation(props)) {
+      throw new TaskValidationError("Only a finished agent request has a situation");
     }
 
     if (props.location !== undefined && props.location.length > MAX_TASK_LOCATION_LENGTH) {
@@ -298,6 +324,7 @@ export class Task {
       actor,
       kind,
       status,
+      situation: props.situation,
       priority: props.priority ?? DEFAULT_TASK_PRIORITY,
       name: props.name,
       description: props.description ?? "",
@@ -313,6 +340,7 @@ export class Task {
       parentId: undefined,
       subtaskIds: [],
       occurrence: props.occurrence,
+      projectId: props.projectId,
       revision: 1,
       createdAt: now,
       updatedAt: now,
@@ -327,6 +355,7 @@ export class Task {
       actor: props.actor,
       kind: props.kind,
       status: props.status,
+      situation: props.situation,
       priority: props.priority ?? DEFAULT_TASK_PRIORITY,
       name: props.name,
       description: props.description ?? "",
@@ -342,9 +371,44 @@ export class Task {
       parentId: props.parentId,
       subtaskIds: props.subtaskIds ?? [],
       occurrence: props.occurrence,
+      projectId: props.projectId,
       revision: props.revision,
       createdAt: props.createdAt,
       updatedAt: props.updatedAt,
+    });
+  }
+
+  /**
+   * O usuario decidiu o que fazer do pedido que terminou. Nao e uma edicao: nao destaca ocorrencia nem pede
+   * `expectedRevision`; vale a ultima gravacao. So o pedido de agente num status final aceita.
+   */
+  withSituation(situation: Situation, now: Date = new Date()): Task {
+    return Task.build({
+      id: this.id,
+      userId: this.userId,
+      actor: this.actor,
+      kind: this.kind,
+      status: this.status,
+      situation,
+      priority: this.priority,
+      name: this.name,
+      description: this.description,
+      location: this.location,
+      startedAt: this.startedAt,
+      estimatedFinishAt: this.estimatedFinishAt,
+      finishedAt: this.finishedAt,
+      notifyOffsetsMinutes: [...this.notifyOffsetsMinutes],
+      tags: this.tags,
+      longRunning: this.longRunning,
+      data: { ...this.data },
+      artifactLinks: [...this.artifactLinks],
+      parentId: this.parentId,
+      subtaskIds: [...this.subtaskIds],
+      occurrence: this.occurrence,
+      projectId: this.projectId,
+      revision: this.revision + 1,
+      createdAt: this.createdAt,
+      updatedAt: now.getTime() < this.createdAt.getTime() ? this.createdAt : now,
     });
   }
 
@@ -364,6 +428,7 @@ export class Task {
       actor: this.actor,
       kind: changes.kind ?? this.kind,
       status: pick(changes.status, this.status),
+      situation: undefined,
       priority: changes.priority ?? this.priority,
       name: changes.name ?? this.name,
       description: changes.description ?? this.description,
@@ -379,6 +444,7 @@ export class Task {
       parentId: this.parentId,
       subtaskIds: [...this.subtaskIds],
       occurrence: detachOccurrence(this.occurrence),
+      projectId: changes.projectId === undefined ? this.projectId : changes.projectId,
       revision: this.revision + 1,
       createdAt: this.createdAt,
       // Um relogio que volta nao faz a edicao parecer anterior a criacao.

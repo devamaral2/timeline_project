@@ -19,12 +19,15 @@ import { agentRequestFixtures } from "./fixtures/agent-request";
 import { documentEditFixtures } from "./fixtures/document-edit";
 import { documentsFixtures } from "./fixtures/documents";
 import { entityEditFixtures } from "./fixtures/entity-edit";
+import { executionFixtures } from "./fixtures/execution";
 import { executorFixtures } from "./fixtures/executor";
 import { modelFavoritesFixtures } from "./fixtures/model-favorites";
 import { notificationsFixtures } from "./fixtures/notifications";
+import { projectsFixtures } from "./fixtures/projects";
 import { recurrenceFixtures } from "./fixtures/recurrence";
 import { sessionFixtures } from "./fixtures/session";
 import { speechFixtures } from "./fixtures/speech";
+import { taskDrawersFixtures } from "./fixtures/task-drawers";
 import { taskListFixtures } from "./fixtures/task-list";
 import { tasksFixtures } from "./fixtures/tasks";
 import { taskArtifactsFixtures } from "./fixtures/task-artifacts";
@@ -45,7 +48,7 @@ export const fixtureDirectory = fileURLToPath(new URL("../../apps/mobile/app/src
 
 export function collectFixtures(): Record<string, unknown> {
   const context: FixtureContext = { z: requireFromContracts("zod").z };
-  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...executorFixtures(), ...taskDetailFixtures(), ...taskEditFixtures(), ...taskHierarchyFixtures(), ...taskArtifactsFixtures(), ...recurrenceFixtures(), ...agendaFixtures(), ...documentsFixtures(), ...documentEditFixtures(), ...entityEditFixtures(), ...agentRequestFixtures(), ...agentFileFixtures(context), ...notificationsFixtures(), ...chatFixtures(), ...modelFavoritesFixtures(), ...speechFixtures(), ...themeFixtures(), ...youtubeFixtures(), ...transcriptionFixtures() };
+  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...taskDrawersFixtures(), ...executorFixtures(), ...executionFixtures(), ...taskDetailFixtures(), ...taskEditFixtures(), ...taskHierarchyFixtures(), ...taskArtifactsFixtures(), ...recurrenceFixtures(), ...agendaFixtures(), ...documentsFixtures(), ...documentEditFixtures(), ...entityEditFixtures(), ...agentRequestFixtures(), ...agentFileFixtures(context), ...notificationsFixtures(), ...projectsFixtures(), ...chatFixtures(), ...modelFavoritesFixtures(), ...speechFixtures(), ...themeFixtures(), ...youtubeFixtures(), ...transcriptionFixtures() };
 }
 
 export function generateFixtures(): string[] {

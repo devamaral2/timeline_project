@@ -128,7 +128,7 @@ const FULL_BODY = [
 ].join("\n");
 
 describe("formatar a transcrição entregue", () => {
-  test("monta o documento na ordem da spec, com o nome real, e fecha o pedido como done", async () => {
+  test("monta o documento na ordem da spec, com o nome real, e fecha o pedido como completed", async () => {
     const kit = setup();
     const created = await kit.delivered();
 
@@ -137,7 +137,7 @@ describe("formatar a transcrição entregue", () => {
     expect(await bodyOf(kit, created.artifactId)).toBe(FULL_BODY);
     expect((await kit.artifactRepository.findById(created.artifactId))?.name).toBe("Entrevista longa");
     const request = await kit.taskRepository.findById(created.requestId);
-    expect(request?.status).toBe("done");
+    expect(request?.status).toBe("completed");
     expect(request?.finishedAt).toBeInstanceOf(Date);
     expect(kit.requests.entriesOf(created.requestId).filter((entry) => entry.kind === "trace")).toEqual([]);
   });
@@ -282,7 +282,7 @@ describe("formatar a transcrição entregue", () => {
     expect(body).not.toContain("## Momentos mais assistidos");
     expect(body).not.toContain("## Comentários");
     expect(kit.haiku.calls.map((call) => call.schemaName)).toEqual(["transcription_format"]);
-    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "done" });
+    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "completed" });
   });
 
   test("falha só no resumo dos comentários: o documento sai sem a seção, o pedido termina done e ganha uma entrada", async () => {
@@ -294,7 +294,7 @@ describe("formatar a transcrição entregue", () => {
     const body = await bodyOf(kit, created.artifactId);
     expect(body).not.toContain("## Comentários");
     expect(body).toBe(FULL_BODY.replace(/## Comentários\n.*\n\n/, ""));
-    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "done" });
+    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "completed" });
     expect(kit.requests.entriesOf(created.requestId).filter((entry) => entry.kind === "trace")).toEqual([
       { kind: "trace", data: { stage: "comments_summary", status: "failed" } },
     ]);
@@ -307,7 +307,7 @@ describe("formatar a transcrição entregue", () => {
     await kit.format.run(created.requestId, actor.userId);
 
     expect(await bodyOf(kit, created.artifactId)).not.toContain("## Comentários");
-    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "done" });
+    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "completed" });
   });
 
   test.each([
@@ -355,7 +355,7 @@ describe("formatar a transcrição entregue", () => {
 
     const request = await kit.taskRepository.findById(created.requestId);
     const { artifactId } = (request?.data ?? {}) as { artifactId: string };
-    expect(request).toMatchObject({ status: "done" });
+    expect(request).toMatchObject({ status: "completed" });
     expect(artifactId).not.toBe(created.artifactId);
     expect(await bodyOf(kit, artifactId)).toContain("## Transcrição");
     expect(kit.database.artifacts.map((artifact) => artifact.id)).toEqual([artifactId]);
@@ -398,7 +398,7 @@ describe("formatar a transcrição entregue", () => {
     const request = await kit.taskRepository.findById(created.requestId);
     if (!request) throw new Error("sem pedido");
     kit.database.tasks = kit.database.tasks.map((task) =>
-      task.id === request.id ? Task.rehydrate({ ...request, status: "cancel", notifyOffsetsMinutes: [], tags: [], data: { ...request.data }, artifactLinks: [...request.artifactLinks], subtaskIds: [] }) : task,
+      task.id === request.id ? Task.rehydrate({ ...request, status: "cancelled", notifyOffsetsMinutes: [], tags: [], data: { ...request.data }, artifactLinks: [...request.artifactLinks], subtaskIds: [] }) : task,
     );
     const commits = kit.batchWriter.commits.length;
 
@@ -408,6 +408,6 @@ describe("formatar a transcrição entregue", () => {
 
     expect(kit.haiku.calls).toEqual([]);
     expect(kit.batchWriter.commits).toHaveLength(commits);
-    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "cancel" });
+    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "cancelled" });
   });
 });

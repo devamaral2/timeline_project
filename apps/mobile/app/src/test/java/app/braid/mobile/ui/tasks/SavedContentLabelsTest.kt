@@ -12,7 +12,7 @@ import org.junit.Test
 class SavedContentLabelsTest {
     @Test
     fun `the status awaiting transcription is named for the screen reader as in the web`() {
-        assertEquals("Agente, aguardando a transcrição", taskStatusName(TaskActor.Agent, TaskStatus.AwaitingTranscription))
+        assertEquals("Agente, esperando transcrição", taskStatusName(TaskActor.Agent, TaskStatus.AwaitingTranscription))
     }
 
     @Test

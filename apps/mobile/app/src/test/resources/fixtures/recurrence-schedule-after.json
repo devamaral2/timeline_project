@@ -17,7 +17,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "shifted": {
       "kind": "common",
@@ -35,7 +36,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     }
   },
   {
@@ -56,7 +58,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "shifted": {
       "kind": "common",
@@ -74,7 +77,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     }
   },
   {
@@ -95,7 +99,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "shifted": {
       "kind": "common",
@@ -113,7 +118,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     }
   },
   {
@@ -134,7 +140,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "shifted": {
       "kind": "common",
@@ -152,7 +159,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     }
   }
 ]

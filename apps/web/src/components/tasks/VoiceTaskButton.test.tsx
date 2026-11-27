@@ -90,7 +90,7 @@ test("sends the transcript as a voice request and hands the created task over wh
 
   await waitFor(() => expect(voicePosts()).toHaveLength(1));
   expect(voicePosts()[0]?.body).toEqual({ transcript: "comecei a estudar ingles", clientMessageId: expect.any(String) });
-  advanceRequest(api, lastRequestId(), { status: "done", entities: [createdTask] });
+  advanceRequest(api, lastRequestId(), { status: "completed", entities: [createdTask] });
 
   await waitFor(() => expect(onCreated).toHaveBeenCalledWith(createdTask), { timeout: 4000 });
 }, 15000);
@@ -115,7 +115,7 @@ test("never keeps two creations in flight at the same time", async () => {
   expect(await screen.findByText("Criando 2 tarefas...")).toBeInTheDocument();
   expect(voicePosts()).toHaveLength(1);
 
-  advanceRequest(api, lastRequestId(), { status: "done", entities: [createdTask] });
+  advanceRequest(api, lastRequestId(), { status: "completed", entities: [createdTask] });
   await waitFor(() => expect(voicePosts()).toHaveLength(2), { timeout: 4000 });
 });
 
@@ -133,7 +133,7 @@ test("shows the failure message of a voice request that fails, and retries with 
   fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
   await waitFor(() => expect(voicePosts()).toHaveLength(2));
   expect(voicePosts()[1]?.body).not.toEqual(voicePosts()[0]?.body);
-  advanceRequest(api, lastRequestId(), { status: "done", entities: [createdTask] });
+  advanceRequest(api, lastRequestId(), { status: "completed", entities: [createdTask] });
 
   await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1), { timeout: 4000 });
 }, 15000);
@@ -158,7 +158,7 @@ test("a lost submission response is retried with the same message id, and the ac
   await waitFor(() => expect(sent()).toHaveLength(2), { timeout: 4000 });
   expect(sent()[1]?.[1]).toEqual(sent()[0]?.[1]);
   expect(requests().size).toBe(1);
-  advanceRequest(api, lastRequestId(), { status: "done", entities: [createdTask] });
+  advanceRequest(api, lastRequestId(), { status: "completed", entities: [createdTask] });
 
   await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1), { timeout: 6000 });
 }, 15000);
@@ -170,7 +170,7 @@ test("reload recovers the open voice request without submitting it again", async
   render(<VoiceTaskButton onCreated={onCreated} />);
 
   expect(await screen.findByText("Criando tarefa...")).toBeInTheDocument();
-  advanceRequest(api, open.id, { status: "done", entities: [createdTask] });
+  advanceRequest(api, open.id, { status: "completed", entities: [createdTask] });
 
   await waitFor(() => expect(onCreated).toHaveBeenCalledWith(createdTask), { timeout: 4000 });
   expect(voicePosts()).toHaveLength(0);

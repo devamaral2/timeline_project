@@ -9,14 +9,17 @@ import app.braid.mobile.domain.task.StaleRevisionException
 import app.braid.mobile.domain.task.SubtaskTree
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
+import app.braid.mobile.domain.task.TaskDrawer
+import app.braid.mobile.domain.task.TaskDrawerKey
 import app.braid.mobile.domain.task.TaskFilters
-import app.braid.mobile.domain.task.TaskGroup
-import app.braid.mobile.domain.task.TaskGroupKey
 import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.TaskRepository
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
-import app.braid.mobile.domain.task.groupTrackedTasks
+import app.braid.mobile.domain.task.drawerOf
+import app.braid.mobile.domain.task.drawersOf
 import app.braid.mobile.domain.task.hasOpenAgentTask
+import app.braid.mobile.domain.task.listedCards
 import app.braid.mobile.domain.task.nestSubtasks
 import app.braid.mobile.domain.task.oneRowPerSeries
 import app.braid.mobile.domain.task.statusPatch
@@ -40,6 +43,7 @@ const val TASK_SEARCH_DEBOUNCE_MS = 250L
 
 const val STALE_TASK_LIST_NOTICE = "Esta tarefa mudou em outro lugar. Carregamos a lista atual; confira e tente de novo."
 const val FAILED_TASK_LIST_NOTICE = "Não foi possível trocar o status. Tente novamente."
+const val FAILED_SITUATION_NOTICE = "Não foi possível mudar a situação. Tente novamente."
 
 /**
  * [cards] é a última lista lida com os filtros de agora, e `null` até a primeira chegar. [facets] é a última lista lida
@@ -55,14 +59,16 @@ data class TasksUiState(
     /** O que está escrito na busca; [query] é o texto já aplicado, depois da espera. */
     val typed: String = "",
     val query: String = "",
-    /** Os grupos recolhidos que o usuário abriu; só vale para Feitas e Encerradas. */
-    val expanded: Set<TaskGroupKey> = emptySet(),
+    /** As gavetas que o usuário virou: cada toque inverte o estado de partida da gaveta (aberta ou fechada). */
+    val flipped: Set<TaskDrawerKey> = emptySet(),
     /** As tarefas com a gaveta de subtarefas fechada; as gavetas começam abertas, as aninhadas também. */
     val closedSubtasks: Set<String> = emptySet(),
     /** A tarefa de pessoa cujo glifo foi tocado: a folha de status está aberta para ela. */
     val statusPicker: TaskCard? = null,
     val notice: String? = null,
     val saving: Boolean = false,
+    /** Quantas gravações de situação estão em curso: a mudança já está na tela e a API ainda não respondeu. */
+    val situationSaves: Int = 0,
     /** O instante da última leitura: os textos calculados da linha ("Hoje", "há 12 min") saem dele. */
     val now: Instant,
     /** De quem são as tarefas lidas: vem da escolha do menu, que vale para as três seções. */
@@ -70,14 +76,22 @@ data class TasksUiState(
 ) {
     val filters: TaskFilters get() = TaskFilters(tag, priorities, query)
 
-    /** Uma série vale uma linha só; a subtarefa cuja principal está na lista vai para a gaveta dela. */
-    val tree: SubtaskTree by lazy(LazyThreadSafetyMode.NONE) { nestSubtasks(oneRowPerSeries(cards.orEmpty())) }
+    /**
+     * Uma série vale uma linha só; o trabalho em andamento do agente sai antes (mora só na gaveta de execução); a subtarefa
+     * cuja principal está na lista vai para a gaveta dela, e a cuja principal saiu continua linha.
+     */
+    val tree: SubtaskTree by lazy(LazyThreadSafetyMode.NONE) { nestSubtasks(listedCards(oneRowPerSeries(cards.orEmpty()))) }
 
-    /** Os grupos são feitos das linhas: a subtarefa na gaveta não entra neles nem na contagem. */
-    val groups: List<TaskGroup> by lazy(LazyThreadSafetyMode.NONE) { groupTrackedTasks(tree.roots) }
+    /** As quatro gavetas são feitas das linhas: a subtarefa na gaveta da principal não entra nelas nem na contagem. */
+    val drawers: List<TaskDrawer> by lazy(LazyThreadSafetyMode.NONE) { drawersOf(tree.roots) }
 
-    /** As linhas dos grupos que não vêm recolhidos: o número do topo e o do menu. */
-    val openCount: Int get() = groups.filterNot { it.collapsedByDefault }.sumOf { it.cards.size }
+    /** As tarefas de Para agora: o número do topo e o do menu. */
+    val toNowCount: Int get() = drawers.firstOrNull { it.key == TaskDrawerKey.Now }?.cards?.size ?: 0
+
+    /** Nada na lista, mas o agente ainda trabalha: a tela não convida a criar a primeira tarefa. */
+    val onlyAgentWork: Boolean get() = cards.orEmpty().any { drawerOf(it) == TaskDrawerKey.Execution }
+
+    val savingSituation: Boolean get() = situationSaves > 0
 
     val tags: List<String> get() = tagsByUse(facets.orEmpty())
 
@@ -86,7 +100,7 @@ data class TasksUiState(
     /** A lista sem filtro ainda não tem tarefa nenhuma: o estado vazio de quem não criou a primeira. */
     val hasTasks: Boolean get() = !facets.isNullOrEmpty()
 
-    fun isExpanded(group: TaskGroup): Boolean = !group.collapsedByDefault || group.key in expanded
+    fun isExpanded(drawer: TaskDrawer): Boolean = drawer.collapsedByDefault == (drawer.key in flipped)
 
     fun isDrawerOpen(taskId: String): Boolean = taskId !in closedSubtasks
 }
@@ -152,19 +166,8 @@ class TasksViewModel
             if (mutableState.value.filters != before) viewModelScope.launch { refresh(quiet = false) }
         }
 
-        fun toggleGroup(key: TaskGroupKey) =
-            mutableState.update {
-                it.copy(
-                    expanded =
-                        if (key in
-                            it.expanded
-                        ) {
-                            it.expanded - key
-                        } else {
-                            it.expanded + key
-                        },
-                )
-            }
+        fun toggleDrawer(key: TaskDrawerKey) =
+            mutableState.update { it.copy(flipped = if (key in it.flipped) it.flipped - key else it.flipped + key) }
 
         /** Abre ou fecha a gaveta de uma tarefa; fechar a principal guarda o que as filhas tinham escolhido. */
         fun toggleSubtasks(taskId: String) =
@@ -209,6 +212,44 @@ class TasksViewModel
                     mutableState.update { it.copy(saving = false) }
                 }
             }
+        }
+
+        /**
+         * A situação do pedido de agente que terminou muda na hora, na lista e nas tags (as duas leituras), e é gravada pelo
+         * `PUT`; se a gravação falha, volta ao que era e avisa. Vale a última gravação, sem revisão: não há conflito a
+         * tratar. Só uma tarefa de agente que já tem situação a muda, e escolher a que ela tem não grava nada.
+         */
+        fun chooseSituation(
+            card: TaskCard,
+            situation: TaskSituation,
+        ) {
+            val before = card.situation ?: return
+            if (card.actor != TaskActor.Agent || situation == TaskSituation.Unknown || situation == before) return
+            mutableState.update { it.copy(notice = null, situationSaves = it.situationSaves + 1) }
+            showSituation(card.id, situation)
+            viewModelScope.launch {
+                try {
+                    tasks.setSituation(card.id, situation)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    // Só desfaz se a linha ainda mostra a escolha que falhou: uma escolha mais nova não é apagada por esta.
+                    showSituation(card.id, before, onlyIf = situation)
+                    mutableState.update { it.copy(notice = FAILED_SITUATION_NOTICE) }
+                } finally {
+                    mutableState.update { it.copy(situationSaves = it.situationSaves - 1) }
+                }
+            }
+        }
+
+        private fun showSituation(
+            taskId: String,
+            situation: TaskSituation,
+            onlyIf: TaskSituation? = null,
+        ) {
+            fun apply(list: List<TaskCard>?) =
+                list?.map { if (it.id == taskId && (onlyIf == null || it.situation == onlyIf)) it.copy(situation = situation) else it }
+            mutableState.update { it.copy(cards = apply(it.cards), facets = apply(it.facets)) }
         }
 
         /** A tela está à vista (resumida) ou não: a releitura das tarefas de agente só anda com ela à vista. */

@@ -9,6 +9,11 @@
       "priority": "high",
       "name": "Reunião de planejamento",
       "description": "Pauta do trimestre.",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "location": "Rua Augusta, 100 - São Paulo",
       "startedAt": "2026-09-14T21:30:00.000Z",
       "estimatedFinishAt": "2026-09-14T22:20:00.000Z",
@@ -51,7 +56,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -63,6 +73,11 @@
       "priority": "medium",
       "name": "Pagar o condomínio",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T03:00:00.000Z",
       "estimatedFinishAt": "2026-09-14T03:00:00.000Z",
       "longRunning": false,
@@ -92,7 +107,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -105,6 +125,11 @@
       "priority": "medium",
       "name": "Projeto longo",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-01T12:00:00.000Z",
       "estimatedFinishAt": "2026-11-30T12:00:00.000Z",
       "longRunning": true,
@@ -138,7 +163,12 @@
       "longRunning": true,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -151,6 +181,11 @@
       "priority": "medium",
       "name": "Enviar o relatório",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-13T15:00:00.000Z",
       "finishedAt": "2026-09-13T20:00:00.000Z",
       "longRunning": false,
@@ -180,7 +215,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -193,6 +233,11 @@
       "priority": "medium",
       "name": "Ideia sem data",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "longRunning": false,
       "notifyOffsetsMinutes": [],
       "tags": [],
@@ -220,7 +265,12 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     }
   },
   {
@@ -233,6 +283,11 @@
       "priority": "medium",
       "name": "Treino",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-23T13:30:00.000Z",
       "estimatedFinishAt": "2026-09-23T14:30:00.000Z",
       "longRunning": false,
@@ -276,7 +331,129 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
+    }
+  },
+  {
+    "name": "inProject",
+    "task": {
+      "id": "task-p",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Revisar o contrato",
+      "description": "",
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      },
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Revisar o contrato",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      }
+    }
+  },
+  {
+    "name": "occurrenceInProject",
+    "task": {
+      "id": "task-occ-p",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Treino",
+      "description": "",
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      },
+      "startedAt": "2026-09-23T13:30:00.000Z",
+      "estimatedFinishAt": "2026-09-23T14:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "recurrence": {
+        "id": "rec-1",
+        "occurrenceOn": "2026-09-23",
+        "detached": false,
+        "rule": {
+          "frequency": "weekly",
+          "interval": 1,
+          "byWeekday": 42,
+          "timeOfDay": "10:30",
+          "durationMinutes": 60,
+          "timeZone": "America/Sao_Paulo",
+          "startsOn": "2026-09-21"
+        }
+      },
+      "revision": 6,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Treino",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-23",
+      "startTime": "10:30",
+      "endDate": "2026-09-23",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      }
     }
   }
 ]

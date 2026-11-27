@@ -12,7 +12,7 @@ const MODEL: ModelSelection = { provider: "anthropic", model: "claude-opus-5-5",
 
 function setup(respond: Parameters<typeof scriptedJev>[0], options: RequestDispatcherOptions = {}) {
   const store = new InMemoryRequestStore();
-  store.seed({ id: "r1", prompt: "pedido", status: "queued" });
+  store.seed({ id: "r1", prompt: "pedido", status: "preparing" });
   const jev = scriptedJev(respond);
   return { store, jev, dispatcher: new RequestDispatcher(store, jev.client, options) };
 }

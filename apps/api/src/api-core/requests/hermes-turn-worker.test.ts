@@ -1,6 +1,6 @@
 import type { AgentTraceDto } from "@repo/contracts";
 import { expect, test, vi } from "vitest";
-import { HermesRequestError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
+import { HermesRequestError, HermesRunInterruptedError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
 import { RetryableJobError } from "../../infrastructure/jobs/jobs.service";
 import { HERMES_OFF_MESSAGE, HermesTurnWorker } from "./hermes-turn-worker";
 import { toRequestDto } from "./request-view";
@@ -16,7 +16,7 @@ const trace = (status: AgentTraceDto["status"], toolStatus: "running" | "done" |
 
 function setup(chat?: (input: HermesChatInput) => Promise<{ text: string; trace: AgentTraceDto }>) {
   const store = new InMemoryRequestStore();
-  const first = store.seed({ id: "01FIRST", prompt: "oi", route: "hermes", status: "done" });
+  const first = store.seed({ id: "01FIRST", prompt: "oi", route: "hermes", status: "completed" });
   const request = store.seed({ id: "01NEXT", prompt: "crie uma tarefa", route: "hermes", status: "queued", sessionId: first.id });
   const hermes = chat ? { chat: vi.fn(chat) } : undefined;
   const progress = vi.fn(async () => {});
@@ -34,10 +34,10 @@ test("a mensagem vai na sessao do primeiro pedido; a resposta e o rastro ficam n
 
   expect(hermes?.chat).toHaveBeenCalledWith(expect.objectContaining({ text: "crie uma tarefa", sessionId: "braid-user-1-01FIRST" }));
   expect(progress).toHaveBeenCalledWith({ trace: trace("running", "running") });
-  expect(store.require("01NEXT")).toMatchObject({ status: "done", answer: "Feito.", trace: trace("done") });
+  expect(store.require("01NEXT")).toMatchObject({ status: "completed", answer: "Feito.", trace: trace("done") });
   // Sem passos gravados: a lista do chat sai do rastro.
   expect(toRequestDto(store.require("01NEXT"), [], []).steps).toEqual([
-    { id: "c1", agent: "mcp_braid_create_task", label: "Criou uma tarefa", status: "done" },
+    { id: "c1", agent: "mcp_braid_create_task", label: "Criou uma tarefa", status: "completed" },
   ]);
 });
 
@@ -58,7 +58,7 @@ test("o rastro e escrito no progresso no maximo uma vez por intervalo, e uma esc
   await run();
 
   expect(progress).toHaveBeenCalledTimes(1);
-  expect(store.require("01NEXT").status).toBe("done");
+  expect(store.require("01NEXT").status).toBe("completed");
 });
 
 test("falha definitiva do Hermes: o pedido falha com um codigo seguro e o ultimo rastro, e o erro sobe para a fila", async () => {
@@ -72,6 +72,16 @@ test("falha definitiva do Hermes: o pedido falha com um codigo seguro e o ultimo
   const request = store.require("01NEXT");
   expect(request).toMatchObject({ status: "failed", errorCode: "unavailable", trace: trace("failed", "failed") });
   expect(request.answer).toBeUndefined();
+});
+
+test("a execucao que o Hermes devolve como interrompida deixa o pedido interrompido, e o erro dele deixa failed", async () => {
+  const stopped = setup(async () => { throw new HermesRunInterruptedError("Hermes run was cancelled"); });
+  await expect(stopped.run()).rejects.toBeInstanceOf(HermesRunInterruptedError);
+  expect(stopped.store.require("01NEXT")).toMatchObject({ status: "interrupted", finishedAt: expect.any(Date) });
+
+  const broken = setup(async () => { throw new HermesRequestError("Hermes run failed"); });
+  await expect(broken.run()).rejects.toBeInstanceOf(HermesRequestError);
+  expect(broken.store.require("01NEXT").status).toBe("failed");
 });
 
 test("erro que a fila ainda vai tentar de novo nao encerra o pedido", async () => {

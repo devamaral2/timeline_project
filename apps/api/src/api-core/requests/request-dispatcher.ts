@@ -41,7 +41,8 @@ export class RequestDispatcher {
 
   async run(requestId: string, signal?: AbortSignal): Promise<void> {
     const request = await this.store.find(requestId);
-    if (request?.status !== "queued") return;
+    // So o pedido que ainda nao tem destino: uma nova tentativa depois da entrega nao despacha de novo.
+    if (request?.status !== "preparing") return;
 
     // `fallback: <pedido>`: quem pediu ja escolheu o caminho; o JEV nem e consultado.
     if (request.forceFallback) {

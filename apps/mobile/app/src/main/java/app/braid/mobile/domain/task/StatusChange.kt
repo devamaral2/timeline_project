@@ -1,6 +1,5 @@
 package app.braid.mobile.domain.task
 
-import app.braid.mobile.domain.request.isOpenRequest
 import java.time.Instant
 
 /** O que o `PATCH` faz com `finishedAt`: não toca, grava a conclusão ou a apaga. */
@@ -57,4 +56,4 @@ fun statusPatch(
     )
 
 /** Há tarefa de agente na fila, executando ou aguardando você? Só ela faz a lista se reler sozinha; tarefa de pessoa nunca conta. */
-fun hasOpenAgentTask(cards: List<TaskCard>): Boolean = cards.any { it.actor == TaskActor.Agent && it.status?.let(::isOpenRequest) == true }
+fun hasOpenAgentTask(cards: List<TaskCard>): Boolean = cards.any { it.actor == TaskActor.Agent && isOpenAgentStatus(it.status) }

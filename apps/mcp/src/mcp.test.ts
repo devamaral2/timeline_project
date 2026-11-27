@@ -418,6 +418,21 @@ describe("MCP over HTTP", () => {
     await client.close();
   });
 
+  test("list_tracked_tasks filters by each of the ten agent statuses and by the person statuses", async () => {
+    fetchApi.mockImplementation(async () => new Response("[]", { status: 200 }));
+    const client = await connect();
+    const statuses = [
+      "preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+      "todo", "toDefine", "doing", "inHold", "done", "cancel", "missed",
+    ];
+
+    const result = await client.callTool({ name: "list_tracked_tasks", arguments: { status: statuses } });
+
+    expect(result.isError).toBeFalsy();
+    expect(new URL(fetchApi.mock.calls[0]?.[0] as string).searchParams.get("status")).toBe(statuses.join(","));
+    await client.close();
+  });
+
   test("list_artifacts forwards its filters and list_recurrences takes none", async () => {
     fetchApi.mockImplementation(async () => new Response("[]", { status: 200 }));
     const client = await connect();

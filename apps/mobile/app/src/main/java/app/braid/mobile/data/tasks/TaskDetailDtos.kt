@@ -2,6 +2,8 @@ package app.braid.mobile.data.tasks
 
 import app.braid.mobile.data.artifacts.ArtifactDto
 import app.braid.mobile.data.artifacts.toDomain
+import app.braid.mobile.data.projects.ProjectDto
+import app.braid.mobile.data.projects.toDomain
 import app.braid.mobile.domain.task.ArtifactRelation
 import app.braid.mobile.domain.task.RequestRelation
 import app.braid.mobile.domain.task.TaskActor
@@ -11,6 +13,7 @@ import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.TaskRequest
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import kotlinx.serialization.Serializable
 import java.time.Instant
@@ -26,6 +29,8 @@ data class TaskDetailDto(
     val priority: String,
     val name: String,
     val description: String,
+    val project: ProjectDto,
+    val situation: String? = null,
     val location: String? = null,
     val startedAt: String? = null,
     val estimatedFinishAt: String? = null,
@@ -73,6 +78,8 @@ fun TaskDetailDto.toDomain(): TaskDetail =
                 longRunning = longRunning,
                 tags = tags,
                 revision = revision,
+                project = project.toDomain(),
+                situation = TaskSituation.fromCode(situation),
             ),
         priority = TaskPriority.fromCode(priority),
         description = description,

@@ -16,6 +16,7 @@ function anTask(overrides: Partial<AgendaTaskCard> = {}): AgendaTaskCard {
     notifyOffsetsMinutes: [],
     name: "Bloco de trabalho",
     description: "",
+    project: { id: "project-1", name: "personal", personal: true },
     startedAt: "2026-08-19T12:00:00.000Z",
     estimatedFinishAt: "2026-08-19T13:00:00.000Z",
     tags: [],

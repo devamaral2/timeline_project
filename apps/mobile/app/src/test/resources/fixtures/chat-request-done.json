@@ -2,8 +2,13 @@
   "id": "R00000000000000000000000A1",
   "kind": "request",
   "route": "steps",
-  "status": "done",
+  "status": "completed",
   "title": "Criar a reunião de sexta",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
   "createdAt": "2026-09-14T14:48:00.000Z",
   "updatedAt": "2026-09-14T14:48:09.000Z",
   "text": "Criar a reunião de sexta",
@@ -12,19 +17,19 @@
       "id": "s1",
       "agent": "router",
       "label": "Entendendo o pedido",
-      "status": "done"
+      "status": "completed"
     },
     {
       "id": "s2",
       "agent": "task",
       "label": "Criando a tarefa",
-      "status": "done"
+      "status": "completed"
     },
     {
       "id": "s3",
       "agent": "writer",
       "label": "Escrevendo a resposta",
-      "status": "done"
+      "status": "completed"
     }
   ],
   "entities": [

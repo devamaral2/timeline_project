@@ -1,4 +1,6 @@
 import type { AgentTaskStatus, TaskActor, HumanTaskStatus } from "@repo/contracts";
+import { AgentStatusIcon } from "./agent-status-icon";
+import { agentStatusAccessibleName } from "./agent-status-names";
 import styles from "./task-glyphs.module.css";
 
 type HumanStatusOrNone = HumanTaskStatus | null;
@@ -17,32 +19,23 @@ const humanNames: Record<HumanTaskStatus, string> = {
   missed: "Não realizado",
 };
 
-const agentNames: Record<AgentTaskStatus, string> = {
-  queued: "Agente, na fila",
-  running: "Agente, executando",
-  waiting: "Agente, aguardando você",
-  awaiting_transcription: "Agente, aguardando a transcrição",
-  done: "Agente, feito",
-  failed: "Agente, falhou",
-  cancel: "Agente, cancelado",
-};
-
 /** O nome que um leitor de tela anuncia para o glifo. */
 export function taskStatusName(actor: TaskActor, status: HumanStatusOrNone | AgentTaskStatus): string {
-  if (actor === "agent") return agentNames[status as AgentTaskStatus];
+  if (actor === "agent") return agentStatusAccessibleName(status as AgentTaskStatus);
   if (status === null) return "Só agenda";
   return humanNames[status as HumanTaskStatus];
 }
 
 /**
- * O glifo do status: um circulo, e o que fica dentro diz qual. Nao tem moldura
- * nem fundo: a cor sai do `data-status` no CSS. Tarefa de pessoa sem status
- * (`null`) e o ponto azul "Só agenda". Os status de agente usam o mesmo
- * contorno; o que muda e o nome, e o `running` ganha um ponto verde-agua.
+ * O glifo do status. O de pessoa e um circulo, e o que fica dentro diz qual: nao
+ * tem moldura nem fundo, e a cor sai do `data-status` no CSS. Tarefa de pessoa sem
+ * status (`null`) e o ponto azul "Só agenda". O de agente e o icone quadrado
+ * (`AgentStatusIcon`), nos mesmos lugares em que o de pessoa seria desenhado.
  */
 export function TaskStatusGlyph(props: TaskStatusGlyphProps) {
-  const { actor, status, size = 22, className } = props;
-  const label = taskStatusName(actor, status);
+  if (props.actor === "agent") return <AgentStatusIcon status={props.status} size={props.size} className={props.className} />;
+  const { status, size = 22, className } = props;
+  const label = taskStatusName("human", status);
   const dataStatus = status ?? "reference";
 
   return (
@@ -58,7 +51,7 @@ export function TaskStatusGlyph(props: TaskStatusGlyphProps) {
       strokeLinecap="round"
       strokeLinejoin="round"
       data-status={dataStatus}
-      data-actor={actor}
+      data-actor="human"
       className={className ?? styles.statusGlyph}
     >
       {dataStatus === "reference" ? (
@@ -66,36 +59,22 @@ export function TaskStatusGlyph(props: TaskStatusGlyphProps) {
       ) : (
         <circle cx="12" cy="12" r="9" strokeDasharray={dataStatus === "toDefine" ? "2.4 2.31" : undefined} />
       )}
-      {dataStatus === "doing" || dataStatus === "running" ? (
-        <path d="M12 6a6 6 0 0 1 0 12Z" fill="currentColor" stroke="none" />
-      ) : null}
-      {dataStatus === "inHold" || dataStatus === "waiting" ? (
+      {dataStatus === "doing" ? <path d="M12 6a6 6 0 0 1 0 12Z" fill="currentColor" stroke="none" /> : null}
+      {dataStatus === "inHold" ? (
         <>
           <path d="M10 9v6" />
           <path d="M14 9v6" />
         </>
       ) : null}
-      {dataStatus === "awaiting_transcription" ? <path d="M12 7.5V12l3 2" /> : null}
       {dataStatus === "done" ? <path d="m8.5 12.2 2.4 2.4 4.6-4.9" /> : null}
-      {dataStatus === "failed" ? (
+      {dataStatus === "cancel" ? (
         <>
-          <path d="M12 8v5" />
-          <path d="M12 16.2h.01" />
+          <path d="m9.5 9.5 5 5" />
+          <path d="m14.5 9.5-5 5" />
         </>
       ) : null}
-      {dataStatus === "cancel" || dataStatus === "missed" ? (
-        dataStatus === "cancel" ? (
-          <>
-            <path d="m9.5 9.5 5 5" />
-            <path d="m14.5 9.5-5 5" />
-          </>
-        ) : (
-          <path d="m9 15 6-6" />
-        )
-      ) : null}
-      {dataStatus === "running" || dataStatus === "doing" ? (
-        <circle cx="19" cy="5" r="3" className={styles.activeDot} stroke="none" />
-      ) : null}
+      {dataStatus === "missed" ? <path d="m9 15 6-6" /> : null}
+      {dataStatus === "doing" ? <circle cx="19" cy="5" r="3" className={styles.activeDot} stroke="none" /> : null}
     </svg>
   );
 }

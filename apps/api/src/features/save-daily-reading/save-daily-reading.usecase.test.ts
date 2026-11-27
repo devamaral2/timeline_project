@@ -131,7 +131,7 @@ test("a leitura de outro dia, de outra pessoa, de agente ou com outro nome não 
       task("amanha", "2026-08-18T03:00:00.000Z"),
       task("deles", "2026-08-17T12:00:00.000Z", { userId: "someone-else" }),
       task("leitura", "2026-08-17T12:00:00.000Z", { name: "Leitura" }),
-      task("agente", "2026-08-17T12:00:00.000Z", { actor: "agent", kind: "request", status: "done" }),
+      task("agente", "2026-08-17T12:00:00.000Z", { actor: "agent", kind: "request", status: "completed" }),
     ],
   });
 
@@ -204,7 +204,7 @@ test("guardar uma página registra a tarefa de agente save_content, já concluí
     userId: actor.userId,
     actor: "agent",
     kind: "save_content",
-    status: "done",
+    status: "completed",
     startedAt: now,
     finishedAt: now,
     data: { url: "https://jornal.example/economia/juros?ref=home" },

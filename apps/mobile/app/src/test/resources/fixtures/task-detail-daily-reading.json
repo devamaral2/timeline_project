@@ -6,6 +6,11 @@
   "priority": "medium",
   "name": "Leitura diária",
   "description": "",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
   "startedAt": "2026-09-14T21:00:00.000Z",
   "longRunning": false,
   "notifyOffsetsMinutes": [],

@@ -1,5 +1,9 @@
 package app.braid.mobile.data.tasks
 
+import app.braid.mobile.data.projects.ProjectDto
+import app.braid.mobile.data.projects.toDomain
+import app.braid.mobile.data.requests.ModelSelectionDto
+import app.braid.mobile.data.requests.toDomain
 import app.braid.mobile.domain.task.FinishedAtChange
 import app.braid.mobile.domain.task.RecurrenceFrequency
 import app.braid.mobile.domain.task.RecurrenceRule
@@ -9,6 +13,7 @@ import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.TaskRecurrence
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.timeline.toIsoMillis
 import kotlinx.serialization.SerialName
@@ -30,6 +35,8 @@ data class TaskCardDto(
     val priority: String,
     val name: String,
     val description: String,
+    val project: ProjectDto,
+    val situation: String? = null,
     val location: String? = null,
     val startedAt: String? = null,
     val estimatedFinishAt: String? = null,
@@ -43,6 +50,7 @@ data class TaskCardDto(
     val revision: Int,
     val createdAt: String,
     val updatedAt: String,
+    val model: ModelSelectionDto? = null,
 )
 
 @Serializable
@@ -63,6 +71,12 @@ data class RecurrenceRuleDto(
     val timeOfDay: String,
     val startsOn: String,
     val endsOn: String? = null,
+)
+
+/** `setTaskSituationInputSchema`: só a situação nova. */
+@Serializable
+data class SetSituationBody(
+    val situation: String,
 )
 
 /** `agendaPageSchema`: a página e o cursor da próxima, que some na última. */
@@ -88,6 +102,9 @@ fun TaskCardDto.toDomain(): TaskCard =
         recurrence = recurrence?.toDomain(),
         parentTaskId = parentTaskId,
         notifyOffsetsMinutes = notifyOffsetsMinutes.map { it.toInt() },
+        project = project.toDomain(),
+        situation = TaskSituation.fromCode(situation),
+        model = model?.toDomain(),
     )
 
 fun TaskRecurrenceDto.toDomain() =

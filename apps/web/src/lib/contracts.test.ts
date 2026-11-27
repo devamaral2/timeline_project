@@ -10,6 +10,7 @@ const card: TaskCardDto = {
   priority: "medium",
   name: "Caminhada",
   description: "",
+  project: { id: "project-1", name: "personal", personal: true },
   startedAt: "2026-11-14T08:00:00-03:00",
   estimatedFinishAt: "2026-11-14T08:30:00-03:00",
   longRunning: false,
@@ -27,4 +28,29 @@ test("um cartao de tarefa de exemplo passa no esquema do contrato compartilhado"
 
 test("o esquema do contrato recusa um cartao com status inventado", () => {
   expect(taskCardSchema.safeParse({ ...card, status: "inventado" }).success).toBe(false);
+});
+
+const agentCard: TaskCardDto = { ...card, actor: "agent", kind: "request", status: "completed", artifactTypes: [], tags: [] };
+
+test("o esquema do contrato aceita um cartao de agente com cada um dos onze status", () => {
+  for (const status of ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back"] as const) {
+    expect(taskCardSchema.safeParse({ ...agentCard, status }).success, status).toBe(true);
+  }
+});
+
+test("o esquema do contrato recusa um cartao de agente com done ou cancel", () => {
+  expect(taskCardSchema.safeParse({ ...agentCard, status: "done" }).success).toBe(false);
+  expect(taskCardSchema.safeParse({ ...agentCard, status: "cancel" }).success).toBe(false);
+});
+
+test("o esquema do contrato recusa um cartao de pessoa com status de agente", () => {
+  for (const status of ["completed", "cancelled", "queued", "failed"]) {
+    expect(taskCardSchema.safeParse({ ...card, status }).success, status).toBe(false);
+  }
+  expect(taskCardSchema.safeParse({ ...card, status: "done" }).success).toBe(true);
+});
+
+test("o esquema do contrato recusa um cartao sem projeto", () => {
+  const { project: _project, ...withoutProject } = card;
+  expect(taskCardSchema.safeParse(withoutProject).success).toBe(false);
 });

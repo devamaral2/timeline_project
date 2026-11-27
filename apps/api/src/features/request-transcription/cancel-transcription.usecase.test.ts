@@ -57,7 +57,7 @@ describe("cancelar o pedido de transcrição", () => {
     await expect(kit.cancel.execute(created.requestId, actor)).resolves.toBe(true);
 
     const request = await kit.taskRepository.findById(created.requestId);
-    expect(request).toMatchObject({ status: "cancel", data: { errorCode: "cancelled" } });
+    expect(request).toMatchObject({ status: "cancelled", data: { errorCode: "cancelled" } });
     expect(request?.finishedAt).toBeInstanceOf(Date);
     expect(await bodyOf(kit, created.artifactId)).toBe(`Fonte: [YouTube](${VIDEO})\n\n${TRANSCRIPTION_CANCELLED_TEXT}\n`);
     expect(TRANSCRIPTION_CANCELLED_TEXT).toBe("Transcrição cancelada");
@@ -82,10 +82,10 @@ describe("cancelar o pedido de transcrição", () => {
     await expect(
       kit.worker.renew({ requestId: created.requestId, leaseToken: reservation.leaseToken, stage: "download", percent: 5 }, actor),
     ).rejects.toThrow(/lease/i);
-    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "cancel" });
+    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "cancelled" });
   });
 
-  test("já entregue e esperando a formatação (running): também cancela", async () => {
+  test("já entregue e esperando a formatação (running): fica interrupted, como todo pedido que já trabalhava", async () => {
     const kit = setup();
     const created = await kit.request.execute({ url: VIDEO }, actor);
     const reservation = await kit.worker.reserve(actor);
@@ -94,7 +94,7 @@ describe("cancelar o pedido de transcrição", () => {
 
     await expect(kit.cancel.execute(created.requestId, actor)).resolves.toBe(true);
 
-    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "cancel" });
+    expect(await kit.taskRepository.findById(created.requestId)).toMatchObject({ status: "interrupted", data: { errorCode: "cancelled" } });
     expect(await bodyOf(kit, created.artifactId)).toContain(TRANSCRIPTION_CANCELLED_TEXT);
     expect(await kit.requests.awaitingFormat(actor.userId, created.requestId)).toBeUndefined();
   });

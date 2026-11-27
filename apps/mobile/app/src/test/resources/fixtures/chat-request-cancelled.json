@@ -2,8 +2,13 @@
   "id": "R00000000000000000000000A1",
   "kind": "request",
   "route": "steps",
-  "status": "cancel",
+  "status": "cancelled",
   "title": "Criar a reunião de sexta",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
   "createdAt": "2026-09-14T14:48:00.000Z",
   "updatedAt": "2026-09-14T14:48:00.000Z",
   "text": "Criar a reunião de sexta",
@@ -12,7 +17,7 @@
       "id": "s1",
       "agent": "router",
       "label": "Entendendo o pedido",
-      "status": "cancel"
+      "status": "cancelled"
     }
   ],
   "entities": [],

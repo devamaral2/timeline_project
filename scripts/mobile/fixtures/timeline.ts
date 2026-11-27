@@ -10,7 +10,9 @@ import {
   zonedDayEnd, zonedDayStart, zonedTimeAt,
 } from "../../../packages/timeline/src/index";
 import { briefDate } from "../../../apps/web/src/lib/dates/day-labels";
-import { darkTheme, hueForTag, lightTheme, tagColors } from "../../../packages/theme/src/index";
+import {
+  darkTheme, hueForTag, lightTheme, projectInitials, tagColors, type Theme,
+} from "../../../packages/theme/src/index";
 
 type Case = { args: unknown[]; result: unknown };
 
@@ -47,6 +49,27 @@ const TASK_DAY_RANGES: [string, string | null][] = [
 ];
 
 const TAG_NAMES = ["saúde", "casa", "trabalho", "a", "Treino", "reunião-semanal", "x".repeat(40), "日本語", "😀tag", "ção"];
+
+/** Os nomes de projeto dos fixtures da marca: os exemplos da spec, nomes de uma letra, com acento, com dígito e com emoji. */
+const PROJECT_NAMES = [
+  "timeline_project", "agent-skills", "t3code", "personal", "a", "7", "ágil", "órbita_ação", "meu projeto", "api.gateway",
+  "acme/web", "timelineProject", "--lead--", "日本語", "x1", "TP", "😀proj", "x".repeat(60),
+];
+
+/** `personal` é o único projeto com a marca neutra; o nome dele vem sempre com o booleano ligado. */
+const projectOf = (name: string) => ({ name, personal: name === "personal" });
+
+/**
+ * A marca como o Android a desenha: o fundo, o texto e o contorno quando há. A cor de um projeto comum é a das tags
+ * (`tagColors`, com o matiz do nome) e o texto é a cor do fundo da tela; o `personal` usa os tokens neutros do tema.
+ */
+function projectMark(project: { name: string; personal: boolean }, theme: Theme) {
+  const initials = projectInitials(project.name);
+  if (project.personal) {
+    return { initials, personal: true, background: theme.colors.muted, text: theme.colors.mutedForeground, outline: theme.colors.border };
+  }
+  return { initials, personal: false, hue: hueForTag(project.name), background: tagColors(project.name, theme).color, text: theme.colors.background };
+}
 
 export function timelineFixtures(): Record<string, unknown> {
   const dayStart = (day: string) => zonedDayStart(day).toISOString();
@@ -91,6 +114,11 @@ export function timelineFixtures(): Record<string, unknown> {
       ]),
       taskDayKeysOf: cases(taskDayKeysOf, TASK_DAY_RANGES),
       toIsoMillis: cases((instant: string) => new Date(instant).toISOString(), INSTANTS.map((instant) => [instant] as [string])),
+    },
+    "project-marks": {
+      projectInitials: cases(projectInitials, PROJECT_NAMES.map((name) => [name] as [string])),
+      light: PROJECT_NAMES.map((name) => ({ name, ...projectMark(projectOf(name), lightTheme) })),
+      dark: PROJECT_NAMES.map((name) => ({ name, ...projectMark(projectOf(name), darkTheme) })),
     },
     "tag-colors": {
       hueForTag: cases(hueForTag, TAG_NAMES.map((name) => [name] as [string])),

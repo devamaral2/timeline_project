@@ -1,4 +1,5 @@
 import type { TranscriptionFailureCode, TranscriptionResult, TranscriptionStage } from "@repo/contracts";
+import type { AgentTaskStatus } from "../../domain";
 
 /**
  * O job do pedido de transcrição (ADR 0013). O worker interno da API só pega
@@ -114,7 +115,7 @@ export interface TranscriptionRequests {
    */
   open(userId: string, requestId: string): Promise<TranscriptionRequestData | undefined>;
   /**
-   * A pessoa cancela o pedido: leva-o a `cancel`, com `errorCode: "cancelled"`, grava onde o documento ficou e cancela o job do serviço local e o
+   * A pessoa cancela o pedido: leva-o a `cancelled` (`interrupted`, se já rodava: a política de parar de `agent-status`), com `errorCode: "cancelled"`, grava onde o documento ficou e cancela o job do serviço local e o
    * de formatação, se houver. Roda na transação do escritor em lote; se o pedido já terminou, desfaz tudo.
    */
   cancel(tx: unknown, input: { requestId: string; userId: string; at: Date; where: TranscriptionPlace }): Promise<void>;
@@ -125,7 +126,7 @@ export interface TranscriptionRequests {
    */
   awaitingFormat(userId: string, requestId: string): Promise<FormattingInput | undefined>;
   /**
-   * A formatação termina o pedido (`done` ou `failed`) e grava onde o documento ficou. Com `failureCode`, ele fica em `tasks.data`; com
+   * A formatação termina o pedido (`completed` ou `failed`) e grava onde o documento ficou. Com `failureCode`, ele fica em `tasks.data`; com
    * `commentsSummaryFailed`, o pedido ganha uma entrada dizendo que o resumo dos comentários falhou. Roda na
    * transação do escritor em lote; se o pedido já não está em `running`, desfaz tudo.
    */
@@ -134,7 +135,7 @@ export interface TranscriptionRequests {
     input: {
       requestId: string;
       userId: string;
-      status: "done" | "failed";
+      status: Extract<AgentTaskStatus, "completed" | "failed">;
       at: Date;
       failureCode?: TranscriptionFailureCode;
       commentsSummaryFailed?: boolean;

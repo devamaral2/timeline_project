@@ -35,7 +35,7 @@ import java.time.Instant
  */
 class ChatConversationTest {
     private val at = Instant.parse("2026-11-14T12:00:00Z")
-    private val step = RequestStep(id = "1", agent = "task-create", label = "Criando tarefas", status = TaskStatus.Done)
+    private val step = RequestStep(id = "1", agent = "task-create", label = "Criando tarefas", status = TaskStatus.Completed)
     private val written =
         RequestEntity(
             kind = EntityKind.Task,
@@ -75,18 +75,18 @@ class ChatConversationTest {
 
     @Test
     fun `a finished request shows its answer, its query rows or what it wrote`() {
-        assertTrue(processAnswerShows(request(TaskStatus.Done, message = "Criei duas tarefas.")))
+        assertTrue(processAnswerShows(request(TaskStatus.Completed, message = "Criei duas tarefas.")))
         val query = step.copy(result = QueryTable(columns = listOf("name"), rows = emptyList(), truncated = false))
-        assertTrue(processAnswerShows(request(TaskStatus.Done, steps = listOf(query))))
-        assertTrue(processAnswerShows(request(TaskStatus.Done, entities = listOf(written))))
-        assertFalse(processAnswerShows(request(TaskStatus.Done)))
+        assertTrue(processAnswerShows(request(TaskStatus.Completed, steps = listOf(query))))
+        assertTrue(processAnswerShows(request(TaskStatus.Completed, entities = listOf(written))))
+        assertFalse(processAnswerShows(request(TaskStatus.Completed)))
     }
 
     @Test
     fun `a failed or cancelled request keeps only what it wrote before stopping`() {
         // O aviso é a mensagem de erro da conversa: o texto do pedido que falhou não vira balão.
         assertFalse(processAnswerShows(request(TaskStatus.Failed, message = "Não deu.")))
-        assertTrue(processAnswerShows(request(TaskStatus.Cancel, entities = listOf(written))))
+        assertTrue(processAnswerShows(request(TaskStatus.Cancelled, entities = listOf(written))))
     }
 
     @Test
@@ -94,7 +94,7 @@ class ChatConversationTest {
         val messages =
             listOf(
                 ChatMessage.User("u1", "crie duas tarefas"),
-                ChatMessage.Process("u1-process", request(TaskStatus.Done, message = "Criei duas tarefas.")),
+                ChatMessage.Process("u1-process", request(TaskStatus.Completed, message = "Criei duas tarefas.")),
                 ChatMessage.User("u2", "que horas são?"),
                 ChatMessage.HermesSteps("u2-steps", steps = emptyList(), running = true),
                 ChatMessage.Process("u3-process", request(TaskStatus.Running)),

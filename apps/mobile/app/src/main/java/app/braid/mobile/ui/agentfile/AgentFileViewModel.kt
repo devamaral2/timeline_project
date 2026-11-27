@@ -13,13 +13,16 @@ import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.request.EDIT_LISTENING_TEXT
 import app.braid.mobile.domain.request.HermesOffException
 import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
+import app.braid.mobile.domain.request.agentEndLabel
+import app.braid.mobile.domain.request.agentEndText
 import app.braid.mobile.domain.request.agentFailureText
 import app.braid.mobile.domain.request.appendTranscript
-import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.runningStepLabel
 import app.braid.mobile.domain.speech.MicrophonePermission
 import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isOpenAgentStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.ui.aiedit.DraftDictation
 import app.braid.mobile.ui.aiedit.startFailureCode
 import app.braid.mobile.ui.chat.VoiceUiState
@@ -89,7 +92,7 @@ data class EditBar(
     /** O microfone do campo: só dita; `available` falso esconde o botão. */
     val voice: VoiceUiState = VoiceUiState(),
 ) {
-    val open: Boolean get() = followed != null && isOpenRequest(followed.status)
+    val open: Boolean get() = followed != null && isOpenAgentStatus(followed.status)
     val finished: Boolean get() = followed != null && !open
     val busy: Boolean get() = sending || open
     val canSend: Boolean get() = !busy && draft.isNotBlank()
@@ -102,10 +105,9 @@ data class EditBar(
         get() =
             when {
                 lost -> EDIT_LOST_TEXT
-                followed?.status == TaskStatus.Done -> followed.message
+                isSuccessAgentStatus(followed?.status) -> followed?.message
                 failed -> agentFailureText(followed?.errorCode ?: "internal")
-                followed?.status == TaskStatus.Cancel -> agentFailureText("cancelled")
-                else -> null
+                else -> agentEndText(followed?.status)
             }
 
     /** O texto grande do resultado: o erro de envio, senão [message]. */
@@ -118,10 +120,9 @@ data class EditBar(
                 sending -> "Enviando o pedido…"
                 lost -> "Não consegui acompanhar o pedido"
                 open -> followed?.progress ?: followed?.let { runningStepLabel(it.steps) } ?: "Entendendo o pedido…"
-                followed?.status == TaskStatus.Done -> "Pronto"
+                isSuccessAgentStatus(followed?.status) -> "Pronto"
                 failed -> "Não deu certo"
-                followed?.status == TaskStatus.Cancel -> "Pedido cancelado"
-                else -> "Esperando o seu pedido"
+                else -> agentEndLabel(followed?.status) ?: "Esperando o seu pedido"
             }
 }
 
@@ -310,7 +311,7 @@ class AgentFileViewModel
         /** Guarda o pedido que o campo acompanha; ao terminar (uma vez por pedido), o texto do arquivo é relido. */
         private fun follow(view: AgentRequest) {
             updateEdit { it.copy(followed = view) }
-            if (!isOpenRequest(view.status) && notifiedId != view.id) {
+            if (!isOpenAgentStatus(view.status) && notifiedId != view.id) {
                 notifiedId = view.id
                 loadText()
             }

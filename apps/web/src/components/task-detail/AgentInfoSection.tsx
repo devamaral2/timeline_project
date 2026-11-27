@@ -9,7 +9,7 @@ import styles from "./task-detail.module.css";
 
 /**
  * A seção "Informações" da tarefa de agente: o início, com o tempo decorrido, e a conclusão, ou "ainda não
- * concluído". Fim estimado e Job não entram: o contrato não traz esses dados.
+ * concluído". O projeto está no cabeçalho. Fim estimado e Job não entram: o contrato não traz esses dados.
  */
 export function AgentInfoSection({ task }: { task: TaskDto }) {
   const now = useNow();

@@ -25,7 +25,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -77,7 +78,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -130,7 +132,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -173,7 +176,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -218,7 +222,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -264,7 +269,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -308,7 +314,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -324,6 +331,108 @@
         "name": "Corrida",
         "description": "",
         "priority": "medium"
+      }
+    }
+  },
+  {
+    "name": "project goes in the template",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-skills",
+        "name": "agent-skills",
+        "personal": false
+      }
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 2,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "template": {
+        "kind": "common",
+        "name": "Treino de força",
+        "description": "",
+        "priority": "medium",
+        "projectId": "project-skills"
+      }
+    }
+  },
+  {
+    "name": "personal project goes in the template with its id",
+    "draft": {
+      "frequency": "weekly",
+      "interval": 1,
+      "weekdays": 2,
+      "monthDay": 5,
+      "month": 3,
+      "endsOn": ""
+    },
+    "form": {
+      "kind": "common",
+      "name": "Treino de força",
+      "status": null,
+      "priority": "medium",
+      "startDate": "2026-09-21",
+      "startTime": "10:30",
+      "endDate": "2026-09-21",
+      "endTime": "11:30",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
+    },
+    "timeZone": "America/Sao_Paulo",
+    "input": {
+      "frequency": "weekly",
+      "interval": 1,
+      "byWeekday": 2,
+      "timeOfDay": "10:30",
+      "durationMinutes": 60,
+      "timeZone": "America/Sao_Paulo",
+      "startsOn": "2026-09-21",
+      "template": {
+        "kind": "common",
+        "name": "Treino de força",
+        "description": "",
+        "priority": "medium",
+        "projectId": "project-personal"
       }
     }
   },
@@ -353,7 +462,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {

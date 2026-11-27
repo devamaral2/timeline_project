@@ -7,6 +7,11 @@
     "priority": "medium",
     "name": "Almoço",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -143,6 +148,11 @@
     "priority": "medium",
     "name": "Jantar",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -163,6 +173,11 @@
     "priority": "medium",
     "name": "Treino",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -235,6 +250,11 @@
     "priority": "medium",
     "name": "Reunião",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -338,6 +358,11 @@
     "priority": "medium",
     "name": "Ligar para o banco",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -357,6 +382,11 @@
     "priority": "medium",
     "name": "Pagar o condomínio",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -377,6 +407,11 @@
     "priority": "medium",
     "name": "Leitura da manhã",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -457,6 +492,11 @@
     "priority": "medium",
     "name": "Revisar a projeção",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],

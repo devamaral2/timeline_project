@@ -47,7 +47,7 @@ describe("guardar página na Leitura diária no Postgres", () => {
     expect(saves).toHaveLength(1);
     expect(await tasks.findById(saves[0]?.id as string)).toMatchObject({
       actor: "agent",
-      status: "done",
+      status: "completed",
       artifactLinks: [{ artifactId: first.artifactId, relation: "creates" }],
     });
     expect(await selectRows(ctx.pool, "SELECT from_task_id, to_task_id, relation FROM task_task_relation")).toEqual([

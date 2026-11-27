@@ -86,6 +86,8 @@ fun TaskEditPage(
                 deleteSeries = viewModel::deleteSeries,
                 save = viewModel::save,
                 hierarchy = viewModel.hierarchy,
+                projectPicker = viewModel.projectPicker,
+                openProjectPicker = viewModel::openProjectPicker,
                 artifacts =
                     ArtifactEditActions(
                         picker = viewModel.artifactPicker,
@@ -115,6 +117,9 @@ class TaskEditActions(
     val resetRecurrence: () -> Unit,
     val deleteSeries: () -> Unit,
     val save: () -> Unit,
+    /** O campo "Projeto" (spec 51): abre a escolha, na criação e na edição. */
+    val projectPicker: TaskProjectPicker,
+    val openProjectPicker: () -> Unit,
     /** A hierarquia (ticket 15): só a edição a mostra. */
     val hierarchy: TaskHierarchyEditor? = null,
     /** Os artefatos (ticket 16): só a edição os mostra. */
@@ -224,6 +229,7 @@ private fun ColumnScope.FormBody(
         // A hierarquia (tarefa principal e subtarefas, ticket 15) e os artefatos (ticket 16) entram aqui, só na edição.
         if (!creating) actions.hierarchy?.let { HierarchySections(it, draft) }
         if (!creating) actions.artifacts?.let { TaskEditArtifactsSection(draft, it) }
+        ProjectPickerHost(actions.projectPicker)
         form.failure?.let { failure ->
             Text(
                 text = failure,

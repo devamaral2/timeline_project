@@ -1,7 +1,16 @@
 import type { ArtifactDto, ArtifactType } from "../artifacts/artifact.dto";
 import type { RecurrenceRule } from "../recurrences/recurrence-rule";
-import type { TaskActor, TaskArtifactRelation, TaskKind, TaskPriority, TaskStatus } from "./task-types";
+import type { TaskActor, TaskArtifactRelation, TaskKind, TaskPriority, TaskSituation, TaskStatus } from "./task-types";
+import type { ModelSelection } from "../agent/model.dto";
 import type { NotificationOffsetMinutes } from "./notification-offset-minutes";
+
+/** O projeto a que uma tarefa pertence. Sem escolha, e o `personal`, o projeto padrao do usuario. */
+export interface ProjectDto {
+  id: string;
+  name: string;
+  /** O projeto padrao: cada usuario tem um so, e o nome dele e `personal`. */
+  personal: boolean;
+}
 
 /** A serie de que a tarefa e uma ocorrencia. */
 export interface TaskRecurrenceDto {
@@ -27,6 +36,10 @@ export interface TaskCardDto {
   priority: TaskPriority;
   name: string;
   description: string;
+  /** O projeto da tarefa: toda tarefa tem um, de pessoa ou de agente. */
+  project: ProjectDto;
+  /** So no pedido de agente que terminou: o que o usuario decidiu dele. Ausente nas demais tarefas. */
+  situation?: TaskSituation;
   /** Onde acontece, como o texto que o Google Maps entende. Ausente sem local: so existe quando alguem o informou. */
   location?: string;
   /** Inicio planejado. A meia-noite local significa "o dia, sem hora". */
@@ -50,6 +63,11 @@ export interface TaskCardDto {
   createdAt: string;
   /** A ultima gravacao da tarefa (ISO 8601). Igual a `createdAt` enquanto ninguem a editou. */
   updatedAt: string;
+  /**
+   * A escolha de provedor, modelo e esforco que o pedido da tarefa de agente levou. Ausente quando o pedido nao
+   * levou nenhuma (rota por passos, Hermes) e em tarefa de pessoa. A lista so desenha o simbolo do provedor.
+   */
+  model?: ModelSelection;
 }
 
 export interface TaskArtifactDto {

@@ -3,6 +3,8 @@ package app.braid.mobile.ui.taskedit
 import androidx.lifecycle.SavedStateHandle
 import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
+import app.braid.mobile.data.projects.DefaultProjectRepository
+import app.braid.mobile.data.projects.ProjectsApi
 import app.braid.mobile.data.requests.DefaultAgentRequestRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
@@ -90,6 +92,7 @@ class TaskEditArtifactsViewModelTest {
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
             DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
+            DefaultProjectRepository(graph.apis.create(ProjectsApi::class.java)),
         ).also(created::add)
     }
 

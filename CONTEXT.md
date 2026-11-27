@@ -59,7 +59,7 @@ Tarefa sem status, que só marca um horário na agenda. Continua editável e pod
 _Avoid_: tarefa stateless, agendado, tarefa azul
 
 **Tarefa longa**:
-Tarefa de pessoa, sempre com status, que fica fora da agenda, como um projeto. Pode ter início real e prazo, mas nenhuma data a coloca na agenda. O trabalho nela aparece na agenda como subtarefas com horário. Não se repete e não vira perdida: com o prazo vencido, fica atrasada. Toda tarefa que duraria mais de 31 dias é uma tarefa longa.
+Tarefa de pessoa, sempre com status, que fica fora da agenda e dura mais que um bloco da agenda. Pode ter início real e prazo, mas nenhuma data a coloca na agenda. O trabalho nela aparece na agenda como subtarefas com horário. Não se repete e não vira perdida: com o prazo vencido, fica atrasada. Toda tarefa que duraria mais de 31 dias é uma tarefa longa.
 _Avoid_: projeto, épico, registro longo, tarefa sem data
 
 **Agenda**:
@@ -99,7 +99,7 @@ Tarefa executada por um agente a partir de algo que o usuário pediu no chat ou 
 _Avoid_: prompt, comando, tarefa do agente
 
 **Conteúdo guardado**:
-Tarefa de agente que registra o que o botão da extensão ou o botão "Adicionar vídeo" guardou, em vez de um pedido de conversa. Tem dois tipos: `save_content`, a página de texto guardada (nasce e termina feita), e `save_content_with_transcription`, o vídeo do YouTube guardado para transcrever (nasce no status `awaiting_transcription`, à espera do serviço local). Aparece na lista de pedidos e na lista de tarefas, nunca na agenda (ADR 0021).
+Tarefa de agente que registra o que o botão da extensão ou o botão "Adicionar vídeo" guardou, em vez de um pedido de conversa. Tem dois tipos: `save_content`, a página de texto guardada (nasce e termina `completed`), e `save_content_with_transcription`, o vídeo do YouTube guardado para transcrever (nasce no status `awaiting_transcription`, à espera do serviço local). Aparece na lista de pedidos e na lista de tarefas, nunca na agenda (ADR 0021), e nunca tem situação (ADR 0023): terminada, cai em Finalizadas; esperando a transcrição ou rodando, aparece na gaveta de execução.
 _Avoid_: pedido de página, favorito, clipe
 
 **Lease de transcrição**:
@@ -138,6 +138,14 @@ _Avoid_: cron (como nome do conceito), automação, rotina do agente
 Tarefa de agente em que um pedido se desdobra, executada por um agente interno. Liga-se ao pedido pela relação de passo e não aparece na lista de pedidos do usuário nem na agenda.
 _Avoid_: etapa, step do processo, processo
 
+**Gaveta de execução**:
+Gaveta presa acima da barra de navegação, em Tarefas, Agenda e Artefatos, que mostra o que os agentes estão fazendo agora: as tarefas de agente em andamento (`preparing`, `queued`, `starting`, `running`) que não são passo nem execução agendada, da mais recente para a mais antiga. Tem três alturas (uma linha, três linhas e todas) e não existe quando nada está em andamento.
+_Avoid_: gaveta (sozinha), barra de progresso, fila de execução
+
+**Gaveta da lista**:
+Cada uma das quatro divisões da lista de tarefas, pela ação que a tarefa pede: **Para agora**, **Contínuas**, **Para depois** e **Finalizadas**. O cabeçalho é o divisor em mono com a contagem e abre e fecha a gaveta (Para agora e Contínuas começam abertas); gaveta vazia não é desenhada. Pedido de agente em andamento não está em nenhuma: mora só na gaveta de execução. A tarefa de agente que terminou cai pela situação (Para revisar: Para agora; Guardada: Para depois; Revisada: Finalizadas), a execução agendada e a tarefa longa de pessoa em Contínuas.
+_Avoid_: gaveta (sozinha, que também nomeia a gaveta de subtarefas e a de execução), grupo, seção, categoria
+
 **Sessão**:
 O primeiro pedido e todos os pedidos que continuam a mesma conversa. Não é uma entidade: é a relação que parte do primeiro pedido para cada continuação.
 _Avoid_: conversa (como entidade), thread, chat
@@ -145,6 +153,14 @@ _Avoid_: conversa (como entidade), thread, chat
 **Entrada**:
 Registro acrescentado a uma tarefa e nunca alterado: mensagem, pensamento, trace, resultado ou insumo de um passo. O texto do usuário só aparece em mensagens, pensamentos e insumos.
 _Avoid_: log, histórico, trace (como termo geral)
+
+**Projeto**:
+Onde uma tarefa, de pessoa ou de agente, fica guardada. Toda tarefa pertence a um projeto; sem escolha, ela fica no projeto `personal`, que cada usuário tem desde a primeira necessidade e que não se renomeia nem se apaga. O nome tem de 1 a 60 caracteres, sem os espaços das pontas, e é único por usuário sem distinguir maiúsculas. Na tela o projeto é uma marca de iniciais sobre uma cor que vem do nome (a do `personal` é neutra), seguida do nome. A ocorrência de uma tarefa recorrente fica no projeto da série. Trocar o projeto de uma ocorrência muda só ela (destaca-se da série); a série leva o projeto da tarefa com que nasceu.
+_Avoid_: pasta, espaço, workspace, repositório, tarefa longa (como sinônimo)
+
+**Situação**:
+O que o usuário decidiu de um pedido de agente que terminou: **Para revisar** (`to_review`), **Revisada** (`reviewed`) ou **Guardada** (`bookmarked`). Só tem situação o pedido de agente, nem passo nem execução agendada, num status final. O pedido nasce Para revisar quando termina, de qualquer jeito que termine; o usuário muda a situação, de qualquer uma para qualquer uma, pelo glifo da esquerda da linha e pelo cabeçalho do detalhe. Não é o status: o status diz como a execução terminou e a situação diz o que o usuário fez com o resultado.
+_Avoid_: modo, estado de revisão, leitura, arquivada
 
 **Subtarefa**:
 Tarefa que é parte de outra, a tarefa principal. Cada tarefa tem no máximo uma principal e pode ter várias subtarefas; as duas podem ser de pessoa ou de agente. A ligação é informativa: não segura nada em espera, não muda status e não revisa nenhuma das duas.

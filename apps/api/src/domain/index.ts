@@ -1,4 +1,5 @@
 export * from "./sets";
+export * from "./agent-status";
 
 export * from "./tasks/entities/task.entity";
 export * from "./tasks/value-objects/task-id";
@@ -7,6 +8,10 @@ export * from "./tasks/types/artifact-link";
 export * from "./tasks/types/default-task-duration";
 export * from "./tasks/types/notification-offset-minutes";
 export * from "./tasks/errors/task.errors";
+
+export type * from "./projects/types/project";
+export * from "./projects/types/project-name";
+export * from "./projects/errors/project.errors";
 
 export * from "./artifacts/entities/artifact.entity";
 export * from "./artifacts/value-objects/artifact-id";

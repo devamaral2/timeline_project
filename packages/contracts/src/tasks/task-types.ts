@@ -35,10 +35,27 @@ export type TaskKind = HumanTaskKind | AgentTaskKind;
  */
 export type HumanTaskStatus = "todo" | "toDefine" | "doing" | "inHold" | "done" | "cancel" | "missed";
 
-/** `awaiting_transcription`: o pedido espera o servico local transcrever o video. */
-export type AgentTaskStatus = "queued" | "running" | "waiting" | "awaiting_transcription" | "done" | "failed" | "cancel";
+/** Nenhum deles e igual a um status de pessoa: lendo so o status, sabe-se quem executou. */
+export type AgentTaskStatus =
+  | "preparing"
+  | "queued"
+  | "starting"
+  | "running"
+  | "waiting"
+  | "awaiting_transcription"
+  | "completed"
+  | "interrupted"
+  | "failed"
+  | "cancelled"
+  | "rolled_back";
 
 export type TaskStatus = HumanTaskStatus | AgentTaskStatus;
+
+/**
+ * O que o usuario decidiu do pedido de agente que terminou: ainda por olhar, revisado ou guardado. So o pedido
+ * (nem passo, nem execucao agendada) num status final tem.
+ */
+export type TaskSituation = "to_review" | "reviewed" | "bookmarked";
 
 export type TaskPriority = "urgent" | "high" | "medium" | "low";
 

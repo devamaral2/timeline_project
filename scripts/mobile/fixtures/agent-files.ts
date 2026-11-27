@@ -11,6 +11,7 @@
 import { requestSchema } from "../../../packages/contracts/src/schemas";
 import { TIMELINE_TIME_ZONE } from "../../../packages/timeline/src/index";
 import type { FixtureContext } from "../generate-fixtures";
+import { PERSONAL_PROJECT } from "./project";
 
 /** Cópia literal de `AgentFileNoteView.tsx`. */
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
@@ -110,6 +111,7 @@ export function agentFileFixtures({ z }: FixtureContext): Record<string, unknown
       route: "hermes",
       status: "running",
       title: "Editar pesquisar/SKILL.md",
+      project: PERSONAL_PROJECT,
       createdAt: "2026-09-14T14:48:00.000Z",
       updatedAt: "2026-09-14T14:49:00.000Z",
       steps: [],
@@ -137,11 +139,11 @@ export function agentFileFixtures({ z }: FixtureContext): Record<string, unknown
       steps: [{ id: "s1", agent: "hermes", label: "Reescrevendo o arquivo", status: "running" }],
     }),
     "agent-file-edit-done": edit({
-      id: "req-edit", status: "done", message: "Pronto: acrescentei a regra de responder em português.",
+      id: "req-edit", status: "completed", message: "Pronto: acrescentei a regra de responder em português.",
     }),
-    "agent-file-edit-done-bare": edit({ id: "req-edit", status: "done" }),
+    "agent-file-edit-done-bare": edit({ id: "req-edit", status: "completed" }),
     "agent-file-edit-failed": edit({ id: "req-edit", status: "failed", errorCode: "unavailable" }),
-    "agent-file-edit-cancelled": edit({ id: "req-edit", status: "cancel" }),
+    "agent-file-edit-cancelled": edit({ id: "req-edit", status: "cancelled" }),
     "agent-file-model": {
       frontmatter: TEXTS.map((text) => {
         const { summary, body } = splitFrontmatter(text);

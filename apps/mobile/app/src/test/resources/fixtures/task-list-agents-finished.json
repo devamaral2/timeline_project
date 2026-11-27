@@ -7,6 +7,11 @@
     "priority": "high",
     "name": "Reunião de planejamento",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T12:00:00.000Z",
     "estimatedFinishAt": "2026-09-14T12:50:00.000Z",
     "longRunning": false,
@@ -28,6 +33,11 @@
     "priority": "urgent",
     "name": "Revisar contrato",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T13:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -43,10 +53,15 @@
     "id": "task-3",
     "actor": "agent",
     "kind": "search_request",
-    "status": "done",
+    "status": "completed",
     "priority": "medium",
     "name": "Buscar passagens",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T14:48:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -60,10 +75,15 @@
     "id": "task-4",
     "actor": "agent",
     "kind": "build_request",
-    "status": "done",
+    "status": "completed",
     "priority": "medium",
     "name": "Montar relatório",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T14:57:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -77,10 +97,15 @@
     "id": "task-5",
     "actor": "agent",
     "kind": "inquiry_request",
-    "status": "done",
+    "status": "completed",
     "priority": "medium",
     "name": "Qual hotel prefere?",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T13:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -98,6 +123,11 @@
     "priority": "low",
     "name": "Ideia sem data",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "longRunning": false,
     "notifyOffsetsMinutes": [],
     "tags": [
@@ -116,6 +146,11 @@
     "priority": "medium",
     "name": "Esperando retorno do banco",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-16T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -135,6 +170,11 @@
     "priority": "medium",
     "name": "Almoço",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T15:00:00.000Z",
     "estimatedFinishAt": "2026-09-14T16:30:00.000Z",
     "longRunning": false,
@@ -151,10 +191,15 @@
     "id": "task-9",
     "actor": "agent",
     "kind": "review_request",
-    "status": "done",
+    "status": "completed",
     "priority": "medium",
     "name": "Resumo pronto",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-12T15:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -172,6 +217,11 @@
     "priority": "medium",
     "name": "Backup falhou",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T02:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -185,10 +235,15 @@
     "id": "task-11",
     "actor": "agent",
     "kind": "request",
-    "status": "cancel",
+    "status": "cancelled",
     "priority": "medium",
     "name": "Pedido cancelado",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T10:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -206,6 +261,11 @@
     "priority": "medium",
     "name": "Consulta perdida",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-10T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -223,6 +283,11 @@
     "priority": "medium",
     "name": "Projeto longo",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-01T12:00:00.000Z",
     "estimatedFinishAt": "2026-11-30T12:00:00.000Z",
     "longRunning": true,
@@ -243,6 +308,11 @@
     "priority": "medium",
     "name": "Meditar",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-13T21:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -272,6 +342,11 @@
     "priority": "medium",
     "name": "Meditar",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-14T21:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -301,6 +376,11 @@
     "priority": "medium",
     "name": "Meditar",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-15T21:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -330,6 +410,11 @@
     "priority": "medium",
     "name": "Meditar (manhã)",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-16T10:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -359,6 +444,11 @@
     "priority": "medium",
     "name": "Academia",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-12T21:30:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -389,6 +479,11 @@
     "priority": "medium",
     "name": "Academia",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-10T21:30:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -419,6 +514,11 @@
     "priority": "medium",
     "name": "Pagar a luz",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-09-05T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],
@@ -449,6 +549,11 @@
     "priority": "medium",
     "name": "Pagar a luz",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "startedAt": "2026-10-05T12:00:00.000Z",
     "longRunning": false,
     "notifyOffsetsMinutes": [],

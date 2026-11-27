@@ -1,0 +1,107 @@
+{
+  "items": [
+    {
+      "id": "model-anthropic",
+      "actor": "agent",
+      "kind": "search_request",
+      "status": "running",
+      "priority": "medium",
+      "name": "Com a Anthropic",
+      "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
+      "startedAt": "2026-09-14T14:48:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "model": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-5-5",
+        "effort": "medium"
+      }
+    },
+    {
+      "id": "model-openai",
+      "actor": "agent",
+      "kind": "build_request",
+      "status": "completed",
+      "priority": "medium",
+      "name": "Com a OpenAI",
+      "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
+      "startedAt": "2026-09-14T14:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "model": {
+        "provider": "openai",
+        "model": "gpt-6.2-sol",
+        "effort": "high"
+      }
+    },
+    {
+      "id": "model-openrouter",
+      "actor": "agent",
+      "kind": "request",
+      "status": "queued",
+      "priority": "medium",
+      "name": "Com o OpenRouter",
+      "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
+      "startedAt": "2026-09-14T14:57:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "model": {
+        "provider": "openrouter",
+        "model": "google/gemini-4-neon",
+        "effort": "low"
+      }
+    },
+    {
+      "id": "model-none",
+      "actor": "agent",
+      "kind": "request",
+      "status": "failed",
+      "priority": "medium",
+      "name": "Sem escolha de modelo",
+      "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
+      "startedAt": "2026-09-14T13:00:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    }
+  ]
+}

@@ -8,6 +8,14 @@ export type { Job } from "../persistence/jobs/postgres-job.store";
 
 export class RetryableJobError extends Error {}
 
+/** O job foi pego de novo depois de esgotar as tentativas: o worker morreu com ele varias vezes. O trabalho foi abandonado, nao falhou. */
+export class WorkerAttemptsExhaustedError extends Error {
+  constructor() {
+    super("Worker attempts exhausted");
+    this.name = "WorkerAttemptsExhaustedError";
+  }
+}
+
 /** O codigo seguro de por que um job falhou: nunca a mensagem do provedor, que pode trazer credencial ou dado do usuario. */
 export function jobErrorCode(error: unknown): string {
   const known = new Set(["conflict", "invalid_input", "limit_reached", "unavailable", "forbidden"]);
@@ -152,7 +160,7 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
     const current = { id: job.id, token, createdAt: job.createdAt, attempts: job.attempts };
     try {
       await jobContext.run(current, async () => {
-        if (job.attempts > this.env.AI_JOBS_MAX_ATTEMPTS) throw new Error("Worker attempts exhausted");
+        if (job.attempts > this.env.AI_JOBS_MAX_ATTEMPTS) throw new WorkerAttemptsExhaustedError();
         await handler(job.payload, context);
         abort.signal.throwIfAborted();
         // O handler que grava dominio ja fechou o job na propria transacao.

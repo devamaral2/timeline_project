@@ -9,6 +9,11 @@
       "priority": "medium",
       "name": "Reunião",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -149,7 +154,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": null
@@ -164,6 +174,11 @@
       "priority": "medium",
       "name": "Reunião",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -297,7 +312,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -328,6 +348,11 @@
       "priority": "medium",
       "name": "Reunião",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -468,7 +493,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -503,6 +533,11 @@
       "priority": "medium",
       "name": "Reunião",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -650,7 +685,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -689,6 +729,11 @@
       "priority": "medium",
       "name": "Ligar para o banco",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -732,7 +777,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -759,6 +809,11 @@
       "priority": "medium",
       "name": "Almoço",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -935,7 +990,12 @@
           "copyOf": "food-global",
           "quantity": " 2 fatias "
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -970,6 +1030,11 @@
       "priority": "medium",
       "name": "Jantar",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -1007,7 +1072,12 @@
           "relation": "uses",
           "copyOf": "food-global"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -1029,6 +1099,11 @@
       "priority": "medium",
       "name": "Jantar",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -1067,7 +1142,12 @@
           "copyOf": "food-global",
           "quantity": "   "
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -1089,6 +1169,11 @@
       "priority": "medium",
       "name": "Jantar",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -1134,7 +1219,12 @@
           "relation": "uses",
           "copyOf": "food-global"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -1159,6 +1249,11 @@
       "priority": "medium",
       "name": "Treino",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -1261,7 +1356,12 @@
           "global": true,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {
@@ -1292,6 +1392,11 @@
       "priority": "medium",
       "name": "Reunião",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -1425,7 +1530,12 @@
           "global": false,
           "relation": "uses"
         }
-      ]
+      ],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
     },
     "now": "2026-09-14T15:30:45.123Z",
     "patch": {

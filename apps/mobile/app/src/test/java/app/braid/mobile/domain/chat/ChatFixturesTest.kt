@@ -201,6 +201,14 @@ class ChatFixturesTest {
                     put("route", "steps")
                     put("status", "running")
                     put("title", "Pedido")
+                    put(
+                        "project",
+                        buildJsonObject {
+                            put("id", "project-personal")
+                            put("name", "personal")
+                            put("personal", true)
+                        },
+                    )
                     put("createdAt", "2026-09-14T14:48:00.000Z")
                     put("updatedAt", "2026-09-14T14:48:00.000Z")
                     put("entities", entities)

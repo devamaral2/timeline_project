@@ -10,6 +10,7 @@ import app.braid.mobile.domain.request.EditEntityType
 import app.braid.mobile.domain.request.FoodRequestCancelException
 import app.braid.mobile.domain.request.ModelSelection
 import app.braid.mobile.domain.request.RequestNotFoundException
+import app.braid.mobile.domain.request.RequestStarted
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -17,6 +18,7 @@ class DefaultAgentRequestRepository
     @Inject
     constructor(
         private val api: RequestsApi,
+        private val started: RequestStarted = RequestStarted(),
     ) : AgentRequestRepository {
         override suspend fun request(id: String): AgentRequest =
             try {
@@ -32,7 +34,7 @@ class DefaultAgentRequestRepository
             text: String,
             sessionId: String?,
             clientMessageId: String,
-        ): String = api.start(StartRequestBody(userId, text, sessionId, clientMessageId)).requestId
+        ): String = api.start(StartRequestBody(userId, text, sessionId, clientMessageId)).requestId.also { started.notifyStarted() }
 
         override suspend fun startEdit(
             userId: String,
@@ -43,7 +45,7 @@ class DefaultAgentRequestRepository
         ): String =
             translatingStartFailures {
                 api.startEdit(StartEditBody(userId, text, entityType.code, entityId, selection?.toDto())).requestId
-            }
+            }.also { started.notifyStarted() }
 
         override suspend fun cancel(id: String): AgentRequest =
             try {

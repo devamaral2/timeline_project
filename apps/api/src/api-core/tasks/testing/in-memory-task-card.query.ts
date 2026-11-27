@@ -7,6 +7,7 @@ import type {
   RecurrenceRepository,
   TrackedQueryParams,
 } from "../../../domain/ports";
+import { personalProjectOf } from "../../projects/testing/in-memory-project.query";
 import { decodeAgendaCursor, encodeAgendaCursor } from "../../../infrastructure/persistence/tasks/queries/agenda-cursor";
 import type { InMemoryTaskDatabase } from "./in-memory-task-database";
 
@@ -111,6 +112,7 @@ export class InMemoryTaskCardQuery implements TaskCardQuery {
       const recurrence = task.occurrence ? await this.recurrenceOf(task.occurrence.recurrenceId) : undefined;
       cards.push({
         task,
+        project: personalProjectOf(task.userId),
         artifactTypes: this.database.artifactsOf(task).map((artifact) => artifact.type),
         ...(recurrence ? { recurrence } : {}),
       });

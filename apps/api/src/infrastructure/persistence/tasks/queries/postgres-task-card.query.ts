@@ -11,6 +11,7 @@ import * as schema from "../../database/schema/index";
 import { mapRecurrenceRow } from "../../recurrences/mappers/recurrence-row.mapper";
 import type { Db } from "../../shared/tx";
 import type { TaskRow } from "../mappers/task-row.mapper";
+import { projectsByIds } from "../../projects/postgres-project.query";
 import { hydrateTasks } from "../repositories/postgres-task.repository";
 import { decodeAgendaCursor, encodeAgendaCursor } from "./agenda-cursor";
 
@@ -121,7 +122,7 @@ export class PostgresTaskCardQuery implements TaskCardQuery {
       .where(and(inArray(schema.tasks.id, ids), isNull(schema.tasks.deletedAt)));
     const tasks = await hydrateTasks(this.db, rows);
 
-    const [typeRows, recurrences] = await Promise.all([
+    const [typeRows, recurrences, projects] = await Promise.all([
       this.db
         .select({ taskId: schema.taskArtifactRelation.taskId, type: schema.artifacts.type })
         .from(schema.taskArtifactRelation)
@@ -129,6 +130,7 @@ export class PostgresTaskCardQuery implements TaskCardQuery {
         .where(and(inArray(schema.taskArtifactRelation.taskId, ids), isNull(schema.artifacts.deletedAt)))
         .orderBy(schema.taskArtifactRelation.position, schema.taskArtifactRelation.createdAt),
       this.recurrencesOf(rows),
+      projectsByIds(this.db, [...new Set(rows.map((row) => row.projectId))]),
     ]);
     const typesByTask = new Map<string, string[]>();
     for (const row of typeRows) {
@@ -136,11 +138,13 @@ export class PostgresTaskCardQuery implements TaskCardQuery {
     }
 
     const byId = new Map(tasks.map((task) => [task.id, task]));
+    const projectOf = new Map(rows.map((row) => [row.id, projects.get(row.projectId)]));
     return ids.flatMap((id) => {
       const task = byId.get(id);
-      if (!task) return [];
+      const project = projectOf.get(id);
+      if (!task || !project) return [];
       const recurrence = task.occurrence ? recurrences.get(task.occurrence.recurrenceId) : undefined;
-      return [{ task, artifactTypes: typesByTask.get(id) ?? [], ...(recurrence ? { recurrence } : {}) }];
+      return [{ task, project, artifactTypes: typesByTask.get(id) ?? [], ...(recurrence ? { recurrence } : {}) }];
     });
   }
 

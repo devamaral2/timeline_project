@@ -13,6 +13,8 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { FINAL_AGENT_STATUSES, KINDS_WITHOUT_SITUATION } from "../../../../domain/agent-status";
+import { projects } from "./projects";
 import { recurrences } from "./recurrences";
 import {
   ACTORS,
@@ -21,6 +23,7 @@ import {
   OFF_AGENDA_KINDS,
   ENTRY_KINDS,
   ENTRY_ROLES,
+  SITUATIONS,
   TASK_KINDS,
   TASK_STATUSES,
   HUMAN_KINDS,
@@ -44,10 +47,16 @@ export const tasks = pgTable(
     id: char("id", { length: 26 }).primaryKey(),
     revision: integer("revision").notNull().default(1),
     userId: text("user_id").notNull(),
+    // Toda tarefa pertence a um projeto. Sem `cascade`: um projeto com tarefas nao se apaga.
+    projectId: char("project_id", { length: 26 })
+      .notNull()
+      .references(() => projects.id),
     actor: text("actor", { enum: ACTORS }).notNull(),
     kind: text("kind", { enum: TASK_KINDS }).notNull(),
     // Nulo e a tarefa de referencia: so marca um horario na agenda.
     status: text("status", { enum: TASK_STATUSES }),
+    // O que o usuario decidiu do pedido de agente que terminou. Nulo nas demais tarefas.
+    situation: text("situation", { enum: SITUATIONS }),
     priority: text("priority", { enum: PRIORITIES }).notNull().default("medium"),
     name: text("name").notNull(),
     description: text("description").notNull().default(""),
@@ -68,7 +77,7 @@ export const tasks = pgTable(
     }),
     occurrenceOn: date("occurrence_on"),
     recurrenceDetached: boolean("recurrence_detached").notNull().default(false),
-    // Tarefa de pessoa que fica fora da agenda, como um projeto.
+    // Tarefa de pessoa que fica fora da agenda e dura mais que um bloco.
     longRunning: boolean("long_running").notNull().default(false),
     // Pequeno: resumo ou resposta final do agente, agente interno de um passo,
     // contexto de tela. O que cresce vai para `task_entries`.
@@ -116,6 +125,13 @@ export const tasks = pgTable(
     check(
       "tasks_status_matches_actor",
       sql`(${table.actor} = 'human' AND (${table.status} IS NULL OR ${table.status} IN (${sqlList(HUMAN_STATUSES)}))) OR (${table.actor} = 'agent' AND ${table.status} IS NOT NULL AND ${table.status} IN (${sqlList(AGENT_STATUSES)}))`,
+    ),
+    check("tasks_situation_valid", sql`${table.situation} IS NULL OR ${table.situation} IN (${sqlList(SITUATIONS)})`),
+    // So o pedido de agente (nem passo, nem execucao agendada) num status final tem situacao. Vale so num sentido:
+    // uma tarefa final pode ficar sem situacao, e restringir a politica de revisao depois nao pede migration.
+    check(
+      "tasks_situation_shape",
+      sql`${table.situation} IS NULL OR (${table.actor} = 'agent' AND ${table.kind} NOT IN (${sqlList(KINDS_WITHOUT_SITUATION)}) AND ${table.status} IN (${sqlList(FINAL_AGENT_STATUSES)}))`,
     ),
     // Tarefa longa: de pessoa, com status, sem serie, nunca perdido.
     check(

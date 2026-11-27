@@ -4,6 +4,11 @@
   "route": "steps",
   "status": "waiting",
   "title": "Buscar passagens",
+  "project": {
+    "id": "project-skills",
+    "name": "agent-skills",
+    "personal": false
+  },
   "sessionId": "req-first",
   "createdAt": "2026-09-14T14:48:00.000Z",
   "updatedAt": "2026-09-14T14:52:00.000Z",
@@ -13,7 +18,7 @@
       "id": "s1",
       "agent": "router",
       "label": "Entender o pedido",
-      "status": "done"
+      "status": "completed"
     },
     {
       "id": "s2",

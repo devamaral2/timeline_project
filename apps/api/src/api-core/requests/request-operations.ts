@@ -4,8 +4,9 @@ import type {
   StartVoiceRequestInput,
 } from "@repo/contracts";
 import type { FoodGenerationPayload } from "../../domain/ports";
+import { isInProgressAgentStatus } from "../../domain/agent-status";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
-import { jobErrorCode, type JobFailureHandler, type JobsService } from "../../infrastructure/jobs/jobs.service";
+import { jobErrorCode, WorkerAttemptsExhaustedError, type JobFailureHandler, type JobsService } from "../../infrastructure/jobs/jobs.service";
 import { FOOD_GENERATION_JOB } from "../../infrastructure/persistence/artifacts/repositories/food-generation";
 import { assertConfigOwner } from "../agent/config/agent-config-access";
 import type { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
@@ -87,7 +88,10 @@ export class RequestOperations implements OnModuleInit {
       await workers.voice.run((raw as { requestId: string }).requestId);
     }, { onFailure: this.failRequest() });
     this.jobs.register(FOOD_GENERATION_JOB, async (raw, context) => {
-      if (context.taskId) await this.store.markRunning(context.taskId);
+      if (context.taskId) {
+        await this.store.markStarting(context.taskId);
+        await this.store.markRunning(context.taskId);
+      }
       await workers.food.execute(raw as FoodGenerationPayload);
     }, {
       onFailure: async (raw) => {
@@ -117,9 +121,12 @@ export class RequestOperations implements OnModuleInit {
   /** O job que conduz o pedido morreu: o pedido nunca fica aberto sem ninguem trabalhando nele. */
   private failRequest(message?: string): JobFailureHandler {
     return async (raw, _context, error) => {
-      await this.store.finish((raw as { requestId: string }).requestId, "failed", {
-        errorCode: requestErrorCode(jobErrorCode(error)), ...(message ? { message } : {}),
-      });
+      const { requestId } = raw as { requestId: string };
+      const outcome = { errorCode: requestErrorCode(jobErrorCode(error)), ...(message ? { message } : {}) };
+      // O worker morreu com o job e as tentativas acabaram: o pedido foi interrompido. So quem estava `running` se
+      // interrompe; um pedido que ainda nao tinha comecado cai no `failed`, para nunca ficar aberto sem ninguem.
+      if (error instanceof WorkerAttemptsExhaustedError) await this.store.finish(requestId, "interrupted", outcome);
+      await this.store.finish(requestId, "failed", outcome);
     };
   }
 
@@ -138,6 +145,7 @@ export class RequestOperations implements OnModuleInit {
       ...(forced ? { forceFallback: true } : {}),
       // A escolha do usuario fica no pedido: os agentes dos passos rodam com ela.
       ...(input.model ? { model: input.model } : {}),
+      ...(input.projectId ? { projectId: input.projectId } : {}),
     });
     return requestId;
   }
@@ -167,6 +175,7 @@ export class RequestOperations implements OnModuleInit {
     const { requestId } = await this.store.start({
       userId: input.userId, route: "hermes", text: input.text, sessionId: input.sessionId,
       clientMessageId: input.clientMessageId, job: REQUEST_JOBS.hermes,
+      ...(input.projectId ? { projectId: input.projectId } : {}),
     });
     return this.view(requestId, actor);
   }
@@ -182,6 +191,7 @@ export class RequestOperations implements OnModuleInit {
     const { requestId } = await this.store.start({
       userId: input.userId, route: "model", text: input.text, sessionId: input.sessionId,
       clientMessageId: input.clientMessageId, model: input.model, job: REQUEST_JOBS.model,
+      ...(input.projectId ? { projectId: input.projectId } : {}),
     });
     return this.view(requestId, actor);
   }
@@ -219,7 +229,7 @@ export class RequestOperations implements OnModuleInit {
 
   private async toDto(request: RequestRecord, detailed: boolean): Promise<RequestDto> {
     const live = detailed && (request.route === "hermes" || request.route === "model")
-      && (request.status === "queued" || request.status === "running");
+      && isInProgressAgentStatus(request.status);
     const [steps, entities, progress] = await Promise.all([
       this.store.steps(request.id),
       this.store.entities(request.id),

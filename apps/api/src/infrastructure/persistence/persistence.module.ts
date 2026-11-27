@@ -7,6 +7,8 @@ import type {
   TaskRepository,
   TaskRequestLinkQuery,
   IdempotencyStore,
+  ProjectQuery,
+  ProjectRepository,
   RecurrenceRepository,
   ScopedSqlQuery,
   TagRepository,
@@ -14,6 +16,8 @@ import type {
 } from "../../domain/ports";
 import { PostgresDatabase } from "./database/postgres-database";
 import { PostgresEntityBatchWriter } from "./agent-batch/postgres-entity-batch-writer";
+import { PostgresProjectQuery } from "./projects/postgres-project.query";
+import { PostgresProjectRepository } from "./projects/postgres-project.repository";
 import { PostgresScopedSqlQuery } from "./agent-sql/postgres-scoped-sql.query";
 import { PostgresWorkoutCatalog } from "./artifacts/postgres-workout.catalog";
 import { PostgresArtifactTaskLinkQuery } from "./artifacts/queries/postgres-artifact-task-link.query";
@@ -41,6 +45,8 @@ export const DATABASE = "DATABASE";
 export const TASK_REPOSITORY = "TASK_REPOSITORY";
 export const TASK_CARD_QUERY = "TASK_CARD_QUERY";
 export const TASK_REQUEST_LINK_QUERY = "TASK_REQUEST_LINK_QUERY";
+export const PROJECT_QUERY = "PROJECT_QUERY";
+export const PROJECT_REPOSITORY = "PROJECT_REPOSITORY";
 export const TAG_REPOSITORY = "TAG_REPOSITORY";
 export const ARTIFACT_REPOSITORY = "ARTIFACT_REPOSITORY";
 export const ARTIFACT_TASK_LINK_QUERY = "ARTIFACT_TASK_LINK_QUERY";
@@ -78,6 +84,16 @@ function requireDatabaseUrl(): string {
       provide: TASK_REQUEST_LINK_QUERY,
       inject: [DATABASE],
       useFactory: (database: PostgresDatabase): TaskRequestLinkQuery => new PostgresTaskRequestLinkQuery(database.db),
+    },
+    {
+      provide: PROJECT_QUERY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): ProjectQuery => new PostgresProjectQuery(database.db),
+    },
+    {
+      provide: PROJECT_REPOSITORY,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): ProjectRepository => new PostgresProjectRepository(database.db),
     },
     {
       provide: TAG_REPOSITORY,
@@ -133,6 +149,8 @@ function requireDatabaseUrl(): string {
     TASK_REPOSITORY,
     TASK_CARD_QUERY,
     TASK_REQUEST_LINK_QUERY,
+    PROJECT_QUERY,
+    PROJECT_REPOSITORY,
     TAG_REPOSITORY,
     ARTIFACT_REPOSITORY,
     ARTIFACT_TASK_LINK_QUERY,

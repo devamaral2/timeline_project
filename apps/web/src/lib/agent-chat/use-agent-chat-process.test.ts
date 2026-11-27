@@ -50,18 +50,18 @@ test("a caixa de processo acompanha os passos ate o fim e a agenda atualiza uma 
   const id = await ask(result, "comendo arroz, depois vou nadar");
 
   await waitFor(() => expect(result.current.messages.map((message) => message.role)).toEqual(["user", "process"]));
-  advanceRequest(api, id, { status: "running", steps: [step("s1", "Criando tarefas", "done"), step("s2", "Criando notas", "running")] });
+  advanceRequest(api, id, { status: "running", steps: [step("s1", "Criando tarefas", "completed"), step("s2", "Criando notas", "running")] });
   await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "process", request: { status: "running" } }));
   expect(result.current.pending).toMatchObject({ label: "Realizando processos", requestId: id });
   expect(onEntitiesChanged).not.toHaveBeenCalled();
 
   advanceRequest(api, id, {
-    status: "done",
-    steps: [step("s1", "Criando tarefas", "done"), step("s2", "Criando notas", "done")],
+    status: "completed",
+    steps: [step("s1", "Criando tarefas", "completed"), step("s2", "Criando notas", "completed")],
     entities: [{ kind: "task", id: "e1", name: "Refeição", operation: "create", linkedTo: [] }],
   });
   await waitFor(() => expect(result.current.pending).toBeNull());
-  expect(result.current.messages.at(-1)).toMatchObject({ role: "process", request: { status: "done" } });
+  expect(result.current.messages.at(-1)).toMatchObject({ role: "process", request: { status: "completed" } });
   expect(bodyOf(0)).toEqual({ userId: "u", text: "comendo arroz, depois vou nadar", clientMessageId: expect.any(String) });
   expect(onEntitiesChanged).toHaveBeenCalledTimes(1);
 });
@@ -69,7 +69,7 @@ test("a caixa de processo acompanha os passos ate o fim e a agenda atualiza uma 
 test("consulta ou resposta sem entidades nao atualiza a agenda", async () => {
   const { result, onEntitiesChanged } = setup();
   const id = await ask(result, "qual a capital da França?");
-  advanceRequest(api, id, { status: "done", message: "Paris." });
+  advanceRequest(api, id, { status: "completed", message: "Paris." });
 
   await waitFor(() => expect(result.current.pending).toBeNull());
   expect(result.current.messages.at(-1)).toMatchObject({ request: { message: "Paris." } });
@@ -137,7 +137,7 @@ test("reenviar a mesma mensagem depois de uma falha de rede nao abre um segundo 
 test("a mensagem seguinte manda o id do primeiro pedido como sessao", async () => {
   const { result } = setup();
   const first = await ask(result, "o que tenho hoje?");
-  advanceRequest(api, first, { status: "done", message: "Um treino." });
+  advanceRequest(api, first, { status: "completed", message: "Um treino." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   await ask(result, "e amanhã?");
@@ -148,7 +148,7 @@ test("a mensagem seguinte manda o id do primeiro pedido como sessao", async () =
 test("comecar uma conversa nova desfaz a sessao", async () => {
   const { result } = setup();
   const first = await ask(result, "primeira");
-  advanceRequest(api, first, { status: "done", message: "Ok." });
+  advanceRequest(api, first, { status: "completed", message: "Ok." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   act(() => result.current.startNewConversation());
@@ -164,8 +164,20 @@ test("cancelar pelo chat cancela o pedido na API; a mensagem nao vira falha", as
   act(() => result.current.cancel());
 
   await waitFor(() => expect(result.current.pending).toBeNull());
-  expect(requests().get(id)).toMatchObject({ status: "cancel" });
+  expect(requests().get(id)).toMatchObject({ status: "cancelled" });
   expect(result.current.messages.at(-1)).toMatchObject({ role: "error", text: "Pedido cancelado.", retryText: "crie uma nota" });
+  expect(result.current.messages.find((message) => message.role === "user")).not.toHaveProperty("failed", true);
+});
+
+test("um pedido interrompido pelo servidor vira a mensagem Pedido interrompido, e a mensagem nao vira falha", async () => {
+  const { result } = setup();
+  const id = await ask(result, "crie uma nota");
+  await waitFor(() => expect(result.current.pending).toMatchObject({ requestId: id }));
+
+  advanceRequest(api, id, { status: "interrupted", errorCode: "cancelled" });
+
+  await waitFor(() => expect(result.current.pending).toBeNull());
+  expect(result.current.messages.at(-1)).toMatchObject({ role: "error", text: "Pedido interrompido.", retryText: "crie uma nota" });
   expect(result.current.messages.find((message) => message.role === "user")).not.toHaveProperty("failed", true);
 });
 
@@ -201,7 +213,7 @@ test("falhas seguidas ao consultar o pedido viram conexao perdida; tentar de nov
   expect(requests().size).toBe(1);
   const id = ids()[0] as string;
   await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "process" }));
-  advanceRequest(api, id, { status: "done", message: "Pronto." });
+  advanceRequest(api, id, { status: "completed", message: "Pronto." });
   await waitFor(() => expect(result.current.pending).toBeNull());
   expect(result.current.messages.at(-1)).toMatchObject({ request: { message: "Pronto." } });
 });
@@ -225,7 +237,7 @@ test("o rastro do pedido abre com a mensagem, segue cada consulta e para de gira
     },
   ]));
 
-  advanceRequest(api, id, { status: "done", trace: trace("done") });
+  advanceRequest(api, id, { status: "completed", trace: trace("done") });
   await waitFor(() => expect(result.current.pending).toBeNull());
   expect(result.current.traces).toMatchObject([{ running: false, trace: { status: "done" } }]);
 });
@@ -233,7 +245,7 @@ test("o rastro do pedido abre com a mensagem, segue cada consulta e para de gira
 test("um servidor que nao manda rastro deixa o pedido na aba, sem detalhes", async () => {
   const { result } = setup();
   const id = await ask(result, "almoço ao meio-dia");
-  advanceRequest(api, id, { status: "done" });
+  advanceRequest(api, id, { status: "completed" });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   expect(result.current.traces).toMatchObject([{ request: "almoço ao meio-dia", running: false, trace: null }]);
@@ -251,7 +263,7 @@ test("o fallback e o Hermes: o pedido que muda para a rota dele troca a caixa de
   expect(result.current.traces[0]).toMatchObject({ route: "hermes", running: true });
 
   advanceRequest(api, id, {
-    route: "hermes", status: "done", message: "Era uma vez…",
+    route: "hermes", status: "completed", message: "Era uma vez…",
     trace: { route: "hermes", status: "done", fields: [], entries: [{ ...tool, status: "done" }] },
   });
   await waitFor(() => expect(result.current.pending).toBeNull());

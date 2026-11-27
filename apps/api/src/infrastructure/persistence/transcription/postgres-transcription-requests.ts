@@ -16,7 +16,9 @@ import {
   type TranscriptionRequestData,
   type TranscriptionRequests,
 } from "../../../api-core/transcription/transcription-requests";
+import type { AgentTaskStatus } from "../../../domain";
 import { enqueueJobInTransaction, type JobTransaction } from "../../jobs/job-context";
+import { IN_PROGRESS, ON_CLOSE_SITUATION, STOPPED_STATUS } from "../requests/agent-status-sql";
 import { appendEntry } from "../requests/request-rows";
 import type { Db, Tx } from "../shared/tx";
 
@@ -32,7 +34,7 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
     const result = await this.db.execute<{ id: string; data: Partial<TranscriptionRequestData> }>(sql`
       SELECT id, data FROM tasks
       WHERE user_id = ${userId} AND kind = 'save_content_with_transcription'
-        AND status IN ('awaiting_transcription', 'running') AND deleted_at IS NULL
+        AND status IN ${IN_PROGRESS} AND deleted_at IS NULL
         AND data->>'url' = ${url} AND data->>'day' = ${day}
       ORDER BY id DESC LIMIT 1`);
     const row = result.rows[0];
@@ -149,17 +151,17 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
     const result = await this.db.execute<{ data: TranscriptionRequestData }>(sql`
       SELECT data FROM tasks
       WHERE id = ${requestId} AND user_id = ${userId} AND actor = 'agent' AND kind = 'save_content_with_transcription'
-        AND status IN ('awaiting_transcription', 'running') AND deleted_at IS NULL`);
+        AND status IN ${IN_PROGRESS} AND deleted_at IS NULL`);
     return result.rows[0]?.data;
   }
 
   async cancel(tx: unknown, input: { requestId: string; userId: string; at: Date; where: TranscriptionPlace }): Promise<void> {
     const transaction = tx as Tx;
     const updated = await transaction.execute(sql`
-      UPDATE tasks SET status = 'cancel', finished_at = ${input.at.toISOString()}, updated_at = now(),
-        data = data || ${JSON.stringify({ errorCode: "cancelled", ...placeData(input.where) })}::jsonb
+      UPDATE tasks SET status = ${STOPPED_STATUS}, situation = ${ON_CLOSE_SITUATION}, finished_at = ${input.at.toISOString()},
+        updated_at = now(), data = data || ${JSON.stringify({ errorCode: "cancelled", ...placeData(input.where) })}::jsonb
       WHERE id = ${input.requestId} AND user_id = ${input.userId} AND actor = 'agent'
-        AND kind = 'save_content_with_transcription' AND status IN ('awaiting_transcription', 'running')
+        AND kind = 'save_content_with_transcription' AND status IN ${IN_PROGRESS}
       RETURNING id`);
     if (updated.rows.length !== 1) throw new TranscriptionNotRunningError();
     await transaction.execute(sql`
@@ -185,7 +187,7 @@ export class PostgresTranscriptionRequests implements TranscriptionRequests {
     input: {
       requestId: string;
       userId: string;
-      status: "done" | "failed";
+      status: Extract<AgentTaskStatus, "completed" | "failed">;
       at: Date;
       failureCode?: TranscriptionFailureCode;
       commentsSummaryFailed?: boolean;

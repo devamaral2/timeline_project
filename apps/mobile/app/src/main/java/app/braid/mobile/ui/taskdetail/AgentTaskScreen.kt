@@ -28,12 +28,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.core.designsystem.ProjectLine
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.request.AgentRequest
@@ -58,13 +63,15 @@ import app.braid.mobile.domain.request.TraceEntry
 import app.braid.mobile.domain.request.entityKindLabel
 import app.braid.mobile.domain.request.entityOperationLabel
 import app.braid.mobile.domain.request.entryText
-import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.request.stepProgress
 import app.braid.mobile.domain.request.traceKindName
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskDetail
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.elapsedLabel
+import app.braid.mobile.domain.task.isOpenAgentStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.task.momentLabel
 import app.braid.mobile.domain.timeline.formatTime
 import app.braid.mobile.ui.aiedit.MicrophonePermissionEffect
@@ -77,8 +84,11 @@ import app.braid.mobile.ui.chat.HermesStatusLine
 import app.braid.mobile.ui.chat.VoiceButton
 import app.braid.mobile.ui.chat.VoiceUiState
 import app.braid.mobile.ui.documents.DocumentIcons
+import app.braid.mobile.ui.tasks.SituationMenu
 import app.braid.mobile.ui.tasks.TaskKindMark
+import app.braid.mobile.ui.tasks.TaskSituationGlyph
 import app.braid.mobile.ui.tasks.TaskStatusGlyph
+import app.braid.mobile.ui.tasks.situationName
 import app.braid.mobile.ui.tasks.taskStatusName
 import java.time.Instant
 
@@ -109,6 +119,7 @@ fun AgentTaskPage(
         onDraftChange = viewModel::onDraftChange,
         onSend = viewModel::send,
         onCancel = viewModel::cancel,
+        onSituationPick = viewModel::chooseSituation,
         onToggleVoice = viewModel::toggleVoice,
     )
 }
@@ -125,6 +136,7 @@ fun AgentTaskScreen(
     onSend: () -> Unit,
     onCancel: () -> Unit,
     onToggleVoice: () -> Unit,
+    onSituationPick: (TaskSituation) -> Unit,
 ) {
     Column(
         Modifier
@@ -147,7 +159,7 @@ fun AgentTaskScreen(
                     Message(state.message, alert = true)
                     BraidPill(text = "Tentar de novo", onClick = onRetry)
                 }
-                is AgentTaskUiState.Content -> Body(state, onOpenTask, onOpenArtifact)
+                is AgentTaskUiState.Content -> Body(state, onOpenTask, onOpenArtifact, onSituationPick)
             }
         }
         if (state is AgentTaskUiState.Content) {
@@ -161,9 +173,10 @@ private fun Body(
     content: AgentTaskUiState.Content,
     onOpenTask: (String) -> Unit,
     onOpenArtifact: (String) -> Unit,
+    onSituationPick: (TaskSituation) -> Unit,
 ) {
     val request = content.request
-    Header(content.task, request)
+    Header(content.task, request, content.situationError, onSituationPick)
     InfoSection(content.task, content.now)
     content.parent?.let {
         LinkedSection("Tarefa principal", "Carregando tarefa principal…", "A tarefa principal não carregou.", it, content.now, onOpenTask)
@@ -179,12 +192,19 @@ private fun Body(
     if (request.status == TaskStatus.Failed) FailureSection(content.requestFailure)
 }
 
-/** O topo: o código do tipo, o título e o status do agente, solto na linha, com o robô na ponta como assinatura. */
+/**
+ * O topo: o código do tipo, o título e o status do agente, solto na linha, com o projeto (só leitura) e o robô na ponta como
+ * assinatura. O pedido que terminou ganha o controle de situação ao lado do status: o toque abre as três opções logo abaixo.
+ */
 @Composable
 private fun Header(
     task: TaskDetail,
     request: AgentRequest,
+    situationError: String?,
+    onSituationPick: (TaskSituation) -> Unit,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val situation = request.situation
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         TaskKindMark(task.card.kind)
         Text(
@@ -201,7 +221,25 @@ private fun Header(
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
             )
+            if (situation != null) {
+                Spacer(Modifier.width(16.dp))
+                Row(
+                    Modifier
+                        .defaultMinSize(minHeight = 40.dp)
+                        .clickable(role = Role.Button) { menuOpen = !menuOpen }
+                        .semantics(mergeDescendants = true) { contentDescription = "${situationName(situation)}. Mudar situação" },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TaskSituationGlyph(situation, size = 16.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(situationName(situation), color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, lineHeight = 20.sp)
+                }
+            }
+            // Só leitura: o projeto de uma tarefa de agente não muda depois que ela nasce.
+            Spacer(Modifier.width(16.dp))
+            ProjectLine(task.card.project, Modifier.weight(1f, fill = false))
             Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
             SvgIcon(
                 BraidIcons.bot,
                 size = 20.dp,
@@ -210,6 +248,16 @@ private fun Header(
                 modifier = Modifier.clearAndSetSemantics {},
             )
         }
+        if (menuOpen && situation != null) {
+            SituationMenu(
+                value = situation,
+                onPick = {
+                    menuOpen = false
+                    onSituationPick(it)
+                },
+            )
+        }
+        situationError?.let { Alert(it) }
     }
 }
 
@@ -523,8 +571,8 @@ private fun requestBotState(
     val tracked = content.tracked
     return when {
         listening -> BotState.Listening
-        tracked == null || content.composer.sending || isOpenRequest(tracked.status) -> BotState.Thinking
-        tracked.status == TaskStatus.Done -> BotState.Done
+        tracked == null || content.composer.sending || isOpenAgentStatus(tracked.status) -> BotState.Thinking
+        isSuccessAgentStatus(tracked.status) -> BotState.Done
         tracked.status == TaskStatus.Failed -> BotState.Error
         else -> BotState.Idle
     }

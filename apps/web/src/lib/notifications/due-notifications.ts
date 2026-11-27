@@ -1,9 +1,10 @@
+import { endsReminders } from "@repo/contracts";
 import type { TaskCardDto, NotificationOffsetMinutes } from "@repo/contracts";
 
 /** O que o aviso precisa de uma tarefa: o cartao da agenda ou da lista de acompanhados serve. */
 export type NotificationSource = Pick<
   TaskCardDto,
-  "id" | "name" | "status" | "longRunning" | "startedAt" | "estimatedFinishAt" | "notifyOffsetsMinutes"
+  "id" | "name" | "actor" | "status" | "longRunning" | "startedAt" | "estimatedFinishAt" | "notifyOffsetsMinutes"
 >;
 
 /** Tarefa acompanhada (`tracked`) e a que tem status ou e longa; o resto e tarefa de referencia (`reference`). Mesmo criterio da API. */
@@ -41,7 +42,7 @@ export function kindOf(source: NotificationSource): NotificationKind {
  * quando nao ha o que avisar: sem data, tarefa longa sem prazo, ou ja concluido ou cancelado.
  */
 export function notificationAnchorOf(source: NotificationSource): string | undefined {
-  if (source.status === "done" || source.status === "cancel") return undefined;
+  if (endsReminders(source.actor, source.status)) return undefined;
   return source.longRunning ? source.estimatedFinishAt : source.startedAt;
 }
 

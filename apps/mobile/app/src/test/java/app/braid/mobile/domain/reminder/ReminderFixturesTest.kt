@@ -1,11 +1,11 @@
 package app.braid.mobile.domain.reminder
 
+import app.braid.mobile.core.network.BraidJson
 import app.braid.mobile.data.tasks.TaskCardDto
 import app.braid.mobile.data.tasks.toDomain
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.support.Fixtures
 import app.braid.mobile.support.fixtureCases
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -22,7 +22,7 @@ class ReminderFixturesTest {
             .jsonObject
             .getValue("cards")
             .jsonArray
-            .map { Json.decodeFromJsonElement(TaskCardDto.serializer(), it).toDomain() }
+            .map { BraidJson.decodeFromJsonElement(TaskCardDto.serializer(), it).toDomain() }
             .associateBy { it.id }
 
     private fun card(id: String) = cards.getValue(id)

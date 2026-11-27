@@ -8,6 +8,7 @@ import {
   getRequest,
   HermesOffError,
   listRequests,
+  REQUEST_STARTED_SIGNAL,
   sendHermesMessage,
   startEditRequest,
   startRequest,
@@ -59,15 +60,15 @@ describe("pedido em texto", () => {
     expect(await getRequest(requestId)).toMatchObject({ status: "running", progress: "Consultando a agenda" });
 
     advanceRequest(api, requestId, {
-      status: "done",
+      status: "completed",
       progress: undefined,
       message: "Faltam 3 dias.",
-      steps: [{ id: "s1", agent: "agenda", label: "Lendo a agenda", status: "done" }],
+      steps: [{ id: "s1", agent: "agenda", label: "Lendo a agenda", status: "completed" }],
       entities: [{ kind: "task", id: "ev-9", name: "Prova", operation: "create", linkedTo: [] }],
     });
     const done = await getRequest(requestId);
-    expect(done).toMatchObject({ status: "done", message: "Faltam 3 dias." });
-    expect(done.steps.map((step) => step.status)).toEqual(["done"]);
+    expect(done).toMatchObject({ status: "completed", message: "Faltam 3 dias." });
+    expect(done.steps.map((step) => step.status)).toEqual(["completed"]);
     expect(done.entities.map((entity) => entity.id)).toEqual(["ev-9"]);
   });
 
@@ -123,12 +124,12 @@ describe("edição da entidade aberta e voz", () => {
   test("o pedido de voz devolve o id; a tarefa criada aparece nas entidades quando o pedido termina", async () => {
     const requestId = await startVoiceRequest({ transcript: "Dentista amanhã às 10", clientMessageId: "voz-1" });
     advanceRequest(api, requestId, {
-      status: "done",
+      status: "completed",
       entities: [{ kind: "task", id: "ev-2", name: "Dentista", operation: "create", linkedTo: [] }],
     });
 
     const request = await getRequest(requestId);
-    expect(request).toMatchObject({ route: "voice", status: "done" });
+    expect(request).toMatchObject({ route: "voice", status: "completed" });
     expect(request.entities[0]).toMatchObject({ kind: "task", id: "ev-2", operation: "create" });
   });
 });
@@ -181,17 +182,17 @@ describe("acompanhar, listar e cancelar", () => {
 
     const cancelled = await cancelRequest(requestId);
 
-    expect(cancelled.status).toBe("cancel");
-    expect((await getRequest(requestId)).status).toBe("cancel");
+    expect(cancelled.status).toBe("cancelled");
+    expect((await getRequest(requestId)).status).toBe("cancelled");
   });
 
   test("cancelar um pedido que já terminou devolve o pedido como estava", async () => {
     const requestId = await startRequest(ana);
-    advanceRequest(api, requestId, { status: "done", message: "Feito." });
+    advanceRequest(api, requestId, { status: "completed", message: "Feito." });
 
     const result = await cancelRequest(requestId);
 
-    expect(result).toMatchObject({ status: "done", message: "Feito." });
+    expect(result).toMatchObject({ status: "completed", message: "Feito." });
   });
 
   test("cancelar um pedido que calcula um alimento devolve o conflito próprio desse caso", async () => {
@@ -205,5 +206,24 @@ describe("acompanhar, listar e cancelar", () => {
   test("ler um pedido que não existe é não encontrado", async () => {
     await expect(getRequest("01ARZ3NDEKTSV4RRFFQ69G5FAV")).rejects.toBeInstanceOf(ApiRequestError);
     await expect(getRequest("01ARZ3NDEKTSV4RRFFQ69G5FAV")).rejects.toMatchObject({ kind: "not_found" });
+  });
+});
+
+describe("aviso de pedido aberto", () => {
+  test("abrir um pedido avisa a janela, para a gaveta de execução se reler logo; pedido que falha não avisa", async () => {
+    const heard = vi.fn();
+    window.addEventListener(REQUEST_STARTED_SIGNAL, heard);
+    try {
+      await startRequest(ana);
+      expect(heard).toHaveBeenCalledTimes(1);
+      await startVoiceRequest({ transcript: "Dentista amanhã às 10", clientMessageId: "voz-2" });
+      expect(heard).toHaveBeenCalledTimes(2);
+      await expect(startRequest({ userId: "ana", text: "   " })).rejects.toThrow();
+      const afterFailure = heard.mock.calls.length;
+      await expect(startRequest({ userId: "ana", text: "   " })).rejects.toThrow();
+      expect(heard.mock.calls.length).toBe(afterFailure);
+    } finally {
+      window.removeEventListener(REQUEST_STARTED_SIGNAL, heard);
+    }
   });
 });

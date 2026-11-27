@@ -28,9 +28,21 @@ describe("banco novo: checks, restricoes e indices", () => {
     );
   }
 
+  /** O `personal` do usuario, criado na primeira necessidade: toda tarefa e serie precisa de um projeto. */
+  async function personalProject(userId: string): Promise<string> {
+    const found = await ctx.pool.query("SELECT id FROM projects WHERE user_id = $1 AND personal", [userId]);
+    if (found.rows[0]) return found.rows[0].id as string;
+    const id = ulid();
+    await insert("projects", { id, user_id: userId, name: "personal", personal: true });
+    return id;
+  }
+
   async function task(overrides: Row = {}): Promise<string> {
     const id = (overrides.id as string | undefined) ?? ulid();
-    await insert("tasks", { id, user_id: "user-1", actor: "human", kind: "common", name: "Tarefa", ...overrides });
+    const userId = (overrides.user_id as string | undefined) ?? "user-1";
+    await insert("tasks", {
+      id, user_id: userId, project_id: await personalProject(userId), actor: "human", kind: "common", name: "Tarefa", ...overrides,
+    });
     return id;
   }
 
@@ -48,6 +60,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     await insert("recurrences", {
       id,
       user_id: "user-1",
+      project_id: await personalProject("user-1"),
       freq: "daily",
       time_of_day: "18:00",
       starts_on: "2026-11-01",
@@ -59,7 +72,7 @@ describe("banco novo: checks, restricoes e indices", () => {
   const count = async (table: string) =>
     (await ctx.pool.query(`SELECT count(*)::int AS n FROM ${table}`)).rows[0].n as number;
 
-  test("a migration cria exatamente as 13 tabelas", async () => {
+  test("a migration cria exatamente as 14 tabelas", async () => {
     const { rows } = await ctx.pool.query(
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
     );
@@ -70,6 +83,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       "artifacts",
       "idempotency_keys",
       "jobs",
+      "projects",
       "recurrence_exceptions",
       "recurrences",
       "tags",
@@ -79,6 +93,51 @@ describe("banco novo: checks, restricoes e indices", () => {
       "task_task_relation",
       "tasks",
     ]);
+  });
+
+  describe("projects: nome, personal e a chave das tarefas", () => {
+    const project = (overrides: Row = {}) => insert("projects", { id: ulid(), user_id: "user-1", name: "timeline_project", ...overrides });
+
+    test("o nome tem de 1 a 60 caracteres e nao leva espaco nas pontas", async () => {
+      await project({ name: "a" });
+      await project({ name: "x".repeat(60) });
+
+      await expect(project({ name: "" })).rejects.toThrow(/projects_name_shape/);
+      await expect(project({ name: "x".repeat(61) })).rejects.toThrow(/projects_name_shape/);
+      await expect(project({ name: " espaco" })).rejects.toThrow(/projects_name_shape/);
+      await expect(project({ name: "espaco " })).rejects.toThrow(/projects_name_shape/);
+    });
+
+    test("o nome e unico por usuario sem distinguir maiusculas", async () => {
+      await project({ name: "Braid" });
+
+      await expect(project({ name: "braid" })).rejects.toThrow(/projects_user_name_unique/);
+      await project({ name: "braid", user_id: "user-2" });
+    });
+
+    test("cada usuario tem no maximo um personal, e o nome dele e personal", async () => {
+      await project({ name: "personal", personal: true });
+
+      await expect(project({ name: "personal", personal: true })).rejects.toThrow(/projects_user_name_unique|projects_user_personal_unique/);
+      await expect(project({ name: "outro", personal: true, user_id: "user-2" })).rejects.toThrow(/projects_personal_name/);
+      await project({ name: "personal", personal: true, user_id: "user-2" });
+    });
+
+    test("a tarefa e a serie exigem projeto, e um projeto com tarefa nao se apaga", async () => {
+      await expect(
+        insert("tasks", { id: ulid(), user_id: "user-1", actor: "human", kind: "common", name: "Sem projeto" }),
+      ).rejects.toThrow(/project_id/);
+      await expect(
+        insert("recurrences", { id: ulid(), user_id: "user-1", freq: "daily", time_of_day: "18:00", starts_on: "2026-11-01", template: "{}" }),
+      ).rejects.toThrow(/project_id/);
+      await expect(
+        insert("tasks", { id: ulid(), user_id: "user-1", project_id: ulid(), actor: "human", kind: "common", name: "Projeto que nao existe" }),
+      ).rejects.toThrow(/tasks_project_id_projects_id_fk/);
+
+      await task();
+      await recurrence();
+      await expect(ctx.pool.query("DELETE FROM projects")).rejects.toThrow(/foreign key/);
+    });
   });
 
   describe("tasks: tipo e status conforme o executor", () => {
@@ -119,15 +178,47 @@ describe("banco novo: checks, restricoes e indices", () => {
       await expect(agentTask({ status: null })).rejects.toThrow(/tasks_status_matches_actor/);
     });
 
-    test("cada executor so aceita os seus status; done e cancel valem para os dois", async () => {
-      for (const status of ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]) await task({ status });
-      for (const status of ["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"]) await agentTask({ status });
+    test("cada executor so aceita os seus status, e os dois conjuntos nao tem valor em comum", async () => {
+      const humanStatuses = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"];
+      const agentStatuses = ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back"];
+      expect(agentStatuses.filter((status) => humanStatuses.includes(status))).toEqual([]);
 
-      await expect(task({ status: "queued" })).rejects.toThrow(/tasks_status_matches_actor/);
-      await expect(task({ status: "awaiting_transcription" })).rejects.toThrow(/tasks_status_matches_actor/);
+      for (const status of humanStatuses) await task({ status });
+      for (const status of agentStatuses) await agentTask({ status });
+
+      for (const status of agentStatuses) await expect(task({ status }), status).rejects.toThrow(/tasks_status_matches_actor/);
+      for (const status of ["done", "cancel", "scheduled"]) {
+        await expect(agentTask({ status }), status).rejects.toThrow(/tasks_status_matches_actor/);
+      }
       await expect(task({ status: "scheduled" })).rejects.toThrow(/tasks_status_matches_actor/);
       await expect(agentTask({ status: "todo" })).rejects.toThrow(/tasks_status_matches_actor/);
       await expect(agentTask({ status: "missed" })).rejects.toThrow(/tasks_status_matches_actor/);
+    });
+
+    test("a situacao so vale no pedido de agente que terminou, e e opcional", async () => {
+      for (const status of ["completed", "interrupted", "failed", "cancelled", "rolled_back"]) {
+        for (const situation of ["to_review", "reviewed", "bookmarked"]) await agentTask({ status, situation });
+        await agentTask({ status, situation: null });
+      }
+      await agentTask({ kind: "build_request", status: "completed", situation: "reviewed" });
+
+      for (const status of ["preparing", "queued", "starting", "running", "waiting"]) {
+        await expect(agentTask({ status, situation: "to_review" }), status).rejects.toThrow(/tasks_situation_shape/);
+      }
+      await expect(agentTask({ kind: "step", status: "completed", situation: "to_review" })).rejects.toThrow(/tasks_situation_shape/);
+      await expect(agentTask({ kind: "cron", status: "completed", situation: "to_review" })).rejects.toThrow(/tasks_situation_shape/);
+      for (const kind of ["save_content", "save_content_with_transcription"]) {
+        for (const status of ["completed", "failed", "cancelled"]) {
+          await agentTask({ kind, status });
+          await expect(agentTask({ kind, status, situation: "to_review" }), `${kind} ${status}`).rejects.toThrow(/tasks_situation_shape/);
+        }
+      }
+      await expect(task({ status: "done", situation: "reviewed" })).rejects.toThrow(/tasks_situation_shape/);
+      await expect(task({ status: null, situation: "reviewed" })).rejects.toThrow(/tasks_situation_shape/);
+    });
+
+    test("a situacao fora do conjunto e recusada", async () => {
+      await expect(agentTask({ status: "completed", situation: "archived" })).rejects.toThrow(/tasks_situation_valid/);
     });
 
     test("executor e prioridade fora do conjunto sao recusados", async () => {

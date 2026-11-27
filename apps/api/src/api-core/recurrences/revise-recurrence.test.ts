@@ -176,6 +176,22 @@ describe("template", () => {
     expect(recurrence.template.artifactIds).toEqual([artifacts[0]?.id, "series-note"]);
   });
 
+  test("the project of the series follows the template like any other field: replaced with it, kept when the template stays", async () => {
+    const { revise } = setup();
+    const inProject = Recurrence.rehydrate({
+      id: "rec-1", userId: actor.userId, rule, template: { ...template, projectId: "project-1" }, revision: 3,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"), updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+
+    const swapped = await revise(inProject, { rule: {}, template: { name: "Correr", projectId: "project-2" } });
+    const dropped = await revise(inProject, { rule: {}, template: { name: "Correr" } });
+    const untouched = await revise(inProject, { rule: { timeOfDay: "09:00" } });
+
+    expect(swapped.recurrence.template).toMatchObject({ projectId: "project-2" });
+    expect(dropped.recurrence.template).not.toHaveProperty("projectId");
+    expect(untouched.recurrence.template).toMatchObject({ projectId: "project-1" });
+  });
+
   test("`keepArtifacts` keeps the artifacts of the series when the new template brings none", async () => {
     const { revise } = setup();
 

@@ -275,7 +275,7 @@ test("a message goes with the picked model and its answer carries the footer", a
   expect(await screen.findByText("Falando com GPT 6.2 Sol…")).toBeInTheDocument();
 
   const id = [...api.store.table<RequestDto>("requests").keys()][0] as string;
-  advanceRequest(api, id, { status: "done", message: "Amanhã você tem dentista." });
+  advanceRequest(api, id, { status: "completed", message: "Amanhã você tem dentista." });
   const log = screen.getByRole("log");
   await waitFor(() => expect(within(log).getByText("Amanhã você tem dentista.")).toBeInTheDocument());
   expect(within(log).getByText("gpt 6.2 sol · alto · openai")).toBeInTheDocument();

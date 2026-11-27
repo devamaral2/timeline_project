@@ -57,6 +57,7 @@ import app.braid.mobile.core.designsystem.tagColors
 import app.braid.mobile.domain.artifact.Artifact
 import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.ui.agenda.ListSkeleton
+import app.braid.mobile.ui.shell.ExecutionReserveSpacer
 import app.braid.mobile.ui.shell.MainTab
 import app.braid.mobile.ui.shell.PublishSectionMenu
 import app.braid.mobile.ui.shell.SectionMenuModel
@@ -125,6 +126,8 @@ fun DocumentsContent(
                         DocumentRow(artifact, onClick = { onOpenDocument(artifact.id) })
                         HorizontalDivider(Modifier.padding(start = 60.dp), color = MaterialTheme.colorScheme.outline)
                     }
+                    // A gaveta de execução, quando há, ocupa o pé da tela: o último documento continua alcançável acima dela.
+                    item { ExecutionReserveSpacer() }
                 }
         }
     }

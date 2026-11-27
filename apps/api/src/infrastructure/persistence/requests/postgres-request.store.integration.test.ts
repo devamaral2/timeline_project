@@ -45,7 +45,7 @@ describe("PostgresRequestStore", () => {
     expect(created).toBe(true);
     const [task] = await rows("SELECT actor, kind, status, name, data, started_at, finished_at FROM tasks WHERE id = $1", [requestId]);
     expect(task).toMatchObject({
-      actor: "agent", kind: "request", status: "queued", finished_at: null,
+      actor: "agent", kind: "request", status: "preparing", finished_at: null,
       data: { route: "steps", context: { screen: "agenda" }, forceFallback: true },
     });
     expect(String(task?.name).length).toBeLessThanOrEqual(80);
@@ -55,7 +55,7 @@ describe("PostgresRequestStore", () => {
     expect(await jobs()).toMatchObject([{ kind: "request-dispatch", task_id: requestId, payload: { requestId } }]);
 
     expect(await store.find(requestId)).toMatchObject({
-      id: requestId, userId: USER, kind: "request", route: "steps", status: "queued", prompt: text,
+      id: requestId, userId: USER, kind: "request", route: "steps", status: "preparing", prompt: text,
       context: { screen: "agenda" }, forceFallback: true, failedSteps: [],
     });
   });
@@ -142,11 +142,11 @@ describe("PostgresRequestStore", () => {
     expect(entries[3]).toEqual({ kind: "trace", role: null, content: null, data: { timings: { total: 850 } } });
     expect(entries[4]?.data).toEqual({ type: "query", columns: ["name"], rows: [["Almoço"]], truncated: false });
     expect(await rows("SELECT revision, status, finished_at IS NOT NULL AS finished FROM tasks WHERE id = $1", [stepId]))
-      .toEqual([{ revision: 1, status: "done", finished: true }]);
+      .toEqual([{ revision: 1, status: "completed", finished: true }]);
 
     const [step] = await store.steps(requestId);
     expect(step).toMatchObject({
-      status: "done", timings: { total: 850 }, result: { columns: ["name"], rows: [["Almoço"]], truncated: false },
+      status: "completed", timings: { total: 850 }, result: { columns: ["name"], rows: [["Almoço"]], truncated: false },
       thoughts: [
         { text: "Preciso das tarefas de hoje.", at: "2026-10-25T15:00:01.000Z", model: "m" },
         { text: "Monto a consulta.", at: "2026-10-25T15:00:02.000Z" },
@@ -162,6 +162,8 @@ describe("PostgresRequestStore", () => {
     await store.beginSteps(requestId, [
       { id: createStep, agent: "task-create", expected: "one" }, { id: editStep, agent: "artifact-edit", expected: "one" },
     ]);
+    await store.markStepRunning(createStep);
+    await store.markStepRunning(editStep);
     const meal = Task.create({ userId: USER, kind: "meal", name: "Almoço", startedAt: new Date("2026-10-25T15:00:00Z") });
     const food = Artifact.create({ userId: USER, type: "text", name: "Cardápio", data: { body: "arroz e feijão" } });
     const old = Artifact.create({ userId: USER, type: "text", name: "Velho", data: { body: "x" } });
@@ -246,7 +248,7 @@ describe("PostgresRequestStore", () => {
     })).rejects.toThrow("no longer open");
 
     expect(await rows("SELECT id FROM tasks WHERE id = $1", [task.id])).toEqual([]);
-    expect((await store.steps(requestId))[0]?.status).toBe("cancel");
+    expect((await store.steps(requestId))[0]?.status).toBe("cancelled");
   });
 
   test("um passo que falha guarda o codigo e enfileira a finalizacao; fechar duas vezes nao muda nada", async () => {
@@ -265,7 +267,8 @@ describe("PostgresRequestStore", () => {
 
   test("o fim do pedido: a resposta e a ultima entrada, o raciocinio e um pensamento, e so fecha uma vez", async () => {
     const { requestId } = await start();
-    await store.finish(requestId, "done", {
+    await store.markRunning(requestId);
+    await store.finish(requestId, "completed", {
       failedSteps: [{ agent: "artifact-create", errorCode: "internal" }], message: "Criei a tarefa, mas não o alimento.",
       thought: "O passo de artefatos falhou.",
     });
@@ -277,7 +280,7 @@ describe("PostgresRequestStore", () => {
     ]);
     const request = await store.find(requestId);
     expect(request).toMatchObject({
-      status: "done", answer: "Criei a tarefa, mas não o alimento.", answerThought: "O passo de artefatos falhou.",
+      status: "completed", answer: "Criei a tarefa, mas não o alimento.", answerThought: "O passo de artefatos falhou.",
       failedSteps: [{ agent: "artifact-create", errorCode: "internal" }],
     });
     expect(request?.finishedAt).toBeInstanceOf(Date);
@@ -298,7 +301,7 @@ describe("PostgresRequestStore", () => {
       ],
     };
 
-    await store.finish(requestId, "done", { message: "Feito.", trace });
+    await store.finish(requestId, "completed", { message: "Feito.", trace });
 
     const entries = await rows("SELECT kind, content, data FROM task_entries WHERE task_id = $1 ORDER BY id", [requestId]);
     expect(entries.map((entry) => entry.kind)).toEqual(["message", "thought", "thought", "thought", "trace", "message"]);
@@ -307,21 +310,21 @@ describe("PostgresRequestStore", () => {
       data: { stage: "turn", route: "hermes", status: "done", startedAt: trace.startedAt, durationMs: 1200, fields: trace.fields },
     });
     const request = await store.find(requestId);
-    expect(request).toMatchObject({ route: "hermes", status: "done", answer: "Feito.", trace });
+    expect(request).toMatchObject({ route: "hermes", status: "completed", answer: "Feito.", trace });
     expect(request?.answerThought).toBeUndefined();
     if (!request) throw new Error("request not found");
     expect(toRequestDto(request, [], [])).toMatchObject({
-      message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_task", label: "Criou uma tarefa", status: "done" }],
+      message: "Feito.", trace, steps: [{ id: "t1", agent: "mcp_braid_create_task", label: "Criou uma tarefa", status: "completed" }],
     });
   });
 
   test("a lista de pedidos traz as paginas guardadas e os videos a transcrever, e nao os passos", async () => {
   const request = await start("oi");
-  const page = Task.create({ userId: USER, name: "Pagina", actor: "agent", kind: "save_content", status: "done" });
+  const page = Task.create({ userId: USER, name: "Pagina", actor: "agent", kind: "save_content", status: "completed" });
   const video = Task.create({
     userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription",
   });
-  const step = Task.create({ userId: USER, name: "Passo", actor: "agent", kind: "step", status: "done" });
+  const step = Task.create({ userId: USER, name: "Passo", actor: "agent", kind: "step", status: "completed" });
   const tasks = new PostgresTaskRepository(ctx.db);
   for (const task of [page, video, step]) await tasks.save(task);
   const listed = await store.list(USER, 10);
@@ -330,7 +333,7 @@ describe("PostgresRequestStore", () => {
   expect(listed.find((record) => record.id === video.id)).toMatchObject({ kind: "save_content_with_transcription", status: "awaiting_transcription" });
 });
 
-test("cancelar o pedido de transcricao que espera o servico local o leva a cancel", async () => {
+test("cancelar o pedido de transcricao que espera o servico local o leva a cancelled, sem situacao", async () => {
   const video = Task.create({
     userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription",
   });
@@ -338,8 +341,25 @@ test("cancelar o pedido de transcricao que espera o servico local o leva a cance
 
   expect(await store.cancel(video.id)).toEqual([video.id]);
 
-  expect(await store.find(video.id)).toMatchObject({ status: "cancel", errorCode: "cancelled" });
+  const cancelled = await store.find(video.id);
+  expect(cancelled).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
+  expect(cancelled?.situation).toBeUndefined();
   expect(await store.cancel(video.id)).toEqual([]);
+});
+
+test("cancelar o video que ja esta rodando o deixa interrupted, e fechar o pedido de conteudo guardado nunca grava situacao", async () => {
+  const video = Task.create({
+    userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "running",
+  });
+  await new PostgresTaskRepository(ctx.db).save(video);
+
+  expect(await store.cancel(video.id)).toEqual([video.id]);
+
+  const stopped = await store.find(video.id);
+  expect(stopped).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
+  expect(stopped?.situation).toBeUndefined();
+  const { rows } = await ctx.pool.query("SELECT situation FROM tasks WHERE id = $1", [video.id]);
+  expect(rows[0].situation).toBeNull();
 });
 
 test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao", async () => {
@@ -363,18 +383,20 @@ test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao"
     const { requestId } = await start();
     const [open, done] = [newOrderedId(), newOrderedId()];
     await store.beginSteps(requestId, [{ id: open, agent: "task-create", expected: "one" }, { id: done, agent: "query", expected: "one" }]);
+    await store.markStepRunning(done);
     await store.recordQueryResult({ requestId, stepId: done, result: { columns: [], rows: [], truncated: false }, timings: {} });
 
     expect(await store.cancel(requestId)).toEqual([requestId, open, done]);
     expect(await store.cancel(requestId)).toEqual([]);
 
-    expect(await store.find(requestId)).toMatchObject({ status: "cancel", errorCode: "cancelled" });
-    expect((await store.steps(requestId)).map((step) => step.status)).toEqual(["cancel", "done"]);
+    // O pedido rodava: fica `interrupted`; o passo que nao comecou fica `cancelled`.
+    expect(await store.find(requestId)).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
+    expect((await store.steps(requestId)).map((step) => step.status)).toEqual(["cancelled", "completed"]);
     // O que chega depois do cancelamento nao reabre nada.
     await store.failStep({ requestId, stepId: open, errorCode: "internal" });
-    await store.finish(requestId, "done", { message: "x" });
+    await store.finish(requestId, "completed", { message: "x" });
     await store.beginSteps(requestId, [{ id: newOrderedId(), agent: "query", expected: "one" }]);
-    expect(await store.find(requestId)).toMatchObject({ status: "cancel" });
+    expect(await store.find(requestId)).toMatchObject({ status: "interrupted" });
     expect(await store.steps(requestId)).toHaveLength(2);
   });
 
@@ -392,7 +414,8 @@ test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao"
       .toEqual([{ data: { stage: "dispatch", model: "jev-test", latencyMs: 9, steps: 0 } }]);
 
     // Pedido que ja terminou nao volta a andar.
-    await store.finish(requestId, "done", { message: "Oi." });
+    await store.markRunning(requestId);
+    await store.finish(requestId, "completed", { message: "Oi." });
     await store.handToHermes(requestId, dispatch);
     expect(await jobs()).toHaveLength(2);
   });
@@ -410,7 +433,8 @@ test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao"
     ]);
 
     // Pedido que ja terminou nao volta a andar.
-    await store.finish(requestId, "done", { message: "Opus 5.5." });
+    await store.markRunning(requestId);
+    await store.finish(requestId, "completed", { message: "Opus 5.5." });
     await store.handToModel(requestId, dispatch, model);
     expect(await jobs()).toHaveLength(2);
   });
@@ -418,6 +442,7 @@ test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao"
   test("a voz: o pedido gera a tarefa de pessoa e termina na transacao dela", async () => {
     const { requestId } = await start("comecei a estudar", { route: "voice", job: "voice-task" });
     const task = Task.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
+    await store.markRunning(requestId);
     await writer.commit({
       userId: USER, tasks: [{ op: "create", entity: task }], artifacts: [],
       afterWrite: (tx) => store.completeVoice(tx, { requestId, taskId: task.id }),
@@ -425,7 +450,7 @@ test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao"
 
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1", [requestId]))
       .toEqual([{ to_task_id: task.id, relation: "generates" }]);
-    expect(await store.find(requestId)).toMatchObject({ route: "voice", status: "done" });
+    expect(await store.find(requestId)).toMatchObject({ route: "voice", status: "completed" });
     expect(await store.entities(requestId)).toMatchObject([
       { kind: "task", id: task.id, operation: "create", stepId: requestId, finalized: true, summary: { name: "Estudar" } },
     ]);

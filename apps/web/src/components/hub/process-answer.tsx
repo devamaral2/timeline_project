@@ -1,6 +1,7 @@
 import type { RequestDto } from "@repo/contracts";
 import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
-import { isRequestOpen } from "@/lib/agent-chat/use-agent-chat";
+import { isSuccessAgentStatus } from "@repo/contracts";
+import { isOpenRequest } from "@/lib/tasks/agent-request-model";
 import { ChatReply } from "./chat-reply";
 import { EntityRows, requestEntityRef } from "./entity-rows";
 import styles from "@/components/shell/shell.module.css";
@@ -22,9 +23,9 @@ interface ProcessAnswerProps {
  * Um pedido que falhou ou foi cancelado deixa só o que gravou antes de parar; o aviso é a mensagem de erro da conversa.
  */
 export function ProcessAnswer({ request, name, entityHref, onOpenEntity }: ProcessAnswerProps) {
-  if (!request || isRequestOpen(request)) return null;
+  if (!request || isOpenRequest(request.status)) return null;
   const result = request.steps.find((step) => step.result)?.result;
-  const text = request.status === "done" ? request.message : undefined;
+  const text = isSuccessAgentStatus(request.status) ? request.message : undefined;
   const entities = request.entities.map(requestEntityRef);
   if (!text && !result && entities.length === 0) return null;
   return (

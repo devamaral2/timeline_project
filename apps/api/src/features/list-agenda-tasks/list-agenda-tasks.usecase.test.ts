@@ -64,8 +64,8 @@ describe("what the agenda shows", () => {
       task("tracked", "2026-08-17T13:00:00.000Z", { status: "todo" }),
       task("undated", undefined, { status: "toDefine" }),
       task("project", "2026-08-17T14:00:00.000Z", { longRunning: true }),
-      task("request", "2026-08-17T15:00:00.000Z", { actor: "agent", kind: "request", status: "done" }),
-      task("step", "2026-08-17T15:00:01.000Z", { actor: "agent", kind: "step", status: "done" }),
+      task("request", "2026-08-17T15:00:00.000Z", { actor: "agent", kind: "request", status: "completed" }),
+      task("step", "2026-08-17T15:00:01.000Z", { actor: "agent", kind: "step", status: "completed" }),
     ]);
 
     expect(idsOf(await useCase.execute({}, actor))).toEqual(["request", "tracked", "reference"]);
@@ -142,7 +142,7 @@ describe("filters", () => {
   const tasks = [
     task("meal", "2026-08-17T15:00:00.000Z", { kind: "meal", tags: ["casa"] }),
     task("common", "2026-08-17T14:00:00.000Z", { tags: ["trabalho", "casa"] }),
-    task("request", "2026-08-17T13:00:00.000Z", { actor: "agent", kind: "search_request", status: "done" }),
+    task("request", "2026-08-17T13:00:00.000Z", { actor: "agent", kind: "search_request", status: "completed" }),
   ];
 
   test("by executor: people and agents together, or each one alone", async () => {
@@ -160,11 +160,11 @@ describe("filters", () => {
 });
 
 describe("saved content", () => {
-  const saved = (id: string, kind: "save_content" | "save_content_with_transcription", status: "done" | "awaiting_transcription") =>
+  const saved = (id: string, kind: "save_content" | "save_content_with_transcription", status: "completed" | "awaiting_transcription") =>
     task(id, "2026-08-17T12:00:00.000Z", { actor: "agent", kind, status });
   const tasks = [
     task("common", "2026-08-17T15:00:00.000Z"),
-    saved("page", "save_content", "done"),
+    saved("page", "save_content", "completed"),
     saved("video", "save_content_with_transcription", "awaiting_transcription"),
   ];
 

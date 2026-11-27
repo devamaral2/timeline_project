@@ -2,8 +2,13 @@
   "id": "task-agent",
   "kind": "search_request",
   "route": "steps",
-  "status": "done",
+  "status": "completed",
   "title": "Buscar passagens",
+  "project": {
+    "id": "project-skills",
+    "name": "agent-skills",
+    "personal": false
+  },
   "sessionId": "req-first",
   "createdAt": "2026-09-14T14:48:00.000Z",
   "updatedAt": "2026-09-14T14:58:00.000Z",
@@ -13,19 +18,19 @@
       "id": "s1",
       "agent": "router",
       "label": "Entender o pedido",
-      "status": "done"
+      "status": "completed"
     },
     {
       "id": "s2",
       "agent": "search",
       "label": "Buscar voos",
-      "status": "done"
+      "status": "completed"
     },
     {
       "id": "s3",
       "agent": "writer",
       "label": "Montar o resumo",
-      "status": "done"
+      "status": "completed"
     }
   ],
   "entities": [

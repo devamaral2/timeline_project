@@ -1,5 +1,5 @@
 import type { TranscriptionFailureCode, TranscriptionResult, TranscriptionStage } from "@repo/contracts";
-import { Task } from "../../../domain";
+import { isInProgressAgentStatus, stoppedStatusOf, Task, type AgentTaskStatus } from "../../../domain";
 import type { InMemoryTaskDatabase } from "../../tasks/testing/in-memory-task-database";
 import type {
   AbandonedTranscription,
@@ -51,7 +51,7 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
       if (
         task.userId === userId &&
         task.kind === "save_content_with_transcription" &&
-        (task.status === "awaiting_transcription" || task.status === "running") &&
+        isInProgressAgentStatus(task.status) &&
         data.url === url &&
         data.day === day
       ) {
@@ -150,16 +150,16 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
   async open(userId: string, requestId: string): Promise<TranscriptionRequestData | undefined> {
     const task = this.database.tasks.find((stored) => stored.id === requestId);
     if (task?.userId !== userId || task.kind !== "save_content_with_transcription") return undefined;
-    if (task.status !== "awaiting_transcription" && task.status !== "running") return undefined;
+    if (!isInProgressAgentStatus(task.status)) return undefined;
     return task.data as unknown as TranscriptionRequestData;
   }
 
   async cancel(_tx: unknown, input: { requestId: string; userId: string; at: Date; where: TranscriptionPlace }): Promise<void> {
     const task = this.database.tasks.find((stored) => stored.id === input.requestId);
-    if (task?.userId !== input.userId || (task.status !== "awaiting_transcription" && task.status !== "running")) {
+    if (task?.userId !== input.userId || !isInProgressAgentStatus(task.status)) {
       throw new TranscriptionNotRunningError();
     }
-    this.setStatus(input.requestId, "cancel", { errorCode: "cancelled", ...placeData(input.where) }, input.at);
+    this.setStatus(input.requestId, stoppedStatusOf(task.status as AgentTaskStatus), { errorCode: "cancelled", ...placeData(input.where) }, input.at);
     for (const job of this.queue) {
       if (job.taskId === input.requestId && (job.status === "queued" || job.status === "running")) job.status = "cancelled";
     }
@@ -179,7 +179,7 @@ export class InMemoryTranscriptionRequests implements TranscriptionRequests {
     input: {
       requestId: string;
       userId: string;
-      status: "done" | "failed";
+      status: Extract<AgentTaskStatus, "completed" | "failed">;
       at: Date;
       failureCode?: TranscriptionFailureCode;
       commentsSummaryFailed?: boolean;

@@ -78,6 +78,27 @@
       "when": 1795777825236,
       "tag": "0010_tipos_de_artefato_de_texto_livre",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795777885236,
+      "tag": "0011_projeto_em_toda_tarefa",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795777945236,
+      "tag": "0012_status_de_agente_proprios",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795778005236,
+      "tag": "0013_situacao_da_tarefa_de_agente",
+      "breakpoints": true
     }
   ]
 }

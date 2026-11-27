@@ -1,6 +1,7 @@
 import { Bot, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
+import { countsAsDone, isClosedStatus } from "@repo/contracts";
 import type { AgentTaskStatus, HumanTaskStatus, TaskCardDto } from "@repo/contracts";
 import { TaskStatusGlyph, taskStatusName } from "@/components/tasks/task-status-glyph";
 import { cardIsOverdue, cardWhenLabel } from "@/lib/tasks/card-text";
@@ -10,7 +11,6 @@ import styles from "./subtasks.module.css";
 /** A volta do círculo da pizza (raio 5), para o traço das feitas. */
 const PIE_LENGTH = 2 * Math.PI * 5;
 /** Feita, cancelada e não realizada: o nome sai riscado no tom apagado. */
-const CLOSED_STATUSES = new Set(["done", "cancel", "missed", "failed"]);
 /** O rótulo de `cardWhenLabel` para quem não tem dia. */
 const NO_DATE = "Sem data";
 
@@ -27,7 +27,7 @@ interface ToggleProps {
  * gaveta logo abaixo da linha.
  */
 export function SubtaskToggle({ card, subtasks, expanded, onToggle }: ToggleProps) {
-  const done = subtasks.filter((subtask) => subtask.status === "done").length;
+  const done = subtasks.filter((subtask) => countsAsDone(subtask.actor, subtask.status)).length;
   const filled = (done / subtasks.length) * PIE_LENGTH;
   return (
     <button
@@ -94,7 +94,7 @@ export function SubtaskDrawer({ parent, tree, userId, now, closedIds, onToggle, 
               <Link
                 href={`/${userId}/tarefas/${card.id}`}
                 className={styles.name}
-                data-closed={CLOSED_STATUSES.has(card.status ?? "") ? "true" : "false"}
+                data-closed={isClosedStatus(card.actor, card.status) ? "true" : "false"}
               >
                 {card.name}
               </Link>

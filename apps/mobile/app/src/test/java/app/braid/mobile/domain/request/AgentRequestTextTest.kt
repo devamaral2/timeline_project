@@ -4,6 +4,7 @@ import app.braid.mobile.core.network.BraidJson
 import app.braid.mobile.data.requests.RequestDto
 import app.braid.mobile.data.requests.toDomain
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isOpenAgentStatus
 import app.braid.mobile.support.Fixtures
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -39,6 +40,14 @@ class AgentRequestTextTest {
                         "route" to JsonPrimitive("steps"),
                         "status" to JsonPrimitive("running"),
                         "title" to JsonPrimitive("t"),
+                        "project" to
+                            JsonObject(
+                                mapOf(
+                                    "id" to JsonPrimitive("project-personal"),
+                                    "name" to JsonPrimitive("personal"),
+                                    "personal" to JsonPrimitive(true),
+                                ),
+                            ),
                         "createdAt" to JsonPrimitive("2026-09-14T14:48:00.000Z"),
                         "updatedAt" to JsonPrimitive("2026-09-14T14:48:00.000Z"),
                         "steps" to steps,
@@ -53,7 +62,7 @@ class AgentRequestTextTest {
     fun `only queued, running and waiting requests are open`() {
         for (case in cases("open")) {
             val status = TaskStatus.fromCode(case.getValue("status").jsonPrimitive.content)
-            assertEquals("$status", case.getValue("open").jsonPrimitive.boolean, isOpenRequest(status))
+            assertEquals("$status", case.getValue("open").jsonPrimitive.boolean, isOpenAgentStatus(status))
         }
     }
 

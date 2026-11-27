@@ -87,6 +87,7 @@ export class RequestTargetEditWorker {
 
       await this.deps.batchWriter.commit({
         ...session.toBatch(),
+        requestId: request.id,
         afterWrite: (tx) => store.recordStepSuccess(tx, { requestId: request.id, stepId: step.id, entities, timings }),
       });
     });

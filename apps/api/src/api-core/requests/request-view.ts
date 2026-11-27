@@ -1,10 +1,11 @@
 import type { AgentTraceDto, AgentTraceStatus, ArtifactType, RequestDto, RequestStepDto } from "@repo/contracts";
+import { isOpenAgentStatus } from "../../domain/agent-status";
 import { stepLabel, uiConfig } from "./request-config";
 import type { RequestEntityRecord, RequestRecord, StepRecord, StepStatus } from "./request-store";
 import { toRequestTrace } from "./request-trace";
 
 const TRACE_STEP_STATUS: Record<AgentTraceStatus, StepStatus> = {
-  pending: "queued", running: "running", done: "done", failed: "failed",
+  pending: "queued", running: "running", done: "completed", failed: "failed",
 };
 
 /** O que o job vivo do pedido publica enquanto trabalha; some com ele. */
@@ -42,7 +43,7 @@ export function toRequestDto(
   options: { progress?: RequestProgress; withTrace?: boolean } = {},
 ): RequestDto {
   const message = messageOf(request);
-  const open = request.status === "queued" || request.status === "running" || request.status === "waiting" || request.status === "awaiting_transcription";
+  const open = isOpenAgentStatus(request.status);
   const trace = request.route === "steps"
     ? toRequestTrace(request, steps, entities, message)
     : request.trace ?? (open ? options.progress?.trace : undefined);
@@ -60,6 +61,8 @@ export function toRequestDto(
     route: request.route,
     status: request.status,
     title: request.title,
+    project: { ...request.project },
+    ...(request.situation ? { situation: request.situation } : {}),
     ...(request.sessionId ? { sessionId: request.sessionId } : {}),
     createdAt: request.createdAt.toISOString(),
     updatedAt: request.updatedAt.toISOString(),

@@ -3,6 +3,8 @@ package app.braid.mobile.ui.taskedit
 import androidx.lifecycle.SavedStateHandle
 import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
+import app.braid.mobile.data.projects.DefaultProjectRepository
+import app.braid.mobile.data.projects.ProjectsApi
 import app.braid.mobile.data.requests.DefaultAgentRequestRepository
 import app.braid.mobile.data.requests.RequestsApi
 import app.braid.mobile.data.session.StoredSession
@@ -104,6 +106,7 @@ class TaskHierarchyViewModelTest {
             DefaultAgentRequestRepository(graph.apis.create(RequestsApi::class.java)),
             graph.sessionRepository,
             DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
+            DefaultProjectRepository(graph.apis.create(ProjectsApi::class.java)),
         ).also(created::add)
     }
 
@@ -433,6 +436,27 @@ class TaskHierarchyViewModelTest {
             serveHermes("task-hierarchy-request-done-nothing-bare")
             viewModel.hierarchy.askHermes()
             viewModel.hierarchy.state.first { it.picker?.footer == PickerFooter.Failed(HERMES_NOTHING_CREATED) }
+        }
+
+    @Test
+    fun `asking right after typing is never dropped, even while the search result is still being mirrored`() =
+        runTest {
+            serveHermes("task-hierarchy-request-done-nothing")
+            val viewModel = newViewModel().opened()
+            // A busca responde numa thread do OkHttp e o teste segue na dele: sem ler o texto da própria busca, "Pedir ao
+            // Hermes" às vezes via o campo ainda vazio e não fazia nada. A corrida é rara; repetir a torna visível.
+            repeat(300) { round ->
+                viewModel.hierarchy.open(HierarchySlot.Subtasks)
+                viewModel.picker()
+                viewModel.hierarchy.type("Preparar a mala")
+
+                viewModel.hierarchy.askHermes()
+
+                val footer =
+                    viewModel.hierarchy.state.value.picker
+                        ?.footer
+                assertTrue("rodada $round", footer != PickerFooter.Idle)
+            }
         }
 
     @Test

@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import type { JobFailureHandler, JobHandler } from "../../infrastructure/jobs/jobs.service";
+import { WorkerAttemptsExhaustedError, type JobFailureHandler, type JobHandler } from "../../infrastructure/jobs/jobs.service";
 import { RequestOperations, type RequestWorkers } from "./request-operations";
 import { InMemoryRequestStore } from "./testing/in-memory-request-store";
 
@@ -77,6 +77,17 @@ describe("fila dos pedidos", () => {
     },
   );
 
+  test("o job abandonado por tentativas esgotadas interrompe o pedido que rodava; o que nao tinha comecado cai em failed", async () => {
+    const { store, handlers, context } = setup();
+    store.seed({ id: "r1", prompt: "x", status: "running" });
+    store.seed({ id: "r2", prompt: "x", status: "queued" });
+    for (const requestId of ["r1", "r2"]) {
+      await handlers.get("hermes-turn")?.onFailure?.({ requestId }, context, new WorkerAttemptsExhaustedError());
+    }
+    expect(store.require("r1")).toMatchObject({ status: "interrupted", errorCode: "unavailable" });
+    expect(store.require("r2")).toMatchObject({ status: "failed", errorCode: "unavailable" });
+  });
+
   test("o alimento: o pedido de construcao passa a rodar, e a falha definitiva grava o estado de falha", async () => {
     const { store, handlers, workers, context } = setup();
     store.seed({ id: "b1", prompt: "banana", route: "food", kind: "build_request", status: "queued" });
@@ -95,7 +106,7 @@ describe("iniciar um pedido", () => {
     const text = `almocei ${"muito ".repeat(30)}`;
     const id = await operations.start({ userId: "user-1", text, context: { screen: "agenda" } }, actor);
 
-    expect(store.require(id)).toMatchObject({ route: "steps", status: "queued", prompt: text, context: { screen: "agenda" } });
+    expect(store.require(id)).toMatchObject({ route: "steps", status: "preparing", prompt: text, context: { screen: "agenda" } });
     expect(store.require(id).title.length).toBeLessThanOrEqual(80);
     expect(store.jobs).toEqual([{ kind: "request-dispatch", requestId: id }]);
     expect(store.require(id).model).toBeUndefined();
@@ -142,6 +153,22 @@ describe("iniciar um pedido", () => {
     await expect(operations.start({ userId: "user-1", text: "x", sessionId: "alheio" }, actor)).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  test("o projectId das tres rotas que abrem pedido chega ao armazenamento, e o edit e a voz nao o aceitam", async () => {
+    const { store, operations } = setup();
+    const start = vi.spyOn(store, "start");
+    const project = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+
+    await operations.start({ userId: "user-1", text: "a", projectId: project }, actor);
+    await operations.startHermes({ userId: "user-1", text: "b", clientMessageId: "h1", projectId: project }, actor);
+    await operations.startModel({ userId: "user-1", text: "c", clientMessageId: "m1", projectId: project, model: SELECTION }, actor);
+    expect(start.mock.calls.map(([input]) => input.projectId)).toEqual([project, project, project]);
+
+    await operations.start({ userId: "user-1", text: "d" }, actor);
+    await operations.startEdit({ userId: "user-1", text: "e", entityType: "task", entityId: "t1" }, actor);
+    await operations.startVoice({ transcript: "f" }, actor);
+    expect(start.mock.calls.slice(3).map(([input]) => "projectId" in input)).toEqual([false, false, false]);
+  });
+
   test("ninguem pede em nome de outro usuario", async () => {
     const { store, operations } = setup();
     await expect(operations.start({ userId: "outro", text: "x" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
@@ -155,7 +182,7 @@ describe("iniciar um pedido", () => {
     const { store, operations } = setup();
     const id = await operations.startEdit({ userId: "user-1", text: "mude para 19h", entityType: "task", entityId: "01H0TASK" }, actor);
     expect(store.require(id)).toMatchObject({
-      route: "steps", prompt: "mude para 19h", status: "queued",
+      route: "steps", prompt: "mude para 19h", status: "preparing",
       target: { entityType: "task", entityId: "01H0TASK" }, context: { screen: "detail", entityId: "01H0TASK" },
     });
     expect(store.jobs).toEqual([{ kind: "request-edit-target", requestId: id }]);
@@ -193,7 +220,7 @@ describe("iniciar um pedido", () => {
 
   test("a mensagem ao modelo vira um pedido da rota dele, com a escolha, na sessao da conversa", async () => {
     const { store, operations } = setup();
-    store.seed({ id: "01FIRST", prompt: "oi", status: "done" });
+    store.seed({ id: "01FIRST", prompt: "oi", status: "completed" });
     const claude = await operations.startModel({ userId: "user-1", text: "o que tenho amanhã?", sessionId: "01FIRST", clientMessageId: "m1", model: SELECTION }, actor);
 
     expect(claude).toMatchObject({ route: "model", status: "queued", text: "o que tenho amanhã?", sessionId: "01FIRST", steps: [], model: SELECTION });
@@ -232,11 +259,11 @@ describe("acompanhar e cancelar", () => {
     expect(running).toMatchObject({ trace: live, progress: "Listou a agenda", steps: [{ id: "c1", label: "Listou a agenda", status: "running" }] });
 
     const final = { ...live, status: "done" as const, entries: [{ ...live.entries[0], status: "done" as const }] };
-    await store.finish("h1", "done", { message: "Pronto.", trace: final });
+    await store.finish("h1", "completed", { message: "Pronto.", trace: final });
     jobs.progressOfTask.mockClear();
     const done = await operations.view("h1", actor);
     expect(jobs.progressOfTask).not.toHaveBeenCalled();
-    expect(done).toMatchObject({ status: "done", message: "Pronto.", trace: final });
+    expect(done).toMatchObject({ status: "completed", message: "Pronto.", trace: final });
     expect(done.progress).toBeUndefined();
   });
 
@@ -253,21 +280,38 @@ describe("acompanhar e cancelar", () => {
     expect(await operations.list(actor, 1)).toHaveLength(1);
   });
 
-  test("cancelar marca o pedido e os passos abertos e cancela os jobs vivos deles", async () => {
+  test("cancelar interrompe o pedido que rodava, cancela o passo que nao comecou e cancela os jobs vivos deles", async () => {
     const { store, jobs, operations } = setup();
     store.seed({ id: "r1", prompt: "x" });
     await store.beginSteps("r1", [{ id: "s1", agent: "entity", expected: "many" }, { id: "s2", agent: "query", expected: "one" }]);
+    await store.markStepRunning("s2");
     await store.recordQueryResult({ requestId: "r1", stepId: "s2", result: { columns: [], rows: [], truncated: false }, timings: {} });
 
     const cancelled = await operations.cancel("r1", actor);
 
     expect(jobs.cancelOfTasks).toHaveBeenCalledWith(["r1", "s1", "s2"], "user-1");
-    expect(cancelled).toMatchObject({ status: "cancel", errorCode: "cancelled" });
-    expect(cancelled.steps.map((step) => step.status)).toEqual(["cancel", "done"]);
+    expect(cancelled).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
+    expect(cancelled.steps.map((step) => step.status)).toEqual(["cancelled", "completed"]);
 
     // Cancelar de novo, ou um pedido que ja terminou, nao muda nada.
     await operations.cancel("r1", actor);
     expect(jobs.cancelOfTasks).toHaveBeenLastCalledWith([], "user-1");
+  });
+
+  test("o pedido que fecha, de qualquer jeito, fica para revisar; o aberto e o passo ficam sem situacao", async () => {
+    const { store, operations } = setup();
+    store.seed({ id: "r1", prompt: "x" });
+    store.seed({ id: "r2", prompt: "y" });
+    store.seed({ id: "r3", prompt: "z" });
+    await store.beginSteps("r1", [{ id: "s1", agent: "entity", expected: "many" }]);
+
+    expect((await operations.view("r1", actor)).situation).toBeUndefined();
+    await operations.cancel("r1", actor);
+    await store.finish("r2", "completed", {});
+    await store.finish("r3", "failed", { errorCode: "internal" });
+
+    for (const id of ["r1", "r2", "r3"]) expect((await operations.view(id, actor)).situation, id).toBe("to_review");
+    expect(store.stepRecords.find((step) => step.id === "s1")).not.toHaveProperty("situation");
   });
 
   test("o pedido que calcula um alimento nao se cancela por aqui", async () => {

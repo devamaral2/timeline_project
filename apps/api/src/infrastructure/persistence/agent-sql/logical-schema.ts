@@ -47,11 +47,15 @@ const TABLES: readonly LogicalTable[] = [
     name: "tasks",
     description:
       "Tarefas do usuario (passado, agora ou futuro; podem se sobrepor). Com status, a tarefa e acompanhada na lista de tarefas; sem status, e tarefa de referencia e so marca um horario na agenda.",
-    from: "public.tasks e",
+    from: "public.tasks e JOIN public.projects pr ON pr.id = e.project_id",
     where: VISIBLE_TASK("e"),
     columns: [
       { name: "id", expr: "e.id", type: "text" },
       { name: "name", expr: "e.name", type: "text" },
+      {
+        name: "project", expr: "pr.name", type: "text",
+        description: "nome do projeto da tarefa; `personal` quando nenhum foi escolhido",
+      },
       { name: "description", expr: "e.description", type: "text" },
       { name: "location", expr: "e.location", type: "text", description: "onde a tarefa acontece; nulo se ninguem informou" },
       { name: "kind", expr: "e.kind", type: "text", description: "default | meal | sleep | training" },
@@ -72,7 +76,7 @@ const TABLES: readonly LogicalTable[] = [
       { name: "finished_at", expr: "e.finished_at", type: "timestamptz", description: "conclusao real; nulo se nao terminou" },
       {
         name: "long_running", expr: "e.long_running", type: "boolean",
-        description: "tarefa longa (um projeto): fica fora da agenda e sempre tem status",
+        description: "tarefa longa: fica fora da agenda e sempre tem status",
       },
       { name: "recurrence_id", expr: "e.recurrence_id", type: "text", description: "serie de origem, se for ocorrencia" },
       { name: "occurrence_on", expr: "e.occurrence_on", type: "date" },

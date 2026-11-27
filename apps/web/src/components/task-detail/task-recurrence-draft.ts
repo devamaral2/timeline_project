@@ -166,6 +166,8 @@ function templateOf(form: TaskDraft): CreateRecurrenceInput["template"] {
     priority: form.priority,
     ...(form.tags.length ? { tags: form.tags } : {}),
     ...(form.reminders.length ? { notifyOffsetsMinutes: form.reminders } : {}),
+    // O projeto da série é o da tarefa que a cria, e cada ocorrência nasce nele. O `personal` leva o id dele, como qualquer outro.
+    ...(form.project ? { projectId: form.project.id } : {}),
   };
 }
 
@@ -178,6 +180,9 @@ export function buildCreateRecurrenceInput(draft: RecurrenceDraft, form: TaskDra
  * O `PATCH` da série com só a regra que mudou em relação à série lida, com a
  * revisão dela. `null` quando nada mudou. Uma troca que a API recusa (semanal
  * para mensal, por exemplo) sai assim mesmo: a recusa volta como mensagem.
+ *
+ * Nunca leva o modelo (nem o projeto dele): o projeto de uma série nasce com ela, e trocar o de uma ocorrência muda só a
+ * ocorrência, como o nome, a prioridade e as etiquetas.
  */
 export function planSeriesEdit(series: RecurrenceDto, draft: RecurrenceDraft): EditRecurrenceInput | null {
   const current: Record<string, unknown> = { ...series };

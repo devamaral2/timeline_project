@@ -63,7 +63,7 @@ describe("mudancas em series que ja existem", () => {
 
     await ctx.worker.run(payload);
 
-    expect(ctx.store.stepRecords.find((step) => step.id === "s2")?.status).toBe("done");
+    expect(ctx.store.stepRecords.find((step) => step.id === "s2")?.status).toBe("completed");
     const batch = ctx.batchWriter.commits[1];
     expect(batch?.recurrenceChanges).toMatchObject([{ op: "update", recurrence: { rule: { timeOfDay: "08:00", frequency: "weekly", byWeekday: 1 << 1 } } }]);
     expect(batch?.artifacts).toHaveLength(0);

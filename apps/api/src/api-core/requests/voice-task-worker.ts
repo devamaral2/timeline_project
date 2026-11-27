@@ -1,5 +1,6 @@
 import type { CreateTaskInput } from "@repo/contracts";
 import type { EntityBatchWriter } from "../../domain/ports";
+import { isTurnAgentStatus } from "../../domain/agent-status";
 import { TASK_TIME_ZONE, toEntityBatch, type CreateTaskUseCase } from "../tasks/create-task.usecase";
 import type { TaskCommandParsingGateway } from "../tasks/gateways/task-command-parsing.gateway";
 import { resolveTaskSchedule } from "../tasks/services/task-schedule.service";
@@ -28,7 +29,8 @@ export class VoiceTaskWorker {
   async run(requestId: string): Promise<void> {
     const { store } = this.deps;
     const request = await store.find(requestId);
-    if (request?.route !== "voice" || (request.status !== "queued" && request.status !== "running")) return;
+    if (request?.route !== "voice" || !isTurnAgentStatus(request.status)) return;
+    await store.markStarting(request.id);
     await store.markRunning(request.id);
 
     const parsed = await this.deps.parsing.parseCommand({ text: request.prompt });

@@ -19,6 +19,7 @@ import { useOpenAgentRefresh } from "@/lib/tasks/use-open-agent-refresh";
 import { slideIn } from "@/lib/motion/enter";
 import { reflow } from "@/lib/motion/view-transition";
 import { briefDate } from "@/lib/dates/day-labels";
+import { plainText } from "@/lib/tasks/agenda-search";
 import { useNow } from "@/lib/tasks/use-now";
 import { useViewMode } from "@/lib/tasks/view-mode";
 import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
@@ -65,11 +66,6 @@ export function daySummary(tasks: readonly ExampleTask[]) {
   if (hours === 0) return `${count} · ${rest} min planejados`;
   if (rest === 0) return `${count} · ${hours} h ${hours === 1 ? "planejada" : "planejadas"}`;
   return `${count} · ${hours} h ${String(rest).padStart(2, "0")} planejadas`;
-}
-
-/** Minúsculas e sem acento, para a busca do menu achar "cafe" em "Café". */
-function plain(text: string) {
-  return text.toLocaleLowerCase("pt-BR").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: string; todayKey?: string }) {
@@ -370,8 +366,8 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     filtered: search.trim() !== "",
     onClear: () => setSearch(""),
   });
-  const needle = plain(search.trim());
-  const matching = (tasks: ExampleTask[]) => (needle ? tasks.filter((task) => plain(task.name).includes(needle)) : tasks);
+  const needle = plainText(search.trim());
+  const matching = (tasks: ExampleTask[]) => (needle ? tasks.filter((task) => plainText(task.name).includes(needle)) : tasks);
 
   if (userId && !ready) {
     return <main id="conteudo" className={page.frame}><p role="status" className={styles.status}>Carregando sua sessão…</p></main>;

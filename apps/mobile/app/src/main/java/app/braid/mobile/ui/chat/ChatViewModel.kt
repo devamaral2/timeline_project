@@ -35,7 +35,7 @@ import app.braid.mobile.domain.request.RequestEntity
 import app.braid.mobile.domain.request.RequestOperation
 import app.braid.mobile.domain.request.RequestRoute
 import app.braid.mobile.domain.request.appendTranscript
-import app.braid.mobile.domain.request.isOpenRequest
+import app.braid.mobile.domain.request.endCode
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.domain.speech.GrantedMicrophone
@@ -46,7 +46,8 @@ import app.braid.mobile.domain.speech.SpeechError
 import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.speech.isStopSpeech
 import app.braid.mobile.domain.speech.speechErrorMessage
-import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isOpenAgentStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.domain.timeline.dayKeyOf
 import app.braid.mobile.domain.transcription.TranscriptionRepository
@@ -538,7 +539,7 @@ class ChatViewModel
                     val view = repository.request(requestId)
                     failures = 0
                     if (id !in following) return
-                    if (!isOpenRequest(view.status)) {
+                    if (!isOpenAgentStatus(view.status)) {
                         finishRequest(id, view)
                         return
                     }
@@ -588,7 +589,7 @@ class ChatViewModel
                     val steps = hermesStepsOf(view.entries)
                     if (steps.isNotEmpty()) {
                         val stepsId = "$id-steps"
-                        val message = ChatMessage.HermesSteps(stepsId, steps, isOpenRequest(view.status))
+                        val message = ChatMessage.HermesSteps(stepsId, steps, isOpenAgentStatus(view.status))
                         messages =
                             if (messages.any { it.id == stepsId }) {
                                 messages.map {
@@ -616,7 +617,7 @@ class ChatViewModel
                             ) {
                                 it.copy(
                                     route = agent?.route ?: RequestRoute.Steps,
-                                    running = isOpenRequest(view.status),
+                                    running = isOpenAgentStatus(view.status),
                                     trace = view.trace,
                                 )
                             } else {
@@ -624,7 +625,7 @@ class ChatViewModel
                             }
                         },
                     pending =
-                        if (label != null && isOpenRequest(view.status) && pending?.id == id && pending.label != label) {
+                        if (label != null && isOpenAgentStatus(view.status) && pending?.id == id && pending.label != label) {
                             pending.copy(label = label)
                         } else {
                             pending
@@ -639,7 +640,7 @@ class ChatViewModel
             view: AgentRequest,
         ) {
             applyView(id, view)
-            if (view.status == TaskStatus.Done) {
+            if (isSuccessAgentStatus(view.status)) {
                 following -= id
                 commit { current ->
                     val answer =
@@ -661,7 +662,7 @@ class ChatViewModel
             if (view.entities.isNotEmpty()) mutableEntitiesChanged.tryEmit(Unit)
             // O agente desligado: o servidor escreve o aviso, que diz mais que o texto do código.
             val notice = if (ChatAgent.of(view.route) != null && view.errorCode == "unavailable") view.message else null
-            fail(id, if (view.status == TaskStatus.Cancel) ChatFailureCode.Cancelled else ChatFailureCode.fromCode(view.errorCode), notice)
+            fail(id, ChatFailureCode.fromCode(endCode(view.status) ?: view.errorCode), notice)
         }
 
         /** [text] troca o texto do código pelo que o servidor escreveu (o aviso do agente desligado). */
@@ -672,13 +673,15 @@ class ChatViewModel
         ) {
             if (id !in following) return
             following -= id
+            // Cancelar ou parar o pedido não é falha da mensagem: ela segue sem a marca de "não enviada".
+            val stopped = code == ChatFailureCode.Cancelled || code == ChatFailureCode.Interrupted
             commit { current ->
                 val request = current.messages.firstOrNull { it.id == id } as? ChatMessage.User
                 current.copy(
                     pending = if (current.pending?.id == id) null else current.pending,
                     messages =
                         current.messages.map {
-                            if (it.id == id && it is ChatMessage.User && code != ChatFailureCode.Cancelled) it.copy(failed = true) else it
+                            if (it.id == id && it is ChatMessage.User && !stopped) it.copy(failed = true) else it
                         } +
                             ChatMessage.Error(
                                 id = "$id-error",
@@ -778,7 +781,7 @@ class ChatViewModel
                             .recent()
                             .filter {
                                 (it.route == RequestRoute.Steps || ChatAgent.of(it.route) != null) &&
-                                    isOpenRequest(it.status) &&
+                                    isOpenAgentStatus(it.status) &&
                                     it.id !in knownRequests
                             }.reversed()
                     } catch (cancelled: CancellationException) {

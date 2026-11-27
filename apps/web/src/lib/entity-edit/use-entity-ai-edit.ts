@@ -1,9 +1,10 @@
 "use client";
 
+import { isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto, RequestEditEntityType } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { modelSelectionForRequest } from "@/lib/agent-chat/model-selection-store";
-import { agentFailureText, startFailureCode } from "@/lib/agent-chat/use-agent-chat";
+import { agentFailureText, endCode, startFailureCode } from "@/lib/agent-chat/use-agent-chat";
 import { getRequest, startEditRequest } from "@/lib/api/requests";
 import { AGENT_REQUEST_POLL_MS, isOpenRequest } from "@/lib/tasks/agent-request-model";
 
@@ -83,11 +84,11 @@ export function useEntityAiEdit({ userId, entityType, entityId, onEdited, pollMs
         setRequest(view);
         if (!isOpenRequest(view.status)) {
           busy.current = false;
-          if (view.status === "done") {
+          if (isSuccessAgentStatus(view.status)) {
             setPhase("done");
             if (view.entities.length > 0) onEditedRef.current();
           } else {
-            setError(agentFailureText(view.errorCode ?? (view.status === "cancel" ? "cancelled" : "internal")));
+            setError(agentFailureText(endCode(view.status) ?? view.errorCode ?? "internal"));
             setPhase("failed");
           }
           return true;

@@ -131,7 +131,8 @@ export function setupRequest(prompt = "pedido", sqlOutcome?: ScopedSqlOutcome) {
   const store = new InMemoryRequestStore(() => NOW, kit.database);
   const gateway = new ScriptedStructuredGateway();
   const runner = new RequestAgentRunner(gateway, { thoughts: store, clock: () => NOW });
-  const request = store.seed({ id: "r1", prompt });
+  // Como o pedido que acabou de chegar: ainda sem destino. `addStep` o desdobra e ele passa a `running`.
+  const request = store.seed({ id: "r1", prompt, status: "preparing" });
   const sql = new StubScopedSqlQuery(sqlOutcome);
   const foodParsing = new ScriptedFoodParsing();
   const files = new FakeAgentFiles();

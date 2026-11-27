@@ -5,11 +5,16 @@ import {
   TaskOwnershipError,
   TaskRevisionConflictError,
   SUBTASK_RELATION,
+  FINAL_AGENT_STATUSES,
+  KINDS_WITHOUT_SITUATION,
   type ArtifactLink,
   type ArtifactWrites,
+  type Situation,
 } from "../../../../domain/index";
 import type { TaskRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema/index";
+import { sqlList } from "../../database/schema/sets";
+import { resolveProjectId, type ProjectScope } from "../../projects/resolve-project";
 import { writeArtifacts } from "../../artifacts/repositories/postgres-artifact.repository";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
@@ -40,16 +45,29 @@ async function insertChildren(tx: Tx, task: Task): Promise<void> {
  * ocorrencia de um dia que a serie ja gerou: o indice unico recusa a linha e o
  * resto nem e tentado, porque apontaria para uma tarefa que nao entrou.
  */
-export async function insertTaskAggregate(tx: Tx, task: Task, artifacts?: ArtifactWrites): Promise<boolean> {
+export async function insertTaskAggregate(
+  tx: Tx,
+  task: Task,
+  artifacts?: ArtifactWrites,
+  scope?: ProjectScope,
+): Promise<boolean> {
+  const projectId = await resolveProjectId(tx, {
+    ...scope,
+    userId: task.userId,
+    projectId: task.projectId,
+    recurrenceId: task.occurrence?.recurrenceId,
+  });
   const inserted = await tx
     .insert(schema.tasks)
     .values({
       id: task.id,
       revision: task.revision,
       userId: task.userId,
+      projectId,
       actor: task.actor,
       kind: task.kind,
       status: task.status ?? null,
+      situation: task.situation ?? null,
       priority: task.priority,
       name: task.name,
       description: task.description,
@@ -88,9 +106,14 @@ export async function updateTaskAggregate(
   expectedRevision: number,
   artifacts?: ArtifactWrites,
 ): Promise<void> {
+  // A tarefa lida sempre traz o projeto; `null` e a edicao que a devolve a `personal`. Quem nao tem projeto no
+  // agregado (testes que montam a tarefa a mao) deixa a coluna como esta.
+  const projectId =
+    task.projectId === undefined ? undefined : await resolveProjectId(tx, { userId: actorUserId, projectId: task.projectId });
   const result = await tx.execute(sql`
     UPDATE tasks
-    SET kind = ${task.kind},
+    SET ${projectId === undefined ? sql`` : sql`project_id = ${projectId},`}
+        kind = ${task.kind},
         status = ${task.status ?? null},
         priority = ${task.priority},
         name = ${task.name},
@@ -271,6 +294,17 @@ export class PostgresTaskRepository implements TaskRepository {
     await this.db.transaction(async (tx) => {
       await softDeleteTask(tx, taskId, actorUserId);
     });
+  }
+
+  async setSituation(taskId: string, userId: string, situation: Situation): Promise<boolean> {
+    // O mesmo criterio de `acceptsSituation`, no comando: o status pode ter mudado desde a leitura.
+    const updated = await this.db.execute(sql`
+      UPDATE tasks SET situation = ${situation}, revision = revision + 1, updated_at = now()
+      WHERE id = ${taskId} AND user_id = ${userId} AND deleted_at IS NULL
+        AND actor = 'agent' AND kind NOT IN (${sqlList(KINDS_WITHOUT_SITUATION)})
+        AND status IN (${sqlList(FINAL_AGENT_STATUSES)})
+      RETURNING id`);
+    return updated.rows.length > 0;
   }
 
   async findById(taskId: string): Promise<Task | null> {
