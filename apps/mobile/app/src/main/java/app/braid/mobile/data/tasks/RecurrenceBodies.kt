@@ -30,6 +30,7 @@ fun NewSeries.toBody(): JsonObject =
                 put("priority", template.priority.code)
                 template.tags?.let { put("tags", JsonArray(it.map(::JsonPrimitive))) }
                 template.notifyOffsetsMinutes?.let { put("notifyOffsetsMinutes", JsonArray(it.map(::JsonPrimitive))) }
+                template.projectId?.let { put("projectId", it) }
             },
         )
     }

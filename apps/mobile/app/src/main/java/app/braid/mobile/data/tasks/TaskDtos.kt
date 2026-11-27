@@ -1,5 +1,7 @@
 package app.braid.mobile.data.tasks
 
+import app.braid.mobile.data.projects.ProjectDto
+import app.braid.mobile.data.projects.toDomain
 import app.braid.mobile.domain.task.FinishedAtChange
 import app.braid.mobile.domain.task.RecurrenceFrequency
 import app.braid.mobile.domain.task.RecurrenceRule
@@ -30,6 +32,7 @@ data class TaskCardDto(
     val priority: String,
     val name: String,
     val description: String,
+    val project: ProjectDto,
     val location: String? = null,
     val startedAt: String? = null,
     val estimatedFinishAt: String? = null,
@@ -88,6 +91,7 @@ fun TaskCardDto.toDomain(): TaskCard =
         recurrence = recurrence?.toDomain(),
         parentTaskId = parentTaskId,
         notifyOffsetsMinutes = notifyOffsetsMinutes.map { it.toInt() },
+        project = project.toDomain(),
     )
 
 fun TaskRecurrenceDto.toDomain() =

@@ -59,6 +59,8 @@ data class SeriesTemplate(
     val priority: TaskPriority,
     val tags: List<String>? = null,
     val notifyOffsetsMinutes: List<Int>? = null,
+    /** O projeto da série: cada ocorrência nasce nele. Ausente (ou `personal`), nada vai. */
+    val projectId: String? = null,
 )
 
 /** O corpo de `POST /api/recurrences`: a regra completa e o modelo. */
@@ -239,6 +241,7 @@ fun buildNewSeries(
                 priority = form.priority,
                 tags = form.tags.ifEmpty { null },
                 notifyOffsetsMinutes = form.reminders.ifEmpty { null },
+                projectId = form.project?.takeUnless { it.personal }?.id,
             ),
     )
 }

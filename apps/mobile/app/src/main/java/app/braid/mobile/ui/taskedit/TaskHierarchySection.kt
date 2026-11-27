@@ -310,7 +310,7 @@ private fun CreateFooter(
 }
 
 @Composable
-private fun FooterAction(
+internal fun FooterAction(
     label: String,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -340,10 +340,10 @@ private fun FooterAction(
     }
 }
 
-private const val DISABLED_ALPHA = 0.5f
+internal const val DISABLED_ALPHA = 0.5f
 
 @Composable
-private fun Hint(
+internal fun Hint(
     text: String,
     alert: Boolean = false,
 ) {

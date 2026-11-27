@@ -1,5 +1,6 @@
 package app.braid.mobile.domain.task
 
+import app.braid.mobile.domain.project.Project
 import java.time.Instant
 
 /** Quem executa a tarefa: a pessoa ou um agente. */
@@ -139,4 +140,6 @@ data class TaskCard(
     val parentTaskId: String? = null,
     /** Quantos minutos antes do início (ou do prazo, na tarefa longa) cada lembrete avisa. */
     val notifyOffsetsMinutes: List<Int> = emptyList(),
+    /** O projeto da tarefa: a lista o mostra abaixo do título; o formulário da pessoa o troca. */
+    val project: Project = Project.Personal,
 )

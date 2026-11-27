@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.core.designsystem.ProjectLine
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.request.AgentRequest
@@ -222,6 +223,8 @@ private fun InfoSection(
     Section("Informações") {
         Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            // Só leitura: o projeto de uma tarefa de agente não muda depois que ela nasce.
+            FactRow("Projeto") { ProjectLine(task.card.project) }
             FactRow("Início") {
                 val startedAt = task.card.startedAt
                 if (startedAt == null) {

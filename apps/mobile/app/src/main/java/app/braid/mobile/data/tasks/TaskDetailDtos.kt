@@ -2,6 +2,8 @@ package app.braid.mobile.data.tasks
 
 import app.braid.mobile.data.artifacts.ArtifactDto
 import app.braid.mobile.data.artifacts.toDomain
+import app.braid.mobile.data.projects.ProjectDto
+import app.braid.mobile.data.projects.toDomain
 import app.braid.mobile.domain.task.ArtifactRelation
 import app.braid.mobile.domain.task.RequestRelation
 import app.braid.mobile.domain.task.TaskActor
@@ -26,6 +28,7 @@ data class TaskDetailDto(
     val priority: String,
     val name: String,
     val description: String,
+    val project: ProjectDto,
     val location: String? = null,
     val startedAt: String? = null,
     val estimatedFinishAt: String? = null,
@@ -73,6 +76,7 @@ fun TaskDetailDto.toDomain(): TaskDetail =
                 longRunning = longRunning,
                 tags = tags,
                 revision = revision,
+                project = project.toDomain(),
             ),
         priority = TaskPriority.fromCode(priority),
         description = description,
