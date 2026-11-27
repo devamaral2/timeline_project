@@ -290,13 +290,16 @@ describe("edição", () => {
     expect(api.store.table<TaskDto>("tasks").get("ev-1")?.project).toEqual(FAKE_PERSONAL_PROJECT);
   });
 
-  it("uma ocorrência de série do braid devolvida ao personal leva a série junto, com o id do personal no modelo", async () => {
-    const rule = { frequency: "daily", interval: 1, timeOfDay: "18:00", timeZone: "America/Sao_Paulo", startsOn: "2026-11-03" } as const;
-    install([inBraid({ recurrence: { id: "rec-1", occurrenceOn: "2026-11-14", detached: false, rule } })]);
-    api.store.table<RecurrenceDto>("recurrences").set(
-      "rec-1",
-      recurrenceFixture({ id: "rec-1", ...rule, template: { name: "Revisar o PR", kind: "common", priority: "medium", description: "", tags: ["pr"], projectId: "project-braid" } }),
-    );
+  const WEEKLY_RULE = { frequency: "weekly", interval: 1, byWeekday: 42, timeOfDay: "18:00", timeZone: "America/Sao_Paulo", startsOn: "2026-11-03" } as const;
+  const SERIES_TEMPLATE = { name: "Revisar o PR", kind: "common", priority: "medium", description: "", tags: ["pr"], projectId: "project-braid" } as const;
+
+  function installOccurrenceInBraid() {
+    install([inBraid({ recurrence: { id: "rec-1", occurrenceOn: "2026-11-14", detached: false, rule: WEEKLY_RULE } })]);
+    api.store.table<RecurrenceDto>("recurrences").set("rec-1", recurrenceFixture({ id: "rec-1", ...WEEKLY_RULE, template: SERIES_TEMPLATE }));
+  }
+
+  it("trocar o projeto de uma ocorrência de série muda só a ocorrência: o PATCH da tarefa leva o projeto e a série não é tocada", async () => {
+    installOccurrenceInBraid();
     render(<TaskEditRoute userId="user-1" taskId="ev-1" />);
     await screen.findByRole("button", { name: FIELD_NAME("braid") });
 
@@ -304,11 +307,30 @@ describe("edição", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “personal”" }));
     save();
 
-    await waitFor(() => expect(writes().map((call) => `${call.method} ${call.pathname}`)).toEqual(["PATCH /api/tasks/ev-1", "PATCH /api/recurrences/rec-1"]));
-    // O modelo troca inteiro: o que a série já levava continua, e o projeto vira o id do personal.
-    expect(api.store.table<RecurrenceDto>("recurrences").get("rec-1")?.template).toEqual({
-      name: "Revisar o PR", kind: "common", priority: "medium", description: "", tags: ["pr"], projectId: FAKE_PERSONAL_PROJECT.id,
-    });
+    await waitFor(() => expect(writes().map((call) => `${call.method} ${call.pathname}`)).toEqual(["PATCH /api/tasks/ev-1"]));
+    expect(writes()[0]?.body).toMatchObject({ projectId: null });
+    expect(api.store.table<TaskDto>("tasks").get("ev-1")?.project).toEqual(FAKE_PERSONAL_PROJECT);
+    expect(api.store.table<RecurrenceDto>("recurrences").get("rec-1")?.template).toEqual(SERIES_TEMPLATE);
+    expect(api.store.table<RecurrenceDto>("recurrences").get("rec-1")?.revision).toBe(1);
+  });
+
+  it("trocar o projeto da ocorrência e a regra da série na mesma edição: o PATCH da série leva só a regra, sem projeto", async () => {
+    installOccurrenceInBraid();
+    render(<TaskEditRoute userId="user-1" taskId="ev-1" />);
+    await screen.findByRole("button", { name: FIELD_NAME("braid") });
+
+    openChoice("braid");
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “Alfa”" }));
+    fireEvent.click(await screen.findByRole("button", { name: /^Recorrência:/ }));
+    fireEvent.change(screen.getByLabelText("Repetir a cada"), { target: { value: "2" } });
+    save();
+
+    await waitFor(() => expect(writes()).toHaveLength(2));
+    const task = writes().find((call) => call.pathname === "/api/tasks/ev-1");
+    const series = writes().find((call) => call.pathname === "/api/recurrences/rec-1");
+    expect(task?.body).toMatchObject({ projectId: ALFA.id });
+    expect(series?.body).toEqual({ expectedRevision: 1, interval: 2 });
+    expect(api.store.table<RecurrenceDto>("recurrences").get("rec-1")?.template).toEqual(SERIES_TEMPLATE);
   });
 
   it("uma série em que a pessoa voltou ao personal leva o id do personal no modelo", async () => {
