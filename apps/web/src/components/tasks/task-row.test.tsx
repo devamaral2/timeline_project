@@ -91,7 +91,7 @@ describe("TaskRow", () => {
     expect(container.querySelector("[data-agent-mark]")).not.toBeInTheDocument();
   });
 
-  it("mostra a tarefa de agente com o robô de assinatura, glifo que não é botão e tempo decorrido no quando", () => {
+  it("mostra a tarefa de agente com glifo inerte à esquerda, tempo decorrido no quando e sem o robô", () => {
     const card = cardOf({
       id: "ev-3",
       actor: "agent",
@@ -103,13 +103,81 @@ describe("TaskRow", () => {
 
     const { container } = render(<TaskRow card={card} userId="user-1" now={NOW} />);
 
-    expect(screen.getByRole("img", { name: "Agente, trabalhando" })).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByText("Pesquisar voos para novembro")).toBeInTheDocument();
     expect(screen.getByText("request")).toBeInTheDocument();
     expect(screen.getByText("há 12 min")).toBeInTheDocument();
     expect(container.querySelector('[data-actor="agent"]')).toBeInTheDocument();
-    expect(container.querySelector("[data-agent-mark]")).toBeInTheDocument();
+    expect(container.querySelector("[data-agent-mark]")).not.toBeInTheDocument();
+    const lead = container.querySelector("[data-row-lead]");
+    expect(lead).toBeInTheDocument();
+    expect(lead?.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    expect(lead?.querySelector("button, a")).toBeNull();
+  });
+
+  it.each([
+    ["preparing", "Preparando", "Agente, preparando"],
+    ["queued", "Na fila", "Agente, na fila"],
+    ["starting", "Iniciando", "Agente, iniciando"],
+    ["running", "Trabalhando", "Agente, trabalhando"],
+    ["waiting", "Esperando", "Agente, esperando"],
+    ["completed", "Concluído", "Agente, concluído"],
+    ["interrupted", "Interrompido", "Agente, interrompido"],
+    ["failed", "Falhou", "Agente, falhou"],
+    ["cancelled", "Cancelado", "Agente, cancelado"],
+    ["rolled_back", "Revertido", "Agente, revertido"],
+  ] as const)("põe o nome %s e o ícone quadrado do status à direita da linha de agente", (status, label, name) => {
+    const { container } = render(
+      <TaskRow card={cardOf({ actor: "agent", kind: "request", status, startedAt: "2026-09-14T09:48:00-03:00" })} userId="user-1" now={NOW} />,
+    );
+
+    const side = container.querySelector("[data-row-side]") as HTMLElement;
+    expect(side).toBeInTheDocument();
+    expect(within(side).getByText(label)).toBeInTheDocument();
+    const icon = within(side).getByRole("img", { name });
+    expect(icon).toHaveAttribute("viewBox", "0 0 20 20");
+    // O nome fica à esquerda do ícone.
+    const text = within(side).getByText(label);
+    expect(text.compareDocumentPosition(icon) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // O status do agente não abre escolha nenhuma.
+    expect(within(side).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["anthropic", "Anthropic"],
+    ["openai", "OpenAI"],
+    ["openrouter", "OpenRouter"],
+  ] as const)("mostra o símbolo do provedor %s abaixo do ícone quando o cartão traz a escolha do pedido", (provider, name) => {
+    const card = cardOf({
+      actor: "agent",
+      kind: "request",
+      status: "completed",
+      model: { provider, model: "um-modelo", effort: "high" },
+    });
+
+    const { container } = render(<TaskRow card={card} userId="user-1" now={NOW} />);
+
+    const side = container.querySelector("[data-row-side]") as HTMLElement;
+    const mark = within(side).getByRole("img", { name });
+    const icon = within(side).getByRole("img", { name: "Agente, concluído" });
+    expect(icon.compareDocumentPosition(mark) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("não mostra símbolo de provedor quando o cartão não traz a escolha do pedido", () => {
+    const card = cardOf({ actor: "agent", kind: "request", status: "completed" });
+
+    const { container } = render(<TaskRow card={card} userId="user-1" now={NOW} />);
+
+    const side = container.querySelector("[data-row-side]") as HTMLElement;
+    expect(within(side).getAllByRole("img")).toHaveLength(1);
+  });
+
+  it("a linha de pessoa não muda: sem lado direito de status e sem símbolo de provedor", () => {
+    const { container } = render(<TaskRow card={cardOf({ status: "done" })} userId="user-1" now={NOW} />);
+
+    expect(container.querySelector("[data-row-side]")).not.toBeInTheDocument();
+    expect(container.querySelector("[data-row-lead]")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Feito. Mudar status de “Revisar proposta”" })).toBeInTheDocument();
   });
 
   it("a hierarquia não muda a linha: subtarefa em espera mostra só o quando", () => {
@@ -153,5 +221,76 @@ describe("TaskRow", () => {
     const link = screen.getByRole("link", { name: /Revisar proposta/ });
     expect(link).toHaveAttribute("href", "/user-1/tarefas/ev-1");
     expect(within(link).getByText("Revisar proposta")).toBeInTheDocument();
+  });
+
+  describe("situação da tarefa de agente", () => {
+    const finished = (overrides: Partial<TaskCardDto> = {}) =>
+      cardOf({
+        id: "ag-1", actor: "agent", kind: "request", status: "completed", situation: "to_review", name: "Pesquisar voos",
+        startedAt: "2026-09-14T09:48:00-03:00", ...overrides,
+      });
+
+    it("o glifo da esquerda mostra a situação e abre as três opções na própria linha", () => {
+      render(<TaskRow card={finished()} userId="user-1" now={NOW} onSituationPick={vi.fn()} />);
+
+      const glyph = screen.getByRole("button", { name: "Para revisar. Mudar situação de “Pesquisar voos”" });
+      expect(glyph).toHaveAttribute("aria-expanded", "false");
+      expect(screen.queryByRole("group", { name: "Situação da tarefa" })).not.toBeInTheDocument();
+
+      fireEvent.click(glyph);
+
+      const menu = screen.getByRole("group", { name: "Situação da tarefa" });
+      expect(within(menu).getAllByRole("button").map((button) => button.textContent)).toEqual(["Para revisar", "Revisada", "Guardada"]);
+      expect(within(menu).getByRole("button", { name: "Para revisar" })).toHaveAttribute("aria-pressed", "true");
+      expect(within(menu).getByRole("button", { name: "Revisada" })).toHaveAttribute("aria-pressed", "false");
+      expect(glyph).toHaveAttribute("aria-expanded", "true");
+    });
+
+    it("escolher uma opção avisa a tela com o cartão e fecha a escolha", () => {
+      const onSituationPick = vi.fn();
+      const card = finished();
+      render(<TaskRow card={card} userId="user-1" now={NOW} onSituationPick={onSituationPick} />);
+
+      fireEvent.click(screen.getByRole("button", { name: /Mudar situação/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Guardada" }));
+
+      expect(onSituationPick).toHaveBeenCalledWith(card, "bookmarked");
+      expect(screen.queryByRole("group", { name: "Situação da tarefa" })).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ["to_review", "Para revisar"],
+      ["reviewed", "Revisada"],
+      ["bookmarked", "Guardada"],
+    ] as const)("a situação %s tem o nome acessível %s", (situation, name) => {
+      render(<TaskRow card={finished({ situation })} userId="user-1" now={NOW} onSituationPick={vi.fn()} />);
+
+      expect(screen.getByRole("button", { name: `${name}. Mudar situação de “Pesquisar voos”` })).toBeInTheDocument();
+    });
+
+    it("o status do agente continua à direita da linha, e o glifo da esquerda é só a situação", () => {
+      const { container } = render(<TaskRow card={finished()} userId="user-1" now={NOW} onSituationPick={vi.fn()} />);
+
+      expect(screen.getAllByRole("img", { name: "Agente, concluído" })).toHaveLength(1);
+      expect(container.querySelector("[data-row-side]")).toContainElement(screen.getByRole("img", { name: "Agente, concluído" }));
+      expect(container.querySelector("[data-row-lead]")).toBeNull();
+    });
+
+    it("a tarefa de agente esperando você e a execução agendada têm um ponto inerte, sem botão", () => {
+      for (const card of [finished({ status: "waiting", situation: undefined }), finished({ kind: "cron", situation: undefined })]) {
+        const { container, unmount } = render(<TaskRow card={card} userId="user-1" now={NOW} onSituationPick={vi.fn()} />);
+
+        expect(container.querySelector("[data-row-lead]")).toBeInTheDocument();
+        expect(screen.queryByRole("button")).not.toBeInTheDocument();
+        unmount();
+      }
+    });
+
+    it("sem quem trate a situação (a agenda), o lugar fica com o ponto inerte e sem botão", () => {
+      const { container } = render(<TaskRow card={finished()} userId="user-1" now={NOW} />);
+
+      expect(container.querySelector("[data-row-lead]")).toBeInTheDocument();
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    });
   });
 });

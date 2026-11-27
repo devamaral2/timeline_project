@@ -61,7 +61,7 @@ test("each Nest controller source declares one public route operation", () => {
   expect(controllers.length).toBeGreaterThan(0);
   for (const path of controllers) {
     const source = readFileSync(path, "utf8");
-    const routeDecorators = source.match(/@(Get|Post|Patch|Delete)\s*(?:\([^)]*\))?/g) ?? [];
+    const routeDecorators = source.match(/@(Get|Post|Put|Patch|Delete)\s*(?:\([^)]*\))?/g) ?? [];
     expect(routeDecorators, path).toHaveLength(1);
   }
 });

@@ -298,6 +298,22 @@ describe("acompanhar e cancelar", () => {
     expect(jobs.cancelOfTasks).toHaveBeenLastCalledWith([], "user-1");
   });
 
+  test("o pedido que fecha, de qualquer jeito, fica para revisar; o aberto e o passo ficam sem situacao", async () => {
+    const { store, operations } = setup();
+    store.seed({ id: "r1", prompt: "x" });
+    store.seed({ id: "r2", prompt: "y" });
+    store.seed({ id: "r3", prompt: "z" });
+    await store.beginSteps("r1", [{ id: "s1", agent: "entity", expected: "many" }]);
+
+    expect((await operations.view("r1", actor)).situation).toBeUndefined();
+    await operations.cancel("r1", actor);
+    await store.finish("r2", "completed", {});
+    await store.finish("r3", "failed", { errorCode: "internal" });
+
+    for (const id of ["r1", "r2", "r3"]) expect((await operations.view(id, actor)).situation, id).toBe("to_review");
+    expect(store.stepRecords.find((step) => step.id === "s1")).not.toHaveProperty("situation");
+  });
+
   test("o pedido que calcula um alimento nao se cancela por aqui", async () => {
     const { store, jobs, operations } = setup();
     store.seed({ id: "b1", prompt: "banana", route: "food", kind: "build_request", status: "queued" });

@@ -1,5 +1,5 @@
 /* Linha única das listas (agenda e lista de tarefas). Pessoa e agente usam a
-   mesma grade, soltos no fundo; o agente leva o robô como assinatura à direita.
+   mesma grade, soltos no fundo; o agente leva à direita o status e o provedor.
    Cores só por token. */
 
 /* Quebra a linha só para o que vem embaixo (a gaveta das subtarefas, com largura toda). */
@@ -103,9 +103,46 @@
   white-space: nowrap;
 }
 
-/* A assinatura do agente: fecha a linha, na borda direita. */
-.agentMark {
+/* O ponto inerte que ocupa o lugar do glifo na tarefa de agente. */
+.idleDot {
+  display: block;
+  color: var(--muted-foreground);
+  opacity: 0.4;
+}
+
+/* A ponta direita da tarefa de agente: o nome do status à esquerda do ícone quadrado e, abaixo,
+   o símbolo do provedor, alinhados na borda direita. */
+.side {
   flex: none;
-  margin-top: 2px;
-  color: var(--brand-accent);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.status {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 22px;
+  color: var(--muted-foreground);
+}
+.status[data-status="starting"],
+.status[data-status="running"] { color: var(--brand-accent); }
+.status[data-status="waiting"],
+.status[data-status="interrupted"] { color: var(--warning); }
+.status[data-status="completed"] { color: var(--success); }
+.status[data-status="failed"] { color: var(--destructive); }
+
+.provider {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 16px;
+  color: var(--muted-foreground);
+}
+.provider svg {
+  width: 15px;
+  height: 13px;
 }

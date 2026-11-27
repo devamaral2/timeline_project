@@ -65,6 +65,7 @@ export class InMemoryTaskDatabase {
       actor: task.actor,
       kind: task.kind,
       status: task.status,
+      situation: task.situation,
       priority: task.priority,
       name: task.name,
       description: task.description,

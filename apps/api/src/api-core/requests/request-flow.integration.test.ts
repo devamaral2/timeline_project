@@ -175,6 +175,56 @@ const statusOf = async (taskId: string) =>
 const jobStatuses = async () =>
   (await ctx.pool.query<{ kind: string; status: string }>("SELECT kind, status FROM jobs ORDER BY created_at, id")).rows;
 
+/** O pedido fecha para revisar, e nenhum passo ganha situacao: so o pedido tem. */
+async function situations(requestId: string): Promise<{ request: string | null; steps: Array<string | null> }> {
+  const { rows } = await ctx.pool.query<{ id: string; kind: string; situation: string | null }>(
+    "SELECT id, kind, situation FROM tasks WHERE actor = 'agent' ORDER BY id",
+  );
+  return {
+    request: rows.find((row) => row.id === requestId)?.situation ?? null,
+    steps: rows.filter((row) => row.kind === "step").map((row) => row.situation),
+  };
+}
+
+test("situacao: o pedido por passos que conclui fica para revisar, e o passo, sem situacao", async () => {
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Almoço", "meal", 12)] }));
+  const requestId = await operations.start({ userId: "user-1", text: "almocei" }, actor);
+  expect(await situations(requestId)).toEqual({ request: null, steps: [] });
+  await drain();
+
+  expect(await operations.view(requestId, actor)).toMatchObject({ status: "completed", situation: "to_review" });
+  expect(await situations(requestId)).toEqual({ request: "to_review", steps: [null] });
+});
+
+test("situacao: o pedido que falha fica para revisar", async () => {
+  gateway.outputs.set("failure_explainer", { message: "Não consegui registrar o almoço." });
+  const requestId = await operations.start({ userId: "user-1", text: "almocei arroz" }, actor);
+  await drain();
+
+  expect(await operations.view(requestId, actor)).toMatchObject({ status: "failed", situation: "to_review" });
+  expect(await situations(requestId)).toEqual({ request: "to_review", steps: [null] });
+});
+
+test("situacao: o pedido cancelado fica para revisar, e os passos cancelados, sem situacao", async () => {
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Almoço", "meal", 12)] }));
+  const requestId = await operations.start({ userId: "user-1", text: "almocei" }, actor);
+  await jobs.tick();
+  await jobs.idle();
+
+  expect(await operations.cancel(requestId, actor)).toMatchObject({ status: "cancelled", situation: "to_review" });
+  expect(await situations(requestId)).toEqual({ request: "to_review", steps: [null] });
+});
+
+test("situacao: o pedido do Hermes que conclui fica para revisar", async () => {
+  const trace: AgentTraceDto = { route: "hermes", status: "done", fields: [], entries: [] };
+  hermesReply = async () => ({ text: "Pronto.", trace });
+  const hermesId = await operations.start({ userId: "user-1", text: "fallback: oi" }, actor);
+  await drain();
+
+  expect(await operations.view(hermesId, actor)).toMatchObject({ status: "completed", situation: "to_review" });
+  expect(await situations(hermesId)).toEqual({ request: "to_review", steps: [] });
+});
+
 test("o exemplo-guia: um passo so grava tudo, a refeicao nasce com o alimento ligado e os nutrientes sao calculados depois", async () => {
   gateway.outputs.set("entity", entityAnswer({ tasks: [
     task("Refeição", "meal", 12, { foods: "300g de arroz", foodName: "Arroz" }), task("Nadar na praia", "training", 13),

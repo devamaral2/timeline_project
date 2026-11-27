@@ -338,6 +338,7 @@ function cancel(request: FakeRequest, store: FakeStore): FakeResult {
   const cancelled = requestSchema.parse({
     ...current,
     status: "cancelled",
+    situation: "to_review",
     errorCode: "cancelled",
     updatedAt: new Date().toISOString(),
   }) as RequestDto;

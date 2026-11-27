@@ -9,24 +9,19 @@
 }
 .statusGlyph[data-status="todo"],
 .statusGlyph[data-status="toDefine"],
-.statusGlyph[data-status="preparing"],
-.statusGlyph[data-status="queued"],
 .statusGlyph[data-status="cancel"],
-.statusGlyph[data-status="cancelled"],
-.statusGlyph[data-status="rolled_back"],
 .statusGlyph[data-status="missed"] { color: var(--muted-foreground); }
 .statusGlyph[data-status="doing"],
-.statusGlyph[data-status="inHold"],
-.statusGlyph[data-status="starting"],
-.statusGlyph[data-status="running"],
-.statusGlyph[data-status="waiting"],
-.statusGlyph[data-status="interrupted"] { color: var(--warning); }
-.statusGlyph[data-status="done"],
-.statusGlyph[data-status="completed"] { color: var(--success); }
-.statusGlyph[data-status="failed"] { color: var(--destructive); }
+.statusGlyph[data-status="inHold"] { color: var(--warning); }
+.statusGlyph[data-status="done"] { color: var(--success); }
 .statusGlyph[data-status="reference"] { color: var(--routine); }
 
-/* O ponto verde-agua de "em curso" e "executando": recortado em fundo, para
+/* A situacao do pedido de agente que terminou: apagada, sucesso ou informacao (o azul de `--routine`). */
+.situationGlyph { flex: none; display: block; overflow: visible; color: var(--muted-foreground); }
+.situationGlyph[data-situation="reviewed"] { color: var(--success); }
+.situationGlyph[data-situation="bookmarked"] { color: var(--routine); }
+
+/* O ponto verde-agua de "em curso": recortado em fundo, para
    separar do contorno. */
 .activeDot {
   fill: var(--brand);

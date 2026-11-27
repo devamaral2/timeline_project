@@ -15,7 +15,7 @@ import type {
 } from "../../../../domain/ports";
 import * as schema from "../../database/schema";
 import { sqlList } from "../../database/schema/sets";
-import { agentStatusesBefore } from "../../../../domain/agent-status";
+import { agentStatusesBefore, REVIEW_SITUATION_ON_CLOSE } from "../../../../domain/agent-status";
 import { completeCurrentJob } from "../../../jobs/job-context";
 import { appendEntry } from "../../requests/request-rows";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
@@ -170,7 +170,8 @@ export class PostgresArtifactRepository implements ArtifactRepository, FoodGener
       const closing = final === "failed" ? "failed" : "completed";
       const requests = await tx.execute<{ id: string }>(sql`
         UPDATE tasks e
-        SET status = ${closing}, finished_at = now(), updated_at = now()
+        SET status = ${closing}, situation = ${REVIEW_SITUATION_ON_CLOSE},
+            finished_at = now(), updated_at = now()
         FROM task_artifact_relation r
         WHERE r.artifact_id = ${payload.artifactId} AND r.task_id = e.id
           AND e.actor = 'agent' AND e.kind = 'build_request' AND e.status IN (${sqlList(agentStatusesBefore(closing))})

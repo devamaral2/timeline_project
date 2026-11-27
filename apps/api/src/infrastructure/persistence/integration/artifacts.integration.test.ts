@@ -277,7 +277,7 @@ describe("PostgresArtifactRepository", () => {
     /** O job pegou o pedido e o handler o marcou `running`: so de la ele conclui (ticket 56). */
     const running = (requestId: string) => ctx.pool.query("UPDATE tasks SET status = 'running' WHERE id = $1", [requestId]);
     const requestOf = async (requestId: string) =>
-      (await selectRows(ctx.pool, "SELECT status, finished_at FROM tasks WHERE id = $1", [requestId]))[0];
+      (await selectRows(ctx.pool, "SELECT status, situation, finished_at FROM tasks WHERE id = $1", [requestId]))[0];
     const resultsOf = (requestId: string) =>
       selectRows(ctx.pool, "SELECT kind, role, content, data FROM task_entries WHERE task_id = $1 AND kind = 'result'", [requestId]);
 
@@ -359,6 +359,7 @@ describe("PostgresArtifactRepository", () => {
       });
       const request = await requestOf(requestId);
       expect(request.status).toBe("completed");
+      expect(request.situation).toBe("to_review");
       expect(request.finished_at).toBeInstanceOf(Date);
       expect(await resultsOf(requestId)).toEqual([
         { kind: "result", role: null, content: null, data: { outcome: "completed", artifactId: food.id } },
@@ -372,7 +373,7 @@ describe("PostgresArtifactRepository", () => {
 
       expect(applied).toBe(true);
       expect((await found(food.id)).data).toMatchObject({ generation: { status: "failed" } });
-      expect((await requestOf(requestId)).status).toBe("failed");
+      expect(await requestOf(requestId)).toMatchObject({ status: "failed", situation: "to_review" });
       expect((await resultsOf(requestId)).map((entry) => entry.data)).toEqual([{ outcome: "failed", artifactId: food.id }]);
     });
 

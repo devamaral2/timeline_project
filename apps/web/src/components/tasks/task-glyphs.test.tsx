@@ -4,6 +4,7 @@ import type { TaskKind, TaskPriority } from "@repo/contracts";
 import { TaskKindMark } from "./task-kind-mark";
 import { TaskPriorityMark } from "./task-priority-mark";
 import { TaskStatusGlyph } from "./task-status-glyph";
+import { TaskSituationGlyph, situationNames } from "./task-situation";
 
 describe("TaskStatusGlyph", () => {
   it.each([
@@ -47,6 +48,31 @@ describe("TaskStatusGlyph", () => {
     render(<TaskStatusGlyph actor="human" status="todo" />);
 
     expect(screen.getByRole("img", { name: "A fazer" }).tagName.toLowerCase()).toBe("svg");
+  });
+});
+
+describe("TaskSituationGlyph", () => {
+  it.each([
+    ["to_review", "Para revisar"],
+    ["reviewed", "Revisada"],
+    ["bookmarked", "Guardada"],
+  ] as const)("nomeia a situação %s como %s", (situation, name) => {
+    render(<TaskSituationGlyph situation={situation} />);
+
+    expect(screen.getByRole("img", { name })).toBeInTheDocument();
+    expect(situationNames[situation]).toBe(name);
+  });
+
+  it("Revisada leva dois vistos e Guardada um marcador; Para revisar é o círculo vazio do 'A fazer'", () => {
+    const { container: review } = render(<TaskSituationGlyph situation="to_review" />);
+    const { container: todo } = render(<TaskStatusGlyph actor="human" status="todo" />);
+    const { container: done } = render(<TaskSituationGlyph situation="reviewed" />);
+    const { container: marked } = render(<TaskSituationGlyph situation="bookmarked" />);
+
+    expect(review.querySelector("svg")?.innerHTML).toBe(todo.querySelector("svg")?.innerHTML);
+    expect(done.querySelectorAll("circle")).toHaveLength(1);
+    expect(done.querySelector("path")?.getAttribute("d")?.match(/m/gi)).toHaveLength(2);
+    expect(marked.querySelector("circle")).toBeNull();
   });
 });
 

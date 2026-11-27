@@ -2,14 +2,14 @@
 
 import { ChevronDown, Hash, ListChecks } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TaskCardDto, TaskPriority, HumanTaskStatus } from "@repo/contracts";
+import type { TaskCardDto, TaskPriority, HumanTaskStatus, TaskSituation } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { TaskRow } from "@/components/tasks/task-row";
 import { TaskStatusPicker } from "@/components/tasks/task-status-picker";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
 import page from "@/components/ui/page.module.css";
 import { ApiRequestError } from "@/lib/api/client-request";
-import { listTrackedTasks, updateTask } from "@/lib/api/tasks";
+import { listTrackedTasks, setTaskSituation, updateTask } from "@/lib/api/tasks";
 import { hasOpenAgentTask } from "@/lib/tasks/agent-request-model";
 import { statusPatch } from "@/lib/tasks/task-read-model";
 import { taskPriorityLabels } from "@/components/tasks/task-priority-mark";
@@ -36,6 +36,7 @@ function toggleIn<T>(list: readonly T[], value: T): T[] {
 
 const STALE_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a lista atual; confira e tente de novo.";
 const FAILURE_MESSAGE = "Não foi possível trocar o status. Tente novamente.";
+const SITUATION_FAILURE_MESSAGE = "Não foi possível mudar a situação. Tente novamente.";
 /** Espera depois da última tecla antes de consultar a API pelo texto. Igual à aba Notas. */
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -158,6 +159,31 @@ export function TaskListScreen({ userId }: { userId: string }) {
     }
   }
 
+  /** Troca a situação de uma tarefa de agente na própria lista, sem reler: a mudança aparece na hora. */
+  function showSituation(taskId: string, situation: TaskSituation | undefined, onlyIf?: TaskSituation | undefined) {
+    const apply = (list: TaskCardDto[] | null) =>
+      list?.map((item) => (item.id === taskId && (onlyIf === undefined || item.situation === onlyIf) ? { ...item, situation } : item)) ?? null;
+    setCards(apply);
+    setFacets(apply);
+  }
+
+  /**
+   * A mudança aparece na hora e é desfeita se a gravação falhar. Vale a última gravação, sem revisão: não há
+   * conflito a tratar, só a falha.
+   */
+  async function changeSituation(card: TaskCardDto, situation: TaskSituation) {
+    if (situation === card.situation) return;
+    setNotice(null);
+    showSituation(card.id, situation);
+    try {
+      await setTaskSituation(card.id, situation);
+    } catch {
+      // Só desfaz se a linha ainda mostra a escolha que falhou: uma escolha mais nova não é apagada por esta.
+      showSituation(card.id, card.situation, situation);
+      setNotice(SITUATION_FAILURE_MESSAGE);
+    }
+  }
+
   // Uma série aparece uma vez; a subtarefa com a principal na lista vai para a gaveta dela.
   const rows = useMemo(() => oneRowPerSeries(cards ?? []), [cards]);
   const tree = useMemo(() => nestSubtasks(rows), [rows]);
@@ -271,6 +297,7 @@ export function TaskListScreen({ userId }: { userId: string }) {
                             now={now}
                             ruleInPlaceOfTime={showsSeriesRule(card)}
                             onStatusClick={openStatusPicker}
+                            onSituationPick={(picked, situation) => void changeSituation(picked, situation)}
                             aside={subtasks.length > 0 ? (
                               <SubtaskToggle card={card} subtasks={subtasks} expanded={drawerOpen} onToggle={() => toggleSubtasks(card.id)} />
                             ) : undefined}
