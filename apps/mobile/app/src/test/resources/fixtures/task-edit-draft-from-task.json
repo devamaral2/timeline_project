@@ -338,5 +338,56 @@
         "personal": true
       }
     }
+  },
+  {
+    "name": "inProject",
+    "task": {
+      "id": "task-p",
+      "actor": "human",
+      "kind": "common",
+      "status": "todo",
+      "priority": "medium",
+      "name": "Revisar o contrato",
+      "description": "",
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      },
+      "startedAt": "2026-09-14T21:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 2,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z",
+      "artifacts": [],
+      "subtaskIds": [],
+      "requests": []
+    },
+    "draft": {
+      "kind": "common",
+      "name": "Revisar o contrato",
+      "status": "todo",
+      "priority": "medium",
+      "startDate": "2026-09-14",
+      "startTime": "18:30",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      }
+    }
   }
 ]

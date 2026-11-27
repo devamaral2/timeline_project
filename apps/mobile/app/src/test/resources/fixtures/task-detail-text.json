@@ -306,9 +306,9 @@
         "name": "Reunião de planejamento",
         "description": "Pauta do trimestre.\nLevar o relatório impresso.",
         "project": {
-          "id": "project-personal",
-          "name": "personal",
-          "personal": true
+          "id": "project-timeline",
+          "name": "timeline_project",
+          "personal": false
         },
         "location": "Rua Augusta, 100 - São Paulo",
         "startedAt": "2026-09-14T21:30:00.000Z",

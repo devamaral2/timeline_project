@@ -10,7 +10,7 @@ import { agendaTasksByDay, isAgendaCard } from "../../../apps/web/src/components
 import { hasOpenAgentTask } from "../../../apps/web/src/lib/tasks/agent-request-model";
 import { humanStatusOptions, statusPatch } from "../../../apps/web/src/lib/tasks/task-read-model";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel, elapsedLabel } from "../../../apps/web/src/lib/tasks/card-text";
-import { PERSONAL_PROJECT } from "./project";
+import { AGENT_SKILLS_PROJECT, PERSONAL_PROJECT, TIMELINE_PROJECT } from "./project";
 
 /** 14 de setembro de 2026, 12:00 em São Paulo: uma segunda-feira. */
 export const NOW = "2026-09-14T15:00:00.000Z";
@@ -36,9 +36,9 @@ function card(input: CardInput) {
 }
 
 const cards = [
-  card({ id: "task-1", name: "Reunião de planejamento", status: "todo", startedAt: "2026-09-14T12:00:00.000Z", estimatedFinishAt: "2026-09-14T12:50:00.000Z", tags: ["trabalho", "saúde"] }),
+  card({ id: "task-1", name: "Reunião de planejamento", project: TIMELINE_PROJECT, status: "todo", startedAt: "2026-09-14T12:00:00.000Z", estimatedFinishAt: "2026-09-14T12:50:00.000Z", tags: ["trabalho", "saúde"] }),
   card({ id: "task-2", name: "Almoço", kind: "meal", status: "done", startedAt: "2026-09-14T15:00:00.000Z", estimatedFinishAt: "2026-09-14T16:30:00.000Z", tags: ["casa"] }),
-  card({ id: "task-3", name: "Buscar passagens", actor: "agent", kind: "search_request", status: "running", startedAt: "2026-09-14T14:48:00.000Z" }),
+  card({ id: "task-3", name: "Buscar passagens", project: AGENT_SKILLS_PROJECT, actor: "agent", kind: "search_request", status: "running", startedAt: "2026-09-14T14:48:00.000Z" }),
   card({ id: "task-4", name: "Montar relatório", actor: "agent", kind: "build_request", status: "queued", startedAt: "2026-09-14T14:57:00.000Z" }),
   card({ id: "task-5", name: "Qual hotel prefere?", actor: "agent", kind: "inquiry_request", status: "waiting", startedAt: "2026-09-14T13:00:00.000Z" }),
   card({ id: "task-6", name: "Dormir", kind: "sleep", status: "doing", startedAt: "2026-09-15T01:00:00.000Z", estimatedFinishAt: "2026-09-15T09:00:00.000Z" }),
