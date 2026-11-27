@@ -10,6 +10,7 @@ const sources: NotificationSource[] = [
   {
     id: "run",
     name: "Corrida",
+    actor: "human",
     longRunning: false,
     startedAt: new Date(NOW.getTime() + minutes(30)).toISOString(),
     notifyOffsetsMinutes: [60], // venceu ha 30 minutos
@@ -17,6 +18,7 @@ const sources: NotificationSource[] = [
   {
     id: "report",
     name: "Entregar relatório",
+    actor: "human",
     status: "todo", // acompanhado: aparece como tarefa
     longRunning: false,
     startedAt: new Date(NOW.getTime() + minutes(120)).toISOString(),

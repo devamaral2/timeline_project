@@ -1,5 +1,6 @@
 "use client";
 
+import { isCancelledAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto } from "@repo/contracts";
 import { ArrowUp, MessageSquare } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -77,7 +78,7 @@ export function AgentRequestBar({ userId, request, onRequestChange }: AgentReque
   const open = tracked !== null && isOpenRequest(tracked.status);
   const state: HermesState = speech.listening ? "listening"
     : open || (tracked === null) ? "thinking"
-    : tracked.status === "done" ? "done"
+    : isSuccessAgentStatus(tracked.status) ? "done"
     : tracked.status === "failed" ? "error"
     : "idle";
   const disabled = sending || cancelling || !tracked;
@@ -126,9 +127,9 @@ export function AgentRequestBar({ userId, request, onRequestChange }: AgentReque
   const statusText = speech.listening ? "Ouvindo…"
     : tracked === null ? "Enviando o pedido…"
     : open ? (tracked.progress ?? runningStepLabel(tracked) ?? "Entendendo o pedido…")
-    : tracked.status === "done" ? "Pronto"
+    : isSuccessAgentStatus(tracked.status) ? "Pronto"
     : tracked.status === "failed" ? "Não deu certo"
-    : tracked.status === "cancel" ? "Pedido cancelado"
+    : isCancelledAgentStatus(tracked.status) ? "Pedido cancelado"
     : "Esperando o seu pedido";
   const failureReason = followId && tracked?.status === "failed" ? agentFailureText(tracked.errorCode ?? "internal") : null;
 

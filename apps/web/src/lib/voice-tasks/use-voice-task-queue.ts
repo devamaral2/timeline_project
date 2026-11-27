@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isCancelledAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto, RequestEntityDto } from "@repo/contracts";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { operationId } from "@/lib/api/operation-id";
@@ -75,7 +76,7 @@ export function useVoiceTaskQueue({ onCreated }: { onCreated: (task: RequestEnti
       } else {
         const request = job.cancelling ? await cancelRequest(job.requestId) : await getRequest(job.requestId);
         if (!activeRef.current || generationRef.current !== generation) return;
-        const created = request.status === "done" ? createdTaskOf(request) : undefined;
+        const created = isSuccessAgentStatus(request.status) ? createdTaskOf(request) : undefined;
         if (isOpenRequest(request.status)) {
           commit(jobsRef.current.map((item) => item.id !== job.id ? item : { ...item, progress: request.progress }));
         } else if (created) {
@@ -83,7 +84,7 @@ export function useVoiceTaskQueue({ onCreated }: { onCreated: (task: RequestEnti
           onCreatedRef.current(created);
         } else {
           terminal = true;
-          const error = request.status === "cancel" ? "Pedido cancelado." : request.message ?? CREATION_FAILED;
+          const error = isCancelledAgentStatus(request.status) ? "Pedido cancelado." : request.message ?? CREATION_FAILED;
           commit(jobsRef.current.map((item) => item.id !== job.id ? item : { ...item, status: "error", error, cancelling: false }));
         }
       }

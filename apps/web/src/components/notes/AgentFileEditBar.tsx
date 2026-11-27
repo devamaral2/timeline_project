@@ -1,5 +1,6 @@
 "use client";
 
+import { isCancelledAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestDto } from "@repo/contracts";
 import { ArrowUp, FileText, X } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
@@ -139,24 +140,24 @@ export function AgentFileEditBar({ path, onDone, pollMs = AGENT_REQUEST_POLL_MS 
 
   const failed = followed?.status === "failed";
   const message = lost ? LOST_TEXT
-    : followed?.status === "done" ? (followed.message ?? null)
+    : followed && isSuccessAgentStatus(followed.status) ? (followed.message ?? null)
     : failed ? agentFailureText(followed.errorCode ?? "internal")
-    : followed?.status === "cancel" ? agentFailureText("cancelled")
+    : followed && isCancelledAgentStatus(followed.status) ? agentFailureText("cancelled")
     : null;
   const shown = error ?? message;
   const hasFailure = error !== null || failed || lost;
   const state: HermesState = speech.listening ? "listening"
     : sending || open ? "thinking"
-    : followed?.status === "done" ? "done"
+    : followed && isSuccessAgentStatus(followed.status) ? "done"
     : hasFailure ? "error"
     : "idle";
   const statusText = speech.listening ? "Ouvindo…"
     : sending ? "Enviando o pedido…"
     : lost ? "Não consegui acompanhar o pedido"
     : open ? (followed?.progress ?? (followed ? runningStepLabel(followed) : undefined) ?? "Entendendo o pedido…")
-    : followed?.status === "done" ? "Pronto"
+    : followed && isSuccessAgentStatus(followed.status) ? "Pronto"
     : failed ? "Não deu certo"
-    : followed?.status === "cancel" ? "Pedido cancelado"
+    : followed && isCancelledAgentStatus(followed.status) ? "Pedido cancelado"
     : "Esperando o seu pedido";
   const canDismiss = finished || lost;
 
