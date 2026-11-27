@@ -43,7 +43,7 @@ const cards = [
   card({ id: "task-5", name: "Qual hotel prefere?", actor: "agent", kind: "inquiry_request", status: "waiting", startedAt: "2026-09-14T13:00:00.000Z" }),
   card({ id: "task-6", name: "Dormir", kind: "sleep", status: "doing", startedAt: "2026-09-15T01:00:00.000Z", estimatedFinishAt: "2026-09-15T09:00:00.000Z" }),
   card({ id: "task-7", name: "Projeto longo", status: "doing", longRunning: true, startedAt: "2026-09-01T12:00:00.000Z", estimatedFinishAt: "2026-11-30T12:00:00.000Z", tags: ["trabalho"] }),
-  card({ id: "task-8", name: "Passo da pesquisa", actor: "agent", kind: "step", status: "done", startedAt: "2026-09-14T14:00:00.000Z" }),
+  card({ id: "task-8", name: "Passo da pesquisa", actor: "agent", kind: "step", status: "completed", startedAt: "2026-09-14T14:00:00.000Z" }),
   card({ id: "task-9", name: "Pagar o condomínio", status: undefined, revision: 4, startedAt: "2026-09-14T03:00:00.000Z" }),
   card({ id: "task-10", name: "Ligar para o banco", status: "todo", startedAt: "2026-09-13T15:00:00.000Z", estimatedFinishAt: "2026-09-13T15:15:00.000Z" }),
   card({ id: "task-11", name: "Devolver o livro", status: "todo", startedAt: "2026-09-11T15:00:00.000Z" }),
@@ -51,10 +51,10 @@ const cards = [
   card({ id: "task-13", name: "Declarar imposto", status: "todo", longRunning: true, startedAt: "2026-08-01T12:00:00.000Z", estimatedFinishAt: "2026-09-10T12:00:00.000Z" }),
   card({ id: "task-14", name: "Treino de amanhã", kind: "training", status: "todo", startedAt: "2026-09-15T11:00:00.000Z", tags: ["saúde"] }),
   card({ id: "task-15", name: "Backup falhou", actor: "agent", kind: "cron", status: "failed", startedAt: "2026-09-14T02:00:00.000Z" }),
-  card({ id: "task-16", name: "Resumo pronto", actor: "agent", kind: "review_request", status: "done", startedAt: "2026-09-12T15:00:00.000Z" }),
+  card({ id: "task-16", name: "Resumo pronto", actor: "agent", kind: "review_request", status: "completed", startedAt: "2026-09-12T15:00:00.000Z" }),
   card({ id: "task-17", name: "Jantar até a meia-noite", kind: "meal", status: "todo", startedAt: "2026-09-15T01:00:00.000Z", estimatedFinishAt: "2026-09-15T03:00:00.000Z" }),
   card({ id: "task-18", name: "Prova de 1h30", status: "todo", startedAt: "2026-09-16T12:00:00.000Z", estimatedFinishAt: "2026-09-16T13:30:00.000Z" }),
-  card({ id: "task-19", name: "Pedido cancelado", actor: "agent", kind: "request", status: "cancel", startedAt: "2026-09-14T10:00:00.000Z" }),
+  card({ id: "task-19", name: "Pedido cancelado", actor: "agent", kind: "request", status: "cancelled", startedAt: "2026-09-14T10:00:00.000Z" }),
   card({ id: "task-20", name: "Em espera", status: "inHold", startedAt: "2026-09-17T12:00:00.000Z", estimatedFinishAt: "2026-09-17T14:00:00.000Z" }),
 ];
 
@@ -66,7 +66,9 @@ const pageTwo = [WEEK_CARDS[2], ...WEEK_CARDS.slice(6)];
 const byDay = agendaTasksByDay(cards);
 
 const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
-const AGENT_STATUSES = ["queued", "running", "waiting", "done", "failed", "cancel"] as const;
+const AGENT_STATUSES = [
+  "preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+] as const;
 const STATUS_NOW = new Date("2026-09-14T15:30:45.123Z");
 
 /** A tarefa de referência da agenda depois que outro lugar a mudou: a releitura que o conflito e o sucesso trazem. */
@@ -84,7 +86,7 @@ export function tasksFixtures(): Record<string, unknown> {
     "tasks-agenda-reference-done": agendaPageSchema.parse({ items: [referenceCard("done", 5)] }),
     /** A semana depois que o agente terminou o que estava aberto. */
     "tasks-agenda-agents-finished": agendaPageSchema.parse({
-      items: [card({ id: "task-3", name: "Buscar passagens", actor: "agent", kind: "search_request", status: "done", startedAt: "2026-09-14T14:48:00.000Z" })],
+      items: [card({ id: "task-3", name: "Buscar passagens", actor: "agent", kind: "search_request", status: "completed", startedAt: "2026-09-14T14:48:00.000Z" })],
     }),
     /** As saídas de `statusPatch`, `humanStatusOptions` e `hasOpenAgentTask` do web, para todas as entradas que importam. */
     "tasks-status-change": {

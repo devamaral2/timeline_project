@@ -2,7 +2,7 @@
   "id": "R00000000000000000000000A2",
   "kind": "request",
   "route": "steps",
-  "status": "done",
+  "status": "completed",
   "title": "O que tenho amanhã?",
   "project": {
     "id": "project-personal",
@@ -17,7 +17,7 @@
       "id": "q1",
       "agent": "query",
       "label": "Consultando a agenda",
-      "status": "done",
+      "status": "completed",
       "result": {
         "columns": [
           "Tarefa",

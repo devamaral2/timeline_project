@@ -124,7 +124,8 @@ or (actor = 'agent' and kind in ('request', 'search_request', 'build_request',
 (actor = 'human' and (status is null
                       or status in ('todo', 'toDefine', 'doing', 'inHold', 'done', 'cancel', 'missed')))
 or (actor = 'agent' and status is not null
-    and status in ('queued', 'running', 'waiting', 'done', 'failed', 'cancel'))
+    and status in ('preparing', 'queued', 'starting', 'running', 'waiting', 'completed', 'interrupted', 'failed',
+                   'cancelled', 'rolled_back'))  -- ADR 0022 (era queued, running, waiting, done, failed, cancel)
 
 -- evento longo: de pessoa, com status, sem recorrência, nunca perdido
 not long_running or (actor = 'human' and status is not null and status <> 'missed' and recurrence_id is null)

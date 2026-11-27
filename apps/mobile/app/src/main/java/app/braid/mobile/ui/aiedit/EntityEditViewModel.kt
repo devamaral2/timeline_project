@@ -215,7 +215,13 @@ class EntityEditViewModel
                 mutableState.update { it.copy(phase = EditPhase.Done) }
                 if (view.entities.isNotEmpty()) mutableEdited.tryEmit(Unit)
             } else {
-                fail(agentFailureText(view.errorCode ?: if (view.status == TaskStatus.Cancel) "cancelled" else "internal"))
+                val code =
+                    when (view.status) {
+                        TaskStatus.Cancelled -> "cancelled"
+                        TaskStatus.Interrupted -> "interrupted"
+                        else -> view.errorCode ?: "internal"
+                    }
+                fail(agentFailureText(code))
             }
         }
 

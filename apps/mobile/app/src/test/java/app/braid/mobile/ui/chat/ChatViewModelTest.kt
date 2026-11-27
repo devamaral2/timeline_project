@@ -125,7 +125,7 @@ class ChatViewModelTest {
             val done =
                 chat.until {
                     it.pending == null &&
-                        it.messages.any { m -> m is ChatMessage.Process && m.request?.status == TaskStatus.Done }
+                        it.messages.any { m -> m is ChatMessage.Process && m.request?.status == TaskStatus.Completed }
                 }
 
             val body = bodyOf(backend.requestsTo("POST", requestsPath).single())

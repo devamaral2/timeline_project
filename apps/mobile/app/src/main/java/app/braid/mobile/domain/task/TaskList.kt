@@ -34,12 +34,14 @@ class TaskGroup(
 /** Cada status, de pessoa ou de agente, cai em exatamente um grupo; o desconhecido fica à vista, em "A fazer". */
 private fun groupOf(status: TaskStatus): TaskGroupKey =
     when (status) {
-        TaskStatus.Doing, TaskStatus.Running -> TaskGroupKey.Doing
-        TaskStatus.Todo, TaskStatus.Queued, TaskStatus.Unknown -> TaskGroupKey.Todo
+        TaskStatus.Doing, TaskStatus.Starting, TaskStatus.Running -> TaskGroupKey.Doing
+        TaskStatus.Todo, TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Unknown -> TaskGroupKey.Todo
         TaskStatus.ToDefine -> TaskGroupKey.ToDefine
         TaskStatus.InHold, TaskStatus.Waiting -> TaskGroupKey.Waiting
-        TaskStatus.Done -> TaskGroupKey.Done
-        TaskStatus.Cancel, TaskStatus.Missed, TaskStatus.Failed -> TaskGroupKey.Closed
+        TaskStatus.Done, TaskStatus.Completed -> TaskGroupKey.Done
+        TaskStatus.Cancel, TaskStatus.Missed, TaskStatus.Failed, TaskStatus.Cancelled, TaskStatus.Interrupted,
+        TaskStatus.RolledBack,
+        -> TaskGroupKey.Closed
     }
 
 /** Agrupa as linhas da lista; cartão sem status (de referência) fica de fora e grupo vazio não é devolvido. */

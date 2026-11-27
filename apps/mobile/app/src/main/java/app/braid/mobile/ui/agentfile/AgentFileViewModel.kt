@@ -105,7 +105,8 @@ data class EditBar(
                 lost -> EDIT_LOST_TEXT
                 isSuccessAgentStatus(followed?.status) -> followed?.message
                 failed -> agentFailureText(followed?.errorCode ?: "internal")
-                followed?.status == TaskStatus.Cancel -> agentFailureText("cancelled")
+                followed?.status == TaskStatus.Cancelled -> agentFailureText("cancelled")
+                followed?.status == TaskStatus.Interrupted -> agentFailureText("interrupted")
                 else -> null
             }
 
@@ -121,7 +122,8 @@ data class EditBar(
                 open -> followed?.progress ?: followed?.let { runningStepLabel(it.steps) } ?: "Entendendo o pedido…"
                 isSuccessAgentStatus(followed?.status) -> "Pronto"
                 failed -> "Não deu certo"
-                followed?.status == TaskStatus.Cancel -> "Pedido cancelado"
+                followed?.status == TaskStatus.Cancelled -> "Pedido cancelado"
+                followed?.status == TaskStatus.Interrupted -> "Pedido interrompido"
                 else -> "Esperando o seu pedido"
             }
 }

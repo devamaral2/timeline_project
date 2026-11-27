@@ -47,7 +47,7 @@ class UnknownStatusTest {
         val read = BraidJson.decodeFromJsonElement(RequestDto.serializer(), request).toDomain()
 
         assertEquals(TaskStatus.Unknown, read.status)
-        assertEquals(listOf(TaskStatus.Done, TaskStatus.Running, TaskStatus.Queued), read.steps.map { it.status })
+        assertEquals(listOf(TaskStatus.Completed, TaskStatus.Running, TaskStatus.Queued), read.steps.map { it.status })
     }
 
     @Test
@@ -74,6 +74,6 @@ class UnknownStatusTest {
         val read = BraidJson.decodeFromJsonElement(RequestDto.serializer(), JsonObject(withUnknownStep)).toDomain()
 
         assertEquals(TaskStatus.Running, read.status)
-        assertEquals(listOf(TaskStatus.Done, TaskStatus.Unknown, TaskStatus.Queued), read.steps.map { it.status })
+        assertEquals(listOf(TaskStatus.Completed, TaskStatus.Unknown, TaskStatus.Queued), read.steps.map { it.status })
     }
 }

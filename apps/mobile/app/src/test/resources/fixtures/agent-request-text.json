@@ -1,7 +1,15 @@
 {
   "open": [
     {
+      "status": "preparing",
+      "open": true
+    },
+    {
       "status": "queued",
+      "open": true
+    },
+    {
+      "status": "starting",
       "open": true
     },
     {
@@ -13,7 +21,11 @@
       "open": true
     },
     {
-      "status": "done",
+      "status": "completed",
+      "open": false
+    },
+    {
+      "status": "interrupted",
       "open": false
     },
     {
@@ -21,7 +33,11 @@
       "open": false
     },
     {
-      "status": "cancel",
+      "status": "cancelled",
+      "open": false
+    },
+    {
+      "status": "rolled_back",
       "open": false
     }
   ],
@@ -40,7 +56,7 @@
           "id": "s1",
           "agent": "router",
           "label": "Entender o pedido",
-          "status": "done"
+          "status": "completed"
         },
         {
           "id": "s2",
@@ -67,19 +83,19 @@
           "id": "s1",
           "agent": "router",
           "label": "Entender o pedido",
-          "status": "done"
+          "status": "completed"
         },
         {
           "id": "s2",
           "agent": "search",
           "label": "Buscar voos",
-          "status": "done"
+          "status": "completed"
         },
         {
           "id": "s3",
           "agent": "writer",
           "label": "Montar o resumo",
-          "status": "done"
+          "status": "completed"
         }
       ],
       "progress": {

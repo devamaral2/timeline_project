@@ -4,7 +4,7 @@
       "id": "task-3",
       "actor": "agent",
       "kind": "search_request",
-      "status": "done",
+      "status": "completed",
       "priority": "medium",
       "name": "Buscar passagens",
       "description": "",

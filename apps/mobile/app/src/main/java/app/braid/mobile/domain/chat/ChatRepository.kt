@@ -16,6 +16,7 @@ enum class ChatFailureCode(
     Conflict("conflict"),
     Unavailable("unavailable"),
     Cancelled("cancelled"),
+    Interrupted("interrupted"),
     Internal("internal"),
     ConnectionLost("connection_lost"),
     ConnectionFailed("connection_failed"),

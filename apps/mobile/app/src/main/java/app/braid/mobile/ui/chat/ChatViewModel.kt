@@ -618,7 +618,13 @@ class ChatViewModel
             if (view.entities.isNotEmpty()) mutableEntitiesChanged.tryEmit(Unit)
             // O agente desligado: o servidor escreve o aviso, que diz mais que o texto do código.
             val notice = if (ChatAgent.of(view.route) != null && view.errorCode == "unavailable") view.message else null
-            fail(id, if (view.status == TaskStatus.Cancel) ChatFailureCode.Cancelled else ChatFailureCode.fromCode(view.errorCode), notice)
+            val code =
+                when (view.status) {
+                    TaskStatus.Cancelled -> ChatFailureCode.Cancelled
+                    TaskStatus.Interrupted -> ChatFailureCode.Interrupted
+                    else -> ChatFailureCode.fromCode(view.errorCode)
+                }
+            fail(id, code, notice)
         }
 
         /** [text] troca o texto do código pelo que o servidor escreveu (o aviso do agente desligado). */
@@ -635,7 +641,7 @@ class ChatViewModel
                     pending = if (current.pending?.id == id) null else current.pending,
                     messages =
                         current.messages.map {
-                            if (it.id == id && it is ChatMessage.User && code != ChatFailureCode.Cancelled) it.copy(failed = true) else it
+                            if (it.id == id && it is ChatMessage.User && code != ChatFailureCode.Cancelled && code != ChatFailureCode.Interrupted) it.copy(failed = true) else it
                         } +
                             ChatMessage.Error(
                                 id = "$id-error",

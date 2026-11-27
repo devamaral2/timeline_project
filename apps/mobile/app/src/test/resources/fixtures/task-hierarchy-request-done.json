@@ -2,7 +2,7 @@
   "id": "req-hermes",
   "kind": "request",
   "route": "steps",
-  "status": "done",
+  "status": "completed",
   "title": "Preparar a viagem",
   "project": {
     "id": "project-personal",

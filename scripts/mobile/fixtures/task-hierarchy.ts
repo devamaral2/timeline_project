@@ -112,9 +112,9 @@ const requests = {
   queued: request({ id: "req-hermes", status: "queued" }),
   running: request({ id: "req-hermes", status: "running", progress: "Criando as tarefas…" }),
   runningStep: request({ id: "req-hermes", status: "running", steps: [{ id: "s1", agent: "writer", label: "Montar as tarefas", status: "running" }] }),
-  done: request({ id: "req-hermes", status: "done", entities: createdEntities }),
-  doneNothing: request({ id: "req-hermes", status: "done", entities: createdEntities.slice(3), message: "Não encontrei o que criar." }),
-  doneNothingBare: request({ id: "req-hermes", status: "done", entities: [] }),
+  done: request({ id: "req-hermes", status: "completed", entities: createdEntities }),
+  doneNothing: request({ id: "req-hermes", status: "completed", entities: createdEntities.slice(3), message: "Não encontrei o que criar." }),
+  doneNothingBare: request({ id: "req-hermes", status: "completed", entities: [] }),
   failed: request({ id: "req-hermes", status: "failed", errorCode: "unavailable", message: "O Hermes está fora do ar." }),
   failedBare: request({ id: "req-hermes", status: "failed", errorCode: "internal" }),
 };

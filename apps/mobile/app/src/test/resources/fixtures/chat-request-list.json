@@ -44,7 +44,7 @@
     "id": "R00000000000000000000000C1",
     "kind": "request",
     "route": "steps",
-    "status": "done",
+    "status": "completed",
     "title": "Já terminou",
     "project": {
       "id": "project-personal",

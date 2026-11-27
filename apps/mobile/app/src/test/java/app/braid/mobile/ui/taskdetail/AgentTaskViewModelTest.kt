@@ -361,7 +361,7 @@ class AgentTaskViewModelTest {
             viewModel.cancel()
             val content =
                 viewModel.state.first {
-                    it is AgentTaskUiState.Content && it.request.status == TaskStatus.Cancel
+                    it is AgentTaskUiState.Content && it.request.status == TaskStatus.Cancelled
                 } as AgentTaskUiState.Content
 
             assertEquals(1, backend.requestsTo("POST", "$requestPath/cancel").size)
@@ -386,7 +386,7 @@ class AgentTaskViewModelTest {
             viewModel.cancel()
             val content =
                 viewModel.state.first {
-                    it is AgentTaskUiState.Content && it.composer.followed?.status == TaskStatus.Done
+                    it is AgentTaskUiState.Content && it.composer.followed?.status == TaskStatus.Completed
                 } as AgentTaskUiState.Content
 
             assertEquals(1, backend.requestsTo("POST", "/api/requests/req-new/cancel").size)
@@ -497,8 +497,8 @@ class AgentTaskViewModelTest {
             val content =
                 viewModel.state.first {
                     it is AgentTaskUiState.Content &&
-                        it.request.status == TaskStatus.Done &&
-                        it.task.status == TaskStatus.Done
+                        it.request.status == TaskStatus.Completed &&
+                        it.task.status == TaskStatus.Completed
                 } as AgentTaskUiState.Content
             val readsNow = reads(requestPath)
             advanceTimeBy(60_000)
@@ -559,7 +559,7 @@ class AgentTaskViewModelTest {
             runCurrent()
             val content =
                 viewModel.state.first {
-                    it is AgentTaskUiState.Content && it.composer.followed?.status == TaskStatus.Done
+                    it is AgentTaskUiState.Content && it.composer.followed?.status == TaskStatus.Completed
                 } as AgentTaskUiState.Content
             val readsNow = reads("/api/requests/req-new")
             advanceTimeBy(60_000)

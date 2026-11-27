@@ -52,9 +52,9 @@ const cards = [
   card({ id: "task-6", name: "Ideia sem data", status: "toDefine", priority: "low", tags: ["casa"] }),
   card({ id: "task-7", name: "Esperando retorno do banco", status: "inHold", startedAt: "2026-09-16T12:00:00.000Z", tags: ["casa"] }),
   card({ id: "task-8", name: "Almoço", kind: "meal", status: "done", startedAt: "2026-09-14T15:00:00.000Z", estimatedFinishAt: "2026-09-14T16:30:00.000Z", tags: ["áurea"] }),
-  card({ id: "task-9", name: "Resumo pronto", actor: "agent", kind: "review_request", status: "done", startedAt: "2026-09-12T15:00:00.000Z" }),
+  card({ id: "task-9", name: "Resumo pronto", actor: "agent", kind: "review_request", status: "completed", startedAt: "2026-09-12T15:00:00.000Z" }),
   card({ id: "task-10", name: "Backup falhou", actor: "agent", kind: "cron", status: "failed", startedAt: "2026-09-14T02:00:00.000Z" }),
-  card({ id: "task-11", name: "Pedido cancelado", actor: "agent", kind: "request", status: "cancel", startedAt: "2026-09-14T10:00:00.000Z" }),
+  card({ id: "task-11", name: "Pedido cancelado", actor: "agent", kind: "request", status: "cancelled", startedAt: "2026-09-14T10:00:00.000Z" }),
   card({ id: "task-12", name: "Consulta perdida", status: "missed", startedAt: "2026-09-10T12:00:00.000Z" }),
   card({ id: "task-13", name: "Projeto longo", status: "doing", longRunning: true, startedAt: "2026-09-01T12:00:00.000Z", estimatedFinishAt: "2026-11-30T12:00:00.000Z", tags: ["trabalho"] }),
   // Série diária "Meditar": fica a aberta de menor `occurrenceOn`, na posição dela.
@@ -154,9 +154,9 @@ export function taskListFixtures(): Record<string, unknown> {
     "task-list-agents": cards.filter((item) => item.actor === "agent"),
     /** A lista depois que os três pedidos abertos do agente terminaram. */
     "task-list-agents-finished": reread({
-      "task-3": { status: "done" },
-      "task-4": { status: "done" },
-      "task-5": { status: "done" },
+      "task-3": { status: "completed" },
+      "task-4": { status: "completed" },
+      "task-5": { status: "completed" },
     }),
     /** Depois de "Reunião de planejamento" passar a "doing" (revisão 4) e a "done" (revisão 4), pelo próprio servidor. */
     "task-list-after-doing": reread({ "task-1": { status: "doing", revision: 4 } }),

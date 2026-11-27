@@ -2,7 +2,7 @@
   "id": "task-agent",
   "kind": "search_request",
   "route": "steps",
-  "status": "done",
+  "status": "completed",
   "title": "Buscar passagens",
   "project": {
     "id": "project-personal",
@@ -18,19 +18,19 @@
       "id": "s1",
       "agent": "router",
       "label": "Entender o pedido",
-      "status": "done"
+      "status": "completed"
     },
     {
       "id": "s2",
       "agent": "search",
       "label": "Buscar voos",
-      "status": "done"
+      "status": "completed"
     },
     {
       "id": "s3",
       "agent": "writer",
       "label": "Montar o resumo",
-      "status": "done"
+      "status": "completed"
     }
   ],
   "entities": [
