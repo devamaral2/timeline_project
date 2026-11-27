@@ -73,7 +73,7 @@ fun TaskRow(
             ruleInPlaceOfTime = ruleInPlaceOfTime,
             modifier = Modifier.weight(1f),
         )
-        if (aside != null) Box(Modifier.padding(top = 7.dp)) { aside() }
+        if (aside != null) Box(Modifier.padding(top = 13.dp)) { aside() }
     }
 }
 
@@ -98,8 +98,8 @@ private fun TaskRowBody(
                 .fillMaxWidth()
                 .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
                 .semantics(mergeDescendants = true) {}
-                .padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.Top,
     ) {
         if (isAgent) {
@@ -117,7 +117,7 @@ private fun TaskRowBody(
                 TaskStatusGlyph(actor = card.actor, status = card.status)
             }
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ROW_LINE_GAP)) {
             Text(
                 text = layout.title,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -126,7 +126,7 @@ private fun TaskRowBody(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 TaskKindMark(layout.meta.kind)
                 Text(
                     text = layout.meta.whenText,
@@ -140,7 +140,7 @@ private fun TaskRowBody(
             }
             // As tags têm linha própria (só quando há); no web têm o cinza e o estilo da linha do tipo. As cores de tag são dos filtros e da edição.
             if (layout.tags.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     layout.tags.forEach { tag ->
                         Text(text = "#$tag", color = muted, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 1)
                     }
@@ -177,7 +177,7 @@ private fun AgentLead(
 @Composable
 private fun AgentStatusEnd(status: TaskStatus?) {
     val tone = agentToneColor(remember(status) { agentStatusIcon(status) }.tone)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         agentStatusLabel(status)?.let { label ->
             Text(
                 text = label,
@@ -193,13 +193,14 @@ private fun AgentStatusEnd(status: TaskStatus?) {
 }
 
 /**
- * A ponta direita, alinhada à borda direita, em duas linhas com 4 dp entre elas. No alto, na altura do título (22 dp):
+ * A ponta direita, alinhada à borda direita, a 16 dp do texto, em duas linhas com [ROW_LINE_GAP] entre elas. No alto, na altura do título (22 dp):
  * a prioridade (pessoa) ou o nome do status à esquerda do ícone quadrado (agente). Embaixo, a marca do projeto sozinha
  * (o nome é só a descrição dela) e, na tarefa de agente com a escolha do pedido, o símbolo do provedor à esquerda dela.
  */
 @Composable
 private fun RowSide(side: TaskRowSide) {
-    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    // A linha já afasta os três blocos 14 dp; os 2 dp a mais dão os 16 dp do web entre o texto e a ponta.
+    Column(Modifier.padding(start = 2.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(ROW_LINE_GAP)) {
         Box(Modifier.height(22.dp), contentAlignment = Alignment.Center) {
             when (val top = side.top) {
                 is TaskRowTop.Priority -> TaskPriorityMark(top.priority)
@@ -208,7 +209,7 @@ private fun RowSide(side: TaskRowSide) {
         }
         Row(
             Modifier.defaultMinSize(minHeight = 18.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             side.marks.provider?.let { provider ->
@@ -228,4 +229,7 @@ private fun RowSide(side: TaskRowSide) {
 }
 
 private val GLYPH_SLOT = 24.dp
+
+/** O respiro entre as linhas do texto e entre as da ponta direita: o mesmo, para as segundas linhas caírem na mesma altura. */
+private val ROW_LINE_GAP = 8.dp
 private const val IDLE_DOT_ALPHA = 0.4f
