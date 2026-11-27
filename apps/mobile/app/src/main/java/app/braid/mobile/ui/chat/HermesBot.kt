@@ -48,7 +48,7 @@ import kotlinx.coroutines.delay
 
 /*
  * O robô do Hermes e os seus cinco estados, com as animações do web (`hermes-bot.module.css`): parado ele pisca; ao ouvir,
- * pensar, concluir ou falhar o corpo se desfaz e as peças viram a onda, os cinco pontos, o ✓ (que se desenha, com um pulo)
+ * pensar, concluir ou falhar o corpo se desfaz e as peças viram a onda, os três pontos que pulam, o ✓ (que se desenha, com um pulo)
  * ou a exclamação (que balança). Cada peça vai de uma pose a outra com os tempos do app: 240 ms na curva de saída para a
  * forma e 120 ms lineares para a opacidade. Com as animações desligadas no sistema, só a pose muda.
  */
@@ -75,7 +75,11 @@ private const val BLINK_PERIOD_MS = 4800L
 private const val BLINK_START = 0.93f
 private const val WAVE_PERIOD_MS = 900L
 private const val DOT_PERIOD_MS = 1200L
-private const val DOT_REST = 0.35f
+private const val DOT_REST = 0.32f
+
+/** Quanto o ponto sobe e cresce no alto do pulo, em unidades da grade. */
+private const val DOT_JUMP = -4.8f
+private const val DOT_GROW = 1.12f
 private const val POP_DELAY_MS = 170L
 private const val POP_MS = 460L
 private const val SHAKE_DELAY_MS = 80L
@@ -98,11 +102,9 @@ private enum class Piece(
     W3(svgRect(14.4f, 4f, 3.2f, 24f, 1.6f), fill = true),
     W4(svgRect(19.9f, 9f, 3.2f, 14f, 1.6f), fill = true),
     W5(svgRect(25.4f, 12f, 3.2f, 8f, 1.6f), fill = true),
-    D1(svgCircle(5f, 16f, 2.1f), fill = true),
-    D2(svgCircle(10.5f, 16f, 2.1f), fill = true),
-    D3(svgCircle(16f, 16f, 2.1f), fill = true),
-    D4(svgCircle(21.5f, 16f, 2.1f), fill = true),
-    D5(svgCircle(27f, 16f, 2.1f), fill = true),
+    D1(svgCircle(7.04f, 16f, 3.04f), fill = true),
+    D2(svgCircle(16f, 16f, 3.04f), fill = true),
+    D3(svgCircle(24.96f, 16f, 3.04f), fill = true),
     Check("m8 16.5 5.5 5.5L24 10.5", fill = false),
     Ex(svgRect(14.4f, 5f, 3.2f, 15f, 1.6f), fill = true),
     Point(svgCircle(16f, 25.4f, 2f), fill = true),
@@ -119,7 +121,7 @@ private data class Pose(
 
 private val Hidden = Pose(alpha = 0f)
 
-/** As barras da onda e os pontos: de onde vêm (escondidos), a escala ao pensar e para onde se recolhem no fim. */
+/** As barras da onda: de onde vêm (escondidas), a escala ao pensar e para onde se recolhem no fim. */
 private class Strand(
     val restX: Float,
     val restY: Float,
@@ -127,20 +129,31 @@ private class Strand(
     val thinkScale: Float,
     val endX: Float,
     val waveDelay: Long,
-    val dotDelay: Long,
 )
 
 private val Strands =
     listOf(
-        Strand(-2.4f, 1.5f, 0.75f, 0.52f, 11f, 260, 280),
-        Strand(1.5f, 1.5f, 0.26f, 0.26f, 5.5f, 370, 430),
-        Strand(0f, -10f, 0.29f, 0.175f, 0f, 480, 580),
-        Strand(-1.5f, 1.5f, 0.3f, 0.3f, -5.5f, 590, 730),
-        Strand(2.4f, 1.5f, 0.75f, 0.52f, -11f, 700, 880),
+        Strand(-2.4f, 1.5f, 0.75f, 0.52f, 11f, 260),
+        Strand(1.5f, 1.5f, 0.26f, 0.26f, 5.5f, 370),
+        Strand(0f, -10f, 0.29f, 0.175f, 0f, 480),
+        Strand(-1.5f, 1.5f, 0.3f, 0.3f, -5.5f, 590),
+        Strand(2.4f, 1.5f, 0.75f, 0.52f, -11f, 700),
     )
 
-/** O ponto vem de um pouco mais alto que a barra do meio. */
-private const val MIDDLE_DOT_Y = -11.4f
+/** Os pontos: de onde vêm (os olhos e a ponta da antena), para onde se recolhem no fim e quando começam a pular. */
+private class Dot(
+    val restX: Float,
+    val restY: Float,
+    val endX: Float,
+    val jumpDelay: Long,
+)
+
+private val Dots =
+    listOf(
+        Dot(4.96f, 1.5f, 8.96f, 280),
+        Dot(0f, -11.4f, 0f, 450),
+        Dot(-4.96f, 1.5f, -8.96f, 620),
+    )
 
 private fun pose(
     piece: Piece,
@@ -163,13 +176,13 @@ private fun pose(
                 BotState.Idle -> Pose(alpha = 0f, tx = strand.restX, ty = strand.restY, sy = strand.restScale)
             }
         }
-        Piece.D1, Piece.D2, Piece.D3, Piece.D4, Piece.D5 -> {
-            val strand = Strands[piece.ordinal - Piece.D1.ordinal]
+        Piece.D1, Piece.D2, Piece.D3 -> {
+            val dot = Dots[piece.ordinal - Piece.D1.ordinal]
             when (state) {
                 BotState.Listening -> Hidden
                 BotState.Thinking -> Pose(alpha = DOT_REST)
-                BotState.Done, BotState.Error -> Pose(alpha = 0f, tx = strand.endX, sx = 0.3f, sy = 0.3f)
-                BotState.Idle -> Pose(alpha = 0f, tx = strand.restX, ty = if (piece == Piece.D3) MIDDLE_DOT_Y else strand.restY)
+                BotState.Done, BotState.Error -> Pose(alpha = 0f, tx = dot.endX, sx = 0.3f, sy = 0.3f)
+                BotState.Idle -> Pose(alpha = 0f, tx = dot.restX, ty = dot.restY)
             }
         }
         Piece.Check -> if (state == BotState.Done) Pose() else Hidden
@@ -244,7 +257,11 @@ private fun keyframes(
 
 private val BlinkStops = listOf(0f to 1f, BLINK_START to 1f, 0.965f to 0.12f, 1f to 1f)
 private val WaveStops = listOf(0f to 1f, 0.5f to 0.5f, 1f to 1f)
-private val DotStops = listOf(0f to DOT_REST, 0.3f to 1f, 0.6f to DOT_REST, 1f to DOT_REST)
+
+/** O pulo de um ponto (`botDot`): sobe, acende e cresce até 28% do laço, volta aos 56% e espera. */
+private val DotStops = listOf(0f to DOT_REST, 0.28f to 1f, 0.56f to DOT_REST, 1f to DOT_REST)
+private val DotJumpStops = listOf(0f to 0f, 0.28f to DOT_JUMP, 0.56f to 0f, 1f to 0f)
+private val DotGrowStops = listOf(0f to 1f, 0.28f to DOT_GROW, 0.56f to 1f, 1f to 1f)
 private val PopStops = listOf(0f to 1f, 0.4f to 1.14f, 1f to 1f)
 private val ShakeStops = listOf(0f to 0f, 0.18f to -2f, 0.38f to 2f, 0.58f to -1.4f, 0.78f to 1f, 1f to 0f)
 
@@ -317,8 +334,8 @@ private val Shapes: List<PieceShape> by lazy {
 }
 
 /**
- * O desenho do robô do Hermes num dos cinco estados, animado como no web: parado, ouvindo (a onda), pensando (cinco
- * pontos), concluiu (o ✓) e erro (a exclamação). É só um sinal: quem fala do estado é o texto ao lado.
+ * O desenho do robô do Hermes num dos cinco estados, animado como no web: parado, ouvindo (a onda), pensando (três
+ * pontos que pulam), concluiu (o ✓) e erro (a exclamação). É só um sinal: quem fala do estado é o texto ao lado.
  */
 @Composable
 fun HermesBotIcon(
@@ -386,6 +403,8 @@ private fun DrawScope.drawPiece(
 ) {
     val piece = shape.piece
     var alpha = pose.alpha.value
+    var ty = pose.ty.value
+    var sx = pose.sx.value
     var sy = pose.sy.value
     if (!reduced) {
         when (piece) {
@@ -401,10 +420,16 @@ private fun DrawScope.drawPiece(
                     loopProgress(elapsed, strand.waveDelay, WAVE_PERIOD_MS)?.let { sy = keyframes(it, WaveStops, EaseInOut) }
                 }
             }
-            Piece.D1, Piece.D2, Piece.D3, Piece.D4, Piece.D5 -> {
-                val strand = Strands[piece.ordinal - Piece.D1.ordinal]
+            Piece.D1, Piece.D2, Piece.D3 -> {
+                val dot = Dots[piece.ordinal - Piece.D1.ordinal]
                 if (state == BotState.Thinking) {
-                    loopProgress(elapsed, strand.dotDelay, DOT_PERIOD_MS)?.let { alpha = keyframes(it, DotStops, EaseInOut) }
+                    loopProgress(elapsed, dot.jumpDelay, DOT_PERIOD_MS)?.let {
+                        alpha = keyframes(it, DotStops, EaseInOut)
+                        ty += keyframes(it, DotJumpStops, EaseInOut)
+                        val grow = keyframes(it, DotGrowStops, EaseInOut)
+                        sx *= grow
+                        sy *= grow
+                    }
                 }
             }
             else -> Unit
@@ -416,8 +441,8 @@ private fun DrawScope.drawPiece(
     if (alpha <= 0.001f) return
     val center = shape.bounds.center
     withTransform({
-        translate(pose.tx.value, pose.ty.value)
-        scale(pose.sx.value, sy, pivot = center)
+        translate(pose.tx.value, ty)
+        scale(sx, sy, pivot = center)
     }) {
         val tint = color.copy(alpha = color.alpha * alpha.coerceIn(0f, 1f))
         when {

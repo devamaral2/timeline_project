@@ -3,8 +3,8 @@ import styles from "./hermes-bot.module.css";
 
 /**
  * O robô do Hermes: o círculo parado do chat. Em repouso ele pisca; ao ouvir,
- * pensar, concluir ou falhar vira os símbolos de sempre (a onda, os cinco
- * pontos, o ✓ e a exclamação). O tamanho vem de quem usa, pelo `font-size`
+ * pensar, concluir ou falhar vira os símbolos de cada estado (a onda, os três
+ * pontos que pulam, o ✓ e a exclamação). O tamanho vem de quem usa, pelo `font-size`
  * (52 px na barra inferior).
  */
 export type HermesBotState = "idle" | "listening" | "thinking" | "done" | "error";
@@ -56,11 +56,9 @@ export function HermesBot({ state = "idle", className, plain = false }: { state?
           <rect data-p="w3" fill="currentColor" stroke="none" x="14.4" y="4" width="3.2" height="24" rx="1.6" />
           <rect data-p="w4" fill="currentColor" stroke="none" x="19.9" y="9" width="3.2" height="14" rx="1.6" />
           <rect data-p="w5" fill="currentColor" stroke="none" x="25.4" y="12" width="3.2" height="8" rx="1.6" />
-          <circle data-p="d1" fill="currentColor" stroke="none" cx="5" cy="16" r="2.1" />
-          <circle data-p="d2" fill="currentColor" stroke="none" cx="10.5" cy="16" r="2.1" />
-          <circle data-p="d3" fill="currentColor" stroke="none" cx="16" cy="16" r="2.1" />
-          <circle data-p="d4" fill="currentColor" stroke="none" cx="21.5" cy="16" r="2.1" />
-          <circle data-p="d5" fill="currentColor" stroke="none" cx="27" cy="16" r="2.1" />
+          <circle data-p="d1" fill="currentColor" stroke="none" cx="7.04" cy="16" r="3.04" />
+          <circle data-p="d2" fill="currentColor" stroke="none" cx="16" cy="16" r="3.04" />
+          <circle data-p="d3" fill="currentColor" stroke="none" cx="24.96" cy="16" r="3.04" />
           <path data-p="check" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" d="m8 16.5 5.5 5.5L24 10.5" />
           <rect data-p="ex" fill="currentColor" stroke="none" x="14.4" y="5" width="3.2" height="15" rx="1.6" />
           <circle data-p="pt" fill="currentColor" stroke="none" cx="16" cy="25.4" r="2" />
