@@ -153,6 +153,7 @@ describe("projetos", () => {
     test("tarefa criada por voz", async () => {
       const { requestId } = await store.start({ userId: USER, route: "voice", text: "comecei a estudar", job: "voice-task" });
       const task = Task.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
+      await store.markRunning(requestId);
 
       await writer.commit({
         userId: USER, tasks: [{ op: "create", entity: task }], artifacts: [],

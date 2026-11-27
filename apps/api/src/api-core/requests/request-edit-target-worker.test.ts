@@ -9,7 +9,7 @@ const hash = "a".repeat(64);
 function queued(entityType: string, entityId: string) {
   const ctx = setupRequest();
   const request = ctx.store.require("r1");
-  request.status = "queued";
+  request.status = "preparing";
   request.target = { entityType: entityType as never, entityId };
   return ctx;
 }
@@ -103,6 +103,7 @@ describe("worker da edicao pela tela de detalhe", () => {
 
   test("pedido que ja saiu da fila e ignorado", async () => {
     const ctx = setupRequest();
+    ctx.store.require("r1").status = "running";
     ctx.store.require("r1").target = { entityType: "task", entityId: "qualquer" };
     await ctx.editTargetWorker.run("r1");
     expect(ctx.store.stepRecords).toHaveLength(0);

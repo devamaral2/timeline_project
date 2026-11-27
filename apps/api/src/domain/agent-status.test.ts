@@ -5,6 +5,9 @@ import {
   IN_PROGRESS_AGENT_STATUSES,
   OPEN_AGENT_STATUSES,
   SUCCESS_AGENT_STATUSES,
+  TURN_AGENT_STATUSES,
+  agentStatusesBefore,
+  canTransitionAgentStatus,
   isFinalAgentStatus,
   isInProgressAgentStatus,
   isOpenAgentStatus,
@@ -77,6 +80,45 @@ describe("grupos de status de agente", () => {
       final: isFinalAgentStatus(status),
       success: isSuccessAgentStatus(status),
     }).toEqual(expected);
+  });
+});
+
+describe("transicoes de status de agente", () => {
+  test.each([
+    ["preparing", ["queued", "running", "failed", "cancelled"]],
+    ["queued", ["starting", "running", "failed", "cancelled"]],
+    ["starting", ["running", "failed", "cancelled"]],
+    ["running", ["waiting", "completed", "failed", "interrupted"]],
+    ["waiting", ["running", "failed", "cancelled"]],
+    ["completed", ["rolled_back"]],
+    ["interrupted", ["rolled_back"]],
+    ["failed", ["rolled_back"]],
+    ["cancelled", []],
+    ["rolled_back", []],
+  ] as const)("de %s aceita so %j", (from, accepted) => {
+    const allowed = AGENT_STATUSES.filter((to) => canTransitionAgentStatus(from, to));
+    expect(allowed).toEqual(AGENT_STATUSES.filter((to) => (accepted as readonly string[]).includes(to)));
+  });
+
+  test("um status final so segue para rolled_back, e cancelado nunca reabre", () => {
+    for (const from of FINAL_AGENT_STATUSES) {
+      for (const to of AGENT_STATUSES) {
+        if (to !== "rolled_back") expect(canTransitionAgentStatus(from, to)).toBe(false);
+      }
+    }
+  });
+
+  test("agentStatusesBefore lista de onde se chega a um status", () => {
+    expect(agentStatusesBefore("running")).toEqual(["preparing", "queued", "starting", "waiting"]);
+    expect(agentStatusesBefore("completed")).toEqual(["running"]);
+    expect(agentStatusesBefore("interrupted")).toEqual(["running"]);
+    expect(agentStatusesBefore("cancelled")).toEqual(["preparing", "queued", "starting", "waiting"]);
+    expect(agentStatusesBefore("failed")).toEqual(["preparing", "queued", "starting", "running", "waiting"]);
+    expect(agentStatusesBefore("preparing")).toEqual([]);
+  });
+
+  test("o worker do turno aceita queued, starting e running", () => {
+    expect([...TURN_AGENT_STATUSES]).toEqual(["queued", "starting", "running"]);
   });
 });
 

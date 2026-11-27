@@ -12,7 +12,8 @@ import type {
   RequestScreenContext,
 } from "@repo/contracts";
 import { stepLabel } from "../../../api-core/requests/request-config";
-import { IN_PROGRESS_AGENT_STATUSES, OPEN_AGENT_STATUSES, REVIEW_SITUATION_ON_CLOSE } from "../../../domain/agent-status";
+import { agentStatusesBefore, IN_PROGRESS_AGENT_STATUSES, OPEN_AGENT_STATUSES, REVIEW_SITUATION_ON_CLOSE } from "../../../domain/agent-status";
+import type { AgentTaskStatus } from "../../../domain/sets";
 import { sqlList } from "../database/schema/sets";
 import { finalizeConcurrencyKey, REQUEST_JOBS, type RequestAgent } from "../../../api-core/requests/request-steps";
 import type {
@@ -61,6 +62,11 @@ const TITLE_CHARS = 80;
 const TEXT_PREVIEW_CHARS = 200;
 const OPEN_REQUEST = sql`(${sqlList(OPEN_AGENT_STATUSES)})`;
 const IN_PROGRESS = sql`(${sqlList(IN_PROGRESS_AGENT_STATUSES)})`;
+/** De onde a tabela de transicoes deixa chegar a `to`: a guarda de toda gravacao de status. */
+const before = (to: AgentTaskStatus) => sql`(${sqlList(agentStatusesBefore(to))})`;
+/** Cancelar o que ainda nao comecou deixa `cancelled`; cancelar o que estava `running` deixa `interrupted`. */
+const STOPPED_STATUS = sql`CASE WHEN status = 'running' THEN 'interrupted' ELSE 'cancelled' END`;
+const STOPPED_STATUS_OF_STEP = sql`CASE WHEN s.status = 'running' THEN 'interrupted' ELSE 'cancelled' END`;
 /** O fechamento do pedido grava a situacao junto com o status final: a politica de revisao esta em `agent-status`. */
 const ON_CLOSE_SITUATION = sql`${REVIEW_SITUATION_ON_CLOSE}`;
 
@@ -123,7 +129,8 @@ export class PostgresRequestStore implements RequestStore {
         id: requestId,
         userId: input.userId,
         kind: "request",
-        status: "queued",
+        // O pedido que passa pelo agente de roteamento (e a edicao por alvo) nasce `preparing`: ainda nao tem destino.
+        status: input.route === "steps" ? "preparing" : "queued",
         name: requestTitleOf(input.text),
         data: {
           route: input.route,
@@ -248,15 +255,22 @@ export class PostgresRequestStore implements RequestStore {
     return [...records.values()];
   }
 
+  async markStarting(requestId: string): Promise<void> {
+    await this.db.execute(sql`
+      UPDATE tasks SET status = 'starting', updated_at = now()
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${before("starting")}`);
+  }
+
   async markRunning(requestId: string): Promise<void> {
     await this.db.execute(sql`
       UPDATE tasks SET status = 'running', updated_at = now()
-      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status = 'queued'`);
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${before("running")}`);
   }
 
   async beginSteps(requestId: string, steps: readonly NewStep[], dispatch?: DispatchRecord): Promise<void> {
     await this.inTransaction(undefined, async (tx) => {
-      const userId = await this.lockOpenRequest(tx, requestId);
+      // Qualquer pedido aberto se desdobra: o status so vira `running` (o que ja roda segue rodando).
+      const userId = await this.lockRequest(tx, requestId, OPEN_AGENT_STATUSES);
       if (!userId) return;
       await this.insertSteps(tx, requestId, userId, steps);
       await this.recordDispatch(tx, requestId, { status: "running" }, dispatch, steps.length);
@@ -265,10 +279,10 @@ export class PostgresRequestStore implements RequestStore {
 
   async handToHermes(requestId: string, dispatch: DispatchRecord): Promise<void> {
     await this.inTransaction(undefined, async (tx) => {
-      const userId = await this.lockOpenRequest(tx, requestId);
+      const userId = await this.lockRequest(tx, requestId, agentStatusesBefore("queued"));
       if (!userId) return;
-      // Continua `queued`: quem o passa a `running` e o job do Hermes, como num pedido que nasce na rota dele.
-      await this.recordDispatch(tx, requestId, { route: "hermes" }, dispatch, 0);
+      // `queued`: quem o passa a `starting` e a `running` e o job do Hermes, como num pedido que nasce na rota dele.
+      await this.recordDispatch(tx, requestId, { status: "queued", route: "hermes" }, dispatch, 0);
       await enqueueJobInTransaction(tx, {
         kind: REQUEST_JOBS.hermes, userId, actorId: userId, taskId: requestId,
         payload: { requestId }, dedupeKey: `hermes:${requestId}`,
@@ -278,10 +292,10 @@ export class PostgresRequestStore implements RequestStore {
 
   async handToModel(requestId: string, dispatch: DispatchRecord, model: ModelSelection): Promise<void> {
     await this.inTransaction(undefined, async (tx) => {
-      const userId = await this.lockOpenRequest(tx, requestId);
+      const userId = await this.lockRequest(tx, requestId, agentStatusesBefore("queued"));
       if (!userId) return;
-      // Continua `queued`: quem o passa a `running` e o job do modelo, como num pedido que nasce na rota dele.
-      await this.recordDispatch(tx, requestId, { route: "model", model }, dispatch, 0);
+      // `queued`: quem o passa a `starting` e a `running` e o job do modelo, como num pedido que nasce na rota dele.
+      await this.recordDispatch(tx, requestId, { status: "queued", route: "model", model }, dispatch, 0);
       await enqueueJobInTransaction(tx, {
         kind: REQUEST_JOBS.model, userId, actorId: userId, taskId: requestId,
         payload: { requestId }, dedupeKey: `model:${requestId}`,
@@ -293,7 +307,7 @@ export class PostgresRequestStore implements RequestStore {
   private async recordDispatch(
     tx: Tx,
     requestId: string,
-    patch: { status?: "running"; route?: "hermes" | "model"; model?: ModelSelection },
+    patch: { status?: "queued" | "running"; route?: "hermes" | "model"; model?: ModelSelection },
     dispatch: DispatchRecord | undefined,
     steps: number,
   ): Promise<void> {
@@ -314,11 +328,11 @@ export class PostgresRequestStore implements RequestStore {
     }
   }
 
-  /** O dono do pedido, com a linha travada; nada se o pedido nao existe ou ja terminou. */
-  private async lockOpenRequest(tx: Tx, requestId: string): Promise<string | undefined> {
+  /** O dono do pedido, com a linha travada; nada se o pedido nao existe ou nao esta num dos status `from`. */
+  private async lockRequest(tx: Tx, requestId: string, from: readonly AgentTaskStatus[]): Promise<string | undefined> {
     const found = await tx.execute<{ user_id: string }>(sql`
       SELECT user_id FROM tasks
-      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN (${sqlList(from)})
       FOR UPDATE`);
     return found.rows[0]?.user_id;
   }
@@ -422,7 +436,7 @@ export class PostgresRequestStore implements RequestStore {
     const closed = await tx.execute<{ user_id: string }>(sql`
       UPDATE tasks SET status = ${status}, finished_at = now(), updated_at = now(),
         data = data || ${json(detail.errorCode ? { errorCode: detail.errorCode } : {})}::jsonb
-      WHERE id = ${stepId} AND kind = 'step' AND status IN ${IN_PROGRESS}
+      WHERE id = ${stepId} AND kind = 'step' AND status IN ${before(status)}
       RETURNING user_id`);
     const userId = closed.rows[0]?.user_id;
     if (userId && (detail.timings || detail.errorCode)) {
@@ -452,7 +466,7 @@ export class PostgresRequestStore implements RequestStore {
     });
   }
 
-  async finish(requestId: string, status: "completed" | "failed", outcome: RequestOutcome): Promise<void> {
+  async finish(requestId: string, status: "completed" | "failed" | "interrupted", outcome: RequestOutcome): Promise<void> {
     await this.inTransaction(undefined, (tx) => this.closeRequest(tx, requestId, status, outcome));
   }
 
@@ -468,7 +482,7 @@ export class PostgresRequestStore implements RequestStore {
   }
 
   /** Encerra o pedido se ele ainda esta aberto. A resposta final e a ultima entrada. */
-  private async closeRequest(tx: Tx, requestId: string, status: "completed" | "failed", outcome: RequestOutcome): Promise<boolean> {
+  private async closeRequest(tx: Tx, requestId: string, status: "completed" | "failed" | "interrupted", outcome: RequestOutcome): Promise<boolean> {
     const patch = {
       ...(outcome.failedSteps?.length ? { failedSteps: outcome.failedSteps } : {}),
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
@@ -476,7 +490,7 @@ export class PostgresRequestStore implements RequestStore {
     const closed = await tx.execute(sql`
       UPDATE tasks SET status = ${status}, situation = ${ON_CLOSE_SITUATION}, finished_at = now(), updated_at = now(),
         data = data || ${json(patch)}::jsonb
-      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${before(status)}
       RETURNING id`);
     if (closed.rows.length === 0) return false;
 
@@ -497,13 +511,13 @@ export class PostgresRequestStore implements RequestStore {
   async cancel(requestId: string): Promise<string[]> {
     return this.inTransaction(undefined, async (tx) => {
       const cancelled = await tx.execute(sql`
-        UPDATE tasks SET status = 'cancelled', situation = ${ON_CLOSE_SITUATION}, finished_at = now(), updated_at = now(),
+        UPDATE tasks SET status = ${STOPPED_STATUS}, situation = ${ON_CLOSE_SITUATION}, finished_at = now(), updated_at = now(),
           data = data || ${json({ errorCode: "cancelled" satisfies RequestErrorCode })}::jsonb
         WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
         RETURNING id`);
       if (cancelled.rows.length === 0) return [];
       await tx.execute(sql`
-        UPDATE tasks s SET status = 'cancelled', finished_at = now(), updated_at = now()
+        UPDATE tasks s SET status = ${STOPPED_STATUS_OF_STEP}, finished_at = now(), updated_at = now()
         FROM task_task_relation r
         WHERE r.from_task_id = ${requestId} AND r.relation = 'step' AND r.to_task_id = s.id
           AND s.kind = 'step' AND s.status IN ${IN_PROGRESS}`);

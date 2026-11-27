@@ -36,9 +36,8 @@ trabalha, nem a execução que parou no meio da que falhou.
    vira `done`; `failed`, `cancelled`, `interrupted` e `rolled_back` viram `failed`; `preparing`, `queued` e `starting`
    viram `pending`. O status do job, o do rastro, o da geração de alimento e o da execução no Hermes não mudam: não são
    status de tarefa.
-4. **Onde a API grava `done` e `cancel` de uma tarefa de agente, grava `completed` e `cancelled`.** Esta etapa só troca os
-   nomes: os momentos em que a API grava um status não mudam, e `preparing`, `starting`, `interrupted` e `rolled_back`
-   são aceitos e desenhados, mas ninguém os grava ainda.
+4. **Onde a API gravava `done` e `cancel` de uma tarefa de agente, grava `completed` e `cancelled`.** Os momentos em que
+   cada status é gravado estão na tabela "Significado e quem grava", abaixo.
 5. **Uma migration** (`0010_status_de_agente_proprios`) tira o check, troca os valores nas tarefas de agente (pedidos e
    passos) e recoloca o check, tudo na mesma transação. As tarefas de pessoa não são tocadas. Os pedidos que já existem
    continuam na lista: os concluídos como "Concluído" e os cancelados como "Cancelado".
@@ -51,6 +50,43 @@ trabalha, nem a execução que parou no meio da que falhou.
 8. **Lembretes, subtarefas e fração:** o lembrete de uma tarefa de agente se cala em qualquer status final e o de pessoa
    continua em `done` e `cancel`; a subtarefa de agente fechada é a de status final; a fração conta `done` de pessoa e
    `completed` de agente.
+
+### Significado e quem grava
+
+Quem grava é sempre a API, e só no pedido ou no passo, de onde a tabela de transições (`canTransitionAgentStatus`,
+`apps/api/src/domain/agent-status.ts`) deixa chegar ao status novo. Uma gravação fora da lista é recusada (o pedido
+continua onde estava), e um status final não volta a ficar aberto: ele só segue para `rolled_back`. `finished_at` é
+gravado em todo status final.
+
+| Status | Significa | Quem grava |
+|---|---|---|
+| `preparing` | O pedido chegou e ainda não tem destino: o agente de roteamento (ou o worker da edição por alvo) decide. | O pedido que passa pelo roteamento (`POST /api/requests`) e a edição por alvo (`/edit`) nascem assim. |
+| `queued` | Tem destino e espera um worker. | O pedido que já nasce com destino (Hermes, modo modelo, voz, cálculo de alimento) e o roteamento, quando entrega o pedido ao Hermes ou ao modo modelo (`handToHermes`, `handToModel`). Os passos nascem assim. |
+| `starting` | Um worker pegou o job e ainda não chamou o executor. | O worker do turno (Hermes, modelo, voz, alimento) ao pegar o job (`markStarting`). |
+| `running` | O executor está trabalhando. | O worker do turno na primeira chamada ao executor (`markRunning`); o roteamento e a edição por alvo, ao desdobrar o pedido em passos (`beginSteps`); o passo, ao começar (`markStepRunning`). |
+| `waiting` | Espera alguém. | Ninguém ainda. |
+| `completed` | Terminou bem. | O finalizador (todos os passos), o worker do turno e o fim do cálculo de alimento; o passo, ao gravar o resultado. |
+| `interrupted` | Parou no meio, sem terminar nem falhar. | O cancelamento de um pedido ou passo `running`; a execução que o Hermes devolve como cancelada ou interrompida; o job abandonado porque o worker morreu e as tentativas acabaram (`WorkerAttemptsExhaustedError`). |
+| `failed` | O executor falhou, ou o pedido não pôde começar. | O erro devolvido pelo executor (worker do turno, passo, finalizador quando todos os passos falham), o job que morreu por erro e o job abandonado cujo pedido ainda não rodava. |
+| `cancelled` | O usuário cancelou antes de o trabalho começar. | O cancelamento de um pedido ou passo `preparing`, `queued`, `starting` ou `waiting`. |
+| `rolled_back` | O que o pedido fez foi desfeito. | Ninguém ainda. |
+
+Transições aceitas:
+
+```
+preparing -> queued | running | failed | cancelled
+queued    -> starting | running | failed | cancelled
+starting  -> running | failed | cancelled
+running   -> waiting | completed | failed | interrupted
+waiting   -> running | failed | cancelled
+completed | interrupted | failed -> rolled_back
+```
+
+Cancelar um pedido deixa `cancelled` ou `interrupted` conforme ele estava, e os passos seguem a mesma regra (o `queued`
+vira `cancelled`, o `running` vira `interrupted`); o código de erro do pedido é `cancelled` nos dois casos. Uma nova
+tentativa do worker acha o pedido onde a anterior parou (`queued`, `starting` ou `running`) e continua. Os workers aceitam
+só esses três (`TURN_AGENT_STATUSES`); o roteamento e a edição por alvo aceitam só `preparing`, para que uma nova tentativa
+depois da entrega não despache de novo.
 
 ### Alternativas rejeitadas
 
