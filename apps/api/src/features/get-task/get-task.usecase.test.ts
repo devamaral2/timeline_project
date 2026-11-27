@@ -5,6 +5,7 @@ import { InMemoryArtifactRepository } from "../../api-core/artifacts/testing/in-
 import { InMemoryTaskDatabase } from "../../api-core/tasks/testing/in-memory-task-database";
 import { InMemoryTaskRepository } from "../../api-core/tasks/testing/in-memory-task.repository";
 import { InMemoryTaskRequestLinkQuery } from "../../api-core/tasks/testing/in-memory-task-request-link.query";
+import { InMemoryProjectQuery } from "../../api-core/projects/testing/in-memory-project.query";
 import { InMemoryRecurrenceRepository } from "../../api-core/recurrences/testing/in-memory-recurrence.repository";
 import { GetTaskUseCase } from "./get-task.usecase";
 
@@ -19,6 +20,7 @@ function setup(database: InMemoryTaskDatabase) {
     new InMemoryArtifactRepository(database.artifacts),
     recurrences,
     requestLinks,
+    new InMemoryProjectQuery(database),
   );
   return { useCase, recurrences, requestLinks };
 }
@@ -176,4 +178,15 @@ test("a task nobody asked the agent about has no requests", async () => {
   const fixture = taskWith({ id: "task-1", userId: actor.userId, name: "Sono", startedAt }, []);
 
   expect((await setup(databaseOf([fixture])).useCase.execute({ taskId: "task-1" }, actor))?.requests).toEqual([]);
+});
+
+test("returns the project of the task, which is the personal project while nothing picks one", async () => {
+  const fixture = taskWith({ id: "task-1", userId: actor.userId, name: "Treino", startedAt });
+  const { useCase } = setup(databaseOf([fixture]));
+
+  expect((await useCase.execute({ taskId: "task-1" }, actor))?.project).toEqual({
+    id: `personal-${actor.userId}`,
+    name: "personal",
+    personal: true,
+  });
 });

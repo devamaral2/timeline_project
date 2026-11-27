@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus } from "@repo/contracts";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/tasks/card-text";
+import { ProjectLine } from "@/components/projects/project-line";
 import { TaskKindMark } from "./task-kind-mark";
 import { TaskStatusGlyph, taskStatusName } from "./task-status-glyph";
 import styles from "./task-row.module.css";
@@ -25,8 +26,8 @@ export interface TaskRowProps {
 }
 
 /**
- * A linha única das listas: glifo de status, título, uma linha com o tipo, o
- * "quando" e as tags, e a duração à direita. Pessoa e agente usam a
+ * A linha única das listas: glifo de status, título, a linha do projeto (marca e
+ * nome), uma linha com o tipo, o "quando" e as tags, e a duração à direita. Pessoa e agente usam a
  * mesma grade; a tarefa de agente fecha a linha com o robô, a sua assinatura.
  * O glifo de pessoa é um botão; o de agente não muda status.
  */
@@ -61,6 +62,8 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, a
       <Link href={`/${userId}/tarefas/${card.id}`} className={styles.body}>
         <span className={styles.text}>
           <span className={styles.title}>{card.name}</span>
+          {/* A mesma linha para pessoa e agente, abaixo do título e acima da linha do tipo. */}
+          <ProjectLine project={card.project} />
           <span className={styles.meta}>
             <TaskKindMark kind={card.kind} />
             <span className={styles.when} data-overdue={overdue ? "true" : "false"}>

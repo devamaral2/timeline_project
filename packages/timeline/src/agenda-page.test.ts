@@ -16,6 +16,7 @@ function anTask(id: string): AgendaTaskCard {
     notifyOffsetsMinutes: [],
     name: id,
     description: "",
+    project: { id: "project-1", name: "personal", personal: true },
     startedAt: "2026-08-31T12:00:00.000Z",
     estimatedFinishAt: "2026-08-31T13:00:00.000Z",
     tags: [],

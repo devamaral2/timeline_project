@@ -11,7 +11,8 @@ declare module "vitest" {
 }
 
 const DRIZZLE_DIR = resolve(__dirname, "../../../../drizzle");
-const MIGRATION = "0009_status_de_agente_proprios";
+const PROJECT = ulid();
+const MIGRATION = "0010_status_de_agente_proprios";
 
 interface JournalEntry { tag: string }
 
@@ -67,8 +68,9 @@ describe("migration dos status de agente, sobre um banco com dados", () => {
 
     await applyAllBefore(pool, MIGRATION);
 
+    await pool.query(`INSERT INTO projects (id, user_id, name, personal) VALUES ($1, 'user-1', 'personal', true)`, [PROJECT]);
     const insert = (id: string, actor: string, kind: string, status: string) =>
-      pool.query(`INSERT INTO tasks (id, user_id, actor, kind, status, name) VALUES ($1, 'user-1', $2, $3, $4, 'Tarefa')`, [id, actor, kind, status]);
+      pool.query(`INSERT INTO tasks (id, project_id, user_id, actor, kind, status, name) VALUES ($1, $5, 'user-1', $2, $3, $4, 'Tarefa')`, [id, actor, kind, status, PROJECT]);
     for (const status of humanStatuses) {
       const id = ulid();
       humans.set(id, status);
@@ -114,7 +116,7 @@ describe("migration dos status de agente, sobre um banco com dados", () => {
 
   test("o check novo aceita os dez status de agente e recusa os de pessoa em tarefa de agente", async () => {
     const insert = (actor: string, kind: string, status: string) =>
-      pool.query(`INSERT INTO tasks (id, user_id, actor, kind, status, name) VALUES ($1, 'user-1', $2, $3, $4, 'Nova')`, [ulid(), actor, kind, status]);
+      pool.query(`INSERT INTO tasks (id, project_id, user_id, actor, kind, status, name) VALUES ($1, $5, 'user-1', $2, $3, $4, 'Nova')`, [ulid(), actor, kind, status, PROJECT]);
 
     for (const status of ["preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back"]) {
       await insert("agent", "request", status);

@@ -10,6 +10,7 @@ const card: TaskCardDto = {
   priority: "medium",
   name: "Caminhada",
   description: "",
+  project: { id: "project-1", name: "personal", personal: true },
   startedAt: "2026-11-14T08:00:00-03:00",
   estimatedFinishAt: "2026-11-14T08:30:00-03:00",
   longRunning: false,
@@ -47,4 +48,9 @@ test("o esquema do contrato recusa um cartao de pessoa com status de agente", ()
     expect(taskCardSchema.safeParse({ ...card, status }).success, status).toBe(false);
   }
   expect(taskCardSchema.safeParse({ ...card, status: "done" }).success).toBe(true);
+});
+
+test("o esquema do contrato recusa um cartao sem projeto", () => {
+  const { project: _project, ...withoutProject } = card;
+  expect(taskCardSchema.safeParse(withoutProject).success).toBe(false);
 });

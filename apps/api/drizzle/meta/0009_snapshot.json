@@ -1,9 +1,108 @@
 {
-  "id": "9e0253da-3fd6-4f92-a3d5-055e33b8f64f",
+  "id": "36669b79-5971-49ee-997c-0a3b3018b4a2",
   "prevId": "c29d33bd-645f-4fb5-a188-14cd4f7eb93e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.projects": {
+      "name": "projects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "char(26)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "personal": {
+          "name": "personal",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "projects_user_name_unique": {
+          "name": "projects_user_name_unique",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(\"name\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "projects_user_personal_unique": {
+          "name": "projects_user_personal_unique",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"projects\".\"personal\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "projects_name_shape": {
+          "name": "projects_name_shape",
+          "value": "\"projects\".\"name\" = btrim(\"projects\".\"name\") AND char_length(\"projects\".\"name\") BETWEEN 1 AND 60"
+        },
+        "projects_personal_name": {
+          "name": "projects_personal_name",
+          "value": "NOT \"projects\".\"personal\" OR \"projects\".\"name\" = 'personal'"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.recurrence_exceptions": {
       "name": "recurrence_exceptions",
       "schema": "",
@@ -78,6 +177,12 @@
         "user_id": {
           "name": "user_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "char(26)",
           "primaryKey": false,
           "notNull": true
         },
@@ -208,7 +313,21 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "recurrences_project_id_projects_id_fk": {
+          "name": "recurrences_project_id_projects_id_fk",
+          "tableFrom": "recurrences",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -404,6 +523,12 @@
         "user_id": {
           "name": "user_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "char(26)",
           "primaryKey": false,
           "notNull": true
         },
@@ -661,6 +786,19 @@
         }
       },
       "foreignKeys": {
+        "tasks_project_id_projects_id_fk": {
+          "name": "tasks_project_id_projects_id_fk",
+          "tableFrom": "tasks",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "tasks_recurrence_id_recurrences_id_fk": {
           "name": "tasks_recurrence_id_recurrences_id_fk",
           "tableFrom": "tasks",
@@ -697,7 +835,7 @@
         },
         "tasks_status_matches_actor": {
           "name": "tasks_status_matches_actor",
-          "value": "(\"tasks\".\"actor\" = 'human' AND (\"tasks\".\"status\" IS NULL OR \"tasks\".\"status\" IN ('todo', 'toDefine', 'doing', 'inHold', 'done', 'cancel', 'missed'))) OR (\"tasks\".\"actor\" = 'agent' AND \"tasks\".\"status\" IS NOT NULL AND \"tasks\".\"status\" IN ('preparing', 'queued', 'starting', 'running', 'waiting', 'completed', 'interrupted', 'failed', 'cancelled', 'rolled_back'))"
+          "value": "(\"tasks\".\"actor\" = 'human' AND (\"tasks\".\"status\" IS NULL OR \"tasks\".\"status\" IN ('todo', 'toDefine', 'doing', 'inHold', 'done', 'cancel', 'missed'))) OR (\"tasks\".\"actor\" = 'agent' AND \"tasks\".\"status\" IS NOT NULL AND \"tasks\".\"status\" IN ('queued', 'running', 'waiting', 'done', 'failed', 'cancel'))"
         },
         "tasks_long_running_shape": {
           "name": "tasks_long_running_shape",

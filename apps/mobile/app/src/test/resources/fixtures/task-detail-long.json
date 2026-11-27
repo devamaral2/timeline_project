@@ -6,6 +6,11 @@
   "priority": "medium",
   "name": "Projeto longo",
   "description": "",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
   "startedAt": "2026-09-01T12:00:00.000Z",
   "estimatedFinishAt": "2026-11-30T12:00:00.000Z",
   "longRunning": true,

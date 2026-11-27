@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { monotonicFactory } from "ulid";
 import type { AgentTaskKind, AgentTaskStatus, EntryKind, EntryRole } from "../../../domain";
 import * as schema from "../database/schema";
+import { resolveProjectId } from "../projects/resolve-project";
 import type { Tx } from "../shared/tx";
 
 /**
@@ -28,6 +29,7 @@ export async function insertAgentTask(tx: Tx, task: NewAgentTask): Promise<void>
   await tx.insert(schema.tasks).values({
     id: task.id,
     userId: task.userId,
+    projectId: await resolveProjectId(tx, { userId: task.userId }),
     actor: "agent",
     kind: task.kind,
     status: task.status,

@@ -9,6 +9,11 @@
       "priority": "medium",
       "name": "Reunião de planejamento",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T18:00:00.000Z",
       "estimatedFinishAt": "2026-09-14T19:00:00.000Z",
       "longRunning": false,
@@ -32,6 +37,11 @@
       "priority": "medium",
       "name": "Entrega do projeto",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-01T12:00:00.000Z",
       "estimatedFinishAt": "2026-09-16T12:00:00.000Z",
       "longRunning": true,
@@ -52,6 +62,11 @@
       "priority": "medium",
       "name": "Pagar o condomínio",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-15T13:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [
@@ -71,6 +86,11 @@
       "priority": "medium",
       "name": "Almoço",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T16:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [
@@ -90,6 +110,11 @@
       "priority": "medium",
       "name": "Treino",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T16:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [
@@ -109,6 +134,11 @@
       "priority": "medium",
       "name": "Ideia sem data",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "longRunning": false,
       "notifyOffsetsMinutes": [
         10
@@ -127,6 +157,11 @@
       "priority": "medium",
       "name": "Estudar sempre",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-01T12:00:00.000Z",
       "longRunning": true,
       "notifyOffsetsMinutes": [
@@ -146,6 +181,11 @@
       "priority": "medium",
       "name": "Buscar passagens",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T17:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [
@@ -165,6 +205,11 @@
       "priority": "medium",
       "name": "Sem aviso",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T17:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -182,6 +227,11 @@
       "priority": "medium",
       "name": "Declarar imposto",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-10-30T12:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [

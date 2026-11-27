@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { artifactSchema, createTaskInputSchema, updateTaskInputSchema } from "./schemas";
+import { artifactSchema, createTaskInputSchema, projectSchema, requestSchema, taskCardSchema, updateTaskInputSchema } from "./schemas";
 
 const food = {
   description: "arroz", items: [],
@@ -65,4 +65,28 @@ test.each(["previousTaskIds", "nextTaskIds"])("the task input schemas refuse %s 
 
 test("the update schema identifies the task by taskId, not by its old name", () => {
   expect(updateTaskInputSchema.safeParse({ [nomeAntigo("taskId")]: "t1", expectedRevision: 1 }).success).toBe(false);
+});
+
+const card = {
+  id: "task", actor: "human", kind: "common", status: "todo", priority: "medium", name: "Ler", description: "",
+  project: { id: "project", name: "personal", personal: true }, longRunning: false, notifyOffsetsMinutes: [], tags: [],
+  artifactTypes: [], revision: 1, createdAt: "2026-01-01", updatedAt: "2026-01-01",
+};
+
+test("a task card carries its project, and a card without one is refused", () => {
+  expect(taskCardSchema.parse(card)).toEqual(card);
+  const { project: _project, ...withoutProject } = card;
+  expect(taskCardSchema.safeParse(withoutProject).success).toBe(false);
+  expect(taskCardSchema.safeParse({ ...card, project: { id: "project", name: "personal" } }).success).toBe(false);
+  expect(projectSchema.safeParse({ ...card.project, color: "red" }).success).toBe(false);
+});
+
+test("a request carries its project, and a request without one is refused", () => {
+  const request = {
+    id: "request", kind: "request", route: "steps", status: "queued", title: "Almocei", project: card.project,
+    createdAt: "2026-01-01", updatedAt: "2026-01-01", steps: [], entities: [],
+  };
+  expect(requestSchema.parse(request)).toEqual(request);
+  const { project: _project, ...withoutProject } = request;
+  expect(requestSchema.safeParse(withoutProject).success).toBe(false);
 });

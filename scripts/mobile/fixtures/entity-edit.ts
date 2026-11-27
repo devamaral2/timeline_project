@@ -6,6 +6,7 @@
 import { requestSchema } from "../../../packages/contracts/src/schemas";
 import { EDIT_TARGET_LABELS, editEntityTypeOfArtifact, isModelCommand } from "../../../apps/web/src/lib/entity-edit/entity-edit-target";
 import { pendingMealEditMessage } from "../../../apps/web/src/lib/notes/meal-generation";
+import { PERSONAL_PROJECT } from "./project";
 
 const ARTIFACT_TYPES = ["text", "food", "sleep", "training", "workout", "skill", "agent", "router"] as const;
 const MODEL_COMMAND_TEXTS = ["/model", "/MODEL", "  /Model  ", "/modelo", "/models", "/model haiku", "model", "/", "mude o /model", ""];
@@ -16,6 +17,7 @@ function edit(input: Record<string, unknown> & { id: string }) {
     route: "steps",
     status: "running",
     title: "Editar a tarefa",
+    project: PERSONAL_PROJECT,
     createdAt: "2026-09-14T14:48:00.000Z",
     updatedAt: "2026-09-14T14:49:00.000Z",
     steps: [],

@@ -6,6 +6,11 @@
   "priority": "medium",
   "name": "Planejar o trimestre",
   "description": "",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
   "startedAt": "2026-09-13T15:00:00.000Z",
   "longRunning": false,
   "notifyOffsetsMinutes": [],

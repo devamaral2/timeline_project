@@ -8,6 +8,11 @@
       "priority": "medium",
       "name": "Reunião de planejamento",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T19:00:00.000Z",
       "estimatedFinishAt": "2026-09-14T20:00:00.000Z",
       "longRunning": false,

@@ -116,6 +116,18 @@ test("Informações mostra o início com o tempo decorrido e 'ainda não conclu�
   expect(screen.queryByText("Job")).not.toBeInTheDocument();
 });
 
+test("o detalhe do pedido mostra o projeto, só para leitura", async () => {
+  install([agentTask({ project: { id: "p-tp", name: "timeline_project", personal: false } })], [agentRequest()]);
+  renderPage();
+  await loaded();
+
+  const info = await screen.findByRole("region", { name: "Informações" });
+  expect(within(info).getByText("Projeto")).toBeInTheDocument();
+  expect(within(info).getByText("timeline_project")).toBeInTheDocument();
+  expect(within(info).getByText("TP")).toBeInTheDocument();
+  expect(within(info).queryByRole("button")).not.toBeInTheDocument();
+});
+
 test("a tarefa de agente mostra a tarefa principal e as subtarefas, somente leitura, com pontas de pessoa e de agente", async () => {
   const review = taskFixture({ id: "rev-1", name: "Revisar o erro", status: "todo", startedAt: "2026-11-14T10:00:00-03:00", parentTaskId: ID });
   const fix = taskFixture({ id: "fix-1", actor: "agent", kind: "request", status: "queued", name: "Aplicar o conserto", startedAt: "2026-11-14T09:50:00-03:00", parentTaskId: ID });

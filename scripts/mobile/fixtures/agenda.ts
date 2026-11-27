@@ -12,6 +12,7 @@ import { spanForExample } from "../../../apps/web/src/components/agenda/agenda-t
 import {
   freeTimeSlots, freeWindowGrade, MIN_FREE_WINDOW_MINUTES, type TimeSpan,
 } from "../../../apps/web/src/components/agenda/free-time";
+import { PERSONAL_PROJECT } from "./project";
 
 type CardInput = Record<string, unknown> & { id: string; name: string };
 
@@ -22,6 +23,7 @@ function card(input: CardInput) {
     status: "todo",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],

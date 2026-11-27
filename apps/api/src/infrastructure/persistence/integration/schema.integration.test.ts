@@ -28,9 +28,21 @@ describe("banco novo: checks, restricoes e indices", () => {
     );
   }
 
+  /** O `personal` do usuario, criado na primeira necessidade: toda tarefa e serie precisa de um projeto. */
+  async function personalProject(userId: string): Promise<string> {
+    const found = await ctx.pool.query("SELECT id FROM projects WHERE user_id = $1 AND personal", [userId]);
+    if (found.rows[0]) return found.rows[0].id as string;
+    const id = ulid();
+    await insert("projects", { id, user_id: userId, name: "personal", personal: true });
+    return id;
+  }
+
   async function task(overrides: Row = {}): Promise<string> {
     const id = (overrides.id as string | undefined) ?? ulid();
-    await insert("tasks", { id, user_id: "user-1", actor: "human", kind: "common", name: "Tarefa", ...overrides });
+    const userId = (overrides.user_id as string | undefined) ?? "user-1";
+    await insert("tasks", {
+      id, user_id: userId, project_id: await personalProject(userId), actor: "human", kind: "common", name: "Tarefa", ...overrides,
+    });
     return id;
   }
 
@@ -48,6 +60,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     await insert("recurrences", {
       id,
       user_id: "user-1",
+      project_id: await personalProject("user-1"),
       freq: "daily",
       time_of_day: "18:00",
       starts_on: "2026-11-01",
@@ -59,7 +72,7 @@ describe("banco novo: checks, restricoes e indices", () => {
   const count = async (table: string) =>
     (await ctx.pool.query(`SELECT count(*)::int AS n FROM ${table}`)).rows[0].n as number;
 
-  test("a migration cria exatamente as 13 tabelas", async () => {
+  test("a migration cria exatamente as 14 tabelas", async () => {
     const { rows } = await ctx.pool.query(
       "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
     );
@@ -70,6 +83,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       "artifacts",
       "idempotency_keys",
       "jobs",
+      "projects",
       "recurrence_exceptions",
       "recurrences",
       "tags",
@@ -79,6 +93,51 @@ describe("banco novo: checks, restricoes e indices", () => {
       "task_task_relation",
       "tasks",
     ]);
+  });
+
+  describe("projects: nome, personal e a chave das tarefas", () => {
+    const project = (overrides: Row = {}) => insert("projects", { id: ulid(), user_id: "user-1", name: "timeline_project", ...overrides });
+
+    test("o nome tem de 1 a 60 caracteres e nao leva espaco nas pontas", async () => {
+      await project({ name: "a" });
+      await project({ name: "x".repeat(60) });
+
+      await expect(project({ name: "" })).rejects.toThrow(/projects_name_shape/);
+      await expect(project({ name: "x".repeat(61) })).rejects.toThrow(/projects_name_shape/);
+      await expect(project({ name: " espaco" })).rejects.toThrow(/projects_name_shape/);
+      await expect(project({ name: "espaco " })).rejects.toThrow(/projects_name_shape/);
+    });
+
+    test("o nome e unico por usuario sem distinguir maiusculas", async () => {
+      await project({ name: "Braid" });
+
+      await expect(project({ name: "braid" })).rejects.toThrow(/projects_user_name_unique/);
+      await project({ name: "braid", user_id: "user-2" });
+    });
+
+    test("cada usuario tem no maximo um personal, e o nome dele e personal", async () => {
+      await project({ name: "personal", personal: true });
+
+      await expect(project({ name: "personal", personal: true })).rejects.toThrow(/projects_user_name_unique|projects_user_personal_unique/);
+      await expect(project({ name: "outro", personal: true, user_id: "user-2" })).rejects.toThrow(/projects_personal_name/);
+      await project({ name: "personal", personal: true, user_id: "user-2" });
+    });
+
+    test("a tarefa e a serie exigem projeto, e um projeto com tarefa nao se apaga", async () => {
+      await expect(
+        insert("tasks", { id: ulid(), user_id: "user-1", actor: "human", kind: "common", name: "Sem projeto" }),
+      ).rejects.toThrow(/project_id/);
+      await expect(
+        insert("recurrences", { id: ulid(), user_id: "user-1", freq: "daily", time_of_day: "18:00", starts_on: "2026-11-01", template: "{}" }),
+      ).rejects.toThrow(/project_id/);
+      await expect(
+        insert("tasks", { id: ulid(), user_id: "user-1", project_id: ulid(), actor: "human", kind: "common", name: "Projeto que nao existe" }),
+      ).rejects.toThrow(/tasks_project_id_projects_id_fk/);
+
+      await task();
+      await recurrence();
+      await expect(ctx.pool.query("DELETE FROM projects")).rejects.toThrow(/foreign key/);
+    });
   });
 
   describe("tasks: tipo e status conforme o executor", () => {

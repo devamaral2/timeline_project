@@ -1,6 +1,7 @@
 "use client";
 
 import type { TaskDto } from "@repo/contracts";
+import { ProjectLine } from "@/components/projects/project-line";
 import { DetailFact, DetailFacts, DetailSection } from "@/components/detail/detail-parts";
 import { useNow } from "@/lib/tasks/use-now";
 import { elapsedLabel } from "@/lib/tasks/card-text";
@@ -17,6 +18,8 @@ export function AgentInfoSection({ task }: { task: TaskDto }) {
   return (
     <DetailSection title="Informações" labelId="agent-info">
       <DetailFacts label="Informações">
+        {/* Só leitura: o projeto de uma tarefa de agente não muda depois que ela nasce. */}
+        <DetailFact label="Projeto"><ProjectLine project={task.project} /></DetailFact>
         <DetailFact label="Início">
           {task.startedAt ? (
             <span className={styles.stack}>

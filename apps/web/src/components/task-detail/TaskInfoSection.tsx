@@ -2,6 +2,7 @@
 
 import type { TaskDto } from "@repo/contracts";
 import { MapPin } from "lucide-react";
+import { ProjectLine } from "@/components/projects/project-line";
 import { DetailFact, DetailFacts, DetailSection, Prose, Reminders, TagPills } from "@/components/detail/detail-parts";
 import { cardDurationLabel } from "@/lib/tasks/card-text";
 import { mapsUrl } from "@/lib/tasks/maps-link";
@@ -23,6 +24,8 @@ export function TaskInfoSection({ task }: { task: TaskDto }) {
   return (
     <DetailSection title="Informações" labelId="task-info">
       <DetailFacts label="Informações">
+        {/* Só leitura: o projeto da tarefa troca pela edição. */}
+        <DetailFact label="Projeto"><ProjectLine project={task.project} /></DetailFact>
         {task.startedAt || !longRunning ? (
           <DetailFact label="Início">{task.startedAt ? momentLabel(task.startedAt) : "sem data"}</DetailFact>
         ) : null}

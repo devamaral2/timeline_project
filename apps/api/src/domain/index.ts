@@ -9,6 +9,8 @@ export * from "./tasks/types/default-task-duration";
 export * from "./tasks/types/notification-offset-minutes";
 export * from "./tasks/errors/task.errors";
 
+export type * from "./projects/types/project";
+
 export * from "./artifacts/entities/artifact.entity";
 export * from "./artifacts/value-objects/artifact-id";
 export * from "./artifacts/types/agent-file-data";

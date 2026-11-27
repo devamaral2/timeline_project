@@ -12,6 +12,7 @@ function card(overrides: { id: string } & Record<string, unknown>): TaskCardDto 
     priority: "medium",
     name: overrides.id,
     description: "",
+    project: { id: "project-1", name: "personal", personal: true },
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],

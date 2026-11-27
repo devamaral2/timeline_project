@@ -11,6 +11,7 @@
 import { requestSchema } from "../../../packages/contracts/src/schemas";
 import { TIMELINE_TIME_ZONE } from "../../../packages/timeline/src/index";
 import type { FixtureContext } from "../generate-fixtures";
+import { PERSONAL_PROJECT } from "./project";
 
 /** Cópia literal de `AgentFileNoteView.tsx`. */
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
@@ -110,6 +111,7 @@ export function agentFileFixtures({ z }: FixtureContext): Record<string, unknown
       route: "hermes",
       status: "running",
       title: "Editar pesquisar/SKILL.md",
+      project: PERSONAL_PROJECT,
       createdAt: "2026-09-14T14:48:00.000Z",
       updatedAt: "2026-09-14T14:49:00.000Z",
       steps: [],
