@@ -8,6 +8,7 @@ import {
   getRequest,
   HermesOffError,
   listRequests,
+  REQUEST_STARTED_EVENT,
   sendHermesMessage,
   startEditRequest,
   startRequest,
@@ -205,5 +206,24 @@ describe("acompanhar, listar e cancelar", () => {
   test("ler um pedido que não existe é não encontrado", async () => {
     await expect(getRequest("01ARZ3NDEKTSV4RRFFQ69G5FAV")).rejects.toBeInstanceOf(ApiRequestError);
     await expect(getRequest("01ARZ3NDEKTSV4RRFFQ69G5FAV")).rejects.toMatchObject({ kind: "not_found" });
+  });
+});
+
+describe("aviso de pedido aberto", () => {
+  test("abrir um pedido avisa a janela, para a gaveta de execução se reler logo; pedido que falha não avisa", async () => {
+    const heard = vi.fn();
+    window.addEventListener(REQUEST_STARTED_EVENT, heard);
+    try {
+      await startRequest(ana);
+      expect(heard).toHaveBeenCalledTimes(1);
+      await startVoiceRequest({ transcript: "Dentista amanhã às 10", clientMessageId: "voz-2" });
+      expect(heard).toHaveBeenCalledTimes(2);
+      await expect(startRequest({ userId: "ana", text: "   " })).rejects.toThrow();
+      const afterFailure = heard.mock.calls.length;
+      await expect(startRequest({ userId: "ana", text: "   " })).rejects.toThrow();
+      expect(heard.mock.calls.length).toBe(afterFailure);
+    } finally {
+      window.removeEventListener(REQUEST_STARTED_EVENT, heard);
+    }
   });
 });
