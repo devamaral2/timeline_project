@@ -45,6 +45,13 @@ const MARKS: Record<ModelProvider, Mark> = {
   },
 };
 
+/** O nome de cada provedor, para o nome acessível da marca fora do seletor. */
+export const providerNames: Record<ModelProvider, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  openrouter: "OpenRouter",
+};
+
 /** A marca de um provedor, na cor do texto de quem a contém. Quem a usa dá o nome acessível (o botão). */
 export function ProviderMark({ provider, ...props }: { provider: ModelProvider } & Omit<SVGProps<SVGSVGElement>, "viewBox" | "children">) {
   const mark = MARKS[provider];

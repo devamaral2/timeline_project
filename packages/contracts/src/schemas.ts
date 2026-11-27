@@ -10,7 +10,7 @@ const humanTaskKindSchema = z.enum(["common", "meal", "sleep", "training"]);
 const agentRequestKindSchema = z.enum(["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"]);
 const taskKindSchema = z.enum([...humanTaskKindSchema.options, ...agentRequestKindSchema.options, "step"]);
 const humanTaskStatusSchema = z.enum(["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]);
-const agentTaskStatusSchema = z.enum([
+export const agentTaskStatusSchema = z.enum([
   "preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back",
 ]);
 const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, ...agentTaskStatusSchema.options]);
