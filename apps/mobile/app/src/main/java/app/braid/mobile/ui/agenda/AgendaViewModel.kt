@@ -93,6 +93,8 @@ data class AgendaUiState(
     val after: Int = 0,
     /** O interruptor "Tempo livre" da engrenagem: guardado no aparelho, desligado por padrão. */
     val showFreeTime: Boolean = false,
+    /** Um puxar para recarregar está em curso: o indicador gira; as leituras automáticas não acendem isto. */
+    val refreshing: Boolean = false,
 ) {
     /** Os dias que a leitura atual cobre: a semana do dia escolhido, ou a janela ancorada da lista contínua. */
     val windowDays: List<String>
@@ -279,6 +281,18 @@ class AgendaViewModel
         fun retry() = load(silent = false)
 
         /**
+         * O puxar para recarregar do modo "Por dia": relê a semana à vista sem o esqueleto, e o indicador gira até a
+         * leitura acabar. Falha deixa os dias lidos e acende o erro com "Tentar de novo". Não faz nada com uma leitura
+         * de esqueleto em curso, outro puxar em curso ou na lista contínua (ela relê ao chegar ao topo).
+         */
+        fun pull() {
+            val current = mutableState.value
+            if (current.mode != AgendaMode.Day || current.refreshing || current.load == AgendaLoad.Loading) return
+            mutableState.update { it.copy(refreshing = true) }
+            load(silent = true)
+        }
+
+        /**
          * Ao voltar ao app o dia pode ter virado e as tarefas mudado (o agente, outro
          * aparelho): relê a semana sem trocar a tela pelo esqueleto.
          */
@@ -304,7 +318,8 @@ class AgendaViewModel
             loadJob?.cancel()
             val ticket = ++generation
             loadingWeek = window.first()
-            if (!silent) mutableState.update { it.copy(load = AgendaLoad.Loading) }
+            // Uma leitura com esqueleto (outro dia, outro modo) assume o lugar de um puxar em curso e o encerra.
+            if (!silent) mutableState.update { it.copy(load = AgendaLoad.Loading, refreshing = false) }
             loadJob =
                 viewModelScope.launch {
                     try {
@@ -321,15 +336,20 @@ class AgendaViewModel
                                 tasksByDay = it.tasksByDay + window.associateWith { day -> byDay[day] ?: emptyList() },
                                 load = AgendaLoad.Idle,
                                 now = readAt,
+                                refreshing = false,
                             )
                         }
                         syncPolling()
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (failure: Exception) {
-                        // Uma releitura silenciosa que falha mantém a agenda que já está na tela.
+                        // Uma releitura silenciosa que falha mantém a agenda que já está na tela; só o puxar a avisa.
                         mutableState.update {
-                            if (!silent || it.load == AgendaLoad.Loading) it.copy(load = AgendaLoad.Failed) else it
+                            if (!silent || it.refreshing || it.load == AgendaLoad.Loading) {
+                                it.copy(load = AgendaLoad.Failed, refreshing = false)
+                            } else {
+                                it
+                            }
                         }
                     } finally {
                         // Só a leitura mais recente solta a marca: uma cancelada termina depois que a nova começou.

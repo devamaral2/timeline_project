@@ -10,6 +10,7 @@ import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.toNowLabel
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.Fixtures
+import app.braid.mobile.support.RequestGate
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
@@ -559,5 +560,148 @@ class TasksViewModelTest {
             assertFalse(state.failed)
             assertNull(state.notice)
             assertEquals(TaskStatus.Running, card(state, "task-3").status)
+        }
+
+    @Test
+    fun `a pull reads the list again, keeps it on screen and turns the flag on and off`() =
+        runTest {
+            val gate = RequestGate()
+            backend.route("GET", listPath) {
+                gate.pass()
+                fixture("task-list-all")
+            }
+            val viewModel = newViewModel()
+            val before = viewModel.settled()
+            gate.close()
+
+            viewModel.pull()
+
+            assertTrue(viewModel.state.value.refreshing)
+            awaitReads(2)
+            assertEquals(before.cards, viewModel.state.value.cards)
+            assertNull(viewModel.state.value.notice)
+            gate.open()
+            val after = viewModel.state.first { !it.refreshing }
+            assertEquals(2, reads())
+            assertEquals(setOf<String>(), lastRead().queryParameterNames)
+            assertEquals(before.cards, after.cards)
+            assertFalse(after.failed)
+            assertNull(after.notice)
+        }
+
+    @Test
+    fun `a pull keeps the current filters`() =
+        runTest {
+            backend.route("GET", listPath) { request ->
+                if (request.requestUrl!!.queryParameter("tag") == "trabalho") fixture("task-list-trabalho") else fixture("task-list-all")
+            }
+            val viewModel = newViewModel()
+            viewModel.settled()
+            viewModel.toggleTag("trabalho")
+            viewModel.state.first { it.tag == "trabalho" && it.cards?.size == 3 }
+            val before = reads()
+
+            viewModel.pull()
+            viewModel.state.first { !it.refreshing }
+
+            assertEquals(before + 1, reads())
+            assertEquals("trabalho", lastRead().queryParameter("tag"))
+            assertEquals(
+                3,
+                viewModel.state.value.cards!!
+                    .size,
+            )
+        }
+
+    @Test
+    fun `a second pull while one is in flight does nothing`() =
+        runTest {
+            val gate = RequestGate()
+            backend.route("GET", listPath) {
+                gate.pass()
+                fixture("task-list-all")
+            }
+            val viewModel = newViewModel()
+            viewModel.settled()
+            gate.close()
+
+            viewModel.pull()
+            viewModel.pull()
+            awaitReads(2)
+            gate.open()
+            viewModel.state.first { !it.refreshing }
+
+            assertEquals(2, reads())
+        }
+
+    @Test
+    fun `a failed pull keeps the list and says so, and the next read that works takes the notice away`() =
+        runTest {
+            var broken = false
+            backend.route("GET", listPath) { if (broken) status(503) else fixture("task-list-all") }
+            val viewModel = newViewModel()
+            val before = viewModel.settled()
+            broken = true
+
+            viewModel.pull()
+            val failed = viewModel.state.first { !it.refreshing }
+
+            assertEquals(before.cards, failed.cards)
+            assertFalse(failed.failed)
+            assertEquals("Não foi possível atualizar as tarefas. Tente novamente.", failed.notice)
+
+            broken = false
+            viewModel.pull()
+            val recovered = viewModel.state.first { !it.refreshing }
+
+            assertNull(recovered.notice)
+            assertEquals(before.cards, recovered.cards)
+        }
+
+    @Test
+    fun `changing a filter in the middle of a pull still ends the pull`() =
+        runTest {
+            val gate = RequestGate()
+            backend.route("GET", listPath) { request ->
+                gate.pass()
+                if (request.requestUrl!!.queryParameter("tag") == "trabalho") fixture("task-list-trabalho") else fixture("task-list-all")
+            }
+            val viewModel = newViewModel()
+            viewModel.settled()
+            gate.close()
+
+            viewModel.pull()
+            viewModel.toggleTag("trabalho")
+            awaitReads(3)
+            gate.open()
+            val after = viewModel.state.first { !it.refreshing && it.cards?.size == 3 }
+
+            assertEquals("trabalho", after.tag)
+            assertFalse(after.refreshing)
+        }
+
+    @Test
+    fun `a pull does nothing during the first read, and on the first read's error it tries again`() =
+        runTest {
+            val gate = RequestGate()
+            gate.close()
+            var broken = true
+            backend.route("GET", listPath) {
+                gate.pass()
+                if (broken) status(500) else fixture("task-list-all")
+            }
+            val viewModel = newViewModel()
+
+            viewModel.pull()
+            assertFalse(viewModel.state.value.refreshing)
+            gate.open()
+            assertTrue(viewModel.settled().failed)
+
+            broken = false
+            viewModel.pull()
+            val recovered = viewModel.state.first { !it.refreshing }
+
+            assertFalse(recovered.failed)
+            assertTrue(recovered.cards!!.isNotEmpty())
         }
 }

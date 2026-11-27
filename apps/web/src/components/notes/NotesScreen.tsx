@@ -3,7 +3,7 @@
 import type { ArtifactDto, ArtifactType } from "@repo/contracts";
 import { FileText } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ICON_STROKE_WIDTH } from "@/components/tasks/task-visuals";
 import page from "@/components/ui/page.module.css";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
@@ -18,6 +18,7 @@ import {
   artifactVisualType,
 } from "@/lib/artifacts/artifact-model";
 import { useViewMode } from "@/lib/tasks/view-mode";
+import { usePullRefresh } from "@/lib/navigation/pull-refresh";
 import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
 import { NoteSheet, noteTypeIcon } from "./NoteSheet";
@@ -31,6 +32,7 @@ function toggle<T>(current: T | null, value: T): T | null {
 const TAGS_SHOWN = 12;
 /** Espera depois da última tecla antes de consultar a API pelo texto. */
 const SEARCH_DEBOUNCE_MS = 250;
+const REFRESH_FAILURE_MESSAGE = "Não foi possível atualizar os artefatos. Tente novamente.";
 
 /**
  * Os artefatos do usuário, do mais recente para o mais antigo. Tipo, tag e
@@ -43,7 +45,11 @@ export function NotesScreen({ userId }: { userId: string }) {
   const [artifacts, setArtifacts] = useState<ArtifactDto[] | null>(null);
   const [facets, setFacets] = useState<ArtifactDto[] | null>(null);
   const [error, setError] = useState(false);
+  /** O aviso de uma recarga pedida pelo puxão que falhou: a lista fica na tela. */
+  const [notice, setNotice] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // Quem puxou a tela para recarregar espera aqui o fim da leitura que pediu.
+  const pullDone = useRef<(() => void) | null>(null);
   const [selectedType, setSelectedType] = useState<ArtifactType | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -71,20 +77,36 @@ export function NotesScreen({ userId }: { userId: string }) {
       q: search || undefined,
     };
     const unfiltered = !selectedType && !selectedTag && !search;
-    setError(false);
+    // A leitura que um puxão pediu não mexe no que está na tela antes de voltar; se falhar, só avisa.
+    const pulled = pullDone.current;
+    pullDone.current = null;
+    if (!pulled) setError(false);
     void listArtifacts(filters)
       .then((data) => {
         if (cancelled) return;
         setArtifacts(data);
+        setError(false);
+        setNotice(null);
         if (unfiltered) setFacets(data);
       })
       .catch(() => {
-        if (!cancelled) setError(true);
-      });
+        if (cancelled) return;
+        if (pulled) setNotice(REFRESH_FAILURE_MESSAGE);
+        else setError(true);
+      })
+      .finally(() => pulled?.());
     return () => {
       cancelled = true;
+      pulled?.();
     };
   }, [selectedType, selectedTag, search, reloadKey]);
+
+  // Puxar a tela para baixo relê a lista com os filtros atuais, sem voltar ao esqueleto.
+  usePullRefresh(() => new Promise<void>((resolve) => {
+    pullDone.current?.();
+    pullDone.current = resolve;
+    setReloadKey((key) => key + 1);
+  }));
 
   const retry = useCallback(() => {
     setArtifacts(null);
@@ -190,6 +212,7 @@ export function NotesScreen({ userId }: { userId: string }) {
       </section>
 
       <section className={`${page.body} ${styles.body}`} aria-label="Lista de artefatos">
+        {notice && !error ? <p role="alert" className={styles.message}>{notice}</p> : null}
         {error ? (
           <p role="alert" className={styles.message}>Não foi possível carregar os artefatos.<button type="button" className={styles.retry} onClick={retry}>Tentar de novo</button></p>
         ) : !shown ? (

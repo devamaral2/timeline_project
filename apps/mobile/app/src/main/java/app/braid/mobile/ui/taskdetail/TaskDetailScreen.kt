@@ -66,6 +66,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.core.designsystem.BraidPullToRefresh
 import app.braid.mobile.core.designsystem.ProjectLine
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
@@ -123,6 +124,7 @@ fun TaskDetailPage(
         onBack = onBack,
         onEdit = { (state as? TaskDetailUiState.Content)?.task?.id?.let(onEdit) },
         onRetry = viewModel::retry,
+        onRefresh = viewModel::pull,
         onOpenTask = onOpenTask,
         onChangeStatus = viewModel::changeStatus,
         onChangePriority = viewModel::changePriority,
@@ -167,6 +169,7 @@ fun TaskDetailScreen(
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
     onOpenTask: (String) -> Unit,
     onChangeStatus: (TaskStatus) -> Unit,
     onChangePriority: (TaskPriority) -> Unit,
@@ -190,23 +193,31 @@ fun TaskDetailScreen(
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         TopBar(onBack = onBack, onEdit = if (content != null) onEdit else null, onDelete = if (content != null) onAskDelete else null)
-        Column(
-            Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 24.dp)
-                .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+        // Puxar para recarregar: só com a tarefa lida; o erro tem o "Tentar de novo" e o esqueleto é a primeira leitura.
+        BraidPullToRefresh(
+            refreshing = content?.refreshing == true,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            enabled = content != null,
         ) {
-            when (state) {
-                TaskDetailUiState.Loading -> Message("Carregando tarefa…")
-                TaskDetailUiState.Missing -> Message("Tarefa não encontrada.", alert = true)
-                TaskDetailUiState.Failed -> {
-                    Message("Não foi possível carregar a tarefa. Tente novamente.", alert = true)
-                    BraidPill(text = "Tentar de novo", onClick = onRetry)
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 24.dp)
+                    .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                when (state) {
+                    TaskDetailUiState.Loading -> Message("Carregando tarefa…")
+                    TaskDetailUiState.Missing -> Message("Tarefa não encontrada.", alert = true)
+                    TaskDetailUiState.Failed -> {
+                        Message("Não foi possível carregar a tarefa. Tente novamente.", alert = true)
+                        BraidPill(text = "Tentar de novo", onClick = onRetry)
+                    }
+                    is TaskDetailUiState.Content ->
+                        Body(state, onOpenTask, onOpenArtifact, onAddArtifact, addVideo, addVideoActions, onChangeStatus, onChangePriority)
                 }
-                is TaskDetailUiState.Content ->
-                    Body(state, onOpenTask, onOpenArtifact, onAddArtifact, addVideo, addVideoActions, onChangeStatus, onChangePriority)
             }
         }
         footer?.invoke()
@@ -322,6 +333,18 @@ internal fun Message(
     )
 }
 
+/** A linha de aviso do detalhe: o erro de uma troca que não gravou, ou de um puxar que não leu. */
+@Composable
+private fun NoticeLine(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+        color = MaterialTheme.colorScheme.error,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+    )
+}
+
 @Composable
 private fun Body(
     content: TaskDetailUiState.Content,
@@ -334,16 +357,10 @@ private fun Body(
     onChangePriority: (TaskPriority) -> Unit,
 ) {
     val task = content.task
+    // O aviso do puxar que falhou fica no topo, onde a pessoa puxou; é o mesmo texto de aviso da troca que falhou.
+    content.pullNotice?.let { NoticeLine(it) }
     Header(content, onChangeStatus, onChangePriority)
-    content.notice?.let { notice ->
-        Text(
-            text = notice,
-            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
-            color = MaterialTheme.colorScheme.error,
-            fontSize = 13.sp,
-            lineHeight = 18.sp,
-        )
-    }
+    content.notice?.let { NoticeLine(it) }
     InfoSection(task)
     content.parent?.let {
         LinkedSection("Tarefa principal", "Carregando tarefa principal…", "A tarefa principal não carregou.", it, content.now, onOpenTask)

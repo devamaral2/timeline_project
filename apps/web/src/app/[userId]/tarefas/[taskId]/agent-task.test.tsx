@@ -4,6 +4,8 @@ import type { AgentTraceDto, TaskDto, RequestDto } from "@repo/contracts";
 import { type FakeApi, createFakeApi } from "@/test/fake-api";
 import { taskFixture, tasksArea } from "@/test/fake-api/tasks";
 import { advanceRequest, requestFixture, requestsArea } from "@/test/fake-api/requests";
+import { PullToRefresh } from "@/components/shell/pull-to-refresh";
+import { pullDown } from "@/test/pull-down";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, back: vi.fn(), replace: vi.fn() }) }));
@@ -535,4 +537,37 @@ test.each([
   expect(link).toHaveAttribute("href", "/user-1/notas/art-livre");
   expect(within(link).getByText(`criado · ${label}`)).toBeInTheDocument();
   expect(link.querySelector(`.${glyph}`)).not.toBeNull();
+});
+
+test("puxar a tela relê o pedido e a tarefa de agente, mesmo com o pedido já encerrado", async () => {
+  install([agentTask({ status: "completed" })], [agentRequest({ status: "completed", steps: STEPS.map((step) => ({ ...step, status: "completed" })) })]);
+  render(<><PullToRefresh /><TaskPage params={Promise.resolve({ userId: "user-1", taskId: ID })} /></>);
+  await loaded();
+  const taskReads = () => api.calls.filter((call) => call.method === "GET" && call.pathname === `/api/tasks/${ID}`).length;
+  const before = { request: requestReads(), task: taskReads() };
+
+  api.store.table<TaskDto>("tasks").set(ID, agentTask({ status: "completed", name: "Voos pesquisados" }));
+  pullDown();
+
+  const top = screen.getByRole("region", { name: "Resumo da tarefa" });
+  expect(await within(top).findByRole("heading", { level: 1, name: "Voos pesquisados" })).toBeInTheDocument();
+  expect(requestReads()).toBe(before.request + 1);
+  expect(taskReads()).toBe(before.task + 1);
+  expect(screen.queryByText(/Carregando/)).not.toBeInTheDocument();
+});
+
+test("se a leitura do pedido falha no puxão, a tarefa de agente fica na tela, com o que deu para reler, e avisa", async () => {
+  install([agentTask()], [agentRequest()]);
+  render(<><PullToRefresh /><TaskPage params={Promise.resolve({ userId: "user-1", taskId: ID })} /></>);
+  await loaded();
+  await screen.findByRole("region", { name: "Passos" });
+
+  api.store.table<TaskDto>("tasks").set(ID, agentTask({ name: "Voos de novembro" }));
+  api.failNext("GET", `/api/requests/${ID}`, 500);
+  pullDown();
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível atualizar a tarefa. Tente novamente.");
+  expect(screen.getByRole("region", { name: "Passos" })).toBeInTheDocument();
+  const top = screen.getByRole("region", { name: "Resumo da tarefa" });
+  expect(within(top).getByRole("heading", { level: 1, name: "Voos de novembro" })).toBeInTheDocument();
 });

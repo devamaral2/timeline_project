@@ -58,6 +58,8 @@ fun AgendaDay(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth()) {
+        // Os dias já lidos ficam: a leitura que falhou (um puxar, por exemplo) avisa por cima deles.
+        if (rows != null && load == AgendaLoad.Failed) LoadFailed(onRetry)
         when {
             rows != null && rows.isEmpty() -> FreeDay()
             rows != null -> AgendaRows(dayKey, rows, now, onStatusClick, onOpenTask, onPlanFreeWindow)

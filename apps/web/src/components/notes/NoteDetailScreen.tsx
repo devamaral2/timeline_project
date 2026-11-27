@@ -3,7 +3,7 @@
 import type { ArtifactDto, ArtifactTaskLinkDto } from "@repo/contracts";
 import { isFreeTextArtifact } from "@repo/contracts/artifact-types";
 import { Pencil, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActionPill, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMenu, DetailMessage, DetailNav, DetailSection, LinkList, LinkRow, MenuItem, TagPills, detailIcon,
 } from "@/components/detail/detail-parts";
@@ -14,6 +14,7 @@ import { getArtifact } from "@/lib/api/artifacts";
 import { ApiRequestError } from "@/lib/api/client-request";
 import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
 import { editEntityTypeOfArtifact } from "@/lib/entity-edit/entity-edit-target";
+import { usePullRefresh } from "@/lib/navigation/pull-refresh";
 import { useNow } from "@/lib/tasks/use-now";
 import { pendingMealEditMessage } from "@/lib/notes/meal-generation";
 import { whenLabel } from "@/lib/notes/notes-model";
@@ -22,6 +23,8 @@ import { ArtifactContent } from "./ArtifactContent";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 
 type LoadState = "loading" | "ready" | "missing" | "error";
+
+const REFRESH_FAILURE_MESSAGE = "Não foi possível atualizar o artefato. Tente novamente.";
 
 /**
  * O artefato aberto, em duas colunas. À esquerda: voltar, o tipo (em mono), o nome na serifa, os fatos
@@ -36,6 +39,8 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   const router = useMotionRouter();
   const [artifact, setArtifact] = useState<ArtifactDto | null>(null);
   const [state, setState] = useState<LoadState>("loading");
+  /** O aviso de um puxão que falhou: o artefato fica na tela. */
+  const [notice, setNotice] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const listHref = `/${userId}/notas`;
   const editHref = `/${userId}/notas/${noteId}/editar`;
@@ -43,6 +48,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   useEffect(() => {
     let cancelled = false;
     setState("loading");
+    setNotice(null);
     getArtifact(noteId).then(
       (loaded) => {
         if (cancelled) return;
@@ -55,6 +61,23 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
     );
     return () => { cancelled = true; };
   }, [noteId]);
+
+  // Puxar a tela para baixo relê o artefato sem voltar ao "Carregando"; na tela de erro, é o jeito de tentar
+  // de novo. A falha não joga fora o que está na tela: fica o aviso. Só o artefato que deixou de existir troca a tela.
+  usePullRefresh(useCallback(async () => {
+    try {
+      setArtifact(await getArtifact(noteId));
+      setState("ready");
+      setNotice(null);
+    } catch (error) {
+      if (isMissing(error)) {
+        setState("missing");
+        return;
+      }
+      setState((current) => (current === "ready" ? current : "error"));
+      setNotice(REFRESH_FAILURE_MESSAGE);
+    }
+  }, [noteId]));
 
   // Um alimento com o cálculo pendente é relido até o servidor terminar (a falha da leitura não derruba a tela).
   const pendingMeal = artifact?.type === "food" && artifact.data.generation?.status === "pending";
@@ -134,6 +157,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
         </>
       }
     >
+      {notice ? <DetailMessage alert>{notice}</DetailMessage> : null}
       <ArtifactContent artifact={artifact} />
 
       {/* Sem tarefa (ou artefato global), a seção some: só aparece quando há o que mostrar. */}

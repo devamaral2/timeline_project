@@ -44,6 +44,7 @@ import javax.inject.Inject
 const val REQUEST_NOT_FOUND_TEXT = "Pedido não encontrado."
 const val REQUEST_LOAD_FAILED_TEXT = "Não foi possível carregar o pedido. Tente novamente."
 const val AGENT_TASK_NOT_FOUND_TEXT = "Tarefa não encontrada."
+const val FAILED_AGENT_PULL_NOTICE = "Não foi possível atualizar a tarefa. Tente novamente."
 const val AGENT_TASK_LOAD_FAILED_TEXT = "Não foi possível carregar a tarefa. Tente novamente."
 const val SITUATION_FAILED_TEXT = "Não foi possível mudar a situação. Tente novamente."
 
@@ -84,6 +85,10 @@ sealed interface AgentTaskUiState {
         val situationSaves: Int = 0,
         /** A gravação da situação falhou e a tela voltou ao que era; some na próxima escolha. */
         val situationError: String? = null,
+        /** Um puxar para recarregar está em curso: o indicador gira; a releitura a cada 3 s não acende isto. */
+        val refreshing: Boolean = false,
+        /** O aviso do puxar em que uma das leituras falhou, com o que estava na tela mantido; só o puxar o acende e o apaga. */
+        val pullNotice: String? = null,
     ) : AgentTaskUiState {
         val savingSituation: Boolean get() = situationSaves > 0
 
@@ -179,6 +184,47 @@ class AgentTaskViewModel
                 syncPolling()
                 launch { loadHierarchy(loaded) }
                 if (sessionId != null) launch { loadPrevious(sessionId) }
+            }
+        }
+
+        /**
+         * O puxar para recarregar: relê a tarefa e o pedido de uma vez, sem o esqueleto, e o indicador gira até as duas
+         * leituras acabarem. A tarefa que "não existe mais" (404 e 403) vai para "Tarefa não encontrada.", como na primeira
+         * leitura. Qualquer outra falha, em qualquer das leituras, mantém a tela (o rascunho do rodapé inclusive), aplica a
+         * leitura que deu certo e acende [AgentTaskUiState.Content.pullNotice]. Não faz nada com outro puxar em curso nem
+         * fora da tarefa lida.
+         */
+        fun pull() {
+            val content = current() ?: return
+            if (content.refreshing) return
+            updateContent { it.copy(refreshing = true) }
+            viewModelScope.launch {
+                try {
+                    val (task, request) =
+                        coroutineScope {
+                            val readTask = async { attempt { tasks.task(taskId) } }
+                            val readRequest = async { attempt { requests.request(taskId) } }
+                            readTask.await() to readRequest.await()
+                        }
+                    if (task.exceptionOrNull() is TaskNotFoundException) {
+                        mutableState.value = AgentTaskUiState.Missing(AGENT_TASK_NOT_FOUND_TEXT)
+                        return@launch
+                    }
+                    val loaded = task.getOrNull()
+                    val read = request.getOrNull()
+                    updateContent {
+                        it.copy(
+                            task = loaded ?: it.task,
+                            request = read ?: it.request,
+                            now = if (loaded != null || read != null) clock.now() else it.now,
+                            pullNotice = if (loaded != null && read != null) null else FAILED_AGENT_PULL_NOTICE,
+                        )
+                    }
+                    syncPolling()
+                    if (loaded != null) loadHierarchy(loaded)
+                } finally {
+                    updateContent { it.copy(refreshing = false) }
+                }
             }
         }
 

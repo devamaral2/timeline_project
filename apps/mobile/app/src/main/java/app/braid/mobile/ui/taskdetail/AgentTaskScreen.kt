@@ -49,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.core.designsystem.BraidPullToRefresh
 import app.braid.mobile.core.designsystem.ProjectLine
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.domain.request.AgentRequest
@@ -114,6 +115,7 @@ fun AgentTaskPage(
         voice = voice,
         onBack = onBack,
         onRetry = viewModel::retry,
+        onRefresh = viewModel::pull,
         onOpenTask = onOpenTask,
         onOpenArtifact = onOpenArtifact,
         onDraftChange = viewModel::onDraftChange,
@@ -130,6 +132,7 @@ fun AgentTaskScreen(
     voice: VoiceUiState,
     onBack: () -> Unit,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
     onOpenTask: (String) -> Unit,
     onOpenArtifact: (String) -> Unit,
     onDraftChange: (String) -> Unit,
@@ -145,21 +148,29 @@ fun AgentTaskScreen(
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         TopBar(onBack = onBack, onEdit = null, onDelete = null)
-        Column(
-            Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+        // Puxar para recarregar: só com a tarefa lida; o erro tem o "Tentar de novo" e o esqueleto é a primeira leitura.
+        BraidPullToRefresh(
+            refreshing = (state as? AgentTaskUiState.Content)?.refreshing == true,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            enabled = state is AgentTaskUiState.Content,
         ) {
-            when (state) {
-                AgentTaskUiState.Loading -> Message("Carregando pedido…")
-                is AgentTaskUiState.Missing -> Message(state.message, alert = true)
-                is AgentTaskUiState.Failed -> {
-                    Message(state.message, alert = true)
-                    BraidPill(text = "Tentar de novo", onClick = onRetry)
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                when (state) {
+                    AgentTaskUiState.Loading -> Message("Carregando pedido…")
+                    is AgentTaskUiState.Missing -> Message(state.message, alert = true)
+                    is AgentTaskUiState.Failed -> {
+                        Message(state.message, alert = true)
+                        BraidPill(text = "Tentar de novo", onClick = onRetry)
+                    }
+                    is AgentTaskUiState.Content -> Body(state, onOpenTask, onOpenArtifact, onSituationPick)
                 }
-                is AgentTaskUiState.Content -> Body(state, onOpenTask, onOpenArtifact, onSituationPick)
             }
         }
         if (state is AgentTaskUiState.Content) {
@@ -176,6 +187,8 @@ private fun Body(
     onSituationPick: (TaskSituation) -> Unit,
 ) {
     val request = content.request
+    // O aviso do puxar que falhou fica no topo, onde a pessoa puxou, na mesma linha de alerta do rodapé.
+    content.pullNotice?.let { Alert(it) }
     Header(content.task, request, content.situationError, onSituationPick)
     InfoSection(content.task, content.now)
     content.parent?.let {

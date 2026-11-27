@@ -44,6 +44,7 @@ const val TASK_SEARCH_DEBOUNCE_MS = 250L
 const val STALE_TASK_LIST_NOTICE = "Esta tarefa mudou em outro lugar. Carregamos a lista atual; confira e tente de novo."
 const val FAILED_TASK_LIST_NOTICE = "Não foi possível trocar o status. Tente novamente."
 const val FAILED_SITUATION_NOTICE = "Não foi possível mudar a situação. Tente novamente."
+const val FAILED_TASK_PULL_NOTICE = "Não foi possível atualizar as tarefas. Tente novamente."
 
 /**
  * [cards] é a última lista lida com os filtros de agora, e `null` até a primeira chegar. [facets] é a última lista lida
@@ -73,6 +74,8 @@ data class TasksUiState(
     val now: Instant,
     /** De quem são as tarefas lidas: vem da escolha do menu, que vale para as três seções. */
     val viewMode: ViewMode = ViewMode.Default,
+    /** Um puxar para recarregar está em curso: o indicador gira; as leituras automáticas não acendem isto. */
+    val refreshing: Boolean = false,
 ) {
     val filters: TaskFilters get() = TaskFilters(tag, priorities, query)
 
@@ -180,6 +183,18 @@ class TasksViewModel
             viewModelScope.launch { refresh(quiet = false) }
         }
 
+        /**
+         * O puxar para recarregar: relê a lista com os filtros de agora sem o esqueleto, e o indicador gira até a leitura
+         * acabar. Falha mantém a lista e avisa. Não faz nada na primeira leitura nem com outro puxar em curso; no erro
+         * da primeira leitura serve de "Tentar de novo".
+         */
+        fun pull() {
+            val current = mutableState.value
+            if (current.refreshing || (current.cards == null && !current.failed)) return
+            mutableState.update { it.copy(refreshing = true) }
+            viewModelScope.launch { refresh(quiet = true) }
+        }
+
         /** O glifo de uma tarefa de pessoa, com qualquer status, abre a folha; o de agente não muda status. */
         fun openStatusPicker(card: TaskCard) {
             if (mutableState.value.saving || card.actor != TaskActor.Human) return
@@ -273,7 +288,8 @@ class TasksViewModel
 
         /**
          * Relê a lista com os filtros e o executor de agora. Falha vira o erro com "Tentar de novo"; uma releitura
-         * silenciosa que falha mantém a lista que já está na tela.
+         * silenciosa que falha mantém a lista que já está na tela (só o [pull] avisa). A leitura mais recente encerra o
+         * puxar em curso, mesmo que ele tenha sido trocada por outra no meio do caminho.
          */
         private suspend fun refresh(quiet: Boolean) {
             val request = ++latestRequest
@@ -285,6 +301,8 @@ class TasksViewModel
                     it.copy(
                         cards = list,
                         failed = false,
+                        refreshing = false,
+                        notice = it.notice.takeUnless { notice -> notice == FAILED_TASK_PULL_NOTICE },
                         now = clock.now(),
                         // Sem filtro, a lista inteira é também a fonte das opções de tag.
                         facets = if (current.filters.count == 0) list else it.facets,
@@ -294,7 +312,16 @@ class TasksViewModel
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
-                if (request == latestRequest && !quiet) mutableState.update { it.copy(failed = true) }
+                if (request == latestRequest) {
+                    mutableState.update {
+                        when {
+                            !quiet -> it.copy(failed = true, refreshing = false)
+                            // Um puxar que falha deixa a lista e avisa; no erro da primeira leitura o erro já está na tela.
+                            it.refreshing && !it.failed -> it.copy(refreshing = false, notice = FAILED_TASK_PULL_NOTICE)
+                            else -> it.copy(refreshing = false)
+                        }
+                    }
+                }
             }
         }
     }

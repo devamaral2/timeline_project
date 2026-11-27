@@ -24,6 +24,8 @@ interface TaskDetailViewProps {
   task: TaskDto;
   /** Relê a tarefa depois de uma troca. Não lança: a falha fica com a tela que o carregou. */
   onChanged: () => Promise<void>;
+  /** O aviso de um puxão na tela que falhou. Fica no topo do conteúdo, onde a pessoa puxou. */
+  notice?: string | null;
 }
 
 const STALE_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a versão atual; confira e tente de novo.";
@@ -36,7 +38,7 @@ const STALE_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a versão at
  * topo, ao lado de "Editar" (ticket 23). Artefatos aparece sempre, com a ação de ligar um artefato embaixo, que
  * grava na hora, sem passar pela edição. A hierarquia só se lê aqui: subtarefa se liga na edição ou pelo agente.
  */
-export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps) {
+export function TaskDetailView({ userId, task, onChanged, notice }: TaskDetailViewProps) {
   const router = useMotionRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +106,7 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
 
   return (
     <DetailFrame type={task.kind} leadLabel="Resumo da tarefa" bodyLabel="Conteúdo da tarefa" lead={lead}>
+      {notice ? <DetailMessage alert>{notice}</DetailMessage> : null}
       <TaskInfoSection task={task} />
       <TaskHierarchySection userId={userId} task={task} />
       <TaskArtifactsSection

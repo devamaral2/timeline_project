@@ -2,6 +2,7 @@
 
 import type { TaskDto } from "@repo/contracts";
 import { BackLink, DetailFrame, DetailMessage } from "@/components/detail/detail-parts";
+import { usePullRefresh } from "@/lib/navigation/pull-refresh";
 import { AgentTaskHeader } from "./AgentTaskHeader";
 import { AgentEntriesSection } from "./AgentEntriesSection";
 import { AgentFailureSection } from "./AgentFailureSection";
@@ -20,6 +21,10 @@ interface AgentTaskDetailViewProps {
   task: TaskDto;
   /** Relê a tarefa. A releitura do pedido em aberto chama isto a cada batida, para pegar a conclusão. */
   onChanged: () => Promise<void>;
+  /** O puxão na tela: relê a tarefa junto com o que `alsoRead` trouxer (aqui, o pedido) e avisa se algo falhar. */
+  onPull: (alsoRead?: () => Promise<void>) => Promise<void>;
+  /** O aviso de um puxão que falhou. Fica no topo do conteúdo, onde a pessoa puxou. */
+  notice?: string | null;
 }
 
 /**
@@ -28,8 +33,11 @@ interface AgentTaskDetailViewProps {
  *   - 47: a falha e o campo do agente no rodapé, depois de Registro; "Cancelar pedido" na linha de status
  *     (no topo, em `AgentTaskHeader`), e o menu "Mais ações" na barra do topo.
  */
-export function AgentTaskDetailView({ userId, task, onChanged }: AgentTaskDetailViewProps) {
-  const { request, load, applyRequest } = useAgentRequest(task.id, onChanged);
+export function AgentTaskDetailView({ userId, task, onChanged, onPull, notice }: AgentTaskDetailViewProps) {
+  const { request, load, applyRequest, reload } = useAgentRequest(task.id, onChanged);
+
+  // Puxar a tela para baixo relê o pedido e a tarefa, sem esperar a próxima batida.
+  usePullRefresh(() => onPull(reload));
 
   const lead = (
     <>
@@ -44,6 +52,7 @@ export function AgentTaskDetailView({ userId, task, onChanged }: AgentTaskDetail
 
   return (
     <DetailFrame type={task.kind} leadLabel="Resumo da tarefa" bodyLabel="Conteúdo da tarefa" lead={lead}>
+      {notice ? <DetailMessage alert>{notice}</DetailMessage> : null}
       {request ? (
         <>
           <AgentInfoSection task={task} />

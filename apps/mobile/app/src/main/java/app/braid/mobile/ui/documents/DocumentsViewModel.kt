@@ -23,6 +23,8 @@ import javax.inject.Inject
 /** Espera depois da última tecla antes de consultar a API pelo texto. */
 const val SEARCH_DEBOUNCE_MS = 250L
 
+const val FAILED_DOCUMENTS_PULL_NOTICE = "Não foi possível atualizar os artefatos. Tente novamente."
+
 /** Por que a lista está vazia: ainda não há artefato ou os filtros escondem todos. */
 enum class EmptyKind { NoneYet, NothingFound }
 
@@ -38,6 +40,10 @@ data class DocumentsUiState(
     val viewMode: ViewMode = ViewMode.Default,
     /** Há artefato na lista sem filtro: só então a busca do menu aparece. */
     val hasArtifacts: Boolean = false,
+    /** Um puxar para recarregar está em curso: o indicador gira; as leituras automáticas não acendem isto. */
+    val refreshing: Boolean = false,
+    /** O aviso do puxar que falhou, com a lista mantida; some na próxima leitura que dá certo. */
+    val notice: String? = null,
 ) {
     val shown: List<Artifact>? =
         artifacts?.let { all -> viewMode.actor?.let { actor -> all.filter { artifactActor(it.type) == actor } } ?: all }
@@ -103,12 +109,32 @@ class DocumentsViewModel
 
         fun retry() = load(silent = false)
 
+        /**
+         * O puxar para recarregar: relê a lista com a busca de agora sem o esqueleto, e o indicador gira até a leitura
+         * acabar. Falha mantém a lista e avisa. Não faz nada na primeira leitura nem com outro puxar em curso; no erro
+         * da primeira leitura serve de "Tentar de novo".
+         */
+        fun pull() {
+            val current = mutableState.value
+            if (current.refreshing || (current.artifacts == null && !current.failed)) return
+            mutableState.update { it.copy(refreshing = true) }
+            load(silent = true)
+        }
+
         /** Ao voltar à tela os artefatos podem ter mudado (o chat, o agente): relê sem trocar a lista pelo esqueleto. */
         fun onResume() = load(silent = true)
 
         private fun load(silent: Boolean) {
             loadJob?.cancel()
-            mutableState.update { if (silent) it.copy(failed = false) else it.copy(artifacts = null, failed = false) }
+            mutableState.update {
+                when {
+                    // Uma leitura com esqueleto assume o lugar de um puxar em curso e o encerra.
+                    !silent -> it.copy(artifacts = null, failed = false, refreshing = false)
+                    // Um puxar mantém o erro na tela até a leitura voltar.
+                    it.refreshing -> it
+                    else -> it.copy(failed = false)
+                }
+            }
             val search = mutableState.value.search
             loadJob =
                 viewModelScope.launch {
@@ -116,12 +142,25 @@ class DocumentsViewModel
                         val read = artifacts.list(ArtifactFilters(query = search.ifEmpty { null }))
                         mutableState.update {
                             // As opções (a legenda do menu) vêm da lista sem filtro, para não sumirem quando a busca estreita o resultado.
-                            it.copy(artifacts = read, hasArtifacts = if (search.isEmpty()) read.isNotEmpty() else it.hasArtifacts)
+                            it.copy(
+                                artifacts = read,
+                                hasArtifacts = if (search.isEmpty()) read.isNotEmpty() else it.hasArtifacts,
+                                failed = false,
+                                refreshing = false,
+                                notice = null,
+                            )
                         }
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (failure: Exception) {
-                        mutableState.update { it.copy(failed = true) }
+                        // Um puxar que falha deixa a lista e avisa; no erro da primeira leitura o erro já está na tela.
+                        mutableState.update {
+                            if (it.refreshing && !it.failed) {
+                                it.copy(refreshing = false, notice = FAILED_DOCUMENTS_PULL_NOTICE)
+                            } else {
+                                it.copy(failed = true, refreshing = false)
+                            }
+                        }
                     }
                 }
         }

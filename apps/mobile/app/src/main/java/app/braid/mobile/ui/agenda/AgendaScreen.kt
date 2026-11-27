@@ -38,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidMonoFont
+import app.braid.mobile.core.designsystem.BraidPullToRefresh
 import app.braid.mobile.domain.agenda.FreeWindow
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.timeline.daysBetween
@@ -81,6 +82,7 @@ fun AgendaScreen(
         state = state,
         onSelectDay = viewModel::selectDay,
         onRetry = viewModel::retry,
+        onRefresh = viewModel::pull,
         onStatusClick = viewModel::openStatusPicker,
         onOpenTask = onOpenTask,
         onVisibleDay = viewModel::showVisibleDay,
@@ -132,6 +134,7 @@ fun AgendaContent(
     state: AgendaUiState,
     onSelectDay: (String) -> Unit,
     onRetry: () -> Unit,
+    onRefresh: () -> Unit,
     onStatusClick: (TaskCard) -> Unit,
     onOpenTask: (String) -> Unit,
     onVisibleDay: (String) -> Unit,
@@ -195,16 +198,24 @@ fun AgendaContent(
         }
         when (state.mode) {
             AgendaMode.Day ->
-                DayPager(
-                    state = state,
-                    anchorDay = anchorDay,
-                    onSelectDay = onSelectDay,
-                    onRetry = onRetry,
-                    onStatusClick = onStatusClick,
-                    onOpenTask = onOpenTask,
-                    onPlanFreeWindow = onPlanFreeWindow,
+                // Puxar para recarregar só no "Por dia"; durante o esqueleto o gesto fica de fora.
+                BraidPullToRefresh(
+                    refreshing = state.refreshing,
+                    onRefresh = onRefresh,
                     modifier = Modifier.fillMaxWidth().weight(1f),
-                )
+                    enabled = state.load != AgendaLoad.Loading,
+                ) {
+                    DayPager(
+                        state = state,
+                        anchorDay = anchorDay,
+                        onSelectDay = onSelectDay,
+                        onRetry = onRetry,
+                        onStatusClick = onStatusClick,
+                        onOpenTask = onOpenTask,
+                        onPlanFreeWindow = onPlanFreeWindow,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             AgendaMode.Sequence ->
                 AgendaSequence(
                     state = state,
