@@ -76,6 +76,73 @@
     }
   },
   {
+    "name": "project chosen",
+    "draft": {
+      "kind": "common",
+      "name": "No projeto",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-timeline",
+        "name": "timeline_project",
+        "personal": false
+      }
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "input": {
+      "kind": "common",
+      "name": "No projeto",
+      "description": "",
+      "priority": "medium",
+      "projectId": "project-timeline"
+    }
+  },
+  {
+    "name": "personal chosen leaves the project out",
+    "draft": {
+      "kind": "common",
+      "name": "Em personal",
+      "status": null,
+      "priority": "medium",
+      "startDate": "",
+      "startTime": "",
+      "endDate": "",
+      "endTime": "",
+      "description": "",
+      "location": "",
+      "reminders": [],
+      "tags": [],
+      "longRunning": false,
+      "parentTaskId": null,
+      "subtaskIds": [],
+      "artifacts": [],
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      }
+    },
+    "now": "2026-09-14T15:30:45.123Z",
+    "input": {
+      "kind": "common",
+      "name": "Em personal",
+      "description": "",
+      "priority": "medium"
+    }
+  },
+  {
     "name": "done",
     "draft": {
       "kind": "common",

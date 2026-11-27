@@ -330,6 +330,7 @@ internal fun InfoSection(
                 onTime = { value -> actions.update { it.copy(endTime = value) } },
             )
             // A tarefa persistente só existe na edição: a criação não a envia.
+            ProjectRow(draft.project, actions.openProjectPicker)
             if (!creating) PersistentRow(draft.longRunning) { value -> actions.update { it.copy(longRunning = value) } }
             // A tarefa persistente não se repete: a linha some, e uma regra já montada é ignorada ao salvar.
             if (!draft.longRunning) RecurrenceRow(draft, creating, recurrence, actions)

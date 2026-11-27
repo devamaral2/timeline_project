@@ -22,6 +22,7 @@ import { entityEditFixtures } from "./fixtures/entity-edit";
 import { executorFixtures } from "./fixtures/executor";
 import { modelFavoritesFixtures } from "./fixtures/model-favorites";
 import { notificationsFixtures } from "./fixtures/notifications";
+import { projectsFixtures } from "./fixtures/projects";
 import { recurrenceFixtures } from "./fixtures/recurrence";
 import { sessionFixtures } from "./fixtures/session";
 import { speechFixtures } from "./fixtures/speech";
@@ -44,7 +45,7 @@ export const fixtureDirectory = fileURLToPath(new URL("../../apps/mobile/app/src
 
 export function collectFixtures(): Record<string, unknown> {
   const context: FixtureContext = { z: requireFromContracts("zod").z };
-  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...executorFixtures(), ...taskDetailFixtures(), ...taskEditFixtures(), ...taskHierarchyFixtures(), ...taskArtifactsFixtures(), ...recurrenceFixtures(), ...agendaFixtures(), ...documentsFixtures(), ...documentEditFixtures(), ...entityEditFixtures(), ...agentRequestFixtures(), ...agentFileFixtures(context), ...notificationsFixtures(), ...chatFixtures(), ...modelFavoritesFixtures(), ...speechFixtures(), ...themeFixtures(), ...youtubeFixtures() };
+  return { ...sessionFixtures(context), ...timelineFixtures(), ...tasksFixtures(), ...taskListFixtures(), ...executorFixtures(), ...taskDetailFixtures(), ...taskEditFixtures(), ...taskHierarchyFixtures(), ...taskArtifactsFixtures(), ...recurrenceFixtures(), ...agendaFixtures(), ...documentsFixtures(), ...documentEditFixtures(), ...entityEditFixtures(), ...agentRequestFixtures(), ...agentFileFixtures(context), ...notificationsFixtures(), ...projectsFixtures(), ...chatFixtures(), ...modelFavoritesFixtures(), ...speechFixtures(), ...themeFixtures(), ...youtubeFixtures() };
 }
 
 export function generateFixtures(): string[] {

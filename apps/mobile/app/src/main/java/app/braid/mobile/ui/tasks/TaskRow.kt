@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
+import app.braid.mobile.core.designsystem.ProjectLine
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.task.TaskActor
@@ -33,7 +34,7 @@ import app.braid.mobile.domain.task.cardWhenLabel
 import java.time.Instant
 
 /**
- * A linha única das listas: glifo de status, título, uma linha com o tipo, o
+ * A linha única das listas: glifo de status, título, a linha do projeto, uma linha com o tipo, o
  * "quando" e as tags, e a duração à direita. Pessoa e agente usam a mesma
  * grade; a tarefa de agente fecha a linha com o robô, a sua assinatura. Os
  * textos calculados saem do cartão e de [now].
@@ -104,6 +105,8 @@ private fun TaskRowBody(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            // Igual para tarefa de pessoa e de agente: a marca e o nome do projeto, abaixo do título e acima do tipo.
+            ProjectLine(card.project)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 TaskKindMark(card.kind)
                 Text(

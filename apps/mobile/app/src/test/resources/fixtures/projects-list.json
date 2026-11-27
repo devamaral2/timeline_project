@@ -1,0 +1,22 @@
+[
+  {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
+  {
+    "id": "project-acai",
+    "name": "Açaí",
+    "personal": false
+  },
+  {
+    "id": "project-skills",
+    "name": "agent-skills",
+    "personal": false
+  },
+  {
+    "id": "project-timeline",
+    "name": "timeline_project",
+    "personal": false
+  }
+]
