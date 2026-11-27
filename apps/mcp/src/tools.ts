@@ -12,8 +12,13 @@ const REQUEST_KINDS = ["request", "search_request", "build_request", "inquiry_re
 const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
 const AGENT_ONLY_STATUSES = ["queued", "running", "waiting", "awaiting_transcription", "failed"] as const;
 const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
+/**
+ * Os tipos de texto livre (`FREE_TEXT_ARTIFACT_TYPES` do contrato): o mesmo dado da nota, um texto em markdown.
+ * Sao os que o agente cria e reescreve por aqui.
+ */
+const FREE_TEXT_ARTIFACT_TYPES = ["text", "news", "email_summary", "youtube_transcript"] as const;
 /** Os tipos de artefato que o dono cria e edita; os de configuracao do agente ficam de fora. */
-const ARTIFACT_TYPES = ["text", "food", "sleep", "training"] as const;
+const ARTIFACT_TYPES = [...FREE_TEXT_ARTIFACT_TYPES, "food", "sleep", "training"] as const;
 
 const idempotencyKey = z
   .string()
@@ -134,9 +139,15 @@ export function registerTools(server: McpServer, api: ApiClient): void {
     "create_artifact",
     {
       description:
-        "Create a free-text artifact (the app shows it as a note), optionally appearing in existing tasks (use list_agenda_tasks / list_tracked_tasks for ids).",
+        "Create a free-text artifact: a markdown text the owner reads and edits like a note, optionally appearing in existing tasks (use list_agenda_tasks / list_tracked_tasks for ids). Pick the type that says what the text is.",
       inputSchema: {
         name: z.string().min(1).optional(),
+        type: z
+          .enum(FREE_TEXT_ARTIFACT_TYPES)
+          .optional()
+          .describe(
+            "What the text is. 'text': a plain note (the default when omitted). 'news': a round-up of news. 'email_summary': the summary of an e-mail inbox. 'youtube_transcript': the transcript of a YouTube video.",
+          ),
         body: z.string().min(1),
         tags,
         taskIds: z.array(z.string()).optional().describe("Tasks in which the artifact appears from the start."),
@@ -144,8 +155,8 @@ export function registerTools(server: McpServer, api: ApiClient): void {
       },
       annotations: CREATE_ONLY,
     },
-    ({ idempotencyKey: key, body, ...artifact }) =>
-      guarded(() => api.post("/api/artifacts", { ...artifact, type: "text", data: { body } }, key)),
+    ({ idempotencyKey: key, body, type, ...artifact }) =>
+      guarded(() => api.post("/api/artifacts", { ...artifact, type: type ?? "text", data: { body } }, key)),
   );
 
   server.registerTool(
@@ -239,9 +250,9 @@ export function registerTools(server: McpServer, api: ApiClient): void {
     "list_artifacts",
     {
       description:
-        "List the owner's artifacts (free text, food, sleep, training), all of them unless filtered. Filters combine with AND. Use taskId to find the artifacts of one task.",
+        "List the owner's artifacts (notes, news, e-mail summaries, YouTube transcripts, food, sleep, training), all of them unless filtered. Filters combine with AND. Use taskId to find the artifacts of one task.",
       inputSchema: {
-        type: z.enum(ARTIFACT_TYPES).optional(),
+        type: z.enum(ARTIFACT_TYPES).optional().describe("Only artifacts of this type. Omit for all."),
         tag: z.string().optional().describe("Exact tag, ignoring case."),
         q: z.string().optional().describe("Text to find in the artifact name or, for free text, its body, ignoring case."),
         taskId: z.string().min(1).optional().describe("Only artifacts that appear in this task."),
@@ -301,7 +312,7 @@ function registerReadAndEditTools(server: McpServer, api: ApiClient): void {
     "update_artifact",
     {
       description:
-        "Edit a free-text artifact. Send only what changes; 'body' replaces the whole text. The tasks it appears in are left untouched.",
+        "Edit a free-text artifact (note, news, e-mail summary or YouTube transcript). Send only what changes; 'body' replaces the whole text and the artifact keeps its type. The tasks it appears in are left untouched.",
       inputSchema: {
         artifactId: id("artifact"),
         expectedRevision: revision,
@@ -312,12 +323,16 @@ function registerReadAndEditTools(server: McpServer, api: ApiClient): void {
       annotations: EDIT,
     },
     ({ artifactId, body, ...patch }) =>
-      guarded(() =>
-        api.patch(
-          `/api/artifacts/${encodeURIComponent(artifactId)}`,
-          body === undefined ? patch : { ...patch, type: "text", data: { body } },
-        ),
-      ),
+      guarded(async () => {
+        const path = `/api/artifacts/${encodeURIComponent(artifactId)}`;
+        if (body === undefined) return api.patch(path, patch);
+        // O corpo novo vai com o tipo do proprio artefato: reescrever um resumo de e-mail nao o transforma em nota.
+        const { type } = await api.get<{ type: string }>(path);
+        if (!(FREE_TEXT_ARTIFACT_TYPES as readonly string[]).includes(type)) {
+          throw new ApiError(400, `Only free-text artifacts (${FREE_TEXT_ARTIFACT_TYPES.join(", ")}) take a new body; this one is '${type}'.`);
+        }
+        return api.patch(path, { ...patch, type, data: { body } });
+      }),
   );
 
   server.registerTool(
