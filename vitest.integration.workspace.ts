@@ -1,14 +1,14 @@
 import { defineWorkspace } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
-/**
- * Os packages são resolvidos direto do fonte TypeScript, igual ao workspace
- * unitário: sem estes aliases o Vite não resolve `@repo/contracts` (o pacote
- * não é publicado e o `package.json` aponta para o fonte) e as suítes de
- * integração do Auth nem carregam.
- */
-const resolve = (relativePath: string) => fileURLToPath(new URL(relativePath, import.meta.url));
+const resolve = (relativePath: string) =>
+  fileURLToPath(new URL(relativePath, import.meta.url));
 
+/**
+ * Como no workspace unitario, os packages sao resolvidos direto do fonte. As
+ * linhas de base HTTP da API e do Auth sobem os apps de verdade e importam os
+ * contratos em runtime, entao nao podem depender de um `dist/` ja construido.
+ */
 const packageAliases = {
   "@repo/contracts/schemas": resolve("./packages/contracts/src/schemas.ts"),
   "@repo/contracts/device-key": resolve("./packages/contracts/src/device-key.ts"),
