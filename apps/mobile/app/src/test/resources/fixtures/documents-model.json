@@ -34,7 +34,7 @@
     {
       "type": "workout",
       "label": "Exercício",
-      "visual": "training"
+      "visual": "workout"
     },
     {
       "type": "skill",
@@ -55,19 +55,19 @@
   "counts": [
     {
       "count": 0,
-      "label": "Nenhum documento"
+      "label": "Nenhum artefato"
     },
     {
       "count": 1,
-      "label": "1 documento"
+      "label": "1 artefato"
     },
     {
       "count": 2,
-      "label": "2 documentos"
+      "label": "2 artefatos"
     },
     {
       "count": 17,
-      "label": "17 documentos"
+      "label": "17 artefatos"
     }
   ],
   "whenLabels": [

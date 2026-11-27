@@ -456,6 +456,40 @@
       "revision": 1,
       "createdAt": "2026-09-01T12:00:00.000Z",
       "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-21",
+      "actor": "agent",
+      "kind": "save_content",
+      "status": "done",
+      "priority": "medium",
+      "name": "Página guardada",
+      "description": "",
+      "startedAt": "2026-09-14T13:30:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
+    },
+    {
+      "id": "task-22",
+      "actor": "agent",
+      "kind": "save_content_with_transcription",
+      "status": "awaiting_transcription",
+      "priority": "medium",
+      "name": "Vídeo guardado",
+      "description": "",
+      "startedAt": "2026-09-14T14:10:00.000Z",
+      "longRunning": false,
+      "notifyOffsetsMinutes": [],
+      "tags": [],
+      "artifactTypes": [],
+      "revision": 1,
+      "createdAt": "2026-09-01T12:00:00.000Z",
+      "updatedAt": "2026-09-01T12:00:00.000Z"
     }
   ],
   "expected": [
@@ -578,6 +612,18 @@
       "when": "17 set, 09:00",
       "overdue": false,
       "duration": "2h"
+    },
+    {
+      "id": "task-21",
+      "when": "há 1 h",
+      "overdue": false,
+      "duration": null
+    },
+    {
+      "id": "task-22",
+      "when": "aguarda a transcrição",
+      "overdue": false,
+      "duration": null
     }
   ],
   "elapsed": [

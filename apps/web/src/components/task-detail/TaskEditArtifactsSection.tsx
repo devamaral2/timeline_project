@@ -26,7 +26,7 @@ interface TaskEditArtifactsSectionProps {
 }
 
 /**
- * "Documentos" na edição: a lista da tarefa, na ordem da tela. Cada linha tem a posição, o nome, o tipo, de quem é
+ * "Artefatos" na edição: a lista da tarefa, na ordem da tela. Cada linha tem a posição, o nome, o tipo, de quem é
  * e a relação, e os botões Subir, Descer e Remover (por teclado e por toque; não há arrastar). O "+" abre o modal
  * de seleção, e o que ele oferece depende do tipo da tarefa: numa refeição, os alimentos (do catálogo global e os
  * seus), que entram como cópia com quantidade; num treino, os exercícios do catálogo global, por referência; nos
@@ -37,9 +37,9 @@ export function TaskEditArtifactsSection({ draft, onChange }: TaskEditArtifactsS
   const positions = draftArtifactPositions(list);
 
   return (
-    <DetailSection title="Documentos" labelId="task-edit-artifacts" count={list.length}>
+    <DetailSection title="Artefatos" labelId="task-edit-artifacts" count={list.length}>
       {list.length > 0 ? (
-        <ul className={edit.list} aria-label="Documentos ligados">
+        <ul className={edit.list} aria-label="Artefatos ligados">
           {list.map((item, index) => (
             <li key={item.id} className={edit.item}>
               <span className={edit.itemLead}>{positions[index] ?? "—"}</span>
@@ -64,7 +64,7 @@ export function TaskEditArtifactsSection({ draft, onChange }: TaskEditArtifactsS
                   <StepButton item={item} list={list} step={1} label={`Descer “${item.name}”`} onChange={onChange} />
                 </span>
               )}
-              <RemoveButton label={`Remover documento “${item.name}”`} onClick={() => onChange("artifacts", removeDraftArtifact(list, item.id))} />
+              <RemoveButton label={`Remover artefato “${item.name}”`} onClick={() => onChange("artifacts", removeDraftArtifact(list, item.id))} />
             </li>
           ))}
         </ul>
@@ -100,11 +100,11 @@ const SOURCES = {
     failedMessage: "Não foi possível buscar exercícios. Tente de novo.",
   },
   other: {
-    title: "Documentos",
-    addLabel: "Adicionar documento",
-    searchLabel: "Buscar documento para ligar",
+    title: "Artefatos",
+    addLabel: "Adicionar artefato",
+    searchLabel: "Buscar artefato para ligar",
     search: searchOwnArtifacts,
-    failedMessage: "Não foi possível buscar documentos. Tente de novo.",
+    failedMessage: "Não foi possível buscar artefatos. Tente de novo.",
   },
 } as const;
 
@@ -122,7 +122,7 @@ function LinkPicker({ kind, list, onChange }: LinkPickerProps) {
     <>
       <div className={edit.addRow}>
         <AddButton label={source.addLabel} onClick={() => setPicking(true)} />
-        {list.length === 0 ? <p className={edit.empty}>nenhum documento</p> : null}
+        {list.length === 0 ? <p className={edit.empty}>nenhum artefato</p> : null}
       </div>
       {picking ? (
         <ArtifactPickerDialog kind={kind} linkedIds={list.map((item) => item.id)} onPick={pick} onClose={() => setPicking(false)} />
@@ -195,7 +195,7 @@ function ChoiceView({ artifact }: { artifact: ArtifactDto }) {
       <span className={edit.itemName}>{artifact.name}</span>
       <span className={edit.itemMeta}>
         <span className={edit.itemCode}>{artifact.type}</span>
-        <span>{artifact.global ? "catálogo global" : "seu documento"}</span>
+        <span>{artifact.global ? "catálogo global" : "seu artefato"}</span>
         {artifact.type === "food" ? <span>{`${Math.round(artifact.data.totals.totalCaloriesKcal)} kcal`}</span> : null}
       </span>
     </>
@@ -206,7 +206,7 @@ function ArtifactMeta({ item, hasPosition }: { item: DraftArtifact; hasPosition:
   return (
     <span className={edit.itemMeta}>
       <span className={edit.itemCode}>{item.type}</span>
-      <span>{item.global ? "catálogo global" : "seu documento"}</span>
+      <span>{item.global ? "catálogo global" : "seu artefato"}</span>
       <span className={edit.itemCode}>{item.relation}</span>
       {item.copyOf === undefined && item.quantity ? <span>{item.quantity}</span> : null}
       {hasPosition ? null : <span>sem posição na lista</span>}

@@ -5,7 +5,7 @@ import app.braid.mobile.domain.task.TaskStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** O nome acessível de cada um dos dez status de agente, no padrão "Agente, concluído" do web. */
+/** O nome acessível de cada um dos onze status de agente, no padrão "Agente, concluído" do web. */
 class AgentStatusNamesTest {
     @Test
     fun `each agent status has its accessible name`() {
@@ -16,6 +16,7 @@ class AgentStatusNamesTest {
                 TaskStatus.Starting to "Agente, iniciando",
                 TaskStatus.Running to "Agente, trabalhando",
                 TaskStatus.Waiting to "Agente, esperando",
+                TaskStatus.AwaitingTranscription to "Agente, esperando transcrição",
                 TaskStatus.Completed to "Agente, concluído",
                 TaskStatus.Interrupted to "Agente, interrompido",
                 TaskStatus.Failed to "Agente, falhou",

@@ -23,11 +23,11 @@ import javax.inject.Inject
 /** Espera depois da última tecla antes de consultar a API pelo texto. */
 const val SEARCH_DEBOUNCE_MS = 250L
 
-/** Por que a lista está vazia: ainda não há documento ou os filtros escondem todos. */
+/** Por que a lista está vazia: ainda não há artefato ou os filtros escondem todos. */
 enum class EmptyKind { NoneYet, NothingFound }
 
 /**
- * [artifacts] são os documentos como a API os devolveu para a [search]; a escolha de executor separa aqui, na
+ * [artifacts] são os artefatos como a API os devolveu para a [search]; a escolha de executor separa aqui, na
  * tela, porque a API não filtra por dono. [query] é o que está digitado e [search] o texto já lido (aparado e depois da espera).
  */
 data class DocumentsUiState(
@@ -36,14 +36,14 @@ data class DocumentsUiState(
     val query: String = "",
     val search: String = "",
     val viewMode: ViewMode = ViewMode.Default,
-    /** Há documento na lista sem filtro: só então a busca do menu aparece. */
+    /** Há artefato na lista sem filtro: só então a busca do menu aparece. */
     val hasArtifacts: Boolean = false,
 ) {
     val shown: List<Artifact>? =
         artifacts?.let { all -> viewMode.actor?.let { actor -> all.filter { artifactActor(it.type) == actor } } ?: all }
 
-    /** A legenda no topo: "Documentos" até a lista chegar, depois a contagem. */
-    val caption: String get() = shown?.let { artifactCountLabel(it.size) } ?: "Documentos"
+    /** A legenda no topo: "Artefatos" até a lista chegar, depois a contagem. */
+    val caption: String get() = shown?.let { artifactCountLabel(it.size) } ?: "Artefatos"
 
     /** Há busca ativa: a aba ganha o ponto (a escolha de executor não conta, como no web). */
     val filtered: Boolean get() = search.isNotEmpty()
@@ -103,7 +103,7 @@ class DocumentsViewModel
 
         fun retry() = load(silent = false)
 
-        /** Ao voltar à tela os documentos podem ter mudado (o chat, o agente): relê sem trocar a lista pelo esqueleto. */
+        /** Ao voltar à tela os artefatos podem ter mudado (o chat, o agente): relê sem trocar a lista pelo esqueleto. */
         fun onResume() = load(silent = true)
 
         private fun load(silent: Boolean) {

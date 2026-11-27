@@ -12,7 +12,7 @@ const REQUEST_KINDS = ["request", "search_request", "build_request", "inquiry_re
 const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
 // Nenhum status de agente e igual a um de pessoa: o filtro aceita os dois conjuntos.
 const AGENT_STATUSES = [
-  "preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+  "preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back",
 ] as const;
 const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
 /** Os tipos de artefato que o dono cria e edita; os de configuracao do agente ficam de fora. */

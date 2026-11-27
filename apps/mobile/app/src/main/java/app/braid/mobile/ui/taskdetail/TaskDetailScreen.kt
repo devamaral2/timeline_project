@@ -117,6 +117,7 @@ fun TaskDetailPage(
         if (resumedOnce) viewModel.reload() else resumedOnce = true
         onPauseOrDispose {}
     }
+    val addVideo by viewModel.addVideo.state.collectAsStateWithLifecycle()
     TaskDetailScreen(
         state = state,
         onBack = onBack,
@@ -130,6 +131,14 @@ fun TaskDetailPage(
         onConfirmDelete = viewModel::confirmDelete,
         onOpenArtifact = onOpenArtifact,
         onAddArtifact = viewModel::openArtifactPicker,
+        addVideo = addVideo,
+        addVideoActions =
+            AddVideoActions(
+                onShow = viewModel.addVideo::show,
+                onHide = viewModel.addVideo::hide,
+                onType = viewModel.addVideo::type,
+                onSubmit = viewModel.addVideo::submit,
+            ),
         footer =
             (state as? TaskDetailUiState.Content)?.let { content ->
                 {
@@ -165,8 +174,11 @@ fun TaskDetailScreen(
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
     onOpenArtifact: (String) -> Unit = {},
-    /** O "+" da seção Documentos: abre o seletor do tipo da tarefa e grava a escolha na hora. */
+    /** O "+" da seção Artefatos: abre o seletor do tipo da tarefa e grava a escolha na hora. */
     onAddArtifact: () -> Unit = {},
+    /** O "Adicionar vídeo" da Leitura diária: o estado do campo do link e as ações dele. */
+    addVideo: AddVideoState = AddVideoState(),
+    addVideoActions: AddVideoActions = AddVideoActions({}, {}, {}, {}),
     /** A barra de edição por IA, fixa no pé da tela. */
     footer: (@Composable () -> Unit)? = null,
 ) {
@@ -193,7 +205,8 @@ fun TaskDetailScreen(
                     Message("Não foi possível carregar a tarefa. Tente novamente.", alert = true)
                     BraidPill(text = "Tentar de novo", onClick = onRetry)
                 }
-                is TaskDetailUiState.Content -> Body(state, onOpenTask, onOpenArtifact, onAddArtifact, onChangeStatus, onChangePriority)
+                is TaskDetailUiState.Content ->
+                    Body(state, onOpenTask, onOpenArtifact, onAddArtifact, addVideo, addVideoActions, onChangeStatus, onChangePriority)
             }
         }
         footer?.invoke()
@@ -315,6 +328,8 @@ private fun Body(
     onOpenTask: (String) -> Unit,
     onOpenArtifact: (String) -> Unit,
     onAddArtifact: () -> Unit,
+    addVideo: AddVideoState,
+    addVideoActions: AddVideoActions,
     onChangeStatus: (TaskStatus) -> Unit,
     onChangePriority: (TaskPriority) -> Unit,
 ) {
@@ -336,7 +351,14 @@ private fun Body(
     content.subtasks?.let {
         LinkedSection("Subtarefas", "Carregando subtarefas…", "Algumas subtarefas não carregaram.", it, content.now, onOpenTask)
     }
-    TaskArtifactsSection(task.card.kind, task.artifacts, onOpenArtifact, onAdd = onAddArtifact, busy = content.saving)
+    TaskArtifactsSection(
+        task.card.kind,
+        task.artifacts,
+        onOpenArtifact,
+        onAdd = onAddArtifact,
+        busy = content.saving,
+        video = if (task.isDailyReading) ({ AddVideo(addVideo, addVideoActions) }) else null,
+    )
     RequestsSection(task.requests, onOpenTask)
 }
 

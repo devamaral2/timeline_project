@@ -1,0 +1,150 @@
+{
+  "soleYouTubeVideoLink": [
+    {
+      "args": [
+        "https://youtu.be/dQw4w9WgXcQ"
+      ],
+      "result": "https://youtu.be/dQw4w9WgXcQ"
+    },
+    {
+      "args": [
+        "  https://youtu.be/dQw4w9WgXcQ  "
+      ],
+      "result": "https://youtu.be/dQw4w9WgXcQ"
+    },
+    {
+      "args": [
+        "\nhttps://youtu.be/dQw4w9WgXcQ\t"
+      ],
+      "result": "https://youtu.be/dQw4w9WgXcQ"
+    },
+    {
+      "args": [
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90"
+      ],
+      "result": "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90"
+    },
+    {
+      "args": [
+        "https://m.youtube.com/watch?v=dQw4w9WgXcQ"
+      ],
+      "result": "https://m.youtube.com/watch?v=dQw4w9WgXcQ"
+    },
+    {
+      "args": [
+        "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+      ],
+      "result": "https://www.youtube.com/shorts/dQw4w9WgXcQ"
+    },
+    {
+      "args": [
+        "resuma https://youtu.be/dQw4w9WgXcQ"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "https://youtu.be/dQw4w9WgXcQ resuma"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "https://youtu.be/dQw4w9WgXcQ https://youtu.be/dQw4w9WgXcQ"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "https://www.youtube.com/@canal"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "https://www.youtube.com/playlist?list=PL123"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "https://www.youtube.com/watch?v=curto"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "https://exemplo.dev/watch?v=dQw4w9WgXcQ"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "youtu.be/dQw4w9WgXcQ"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "isto não é um link"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        ""
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "   "
+      ],
+      "result": null
+    }
+  ],
+  "isDailyReading": [
+    {
+      "args": [
+        "Leitura diária"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "leitura Diaria"
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "  LEITURA   DIÁRIA "
+      ],
+      "result": true
+    },
+    {
+      "args": [
+        "Leitura"
+      ],
+      "result": false
+    },
+    {
+      "args": [
+        "Leituras diárias"
+      ],
+      "result": false
+    },
+    {
+      "args": [
+        "Comprar pão"
+      ],
+      "result": false
+    },
+    {
+      "args": [
+        ""
+      ],
+      "result": false
+    }
+  ]
+}

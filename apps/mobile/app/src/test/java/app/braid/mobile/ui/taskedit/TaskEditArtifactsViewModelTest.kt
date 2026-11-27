@@ -50,7 +50,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
-/** Os documentos na edição da tarefa pela rede: o seletor por tipo, ordenar, tirar e o que o Salvar manda. */
+/** Os artefatos na edição da tarefa pela rede: o seletor por tipo, ordenar, tirar e o que o Salvar manda. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TaskEditArtifactsViewModelTest {
     private val now = Instant.parse("2026-09-14T15:30:45.123Z")

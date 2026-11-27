@@ -12,7 +12,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Os modos de executor, a regra dos documentos e a busca, conferidos contra `view-mode.ts`, `artifactActor` e a busca da agenda. */
+/** Os modos de executor, a regra dos artefatos e a busca, conferidos contra `view-mode.ts`, `artifactActor` e a busca da agenda. */
 class ExecutorFixturesTest {
     private val modes = Fixtures.json("executor-view-modes").jsonObject
 

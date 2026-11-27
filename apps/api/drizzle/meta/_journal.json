@@ -68,22 +68,29 @@
     {
       "idx": 9,
       "version": "7",
-      "when": 1795748213743,
-      "tag": "0009_projeto_em_toda_tarefa",
+      "when": 1795666036071,
+      "tag": "0009_tipos_de_conteudo_guardado",
       "breakpoints": true
     },
     {
       "idx": 10,
       "version": "7",
-      "when": 1795770253527,
-      "tag": "0010_status_de_agente_proprios",
+      "when": 1795748213743,
+      "tag": "0010_projeto_em_toda_tarefa",
       "breakpoints": true
     },
     {
       "idx": 11,
       "version": "7",
+      "when": 1795770253527,
+      "tag": "0011_status_de_agente_proprios",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
       "when": 1795772784187,
-      "tag": "0011_situacao_da_tarefa_de_agente",
+      "tag": "0012_situacao_da_tarefa_de_agente",
       "breakpoints": true
     }
   ]

@@ -16,17 +16,20 @@ import {
   isInProgressAgentStatus,
   isOpenAgentStatus,
   isSuccessAgentStatus,
+  KINDS_WITHOUT_SITUATION,
+  acceptsSituation,
+  isExecutionRun,
 } from "./agent-status-groups";
 
 const AGENT_STATUSES: readonly AgentTaskStatus[] = [
-  "preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+  "preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back",
 ];
 const HUMAN_STATUSES: readonly HumanTaskStatus[] = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"];
 
 describe("grupos de status de agente", () => {
   test("os grupos têm os valores da spec", () => {
-    expect([...OPEN_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running", "waiting"]);
-    expect([...IN_PROGRESS_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running"]);
+    expect([...OPEN_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription"]);
+    expect([...IN_PROGRESS_AGENT_STATUSES]).toEqual(["preparing", "queued", "starting", "running", "awaiting_transcription"]);
     expect([...FINAL_AGENT_STATUSES]).toEqual(["completed", "interrupted", "failed", "cancelled", "rolled_back"]);
     expect([...SUCCESS_AGENT_STATUSES]).toEqual(["completed"]);
     expect([...CANCELLED_AGENT_STATUSES]).toEqual(["cancelled"]);
@@ -76,5 +79,26 @@ describe("perguntas que servem aos dois executores", () => {
       expect(isClosedStatus(actor, undefined)).toBe(false);
       expect(countsAsDone(actor, undefined)).toBe(false);
     }
+  });
+});
+
+describe("tipos sem situacao e a gaveta de execucao", () => {
+  test("passo, execucao agendada e conteudo guardado nunca tem situacao", () => {
+    expect([...KINDS_WITHOUT_SITUATION]).toEqual(["step", "cron", "save_content", "save_content_with_transcription"]);
+    for (const kind of KINDS_WITHOUT_SITUATION) {
+      for (const status of FINAL_AGENT_STATUSES) expect(acceptsSituation({ actor: "agent", kind, status })).toBe(false);
+    }
+    expect(acceptsSituation({ actor: "agent", kind: "request", status: "completed" })).toBe(true);
+  });
+
+  test("o conteudo guardado em andamento, ou esperando a transcricao, aparece na gaveta de execucao", () => {
+    expect(isExecutionRun({ actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription" })).toBe(true);
+    expect(isExecutionRun({ actor: "agent", kind: "save_content", status: "running" })).toBe(true);
+    expect(isExecutionRun({ actor: "agent", kind: "save_content", status: "completed" })).toBe(false);
+  });
+
+  test("passo e execucao agendada nunca entram na gaveta, mesmo em andamento", () => {
+    expect(isExecutionRun({ actor: "agent", kind: "step", status: "running" })).toBe(false);
+    expect(isExecutionRun({ actor: "agent", kind: "cron", status: "running" })).toBe(false);
   });
 });

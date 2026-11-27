@@ -78,6 +78,7 @@ class BraidVoiceInteractionSession(
                                 clock = entry.clock(),
                                 polling = entry.polling(),
                                 models = entry.models(),
+                                transcription = entry.transcription(),
                                 speech = entry.speech(),
                                 microphone = entry.microphone(),
                             ) as T

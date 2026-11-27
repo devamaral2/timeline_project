@@ -69,7 +69,7 @@ fun parseChatCommand(text: String): ChatModeCommand? {
 
 /**
  * O que a barra "/" do chat abre, na ordem do web; cada tela liga o seu comando em [ChatCommandHandlers]. `/buscar` pesquisa
- * as tarefas e os documentos de verdade (o web filtra uma lista de exemplo).
+ * as tarefas e os artefatos de verdade (o web filtra uma lista de exemplo).
  */
 enum class ChatCommand(
     val slug: String,
@@ -78,7 +78,7 @@ enum class ChatCommand(
 ) {
     Task("tarefa", "Criar tarefa", "Tipo, status, início e término"),
     Document("nota", "Criar nota", "A primeira linha vira o título"),
-    Search("buscar", "Pesquisar", "Tarefas e documentos"),
+    Search("buscar", "Pesquisar", "Tarefas e artefatos"),
     Notifications("notificacoes", "Notificações", "Avisos recentes e próximos"),
     Settings("configuracoes", "Configurações", "Tema e conta"),
 }

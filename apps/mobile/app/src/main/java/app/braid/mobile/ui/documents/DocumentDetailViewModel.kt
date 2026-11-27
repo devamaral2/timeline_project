@@ -36,7 +36,7 @@ data class DocumentDeleteDialog(
 sealed interface DocumentDetailUiState {
     data object Loading : DocumentDetailUiState
 
-    /** O documento não existe ou é de outro usuário (404 e 403 não se distinguem na tela). */
+    /** O artefato não existe ou é de outro usuário (404 e 403 não se distinguem na tela). */
     data object Missing : DocumentDetailUiState
 
     data object Error : DocumentDetailUiState
@@ -46,14 +46,14 @@ sealed interface DocumentDetailUiState {
         val artifact: Artifact,
         val now: Instant,
         val delete: DocumentDeleteDialog = DocumentDeleteDialog(),
-        /** O documento foi excluído: a tela volta para a lista. */
+        /** O artefato foi excluído: a tela volta para a lista. */
         val deleted: Boolean = false,
     ) : DocumentDetailUiState {
         /** Um alimento que o agente ainda calcula: a tela o relê até terminar. */
         val pendingMeal: Boolean =
             artifact.type == ArtifactType.Food && (artifact.data as? FoodData)?.generation == FoodGeneration.Pending
 
-        /** Sem tarefa, ou num documento global, a seção "Tarefas" some. */
+        /** Sem tarefa, ou num artefato global, a seção "Tarefas" some. */
         val showsTasks: Boolean get() = !artifact.global && artifact.tasks.isNotEmpty()
 
         /**
@@ -80,7 +80,7 @@ class DocumentDetailViewModel
         private val artifacts: ArtifactRepository,
         private val clock: AppClock,
     ) : ViewModel() {
-        private val documentId: String = checkNotNull(savedState["documentId"]) { "A rota do documento leva o documentId." }
+        private val documentId: String = checkNotNull(savedState["documentId"]) { "A rota do artefato leva o documentId." }
         private val mutableState = MutableStateFlow<DocumentDetailUiState>(DocumentDetailUiState.Loading)
         val state: StateFlow<DocumentDetailUiState> = mutableState.asStateFlow()
 
@@ -96,7 +96,7 @@ class DocumentDetailViewModel
             load()
         }
 
-        /** Relê o documento sem trocar a tela por "Carregando": depois de uma edição por IA ela mostra a versão nova. Falha mantém a que está. */
+        /** Relê o artefato sem trocar a tela por "Carregando": depois de uma edição por IA ela mostra a versão nova. Falha mantém a que está. */
         fun refresh() {
             if (mutableState.value !is DocumentDetailUiState.Ready) return
             viewModelScope.launch {
@@ -105,7 +105,7 @@ class DocumentDetailViewModel
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (failure: Exception) {
-                    // A falha de transporte mantém o documento visível.
+                    // A falha de transporte mantém o artefato visível.
                 }
                 syncPolling()
             }
@@ -159,7 +159,7 @@ class DocumentDetailViewModel
         private fun pending(): Boolean = (mutableState.value as? DocumentDetailUiState.Ready)?.pendingMeal == true
 
         /**
-         * Com o alimento em cálculo e a tela à vista, relê o documento a cada [MEAL_POLL_MS] até o servidor terminar;
+         * Com o alimento em cálculo e a tela à vista, relê o artefato a cada [MEAL_POLL_MS] até o servidor terminar;
          * uma leitura que falha mantém a nota que está na tela. Sai de vista ou termina, para.
          */
         private fun syncPolling() {

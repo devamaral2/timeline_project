@@ -16,6 +16,9 @@ import {
   useModelSelection,
 } from "./model-selection-store";
 import { operationId } from "@/lib/api/operation-id";
+import { requestTranscription } from "@/lib/api/transcription";
+import { TRANSCRIPTION_TEXTS } from "@/lib/transcription/texts";
+import { soleYouTubeVideoLink } from "@/lib/notes/youtube";
 import { isOpenRequest } from "@/lib/tasks/agent-request-model";
 
 /** Um registro que a resposta tocou, como a conversa o mostra: o `kind` é o da tela (tarefa ou nota). */
@@ -99,6 +102,7 @@ const LEAVE_TEXT = "De volta ao assistente da agenda.";
 const HERMES_OFF_TEXT = "O Hermes está desligado neste ambiente (AI_AUTOMATION).";
 const HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /app para voltar ao assistente da agenda.";
 const MODEL_OFF_TEXT = "O modo modelo está desligado neste ambiente.";
+
 
 /** "Falando com o Hermes" ou "Falando com Sonnet 5.5": o que o chat diz enquanto espera a resposta do agente. */
 function pendingLabelOf(agent: ChatAgent, selection: ModelSelection | undefined, options: ModelOptionsDto | null): string {
@@ -444,6 +448,40 @@ export function useAgentChat({
   );
 
   /**
+   * A mensagem que é só um link de vídeo do YouTube: vai direto ao pedido de transcrição (spec #39), antes do agente
+   * de roteamento, sem gastar modelo para classificá-la. A resposta diz que o vídeo entrou na fila e leva à Leitura
+   * diária. Não abre pedido de chat: não há rastro nem caixa de processo.
+   */
+  const runTranscription = useCallback(
+    async (id: string, url: string): Promise<void> => {
+      if (!userId) return;
+      commitPending({ id, label: TRANSCRIPTION_TEXTS.chatPending });
+      let result: Awaited<ReturnType<typeof requestTranscription>>;
+      try {
+        result = await requestTranscription(url);
+      } catch (error) {
+        const code = startFailureCode(error);
+        fail(id, code, code === "invalid_input" ? TRANSCRIPTION_TEXTS.invalidLink : undefined);
+        return;
+      }
+      if (disposedRef.current || !followingRef.current.has(id)) return;
+      followingRef.current.delete(id);
+      if (pendingRef.current?.id === id) commitPending(null);
+      commitMessages((current) => [
+        ...current,
+        {
+          id: `${id}-transcription`,
+          role: "assistant",
+          text: result.created ? TRANSCRIPTION_TEXTS.chatQueued : TRANSCRIPTION_TEXTS.alreadyQueued,
+          entities: [{ kind: "task", id: result.taskId, change: "updated", label: TRANSCRIPTION_TEXTS.dailyReading }],
+        },
+      ]);
+      onEntitiesChangedRef.current?.();
+    },
+    [commitMessages, commitPending, fail, userId],
+  );
+
+  /**
    * A mensagem a um agente de modo: vira um pedido na rota do agente, com o id da mensagem (reenviar não abre
    * outro) e a sessão; no modo modelo, com a escolha atual de provedor, modelo e esforço. O pedido é acompanhado
    * como os demais: os passos vêm do rastro e a resposta, em `message`. Com o agente desligado a API responde não
@@ -562,8 +600,11 @@ export function useAgentChat({
       followingRef.current.add(id);
       commitPending({ id });
       const agent = agentModeRef.current;
+      // Em qualquer modo: o link sozinho é um pedido de transcrição, não uma conversa com o agente.
+      const videoLink = command ? null : soleYouTubeVideoLink(trimmed);
       const run = () => {
-        if (command?.kind === "agent" && command.agent === "model") void enterModelMode(id, command.provider, command.text);
+        if (videoLink) void runTranscription(id, videoLink);
+        else if (command?.kind === "agent" && command.agent === "model") void enterModelMode(id, command.provider, command.text);
         else if (command?.kind === "agent") void runAgent("hermes", id, command.text ?? trimmed);
         else if (agent) void runAgent(agent, id, trimmed);
         else void runRequest(id, trimmed);
@@ -572,7 +613,7 @@ export function useAgentChat({
       else run();
       return true;
     },
-    [commitAgentMode, commitMessages, commitPending, enterModelMode, runAgent, runRequest, userId],
+    [commitAgentMode, commitMessages, commitPending, enterModelMode, runAgent, runRequest, runTranscription, userId],
   );
 
   const send = useCallback((text: string) => dispatch(text, operationId()), [dispatch]);

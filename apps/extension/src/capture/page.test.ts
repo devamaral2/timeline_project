@@ -68,26 +68,6 @@ test("uma reportagem vira o texto principal em markdown, sem menu nem rodapé, c
   expect(dailyReadingInputSchema.safeParse(body).success).toBe(true);
 });
 
-test("uma página de vídeo do YouTube é guardada como o link dela, sozinho na primeira linha", () => {
-  const doc = documentOf(`
-    <head>
-      <title>(3) Never Gonna Give You Up - YouTube</title>
-      <meta property="og:description" content="O clipe oficial." />
-    </head>
-    <body><ytd-watch-metadata><ytd-channel-name><a href="/@rick">Rick Astley</a></ytd-channel-name></ytd-watch-metadata><p>${paragraph.repeat(5)}</p></body>`);
-
-  const page = capturePage(doc, "https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PL123&t=90s");
-
-  expect(page).toEqual({
-    kind: "video",
-    url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    title: "Never Gonna Give You Up",
-    siteName: "YouTube",
-    byline: "Rick Astley",
-    markdown: "[Never Gonna Give You Up](https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90s)\n\nO clipe oficial.",
-  });
-});
-
 test("uma página sem texto principal é guardada só como link, com a descrição dela", () => {
   const withDescription = capturePage(
     documentOf('<head><title>Painel</title><meta name="description" content="Seu painel de controle." /></head><body><button>Sair</button></body>'),

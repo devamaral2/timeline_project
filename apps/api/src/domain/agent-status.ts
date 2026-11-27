@@ -7,9 +7,9 @@ import type { AgentTaskStatus, Situation } from "./sets";
  */
 
 /** Ainda nao terminou: pode ser cancelado e ainda vai mudar. */
-export const OPEN_AGENT_STATUSES = ["preparing", "queued", "starting", "running", "waiting"] as const satisfies readonly AgentTaskStatus[];
-/** Aberto e com trabalho a fazer ou em curso (fora a espera). */
-export const IN_PROGRESS_AGENT_STATUSES = ["preparing", "queued", "starting", "running"] as const satisfies readonly AgentTaskStatus[];
+export const OPEN_AGENT_STATUSES = ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription"] as const satisfies readonly AgentTaskStatus[];
+/** Aberto e com trabalho a fazer ou em curso, fora a espera da pessoa; esperar a transcricao e trabalho em curso fora daqui. */
+export const IN_PROGRESS_AGENT_STATUSES = ["preparing", "queued", "starting", "running", "awaiting_transcription"] as const satisfies readonly AgentTaskStatus[];
 /** Terminou, de qualquer jeito. */
 export const FINAL_AGENT_STATUSES = ["completed", "interrupted", "failed", "cancelled", "rolled_back"] as const satisfies readonly AgentTaskStatus[];
 /** Terminou bem. */
@@ -64,6 +64,7 @@ const TRANSITIONS: Record<AgentTaskStatus, readonly AgentTaskStatus[]> = {
   starting: ["running", "failed", "cancelled"],
   running: ["waiting", "completed", "failed", "interrupted"],
   waiting: ["running", "failed", "cancelled"],
+  awaiting_transcription: ["running", "failed", "cancelled"],
   completed: ["rolled_back"],
   interrupted: ["rolled_back"],
   failed: ["rolled_back"],

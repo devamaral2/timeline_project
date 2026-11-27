@@ -1,5 +1,6 @@
 package app.braid.mobile.domain.task
 
+import app.braid.mobile.domain.transcription.isDailyReading
 import java.time.Instant
 
 enum class RequestRelation { Generates, Updates }
@@ -13,7 +14,7 @@ data class TaskRequest(
 )
 
 /**
- * A tarefa do detalhe (`TaskDto`): o [card] que as listas leem mais o que só o detalhe mostra. Os documentos
+ * A tarefa do detalhe (`TaskDto`): o [card] que as listas leem mais o que só o detalhe mostra. Os artefatos
  * (`artifacts`) vêm junto.
  */
 data class TaskDetail(
@@ -27,12 +28,15 @@ data class TaskDetail(
     val recurrence: TaskRecurrence?,
     val subtaskIds: List<String>,
     val requests: List<TaskRequest>,
-    /** Os documentos ligados, na ordem da API (ticket 16). */
+    /** Os artefatos ligados, na ordem da API (ticket 16). */
     val artifacts: List<TaskArtifact> = emptyList(),
 ) {
     val id: String get() = card.id
     val actor: TaskActor get() = card.actor
     val status: TaskStatus? get() = card.status
+
+    /** A tarefa "Leitura diária": o detalhe dela tem "Adicionar vídeo", que pede a transcrição de um vídeo do YouTube. */
+    val isDailyReading: Boolean get() = isDailyReading(card.actor, card.name)
 
     /** Só a tarefa de pessoa com status mostra e troca status e prioridade no topo; a de referência e a de agente não. */
     val hasHumanControls: Boolean get() = card.actor == TaskActor.Human && card.status != null

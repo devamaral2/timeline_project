@@ -26,13 +26,13 @@ export function AgendaNavIcon() {
   );
 }
 
-/** Documentos: duas páginas empilhadas, a da frente com as linhas do texto. */
-export function DocumentsNavIcon() {
+/** Artefatos: três camadas empilhadas, a de cima inteira e as outras duas só com a borda de baixo. */
+export function ArtifactsNavIcon() {
   return (
     <svg {...stroke} aria-hidden="true">
-      <rect x="3.5" y="6.5" width="13" height="15" rx="2" />
-      <path d="M7 11.5h6M7 15.5h4" />
-      <path d="M8 2.75h10.5a2 2 0 0 1 2 2V18" />
+      <path d="M12 3l9 4.5-9 4.5-9-4.5z" />
+      <path d="M3 12l9 4.5 9-4.5" />
+      <path d="M3 16.5l9 4.5 9-4.5" />
     </svg>
   );
 }

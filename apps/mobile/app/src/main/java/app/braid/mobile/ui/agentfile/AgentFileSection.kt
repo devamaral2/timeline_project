@@ -65,7 +65,7 @@ import app.braid.mobile.ui.documents.MarkdownView
 import app.braid.mobile.ui.taskdetail.DetailIcons
 
 /**
- * O arquivo de uma skill ou agente do Hermes dentro do documento: caminho, versão, aviso de arquivo ausente e
+ * O arquivo de uma skill ou agente do Hermes dentro do artefato: caminho, versão, aviso de arquivo ausente e
  * descrição; para o dono, o texto em markdown ou cru, os backups (com restauração) e o campo de pedir uma edição ao
  * Hermes. Quem não é o dono vê só o cabeçalho: sem texto, backups, campo nem erro.
  */

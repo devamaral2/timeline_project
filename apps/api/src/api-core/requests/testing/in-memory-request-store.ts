@@ -7,7 +7,7 @@ import { personalProjectOf } from "../../projects/testing/in-memory-project.quer
 import { stepLabel } from "../request-config";
 import { REQUEST_JOBS } from "../request-steps";
 import type {
-  DispatchRecord, EntitySummary, FailedStep, LinkRecord, NewEntity, NewRequest, NewStep, RequestEntityRecord,
+  DispatchRecord, EntitySummary, LinkRecord, NewEntity, NewRequest, NewStep, RequestEntityRecord,
   RequestOutcome, RequestRecord, RequestStore, StepRecord, StepThought,
 } from "../request-store";
 

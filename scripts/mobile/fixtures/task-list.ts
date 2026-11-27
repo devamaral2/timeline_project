@@ -8,6 +8,7 @@ import { taskCardSchema } from "../../../packages/contracts/src/schemas";
 import { statusPatch } from "../../../apps/web/src/lib/tasks/task-read-model";
 import { cardIsOverdue, cardWhenLabel, recurrenceRuleLabel } from "../../../apps/web/src/lib/tasks/card-text";
 import { nestSubtasks, oneRowPerSeries, showsSeriesRule } from "../../../apps/web/src/lib/tasks/task-groups";
+import { drawerOf, drawersOf, listedCards } from "../../../apps/web/src/lib/tasks/task-drawers";
 import { PRIORITY_ORDER, tagsByUse, taskFilterCount, trackedFilters } from "../../../apps/web/src/lib/tasks/task-filters";
 import { TASK_SITUATIONS, situationNames } from "../../../apps/web/src/components/tasks/task-situation";
 import { NOW } from "./tasks";
@@ -42,6 +43,11 @@ function occurrence(seriesId: string, occurrenceOn: string, ruleOverrides: Recor
 }
 
 const WEEKLY = { frequency: "weekly", timeOfDay: "18:30", byWeekday: 2 + 8 + 32 };
+
+const savedContentCards = [
+  card({ id: "saved-1", name: "Página guardada", actor: "agent", kind: "save_content", status: "completed", startedAt: "2026-09-14T13:30:00.000Z" }),
+  card({ id: "saved-2", name: "Vídeo guardado", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription", startedAt: "2026-09-14T14:10:00.000Z" }),
+];
 
 /** A lista que o servidor devolve sem filtro, na ordem dele: uma tarefa de cada grupo, três séries e uma ocorrência destacada. */
 const cards = [
@@ -194,6 +200,14 @@ export function taskListFixtures(): Record<string, unknown> {
     "task-list-subtasks-no-parent": subtaskCards.filter((item) => item.id !== "trip"),
     /** O filtro de executor "Agentes": só a subtarefa de agente chega, sem a principal de pessoa. */
     "task-list-subtasks-agents": subtaskCards.filter((item) => item.actor === "agent"),
+    /** Conteúdo guardado na lista: o vídeo à espera do serviço local fica na gaveta de execução (fora da lista) e a página guardada, sem situação, em Finalizadas. */
+    "task-list-saved-content": {
+      now: NOW,
+      cards: savedContentCards,
+      drawers: drawersOf(listedCards(savedContentCards)).map((drawer) => ({ key: drawer.key, ids: drawer.cards.map((item) => item.id) })),
+      execution: savedContentCards.filter((item) => drawerOf(item) === "execution").map((item) => item.id),
+      whens: savedContentCards.map((item) => ({ id: item.id, when: cardWhenLabel(item, new Date(NOW)) })),
+    },
     "task-list-nesting": {
       now: NOW,
       cards: subtaskCards,

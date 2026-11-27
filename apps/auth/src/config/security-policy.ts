@@ -1,3 +1,5 @@
+import { TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES } from "@repo/contracts/device-key";
+
 /** Security durations and limits are deliberately not deployment knobs. */
 export const SECURITY_POLICY = {
   accessTokenTtlSeconds: 900,
@@ -12,4 +14,11 @@ export const SECURITY_POLICY = {
    */
   largeBodyPaths: ["/api/tasks/daily-reading"],
   maxLargeRequestBodyBytes: 1024 * 1024,
+  /**
+   * A entrega do servico local de transcricao
+   * (`POST /api/transcription-worker/deliver`) leva a transcricao de um video de
+   * horas. O teto e o mesmo da API (apps/api).
+   */
+  deliveryBodyPaths: ["/api/transcription-worker/deliver"],
+  maxDeliveryBodyBytes: TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES,
 } as const;

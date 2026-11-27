@@ -9,7 +9,7 @@ import styles from "./entity-picker.module.css";
 const SEARCH_DEBOUNCE_MS = 250;
 
 export interface EntityPickerDialogProps<T> {
-  /** O que a lista vai receber: "Subtarefas", "Documentos". Vira o título do modal. */
+  /** O que a lista vai receber: "Subtarefas", "Artefatos". Vira o título do modal. */
   title: string;
   /** O nome do campo de busca: rótulo acessível e placeholder. */
   searchLabel: string;
@@ -38,7 +38,7 @@ export interface EntityPickerDialogProps<T> {
 type SearchState = "loading" | "ready" | "failed";
 
 /**
- * O modal de seleção de entidade: abre pelo "+" de uma lista de ligações (tarefa principal e subtarefas, documentos da tarefa,
+ * O modal de seleção de entidade: abre pelo "+" de uma lista de ligações (tarefa principal e subtarefas, artefatos da tarefa,
  * tarefas do artefato), mostra os primeiros itens, filtra pela busca e, ao escolher, entrega o item e fecha.
  * No celular é uma folha que sobe do pé; no desktop, um diálogo centrado. Esc, o "x" e o toque fora fecham
  * sem escolher, e o foco volta para quem abriu. Não sabe de que é a lista: quem usa passa a fonte e o desenho.

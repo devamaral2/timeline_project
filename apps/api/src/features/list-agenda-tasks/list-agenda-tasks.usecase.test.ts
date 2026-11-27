@@ -159,6 +159,21 @@ describe("filters", () => {
   });
 });
 
+describe("saved content", () => {
+  const saved = (id: string, kind: "save_content" | "save_content_with_transcription", status: "done" | "awaiting_transcription") =>
+    task(id, "2026-08-17T12:00:00.000Z", { actor: "agent", kind, status });
+  const tasks = [
+    task("common", "2026-08-17T15:00:00.000Z"),
+    saved("page", "save_content", "done"),
+    saved("video", "save_content_with_transcription", "awaiting_transcription"),
+  ];
+
+  test("the agenda leaves out the saved pages and the videos waiting for transcription", async () => {
+    expect(idsOf(await useCaseOf(tasks).execute({}, actor))).toEqual(["common"]);
+    expect(idsOf(await useCaseOf(tasks).execute({ actor: "agent" }, actor))).toEqual([]);
+  });
+});
+
 describe("pages", () => {
   const tasks = ["a", "b", "c", "d", "e"].map((id, index) => task(id, `2026-08-17T1${index}:00:00.000Z`));
 

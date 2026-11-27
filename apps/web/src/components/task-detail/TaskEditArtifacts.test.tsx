@@ -66,7 +66,7 @@ async function loaded() {
 
 /** O "+" da lista, pelo nome da busca do modal que ele abre (depende do tipo da tarefa). */
 const ADD_BUTTONS: Record<string, string> = {
-  "Buscar documento para ligar": "Adicionar documento",
+  "Buscar artefato para ligar": "Adicionar artefato",
   "Buscar alimento para a refeição": "Adicionar alimento à refeição",
   "Buscar exercício para o treino": "Adicionar exercício ao treino",
 };
@@ -78,14 +78,14 @@ function search(label: string, text: string) {
 }
 
 function linked() {
-  return screen.getByRole("list", { name: "Documentos ligados" });
+  return screen.getByRole("list", { name: "Artefatos ligados" });
 }
 
 /** A ordem dos nomes na lista de artefatos ligados, lida pelo botão Remover de cada linha. */
 function linkedNames(): string[] {
   return within(linked())
-    .getAllByRole("button", { name: /^Remover documento/ })
-    .map((button) => (button.getAttribute("aria-label") ?? "").replace(/^Remover documento “/, "").replace(/”$/, ""));
+    .getAllByRole("button", { name: /^Remover artefato/ })
+    .map((button) => (button.getAttribute("aria-label") ?? "").replace(/^Remover artefato “/, "").replace(/”$/, ""));
 }
 
 beforeEach(() => {
@@ -99,8 +99,8 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("documentos na edição", () => {
-  it("a lista mostra os documentos da tarefa na ordem da API, com o que ela criou sem posição", async () => {
+describe("artefatos na edição", () => {
+  it("a lista mostra os artefatos da tarefa na ordem da API, com o que ela criou sem posição", async () => {
     install();
     renderRoute();
     await loaded();
@@ -110,12 +110,12 @@ describe("documentos na edição", () => {
     expect(within(linked()).getByText("sem posição na lista")).toBeInTheDocument();
   });
 
-  it("buscar um documento seu o põe no fim com a relação uses, e Salvar manda a lista inteira na ordem da tela", async () => {
+  it("buscar um artefato seu o põe no fim com a relação uses, e Salvar manda a lista inteira na ordem da tela", async () => {
     install();
     renderRoute();
     await loaded();
 
-    search("Buscar documento para ligar", "Caminhada");
+    search("Buscar artefato para ligar", "Caminhada");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Caminhada no parque”" }));
     expect(linkedNames()).toEqual(["Ficha A", "Ficha B", "Registro do treino", "Caminhada no parque"]);
     save();
@@ -142,7 +142,7 @@ describe("documentos na edição", () => {
     renderRoute();
     await loaded();
 
-    search("Buscar documento para ligar", "Ficha");
+    search("Buscar artefato para ligar", "Ficha");
     await waitFor(() => expect(api.calls.some((call) => call.pathname === "/api/artifacts" && call.query.q === "Ficha")).toBe(true));
     expect(screen.queryByRole("button", { name: "Escolher “Ficha A”" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Escolher “Ficha B”" })).not.toBeInTheDocument();
@@ -176,12 +176,12 @@ describe("documentos na edição", () => {
     expect(task.artifacts.map((link) => link.artifact.name)).toEqual(["Ficha B", "Ficha A", "Registro do treino"]);
   });
 
-  it("remover tira a ligação na hora, a remoção vai no Salvar, e o documento continua existindo", async () => {
+  it("remover tira a ligação na hora, a remoção vai no Salvar, e o artefato continua existindo", async () => {
     install();
     renderRoute();
     await loaded();
 
-    fireEvent.click(screen.getByRole("button", { name: "Remover documento “Ficha B”" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remover artefato “Ficha B”" }));
     expect(linkedNames()).toEqual(["Ficha A", "Registro do treino"]);
     save();
 
@@ -200,10 +200,10 @@ describe("documentos na edição", () => {
     renderRoute();
     await loaded();
 
-    search("Buscar documento para ligar", "Caminhada");
+    search("Buscar artefato para ligar", "Caminhada");
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Caminhada no parque”" }));
     fireEvent.click(screen.getByRole("button", { name: "Subir “Caminhada no parque”" }));
-    fireEvent.click(screen.getByRole("button", { name: "Remover documento “Ficha A”" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remover artefato “Ficha A”" }));
     // Subir a caminhada troca com a Ficha B, que é a posição de cima; o que a tarefa criou fica no meio, sem número.
     expect(linkedNames()).toEqual(["Caminhada no parque", "Registro do treino", "Ficha B"]);
     save();
@@ -329,7 +329,7 @@ describe("treino: exercício do catálogo global, por referência, na ordem da l
     artifactFixture({ id: "art-ficha", name: "Ficha de costas", links: [] }),
   ];
 
-  it("a busca oferece os exercícios do catálogo global, e não os documentos próprios", async () => {
+  it("a busca oferece os exercícios do catálogo global, e não os artefatos próprios", async () => {
     install(TRAINING, EXERCISES);
     renderRoute();
     await loaded();

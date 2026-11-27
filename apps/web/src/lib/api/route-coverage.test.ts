@@ -8,6 +8,7 @@ import { placesRoutes, searchPlaces } from "./places";
 import { createProject, listProjects, projectsRoutes } from "./projects";
 import { createTask, deleteTask, tasksRoutes, getTask, listAgenda, listTrackedTasks, setTaskSituation, suggestTags, updateTask } from "./tasks";
 import { cancelRequest, getRequest, listRequests, getModelOptions, requestsRoutes, sendHermesMessage, sendModelMessage, startEditRequest, startRequest, startVoiceRequest } from "./requests";
+import { requestTranscription, transcriptionRoutes } from "./transcription";
 import { createRecurrence, deleteRecurrence, editRecurrence, getRecurrence, listRecurrences, recurrencesRoutes } from "./recurrences";
 
 /**
@@ -38,13 +39,20 @@ const declaredRoutes: string[] = [
   ...Object.values(projectsRoutes),
   ...Object.values(recurrencesRoutes),
   ...Object.values(requestsRoutes),
+  ...Object.values(transcriptionRoutes),
 ];
 
 /**
  * Rotas do catálogo que o web não chama: quem chama é outro cliente. A extensão do navegador
- * (`apps/extension/src/api.ts`) guarda a página lida pela rota abaixo.
+ * (`apps/extension/src/api.ts`) guarda a página lida por `daily-reading`; o serviço local de transcrição reserva,
+ * renova e entrega os pedidos pelas três rotas `transcription-worker`, com a chave de dispositivo.
  */
-const otherClientRoutes: string[] = ["POST /api/tasks/daily-reading"];
+const otherClientRoutes: string[] = [
+  "POST /api/tasks/daily-reading",
+  "POST /api/transcription-worker/next",
+  "POST /api/transcription-worker/lease",
+  "POST /api/transcription-worker/deliver",
+];
 
 test("o leitor do catálogo acha as rotas documentadas", () => {
   expect(documentedRoutes().length, "nenhuma rota lida do catálogo").toBeGreaterThan(0);
@@ -155,6 +163,9 @@ const cases: Case[] = [
     getRequest: () => getRequest("ID"),
     listRequests: () => listRequests(),
     cancelRequest: () => cancelRequest("ID"),
+  }),
+  ...casesOf("transcrição", transcriptionRoutes, {
+    requestTranscription: () => requestTranscription("https://youtu.be/dQw4w9WgXcQ"),
   }),
   ...casesOf("arquivos do agente", agentFilesRoutes, {
     listAgentFiles: () => listAgentFiles(),

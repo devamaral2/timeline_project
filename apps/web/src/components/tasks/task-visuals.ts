@@ -1,4 +1,5 @@
-import { Apple, CalendarCheck, CircleDashed, Dumbbell, Moon, type LucideIcon } from "lucide-react";
+import { CalendarCheck, CircleDashed, type LucideIcon } from "lucide-react";
+import { BarbellIcon, MoonStarIcon, PlateIcon } from "@/components/ui/type-icons";
 import type { HumanTaskKind, NotificationOffsetMinutes } from "@repo/contracts";
 
 /**
@@ -18,9 +19,9 @@ export interface ItemTypeVisual {
 
 const knownVisuals: Record<HumanTaskKind, ItemTypeVisual> = {
   common: { Icon: CalendarCheck, label: "Padrão" },
-  meal: { Icon: Apple, label: "Refeição" },
-  training: { Icon: Dumbbell, label: "Treino" },
-  sleep: { Icon: Moon, label: "Sono" },
+  meal: { Icon: PlateIcon, label: "Refeição" },
+  training: { Icon: BarbellIcon, label: "Treino" },
+  sleep: { Icon: MoonStarIcon, label: "Sono" },
 };
 
 /**

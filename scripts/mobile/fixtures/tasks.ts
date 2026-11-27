@@ -58,16 +58,21 @@ const cards = [
   card({ id: "task-20", name: "Em espera", status: "inHold", startedAt: "2026-09-17T12:00:00.000Z", estimatedFinishAt: "2026-09-17T14:00:00.000Z" }),
 ];
 
+/** O conteúdo guardado: a página da extensão e o vídeo à espera do serviço local. Têm horário e nunca entram na agenda (ADR 0021). */
+const SAVED_CONTENT_CARDS = [
+  card({ id: "task-21", name: "Página guardada", actor: "agent", kind: "save_content", status: "done", startedAt: "2026-09-14T13:30:00.000Z" }),
+  card({ id: "task-22", name: "Vídeo guardado", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription", startedAt: "2026-09-14T14:10:00.000Z" }),
+];
+const GROUPING_CARDS = [...cards, ...SAVED_CONTENT_CARDS];
+
 /** As tarefas que o servidor devolveria para a semana de 13 a 19 de setembro, em duas páginas com um cartão repetido. */
 const WEEK_CARDS = cards.filter((item) => item.id !== "task-12" && item.id !== "task-16" && item.id !== "task-11" && item.id !== "task-7");
 const pageOne = WEEK_CARDS.slice(0, 6);
 const pageTwo = [WEEK_CARDS[2], ...WEEK_CARDS.slice(6)];
 
-const byDay = agendaTasksByDay(cards);
-
 const HUMAN_STATUSES = ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"] as const;
 const AGENT_STATUSES = [
-  "preparing", "queued", "starting", "running", "waiting", "completed", "interrupted", "failed", "cancelled", "rolled_back",
+  "preparing", "queued", "starting", "running", "waiting", "awaiting_transcription", "completed", "interrupted", "failed", "cancelled", "rolled_back",
 ] as const;
 const STATUS_NOW = new Date("2026-09-14T15:30:45.123Z");
 
@@ -129,14 +134,14 @@ export function tasksFixtures(): Record<string, unknown> {
       pageTwoIds: pageTwo.map((item) => item.id),
     },
     "tasks-agenda-grouping": {
-      cards,
-      agendaCardIds: cards.filter(isAgendaCard).map((item) => item.id),
-      idsByDay: Object.fromEntries(Object.entries(byDay).map(([day, tasks]) => [day, tasks.map((task) => task.id)])),
+      cards: GROUPING_CARDS,
+      agendaCardIds: GROUPING_CARDS.filter(isAgendaCard).map((item) => item.id),
+      idsByDay: Object.fromEntries(Object.entries(agendaTasksByDay(GROUPING_CARDS)).map(([day, tasks]) => [day, tasks.map((task) => task.id)])),
     },
     "tasks-card-text": {
       now: NOW,
-      cards,
-      expected: cards.map((item) => ({
+      cards: GROUPING_CARDS,
+      expected: GROUPING_CARDS.map((item) => ({
         id: item.id,
         when: cardWhenLabel(item, new Date(NOW)),
         overdue: cardIsOverdue(item, new Date(NOW)),

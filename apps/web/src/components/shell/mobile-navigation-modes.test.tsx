@@ -55,7 +55,7 @@ function Screen({ section, model }: { section: "tasks" | "agenda" | "notes"; mod
 test("cada aba leva o título ao lado do ícone (o CSS só o abre na atual) e o nome acessível não dobra", () => {
   render(<MobileNavigation userId="user-1" />);
 
-  for (const name of ["Tarefas", "Agenda", "Documentos"]) {
+  for (const name of ["Tarefas", "Agenda", "Artefatos"]) {
     expect(tab(name)).toBeInTheDocument();
     expect(tab(name)).toHaveTextContent(name);
     expect(tab(name).querySelector("[aria-hidden]")).not.toBeNull();
@@ -120,24 +120,24 @@ test("escolher uma lista de quem grava o modo e fecha o menu", () => {
   expect(bar()).toHaveAttribute("data-list-mode", "agent");
 });
 
-test("Documentos abre o mesmo menu: as listas de quem, mais as listas e a busca que a tela publica", () => {
+test("Artefatos abre o mesmo menu: as listas de quem, mais as listas e a busca que a tela publica", () => {
   nav.pathname = "/user-1/notas";
   const onPick = vi.fn();
   const onChange = vi.fn();
   render(<>
-    <Screen section="notes" model={{ count: 7, lists: [{ id: "tag:saude", name: "saude", desc: "#saude", Icon: Hash, count: 3, selected: false, onPick }], search: { label: "Buscar nos documentos", value: "", onChange }, filtered: false }} />
+    <Screen section="notes" model={{ count: 7, lists: [{ id: "tag:saude", name: "saude", desc: "#saude", Icon: Hash, count: 3, selected: false, onPick }], search: { label: "Buscar nos artefatos", value: "", onChange }, filtered: false }} />
     <MobileNavigation userId="user-1" />
   </>);
 
-  fireEvent.click(tab("Documentos"));
+  fireEvent.click(tab("Artefatos"));
 
-  expect(menuOpen("documentos")).toBe(true);
-  expect(list("documentos", /^Todos/)).toHaveAttribute("aria-pressed", "true");
-  expect(list("documentos", /^Você/)).toBeInTheDocument();
-  expect(list("documentos", /^Agentes/)).toBeInTheDocument();
-  fireEvent.click(list("documentos", /saude/));
+  expect(menuOpen("artefatos")).toBe(true);
+  expect(list("artefatos", /^Todos/)).toHaveAttribute("aria-pressed", "true");
+  expect(list("artefatos", /^Você/)).toBeInTheDocument();
+  expect(list("artefatos", /^Agentes/)).toBeInTheDocument();
+  fireEvent.click(list("artefatos", /saude/));
   expect(onPick).toHaveBeenCalledTimes(1);
-  fireEvent.change(within(menu("documentos")).getByRole("searchbox", { name: "Buscar nos documentos", hidden: true }), { target: { value: "bowl" } });
+  fireEvent.change(within(menu("artefatos")).getByRole("searchbox", { name: "Buscar nos artefatos", hidden: true }), { target: { value: "bowl" } });
   expect(onChange).toHaveBeenCalledWith("bowl");
 });
 
@@ -165,7 +165,7 @@ test("com filtro ativo na tela, a aba selecionada ganha o ponto", () => {
     <MobileNavigation userId="user-1" />
   </>);
 
-  expect(tab("Documentos").querySelector("[data-on]")).not.toBeNull();
+  expect(tab("Artefatos").querySelector("[data-on]")).not.toBeNull();
   expect(tab("Agenda").querySelector("[data-on]")).toBeNull();
 });
 

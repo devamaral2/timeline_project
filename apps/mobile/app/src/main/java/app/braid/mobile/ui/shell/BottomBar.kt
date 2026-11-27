@@ -63,7 +63,7 @@ enum class MainTab(
 ) {
     Tasks("Tarefas", BraidIcons.tasksNav),
     Agenda("Agenda", BraidIcons.agendaNav),
-    Documents("Documentos", BraidIcons.documentsNav),
+    Documents("Artefatos", BraidIcons.documentsNav),
 }
 
 private val DockHeight = 58.dp

@@ -5,7 +5,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 
-/** As cores dos documentos que o `colorScheme` não carrega: o sono, o treino, a refeição e os três macronutrientes. */
+/** As cores dos artefatos que o `colorScheme` não carrega: o sono, o treino, a refeição e os três macronutrientes. */
 @Immutable
 class DocumentTokens(
     val sleep: Color,

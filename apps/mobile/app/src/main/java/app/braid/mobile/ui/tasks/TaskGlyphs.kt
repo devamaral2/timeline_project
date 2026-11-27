@@ -35,6 +35,7 @@ fun agentStatusLabel(status: TaskStatus?): String? =
         TaskStatus.Starting -> "Iniciando"
         TaskStatus.Running -> "Trabalhando"
         TaskStatus.Waiting -> "Esperando"
+        TaskStatus.AwaitingTranscription -> "Esperando transcrição"
         TaskStatus.Completed -> "Concluído"
         TaskStatus.Interrupted -> "Interrompido"
         TaskStatus.Failed -> "Falhou"

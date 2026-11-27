@@ -373,7 +373,7 @@ describe("lembretes e tags", () => {
   });
 });
 
-describe("documentos na edição", () => {
+describe("artefatos na edição", () => {
   /** Um vínculo como a tarefa o devolve: o artefato inteiro (catálogo global é treino; o próprio, nota). */
   function link(id: string, name: string, relation: TaskArtifactDto["relation"] = "uses") {
     const global = id === "art-gym";
@@ -392,7 +392,7 @@ describe("documentos na edição", () => {
   const workout = link("art-gym", "Musculação");
   const sheet = link("art-sheet", "Ficha A");
 
-  it("o rascunho lê a lista de documentos da tarefa, na ordem da API", () => {
+  it("o rascunho lê a lista de artefatos da tarefa, na ordem da API", () => {
     const draft = draftFromTask(training({ artifacts: [workout, sheet] }));
 
     expect(draft.artifacts).toEqual([

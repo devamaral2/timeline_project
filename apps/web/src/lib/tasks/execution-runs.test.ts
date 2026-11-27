@@ -6,7 +6,7 @@ import { drawerGrows, EXECUTION_STATUS_FILTER, executionRunsOf, shownRowCount } 
 const card = (overrides: Partial<TaskCardDto> & { id: string }) => taskFixture({ actor: "agent", kind: "request", status: "running", ...overrides }) as TaskCardDto;
 
 test("o filtro de status é o grupo em andamento dos contratos", () => {
-  expect([...EXECUTION_STATUS_FILTER].sort()).toEqual(["preparing", "queued", "running", "starting"]);
+  expect([...EXECUTION_STATUS_FILTER].sort()).toEqual(["awaiting_transcription", "preparing", "queued", "running", "starting"]);
 });
 
 test("só execução de agente em andamento, sem passo nem execução agendada, da mais recente para a mais antiga", () => {
@@ -20,6 +20,15 @@ test("só execução de agente em andamento, sem passo nem execução agendada, 
     taskFixture({ id: "pessoa", status: "doing", startedAt: "2026-09-14T09:44:00-03:00" }) as TaskCardDto,
   ]);
   expect(runs.map((run) => run.id)).toEqual(["nova", "velha"]);
+});
+
+test("o conteúdo guardado esperando a transcrição ou rodando aparece na gaveta; o terminado não", () => {
+  const runs = executionRunsOf([
+    card({ id: "video", kind: "save_content_with_transcription", status: "awaiting_transcription", startedAt: "2026-09-14T09:10:00-03:00" }),
+    card({ id: "pagina", kind: "save_content", status: "running", startedAt: "2026-09-14T09:05:00-03:00" }),
+    card({ id: "guardada", kind: "save_content", status: "completed", startedAt: "2026-09-14T09:20:00-03:00" }),
+  ]);
+  expect(runs.map((run) => run.id)).toEqual(["video", "pagina"]);
 });
 
 test("sem início a execução vai para o fim e o empate se desfaz pelo id", () => {

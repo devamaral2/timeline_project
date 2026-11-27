@@ -6,10 +6,13 @@ import type { AgentTaskStatus, HumanTaskStatus, TaskActor, TaskStatus } from "./
  */
 
 /** O pedido ainda nao terminou: a tela continua relendo. */
-export const OPEN_AGENT_STATUSES: readonly AgentTaskStatus[] = ["preparing", "queued", "starting", "running", "waiting"];
+export const OPEN_AGENT_STATUSES: readonly AgentTaskStatus[] = ["preparing", "queued", "starting", "running", "waiting", "awaiting_transcription"];
 
-/** O pedido esta sendo preparado, na fila, iniciando ou executando, sem esperar o usuario. */
-export const IN_PROGRESS_AGENT_STATUSES: readonly AgentTaskStatus[] = ["preparing", "queued", "starting", "running"];
+/**
+ * O pedido esta sendo preparado, na fila, iniciando, executando ou esperando o servico local transcrever o video,
+ * sem esperar o usuario.
+ */
+export const IN_PROGRESS_AGENT_STATUSES: readonly AgentTaskStatus[] = ["preparing", "queued", "starting", "running", "awaiting_transcription"];
 
 /** O pedido terminou, por qualquer motivo. */
 export const FINAL_AGENT_STATUSES: readonly AgentTaskStatus[] = ["completed", "interrupted", "failed", "cancelled", "rolled_back"];
@@ -48,10 +51,13 @@ export function isCancelledAgentStatus(status: AgentTaskStatus): boolean {
 }
 
 /**
- * Os tipos de tarefa de agente que nao sao um pedido: o passo de um pedido e a execucao agendada. Nao tem situacao e
- * nao aparece na gaveta de execucao.
+ * Os tipos de tarefa de agente que nunca tem situacao: o passo de um pedido, a execucao agendada e o conteudo guardado
+ * (`save_content*`, ADR 0021). Quem grava a lista no banco e no SQL le daqui.
  */
-export const KINDS_WITHOUT_SITUATION = ["step", "cron"] as const;
+export const KINDS_WITHOUT_SITUATION = ["step", "cron", "save_content", "save_content_with_transcription"] as const;
+
+/** Os tipos de agente que a gaveta de execucao nunca mostra: o passo e a execucao agendada (sempre em Continuas). */
+export const KINDS_OUTSIDE_EXECUTION_DRAWER = ["step", "cron"] as const;
 
 /** O que as perguntas sobre pedido de agente leem de uma tarefa ou cartao. */
 interface AgentTaskFacts {
@@ -60,7 +66,7 @@ interface AgentTaskFacts {
   status?: string | null | undefined;
 }
 
-/** E um pedido de agente: de agente, e nao passo nem execucao agendada. */
+/** E um pedido de agente que pode ter situacao: de agente, e nao passo, execucao agendada nem conteudo guardado. */
 export function isAgentRequest(task: AgentTaskFacts): boolean {
   return task.actor === "agent" && !(KINDS_WITHOUT_SITUATION as readonly string[]).includes(task.kind);
 }
@@ -70,9 +76,12 @@ export function acceptsSituation(task: AgentTaskFacts): boolean {
   return isAgentRequest(task) && task.status != null && isFinalAgentStatus(task.status as AgentTaskStatus);
 }
 
-/** A tarefa e uma execucao: um pedido de agente em andamento (a gaveta de execucao mostra so estas). */
+/**
+ * A tarefa e uma execucao: trabalho de agente em andamento (a gaveta de execucao mostra so estas). O conteudo guardado
+ * entra, sem situacao; o passo e a execucao agendada nao.
+ */
 export function isExecutionRun(task: AgentTaskFacts): boolean {
-  return isAgentRequest(task) && task.status != null && isInProgressAgentStatus(task.status as AgentTaskStatus);
+  return task.actor === "agent" && !(KINDS_OUTSIDE_EXECUTION_DRAWER as readonly string[]).includes(task.kind) && task.status != null && isInProgressAgentStatus(task.status as AgentTaskStatus);
 }
 
 /*

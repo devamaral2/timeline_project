@@ -7,6 +7,7 @@
 .tone { color: var(--muted-foreground); }
 .tone[data-status="queued"],
 .tone[data-status="preparing"],
+.tone[data-status="awaiting_transcription"],
 .tone[data-status="cancelled"],
 .tone[data-status="rolled_back"] { color: var(--muted-foreground); }
 .tone[data-status="starting"],
