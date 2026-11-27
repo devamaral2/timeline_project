@@ -1,8 +1,10 @@
 import type { TaskCardDto, TaskStatus } from "@repo/contracts";
 
 /**
- * Agrupamento da lista de tarefas: as tarefas com status da rota `tracked`
- * juntam pessoa e agente nos seis grupos do canvas. Função pura, sem rede.
+ * Agrupamento antigo da lista de tarefas: pessoa e agente nos seis grupos por status. O web não o usa mais (a lista
+ * tem as quatro gavetas de `task-drawers.ts`); fica só para o fixture que o Android confere hoje (`task-list-pipeline`)
+ * e sai junto com ele quando o Android portar a regra nova (ticket 68). `nestSubtasks` e `oneRowPerSeries`, daqui, seguem
+ * em uso. Função pura, sem rede.
  */
 
 export type TaskGroupKey = "doing" | "todo" | "toDefine" | "waiting" | "done" | "closed";
