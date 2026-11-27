@@ -1,7 +1,9 @@
-import type { CreateTaskInput, TaskCardDto, TaskDto } from "@repo/contracts";
+import { isFinalAgentStatus } from "@repo/contracts";
+import type { AgentTaskStatus, CreateTaskInput, RequestDto, TaskCardDto, TaskDto, TaskSituation } from "@repo/contracts";
 import {
   agendaPageSchema,
   createTaskInputSchema,
+  setTaskSituationInputSchema,
   taskCardSchema,
   taskSchema,
   placeSuggestionSchema,
@@ -17,7 +19,7 @@ import { type ArtifactLink, type TaskArtifactEntry, artifactsOfTask, relinkTaskA
 
 const TASKS = "tasks";
 const CARD_KEYS = [
-  "id", "actor", "kind", "status", "priority", "name", "description", "project", "location", "startedAt", "estimatedFinishAt",
+  "id", "actor", "kind", "status", "situation", "priority", "name", "description", "project", "location", "startedAt", "estimatedFinishAt",
   "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "parentTaskId",
   "recurrence", "revision", "createdAt", "updatedAt",
 ] as const;
@@ -308,6 +310,23 @@ function remove(request: FakeRequest, store: FakeStore): FakeResult {
   return { status: 204 };
 }
 
+/** A API aceita só o pedido de agente que terminou: pessoa, passo, execução agendada e tarefa aberta dão 409. */
+function setSituation(request: FakeRequest, store: FakeStore): FakeResult {
+  const task = table(store).get(request.params.taskId ?? "");
+  if (!task) return { status: 404 };
+  const accepts = task.actor === "agent" && task.kind !== "step" && task.kind !== "cron"
+    && task.status !== undefined && isFinalAgentStatus(task.status as AgentTaskStatus);
+  if (!accepts) return { status: 409 };
+  const { situation } = request.body as { situation: TaskSituation };
+  const next = taskSchema.parse({ ...task, situation, revision: task.revision + 1, updatedAt: new Date().toISOString() });
+  table(store).set(task.id, next);
+  // O pedido tem o mesmo id da tarefa: a leitura dele traz a mesma situação.
+  const requests = store.table<RequestDto>("requests");
+  const stored = requests.get(task.id);
+  if (stored) requests.set(task.id, { ...stored, situation });
+  return { status: 200, body: toCard(next) };
+}
+
 function suggestTags(request: FakeRequest, store: FakeStore): FakeResult {
   const prefix = (request.query.get("query") ?? "").toLocaleLowerCase("pt-BR");
   const limit = Math.min(Number(request.query.get("limit") ?? 10), 100);
@@ -342,6 +361,7 @@ export const tasksArea: FakeArea = {
     { method: "POST", path: "/api/tasks", input: createTaskInputSchema, output: createdTaskSchema, idempotent: true, handle: create },
     { method: "GET", path: "/api/tasks/:taskId", output: taskSchema, handle: read },
     { method: "PATCH", path: "/api/tasks/:taskId", input: updateTaskInputSchema.omit({ taskId: true }), handle: update },
+    { method: "PUT", path: "/api/tasks/:taskId/situation", input: setTaskSituationInputSchema, output: taskCardSchema, handle: setSituation },
     { method: "DELETE", path: "/api/tasks/:taskId", handle: remove },
     { method: "GET", path: "/api/tags", output: z.array(tagSuggestionSchema), handle: suggestTags },
     { method: "GET", path: "/api/places", output: z.array(placeSuggestionSchema), handle: searchPlaces },

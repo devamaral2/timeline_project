@@ -1,10 +1,12 @@
 import { Bot } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
-import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus } from "@repo/contracts";
+import { useState, type ReactNode } from "react";
+import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus, TaskSituation } from "@repo/contracts";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/tasks/card-text";
 import { ProjectLine } from "@/components/projects/project-line";
 import { TaskKindMark } from "./task-kind-mark";
+import { SituationMenu } from "./situation-menu";
+import { TaskInertDot, TaskSituationGlyph, situationNames } from "./task-situation";
 import { TaskStatusGlyph, taskStatusName } from "./task-status-glyph";
 import styles from "./task-row.module.css";
 
@@ -19,6 +21,11 @@ export interface TaskRowProps {
   ruleInPlaceOfTime?: boolean;
   /** Toque no glifo de uma tarefa de pessoa (a tela abre a escolha de status). */
   onStatusClick?: (card: TaskCardDto, anchor: HTMLElement) => void;
+  /**
+   * A lista trata a situação do pedido de agente: o glifo da esquerda mostra a situação e abre as três opções na
+   * própria linha. Sem isto (a agenda), a linha do agente continua com o status à esquerda e sem toque.
+   */
+  onSituationPick?: (card: TaskCardDto, situation: TaskSituation) => void;
   /** Controle na ponta direita da linha, fora do link (a fração das subtarefas na lista). */
   aside?: ReactNode;
   /** O que vem embaixo da linha, na largura dela (a gaveta das subtarefas na lista). */
@@ -31,7 +38,8 @@ export interface TaskRowProps {
  * mesma grade; a tarefa de agente fecha a linha com o robô, a sua assinatura.
  * O glifo de pessoa é um botão; o de agente não muda status.
  */
-export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, aside, children }: TaskRowProps) {
+export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, onSituationPick, aside, children }: TaskRowProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const isAgent = card.actor === "agent";
   const overdue = !isAgent && cardIsOverdue(card, now);
   const when = cardWhenLabel(card, now, { ruleInPlaceOfTime });
@@ -45,9 +53,27 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, a
     <TaskStatusGlyph actor="human" status={humanStatus} />
   );
 
+  // Na lista, o glifo da esquerda é a situação (ou o ponto inerte) e o status passa para a ponta direita.
+  const situationMode = isAgent && onSituationPick !== undefined;
+  const situation = situationMode ? card.situation : undefined;
+
   return (
     <li className={styles.row} data-actor={card.actor} data-status={card.status ?? "reference"}>
-      {isAgent ? (
+      {situationMode ? (
+        situation ? (
+          <button
+            type="button"
+            className={styles.glyphButton}
+            aria-label={`${situationNames[situation]}. Mudar situação de “${card.name}”`}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((current) => !current)}
+          >
+            <TaskSituationGlyph situation={situation} />
+          </button>
+        ) : (
+          <span className={styles.glyphSlot}><TaskInertDot /></span>
+        )
+      ) : isAgent ? (
         <span className={styles.glyphSlot}>{glyph}</span>
       ) : (
         <button
@@ -77,10 +103,21 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, a
           </span>
         </span>
         {duration ? <span className={styles.duration}>{duration}</span> : null}
+        {/* O status do agente fica onde estava o glifo; o ticket do ícone quadrado o leva para a direita. */}
+        {situationMode ? <TaskStatusGlyph actor="agent" status={agentStatus} size={18} /> : null}
         {/* Decorativo: o nome do glifo de status já diz "Agente". */}
         {isAgent ? <Bot className={styles.agentMark} size={18} strokeWidth={1.9} aria-hidden="true" data-agent-mark /> : null}
       </Link>
       {aside}
+      {menuOpen && situation ? (
+        <SituationMenu
+          value={situation}
+          onPick={(next) => {
+            setMenuOpen(false);
+            onSituationPick?.(card, next);
+          }}
+        />
+      ) : null}
       {children}
     </li>
   );

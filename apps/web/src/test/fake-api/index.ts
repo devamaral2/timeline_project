@@ -12,7 +12,7 @@ import { ApiError } from "@/lib/api/authed-fetch";
  * (não `ApiError`): o teste quebra no lugar do bug, não em produção.
  */
 
-export type FakeMethod = "GET" | "POST" | "PATCH" | "DELETE";
+export type FakeMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export interface FakeRequest {
   method: FakeMethod;

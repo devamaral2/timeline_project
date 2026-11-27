@@ -26,6 +26,13 @@
 .statusGlyph[data-status="failed"] { color: var(--destructive); }
 .statusGlyph[data-status="reference"] { color: var(--routine); }
 
+/* A situacao do pedido de agente que terminou: apagada, sucesso ou informacao (o azul de `--routine`). */
+.situationGlyph { flex: none; display: block; overflow: visible; color: var(--muted-foreground); }
+.situationGlyph[data-situation="reviewed"] { color: var(--success); }
+.situationGlyph[data-situation="bookmarked"] { color: var(--routine); }
+/* O ponto inerte: sem toque, esmaecido. */
+.inertDot { flex: none; display: block; overflow: visible; color: var(--muted-foreground); opacity: 0.4; }
+
 /* O ponto verde-agua de "em curso" e "executando": recortado em fundo, para
    separar do contorno. */
 .activeDot {

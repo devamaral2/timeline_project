@@ -5,7 +5,7 @@ import { ApiError, authedFetch } from "./authed-fetch";
  * Cada área (tarefas, artefatos, …) chama `apiRequest` e não conhece HTTP.
  */
 
-export type ApiMethod = "GET" | "POST" | "PATCH" | "DELETE";
+export type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /** O que a tela distingue. Qualquer outro status continua sendo `ApiError`. */
 export type ApiFailureKind =
