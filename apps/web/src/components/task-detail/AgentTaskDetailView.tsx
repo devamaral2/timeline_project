@@ -38,7 +38,7 @@ export function AgentTaskDetailView({ userId, task, onChanged }: AgentTaskDetail
         <span className={styles.topbarTitle}>Tarefa</span>
         <div className={styles.topbarActions} />
       </nav>
-      {request ? <AgentTaskHeader task={task} request={request} /> : null}
+      {request ? <AgentTaskHeader task={task} request={request} onRequestChange={applyRequest} /> : null}
     </>
   );
 

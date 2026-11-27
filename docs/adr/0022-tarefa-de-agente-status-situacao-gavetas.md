@@ -64,3 +64,60 @@ trabalha, nem a execução que parou no meio da que falhou.
   um status desconhecido como neutro, sem derrubar o cartão.
 - Quem entrar depois com um status de agente novo (como `awaiting_transcription`, das issues 39 e 40) decide entre usar
   `queued` e acrescentá-lo ao conjunto e aos grupos, com nome, ícone e cor.
+
+## Situação
+
+### Contexto
+
+O status diz como a execução terminou; não diz o que o usuário fez com o resultado. Sem isso, um pedido concluído de
+ontem e um que acabou de terminar são iguais na lista, e quem quer deixar um resultado de lado ou guardá-lo para depois
+não tem onde marcar.
+
+### Decisão
+
+1. **A tarefa de agente que termina ganha uma situação, que o usuário controla:** `to_review` (Para revisar),
+   `reviewed` (Revisada) ou `bookmarked` (Guardada). A coluna `tasks.situation` é texto e opcional; o nome nos contratos
+   é o mesmo (`TaskSituation`, `situation` no cartão da tarefa e no pedido).
+2. **Quem pode ter situação** é o pedido de agente que não é passo nem execução agendada e está num status final. O
+   domínio (`acceptsSituation`, no mesmo módulo dos grupos de status) e dois checks do banco impõem isso:
+   `tasks_situation_valid` (um dos três valores) e `tasks_situation_shape` (só agente, só fora de `step` e `cron`, só em
+   status final). O check vale **só num sentido**: uma tarefa final pode ficar sem situação. Assim, restringir a política
+   de revisão depois não pede migration.
+3. **A política de revisão mora num lugar só** (`REVIEW_SITUATION_ON_CLOSE`, em `domain/agent-status.ts`): a gravação que
+   fecha um pedido, em qualquer status final, grava `to_review` na mesma operação. São três gravações, todas passam por
+   ela: o fechamento do pedido (`closeRequest`, que cobre `completed` e `failed`), o cancelamento do pedido (`cancel`) e
+   o fechamento do pedido de cálculo de alimento. Os passos nunca ganham situação. Quem passar a gravar `interrupted`
+   (ticket 56) fecha o pedido pelas mesmas gravações e herda a política.
+4. **Definir a situação** é `PUT /api/tasks/:taskId/situation` com `{ situation }`, e devolve o cartão da tarefa.
+   Aceita qualquer um dos três valores a partir de qualquer um deles, não usa `expectedRevision` (a tarefa de agente não
+   é editada por formulário, vale a última gravação) e responde 404 para tarefa inexistente ou de outro usuário (os dois
+   casos iguais) e 409 quando a tarefa não aceita situação (de pessoa, passo, execução agendada ou ainda aberta). A
+   gravação confere o critério de novo no próprio `UPDATE`, porque o status pode ter mudado desde a leitura. A mudança
+   sobe a `revision` e o `updated_at` da tarefa. A rota está no catálogo de rotas da API.
+5. **A migration** `0011_situacao_da_tarefa_de_agente` acrescenta a coluna e os dois checks e grava `reviewed` nas tarefas
+   de agente que já estão num status final e não são passo nem execução agendada: o que terminou antes desta mudança
+   nunca foi mostrado ao usuário como "para revisar", então não entra na fila de revisão. As abertas e os passos ficam
+   sem situação.
+6. **No web:** na linha da tarefa de agente que tem situação, o glifo da esquerda mostra a situação (Para revisar é o
+   círculo vazio de "A fazer", em cor apagada; Revisada, um círculo com dois vistos, em sucesso; Guardada, um marcador,
+   na cor de informação, o azul de `--routine`) e abre as três opções na própria linha. A mudança aparece na hora e é
+   desfeita se a gravação falhar. Na tarefa de agente `waiting` e na execução agendada o glifo é um ponto inerte. O
+   cabeçalho do detalhe do pedido terminado ganha o mesmo controle. A lista continua agrupando como antes: as quatro
+   gavetas vêm com a regra das gavetas, e o status continua onde é desenhado, até o ticket do ícone quadrado o levar
+   para a direita.
+
+### Alternativas rejeitadas
+
+- Um status a mais (`reviewed`) no conjunto de agente: misturaria o resultado da execução com a decisão do usuário e
+  tornaria `completed` ambíguo para os lembretes, a fração e os grupos.
+- Gravar `to_review` na migration para o que já terminou: encheria a fila de revisão com o histórico inteiro no primeiro
+  acesso.
+- Exigir `expectedRevision` na troca: a situação não é um campo editado por formulário, e duas telas trocando-a deixam a
+  última valer sem perder nada.
+
+### Consequências
+
+- O Android recebe `situation` no cartão e no pedido e ignora o campo até o ticket do Android; a linha de paridade
+  fica pendente.
+- Os clientes não escrevem a lista de status finais para decidir se mostram o controle: o cartão só traz `situation` quando
+  a tarefa aceita.

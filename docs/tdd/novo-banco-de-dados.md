@@ -89,6 +89,7 @@ create table events (
   actor                  text not null,                   -- human | agent
   kind                   text not null,
   status                 text,                            -- nulo = evento de referência
+  situation              text,                            -- to_review | reviewed | bookmarked (ADR 0022)
   priority               text not null default 'medium',  -- urgent | high | medium | low
   name                   text not null,
   description            text not null default '',
@@ -126,6 +127,12 @@ or (actor = 'agent' and kind in ('request', 'search_request', 'build_request',
 or (actor = 'agent' and status is not null
     and status in ('preparing', 'queued', 'starting', 'running', 'waiting', 'completed', 'interrupted', 'failed',
                    'cancelled', 'rolled_back'))  -- ADR 0022 (era queued, running, waiting, done, failed, cancel)
+
+-- situação (ADR 0022): só o pedido de agente, fora de passo e de execução agendada, num status final.
+-- Vale só num sentido: uma tarefa final pode ficar sem situação
+situation is null or situation in ('to_review', 'reviewed', 'bookmarked')
+situation is null or (actor = 'agent' and kind not in ('step', 'cron')
+                      and status in ('completed', 'interrupted', 'failed', 'cancelled', 'rolled_back'))
 
 -- evento longo: de pessoa, com status, sem recorrência, nunca perdido
 not long_running or (actor = 'human' and status is not null and status <> 'missed' and recurrence_id is null)

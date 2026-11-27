@@ -102,6 +102,74 @@ test("uma tarefa de agente abre na forma do agente: tipo, título, status e o ro
   expect(screen.queryByRole("button", { name: /Trocar status/ })).not.toBeInTheDocument();
 });
 
+const finishedTask = (overrides: Partial<TaskDto> = {}) => agentTask({ status: "completed", situation: "to_review", ...overrides });
+const finishedRequest = (overrides: Partial<RequestDto> = {}) =>
+  agentRequest({ status: "completed", situation: "to_review", steps: STEPS.map((step) => ({ ...step, status: "completed" })), ...overrides });
+const situationControl = () => screen.findByRole("button", { name: /Mudar situação/ });
+
+test("o cabeçalho do pedido terminado mostra o status, o controle de situação com o nome acessível e o projeto", async () => {
+  install([finishedTask()], [finishedRequest()]);
+  renderPage();
+  await loaded();
+
+  const top = screen.getByRole("region", { name: "Resumo da tarefa" });
+  expect(within(top).getByText("Agente, concluído")).toBeInTheDocument();
+  expect(await situationControl()).toHaveAccessibleName("Para revisar. Mudar situação");
+  expect(within(top).getByRole("button", { name: /Mudar situação/ })).toHaveTextContent("Para revisar");
+});
+
+test.each([
+  ["to_review", "Para revisar"],
+  ["reviewed", "Revisada"],
+  ["bookmarked", "Guardada"],
+] as const)("a situação %s tem o nome acessível %s no detalhe", async (situation, name) => {
+  install([finishedTask({ situation })], [finishedRequest({ situation })]);
+  renderPage();
+  await loaded();
+
+  expect(await situationControl()).toHaveAccessibleName(`${name}. Mudar situação`);
+});
+
+test("o detalhe do pedido muda a situação: grava na API e continua assim ao recarregar", async () => {
+  install([finishedTask()], [finishedRequest()]);
+  const { unmount } = renderPage();
+  await loaded();
+
+  fireEvent.click(await situationControl());
+  fireEvent.click(within(screen.getByRole("group", { name: "Situação da tarefa" })).getByRole("button", { name: "Guardada" }));
+
+  expect(await situationControl()).toHaveAccessibleName("Guardada. Mudar situação");
+  expect(screen.queryByRole("group", { name: "Situação da tarefa" })).not.toBeInTheDocument();
+  await waitFor(() => expect(api.calls.some((call) => call.method === "PUT")).toBe(true));
+  expect(api.calls.find((call) => call.method === "PUT")).toMatchObject({ pathname: `/api/tasks/${ID}/situation`, body: { situation: "bookmarked" } });
+
+  unmount();
+  renderPage();
+  await loaded();
+  expect(await situationControl()).toHaveAccessibleName("Guardada. Mudar situação");
+});
+
+test("com a API falhando, a situação volta ao que era e o detalhe avisa", async () => {
+  install([finishedTask()], [finishedRequest()]);
+  renderPage();
+  await loaded();
+  api.failNext("PUT", `/api/tasks/${ID}/situation`, 500);
+
+  fireEvent.click(await situationControl());
+  fireEvent.click(within(screen.getByRole("group", { name: "Situação da tarefa" })).getByRole("button", { name: "Revisada" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível mudar a situação");
+  expect(await situationControl()).toHaveAccessibleName("Para revisar. Mudar situação");
+});
+
+test("o pedido ainda aberto não tem controle de situação", async () => {
+  install([agentTask()], [agentRequest()]);
+  renderPage();
+  await loaded();
+
+  expect(screen.queryByRole("button", { name: /Mudar situação/ })).not.toBeInTheDocument();
+});
+
 test("Informações mostra o início com o tempo decorrido e 'ainda não concluído'; sem fim estimado nem job", async () => {
   install([agentTask()], [agentRequest()]);
   renderPage();
