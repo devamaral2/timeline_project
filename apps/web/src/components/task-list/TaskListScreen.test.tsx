@@ -409,7 +409,7 @@ test("com tarefa de agente em aberto, a lista se relê sozinha e a linha vai par
   await screen.findByRole("link", { name: /Pesquisar voos/ });
 
   const table = api.store.table<TaskDto>("tasks");
-  table.set("pesquisa", { ...(table.get("pesquisa") as TaskDto), status: "done" });
+  table.set("pesquisa", { ...(table.get("pesquisa") as TaskDto), status: "completed" });
   await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
 
   await waitFor(() => expect(screen.queryByRole("region", { name: /Em curso/ })).not.toBeInTheDocument());
@@ -418,7 +418,7 @@ test("com tarefa de agente em aberto, a lista se relê sozinha e a linha vai par
 });
 
 test("sem tarefa de agente em aberto, a lista não se relê em intervalo", async () => {
-  const api = serve(tasks.map((task) => (task.id === "pesquisa" ? { ...task, status: "done" as const } : task)));
+  const api = serve(tasks.map((task) => (task.id === "pesquisa" ? { ...task, status: "completed" as const } : task)));
   render(<TaskListScreen userId="user-1" />);
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
   const reads = trackedReads(api);

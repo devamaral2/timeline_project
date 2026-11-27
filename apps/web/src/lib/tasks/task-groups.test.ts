@@ -26,7 +26,7 @@ function card(overrides: { id: string } & Record<string, unknown>): TaskCardDto 
 
 test("junta os dois executores nos seis grupos, na ordem do canvas, e tira os grupos vazios", () => {
   const groups = groupTrackedTasks([
-    card({ id: "feita-agente", actor: "agent", kind: "request", status: "done" }),
+    card({ id: "feita-agente", actor: "agent", kind: "request", status: "completed" }),
     card({ id: "pneu", status: "inHold" }),
     card({ id: "falhou", actor: "agent", kind: "request", status: "failed" }),
     card({ id: "rodando", actor: "agent", kind: "request", status: "running" }),

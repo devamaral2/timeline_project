@@ -95,7 +95,7 @@ test("o dono manda o pedido: o campo acompanha o andamento, mostra a resposta e 
 
   // O Hermes editou o arquivo e terminou: a tela mostra a resposta e relê o texto atual.
   api.store.table<AgentFileRow>("agentFiles").set(SKILL, { id: SKILL, path: SKILL, text: TEXT_EDITED, missing: false });
-  advanceRequest(api, openedRequest(), { status: "done", message: "Troquei o passo 1." });
+  advanceRequest(api, openedRequest(), { status: "completed", message: "Troquei o passo 1." });
   expect(await screen.findByText("Troquei o passo 1.")).toBeInTheDocument();
   await waitFor(() => expect(screen.getByLabelText("Texto do arquivo").textContent).toContain("ler o contrato"));
   expect(api.calls.filter((call) => call.pathname === "/api/ai/config/file").length).toBeGreaterThan(1);

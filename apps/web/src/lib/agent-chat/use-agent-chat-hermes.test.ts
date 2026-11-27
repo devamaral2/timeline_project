@@ -64,7 +64,7 @@ test("/hermes abre um pedido na rota do Hermes, com o id da mensagem, e mostra a
   expect(stepsPosts()).toHaveLength(0);
   expect(result.current.pending).toMatchObject({ label: "Falando com o Hermes", requestId: id });
 
-  advanceRequest(api, id, { status: "done", message: "Nota criada." });
+  advanceRequest(api, id, { status: "completed", message: "Nota criada." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   expect(result.current.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
@@ -84,7 +84,7 @@ test("os passos do Hermes aparecem enquanto ele trabalha, ficam depois e vem ant
     steps: [{ id: "c1", kind: "tool", label: "Executou um comando", detail: "date", status: "running" }],
   });
 
-  advanceRequest(api, id, { status: "done", trace: thinking("done"), message: "2026" });
+  advanceRequest(api, id, { status: "completed", trace: thinking("done"), message: "2026" });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   expect(result.current.messages.map((message) => message.role)).toEqual(["user", "hermes-steps", "assistant"]);
@@ -164,7 +164,7 @@ test("reenviar a mensagem depois de uma falha de rede nao manda uma segunda ao H
 test("a sessao e o primeiro pedido: a mensagem seguinte ao Hermes manda o id dele como sessionId", async () => {
   const { result } = setup();
   const first = await ask(result, "/hermes oi");
-  advanceRequest(api, first, { status: "done", message: "Oi." });
+  advanceRequest(api, first, { status: "completed", message: "Oi." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   await ask(result, "e amanha?");
@@ -176,14 +176,14 @@ test("a sessao e o primeiro pedido: a mensagem seguinte ao Hermes manda o id del
 test("depois de /hermes, as mensagens seguintes continuam com o Hermes ate /app", async () => {
   const { result } = setup();
   const first = await ask(result, "/hermes oi");
-  advanceRequest(api, first, { status: "done", message: "Oi." });
+  advanceRequest(api, first, { status: "completed", message: "Oi." });
   await waitFor(() => expect(result.current.pending).toBeNull());
   expect(result.current.agentMode).toBe("hermes");
 
   const second = await ask(result, "me diga como conectar ao google agenda");
   expect(hermesPosts()).toHaveLength(2);
   expect(stepsPosts()).toHaveLength(0);
-  advanceRequest(api, second, { status: "done", message: "Pelo menu do Google." });
+  advanceRequest(api, second, { status: "completed", message: "Pelo menu do Google." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   act(() => { result.current.send("/app"); });
@@ -210,7 +210,7 @@ test("/hermes sozinho so liga o modo, sem chamar o servidor", () => {
 test("nova conversa sai do modo Hermes e limpa a sessao", async () => {
   const { result } = setup();
   const first = await ask(result, "/hermes oi");
-  advanceRequest(api, first, { status: "done", message: "Oi." });
+  advanceRequest(api, first, { status: "completed", message: "Oi." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   act(() => result.current.startNewConversation());
@@ -241,7 +241,7 @@ test("o rastro do Hermes abre ao enviar, cresce enquanto roda e fecha com a resp
     { id: result.current.messages[0]?.id, request: "que horas sao?", route: "hermes", running: true, trace: thinking("running") },
   ]));
 
-  advanceRequest(api, id, { status: "done", trace: thinking("done"), message: "18h" });
+  advanceRequest(api, id, { status: "completed", trace: thinking("done"), message: "18h" });
   await waitFor(() => expect(result.current.pending).toBeNull());
   expect(result.current.traces).toEqual([
     { id: result.current.messages[0]?.id, request: "que horas sao?", route: "hermes", running: false, trace: thinking("done") },

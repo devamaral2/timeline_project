@@ -19,16 +19,22 @@ export interface TaskGroup {
 /** Cada status (de pessoa ou de agente) cai em exatamente um grupo. */
 const groupOfStatus: Record<TaskStatus, TaskGroupKey> = {
   doing: "doing",
+  starting: "doing",
   running: "doing",
   todo: "todo",
+  preparing: "todo",
   queued: "todo",
   toDefine: "toDefine",
   inHold: "waiting",
   waiting: "waiting",
   done: "done",
+  completed: "done",
   cancel: "closed",
   missed: "closed",
   failed: "closed",
+  cancelled: "closed",
+  interrupted: "closed",
+  rolled_back: "closed",
 };
 
 const GROUPS: readonly Omit<TaskGroup, "cards">[] = [

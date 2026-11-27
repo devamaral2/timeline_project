@@ -27,12 +27,16 @@ describe("TaskStatusGlyph", () => {
   });
 
   it.each([
+    ["preparing", "Agente, preparando"],
     ["queued", "Agente, na fila"],
-    ["running", "Agente, executando"],
-    ["waiting", "Agente, aguardando você"],
-    ["done", "Agente, feito"],
+    ["starting", "Agente, iniciando"],
+    ["running", "Agente, trabalhando"],
+    ["waiting", "Agente, esperando"],
+    ["completed", "Agente, concluído"],
+    ["interrupted", "Agente, interrompido"],
     ["failed", "Agente, falhou"],
-    ["cancel", "Agente, cancelado"],
+    ["cancelled", "Agente, cancelado"],
+    ["rolled_back", "Agente, revertido"],
   ] as const)("nomeia o status de agente %s como %s", (status, name) => {
     render(<TaskStatusGlyph actor="agent" status={status} />);
 

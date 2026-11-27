@@ -95,7 +95,7 @@ test("/claude abre um pedido na rota do modelo com a escolha, mostra os passos e
     ],
   });
 
-  advanceRequest(api, id, { status: "done", trace: working("done"), message: "Amanhã você tem dentista às 9h." });
+  advanceRequest(api, id, { status: "completed", trace: working("done"), message: "Amanhã você tem dentista às 9h." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   expect(result.current.messages.map((message) => message.role)).toEqual(["user", "hermes-steps", "assistant"]);
@@ -119,14 +119,14 @@ test("/modelo sozinho so liga o modo; as mensagens seguintes vao ao modelo, na m
   expect(optionsCalls()).toHaveLength(1);
 
   const first = await ask(result, "oi");
-  advanceRequest(api, first, { status: "done", message: "Oi!" });
+  advanceRequest(api, first, { status: "completed", message: "Oi!" });
   await waitFor(() => expect(result.current.pending).toBeNull());
   const second = await ask(result, "e amanhã?");
 
   expect(modelPosts()[0]?.body).not.toHaveProperty("sessionId");
   expect(modelPosts()[1]?.body).toMatchObject({ text: "e amanhã?", sessionId: first });
   expect(optionsCalls()).toHaveLength(1);
-  advanceRequest(api, second, { status: "done", message: "Nada marcado." });
+  advanceRequest(api, second, { status: "completed", message: "Nada marcado." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   act(() => { result.current.send("/app"); });
@@ -142,7 +142,7 @@ test("/openai e /openrouter ja escolhem o provedor, com o modelo padrao dele, e 
 
   await ask(result, "oi");
   expect(modelPosts()[0]?.body).toMatchObject({ model: { provider: "openai", model: "gpt-6.2-sol", effort: "medium" } });
-  advanceRequest(api, ids()[0] as string, { status: "done", message: "Oi." });
+  advanceRequest(api, ids()[0] as string, { status: "completed", message: "Oi." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   await ask(result, "/openrouter e agora?");
@@ -249,7 +249,7 @@ test("sem armazenamento no aparelho a conversa segue com a escolha padrao", asyn
 test("trocar de /hermes para /claude muda o destino sem perder a sessao", async () => {
   const { result } = setup();
   const first = await ask(result, "/hermes oi");
-  advanceRequest(api, first, { status: "done", message: "Oi." });
+  advanceRequest(api, first, { status: "completed", message: "Oi." });
   await waitFor(() => expect(result.current.pending).toBeNull());
 
   await ask(result, "/claude e você?");
@@ -310,7 +310,7 @@ test("sem nenhum provedor neste ambiente o pedido do assistente vai sem escolha 
   serve("off");
   const { result } = setup();
   const first = await ask(result, "o que tenho hoje?");
-  advanceRequest(api, first, { status: "done", message: "Nada." });
+  advanceRequest(api, first, { status: "completed", message: "Nada." });
   await waitFor(() => expect(result.current.pending).toBeNull());
   await ask(result, "e amanhã?");
 
@@ -346,6 +346,6 @@ test("um pedido ao modelo que ficou aberto volta a ser acompanhado ao abrir o ch
   await act(async () => { await result.current.recover(); });
 
   expect(result.current.pending).toMatchObject({ label: expect.stringContaining("Falando com"), requestId: "01M7RVND35K7C0SC20A693SNSQ" });
-  advanceRequest(api, "01M7RVND35K7C0SC20A693SNSQ", { status: "done", message: "Semana tranquila." });
+  advanceRequest(api, "01M7RVND35K7C0SC20A693SNSQ", { status: "completed", message: "Semana tranquila." });
   await waitFor(() => expect(result.current.messages.at(-1)).toMatchObject({ role: "assistant", text: "Semana tranquila.", model: { provider: "openai" } }));
 });

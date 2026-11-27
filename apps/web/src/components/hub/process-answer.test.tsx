@@ -9,7 +9,7 @@ const base: RequestDto = {
   project: { id: "project-1", name: "personal", personal: true },
   createdAt: "2026-11-14T12:00:00.000Z", updatedAt: "2026-11-14T12:00:01.000Z",
   steps: [
-    { id: "1", agent: "task-create", label: "Criando tarefas", status: "done" },
+    { id: "1", agent: "task-create", label: "Criando tarefas", status: "completed" },
     { id: "2", agent: "task-create", label: "Criando tarefas", status: "running" },
   ],
   entities: [],
@@ -31,7 +31,7 @@ test("enquanto o pedido roda, a conversa não mostra nada dele: nem título, nem
 });
 
 test("a resposta aparece quando o pedido termina bem, sob o nome de quem responde e sem a lista de passos", () => {
-  renderAnswer({ request: { ...base, status: "done", message: "Criei duas tarefas." } });
+  renderAnswer({ request: { ...base, status: "completed", message: "Criei duas tarefas." } });
   expect(screen.getByText("Criei duas tarefas.")).toBeTruthy();
   expect(screen.getByText("Assistente")).toBeTruthy();
   expect(screen.queryByText("Realizando processos:")).toBeNull();
@@ -45,9 +45,9 @@ test("um pedido que falhou não deixa resposta: o aviso é a mensagem de erro da
 
 test("passo de consulta mostra as linhas devolvidas e avisa quando foram limitadas", () => {
   renderAnswer({ request: {
-    ...base, status: "done",
+    ...base, status: "completed",
     steps: [{
-      id: "q", agent: "query", label: "Consultando dados", status: "done",
+      id: "q", agent: "query", label: "Consultando dados", status: "completed",
       result: { columns: ["name", "started_at"], rows: [["Reunião", "2026-10-25T13:00:00.000Z"], ["Almoço", null]], truncated: true },
     }],
   } });
@@ -59,8 +59,8 @@ test("passo de consulta mostra as linhas devolvidas e avisa quando foram limitad
 
 test("consulta sem linhas", () => {
   renderAnswer({ request: {
-    ...base, status: "done",
-    steps: [{ id: "q", agent: "query", label: "Consultando dados", status: "done", result: { columns: ["n"], rows: [], truncated: false } }],
+    ...base, status: "completed",
+    steps: [{ id: "q", agent: "query", label: "Consultando dados", status: "completed", result: { columns: ["n"], rows: [], truncated: false } }],
   } });
   expect(screen.getByText("Nenhum resultado.")).toBeTruthy();
 });
@@ -68,7 +68,7 @@ test("consulta sem linhas", () => {
 test("cada registro criado ou alterado vira uma linha de prévia, com link quando há destino", () => {
   renderAnswer({
     request: {
-      ...base, status: "done",
+      ...base, status: "completed",
       entities: [
         { kind: "task", id: "e1", name: "Comprar faixa elástica", operation: "create", linkedTo: [] },
         { kind: "artifact", id: "a1", name: "Treino de mobilidade", artifactType: "text", operation: "update", linkedTo: [] },
@@ -84,13 +84,13 @@ test("cada registro criado ou alterado vira uma linha de prévia, com link quand
 
 test("o que um pedido cancelado gravou antes de parar continua à vista", () => {
   renderAnswer({ request: {
-    ...base, status: "cancel",
+    ...base, status: "cancelled",
     entities: [{ kind: "task", id: "e1", name: "Comprar faixa elástica", operation: "create", linkedTo: [] }],
   } });
   expect(within(screen.getByRole("list", { name: "Registros desta resposta" })).getAllByRole("listitem")).toHaveLength(1);
 });
 
 test("sem resposta, consulta nem registros, o pedido terminado não ocupa a conversa", () => {
-  renderAnswer({ request: { ...base, status: "done" } });
+  renderAnswer({ request: { ...base, status: "completed" } });
   expect(screen.queryByRole("listitem")).toBeNull();
 });

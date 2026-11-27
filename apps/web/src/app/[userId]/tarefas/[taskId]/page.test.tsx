@@ -211,7 +211,7 @@ test("tarefa de agente: só o status aparece, sem prioridade nem seletor", async
   renderPage();
 
   expect(await screen.findByRole("heading", { level: 1, name: "Pesquisar voos" })).toBeInTheDocument();
-  expect(screen.getByText("Agente, executando")).toBeInTheDocument();
+  expect(screen.getByText("Agente, trabalhando")).toBeInTheDocument();
   expect(screen.queryByText("Média")).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /Trocar/ })).not.toBeInTheDocument();
 });

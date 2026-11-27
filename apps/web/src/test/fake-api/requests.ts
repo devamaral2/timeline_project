@@ -337,7 +337,7 @@ function cancel(request: FakeRequest, store: FakeStore): FakeResult {
   if (!isOpenAgentStatus(current.status)) return { status: 200, body: current };
   const cancelled = requestSchema.parse({
     ...current,
-    status: "cancel",
+    status: "cancelled",
     errorCode: "cancelled",
     updatedAt: new Date().toISOString(),
   }) as RequestDto;

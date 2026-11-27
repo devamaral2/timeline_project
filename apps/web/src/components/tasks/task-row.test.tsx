@@ -49,7 +49,7 @@ describe("TaskRow", () => {
     const project = { id: "p-tp", name: "timeline_project", personal: false };
     for (const overrides of [
       { actor: "human" as const, status: "todo" as const, kind: "common" as const },
-      { actor: "agent" as const, status: "done" as const, kind: "request" as const },
+      { actor: "agent" as const, status: "completed" as const, kind: "request" as const },
     ]) {
       const { container, unmount } = render(
         <TaskRow card={cardOf({ ...overrides, project, startedAt: "2026-09-14T09:00:00-03:00" })} userId="user-1" now={NOW} />,
@@ -103,7 +103,7 @@ describe("TaskRow", () => {
 
     const { container } = render(<TaskRow card={card} userId="user-1" now={NOW} />);
 
-    expect(screen.getByRole("img", { name: "Agente, executando" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Agente, trabalhando" })).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByText("Pesquisar voos para novembro")).toBeInTheDocument();
     expect(screen.getByText("request")).toBeInTheDocument();

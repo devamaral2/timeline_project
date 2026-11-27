@@ -36,7 +36,7 @@ const PARENT = taskFixture({
   id: "parent-1",
   actor: "agent",
   kind: "request",
-  status: "done",
+  status: "completed",
   name: "Monitorar a aplicação",
   startedAt: "2026-11-14T08:00:00-03:00",
   subtaskIds: ["ev-1"],
@@ -98,7 +98,7 @@ test("as duas pontas podem ser tarefa de agente, e o glifo mostra o status delas
   await loaded();
 
   const parent = await screen.findByRole("region", { name: "Tarefa principal" });
-  expect(within(parent).getByRole("img", { name: "Agente, feito" })).toBeInTheDocument();
+  expect(within(parent).getByRole("img", { name: "Agente, concluído" })).toBeInTheDocument();
 
   const subtasks = screen.getByRole("region", { name: "Subtarefas" });
   expect(within(subtasks).getByRole("link", { name: /Aplicar o conserto/ })).toHaveAttribute("href", "/user-1/tarefas/sub-2");
