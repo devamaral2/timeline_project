@@ -231,3 +231,14 @@ test("o menu Mais ações leva à rota de edição", async () => {
 
   expect(push).toHaveBeenCalledWith("/user-1/tarefas/ev-1/editar");
 });
+
+test("o detalhe da tarefa mostra o projeto, só para leitura", async () => {
+  install([training({ project: { id: "p-tp", name: "timeline_project", personal: false } })]);
+  renderPage();
+
+  const info = await screen.findByRole("region", { name: "Informações" });
+  expect(within(info).getByText("Projeto")).toBeInTheDocument();
+  expect(within(info).getByText("timeline_project")).toBeInTheDocument();
+  expect(within(info).getByText("TP")).toBeInTheDocument();
+  expect(within(info).queryByRole("button", { name: /projeto/i })).not.toBeInTheDocument();
+});

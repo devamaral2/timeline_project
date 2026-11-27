@@ -13,6 +13,7 @@ function cardOf(overrides: Partial<TaskCardDto>): TaskCardDto {
     priority: "medium",
     name: "Revisar proposta",
     description: "",
+    project: { id: "project-1", name: "personal", personal: true },
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
@@ -42,6 +43,32 @@ describe("TaskRow", () => {
     expect(screen.getByText("Hoje, 09:00")).toBeInTheDocument();
     expect(screen.getByText("#trabalho")).toBeInTheDocument();
     expect(screen.getByText("1h30")).toBeInTheDocument();
+  });
+
+  it("mostra a linha do projeto, com a marca e o nome, entre o título e a linha do tipo, igual para pessoa e agente", () => {
+    const project = { id: "p-tp", name: "timeline_project", personal: false };
+    for (const overrides of [
+      { actor: "human" as const, status: "todo" as const, kind: "common" as const },
+      { actor: "agent" as const, status: "done" as const, kind: "request" as const },
+    ]) {
+      const { container, unmount } = render(
+        <TaskRow card={cardOf({ ...overrides, project, startedAt: "2026-09-14T09:00:00-03:00" })} userId="user-1" now={NOW} />,
+      );
+
+      const line = container.querySelector("[data-project-line]");
+      expect(line).toHaveTextContent("TPtimeline_project");
+      const title = screen.getByText("Revisar proposta");
+      const kind = screen.getByText(overrides.kind);
+      expect(title.compareDocumentPosition(line as Element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect((line as Element).compareDocumentPosition(kind) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it("mostra a linha do projeto também quando ele é o personal", () => {
+    const { container } = render(<TaskRow card={cardOf({ status: "todo" })} userId="user-1" now={NOW} />);
+
+    expect(container.querySelector("[data-project-line]")).toHaveTextContent("PEpersonal");
   });
 
   it("mostra a tarefa de referência como ponto 'Só agenda', com glifo que é botão", () => {

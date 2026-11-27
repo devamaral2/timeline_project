@@ -1,5 +1,6 @@
 import type { RequestDto } from "@repo/contracts";
 import { requestSchema } from "@repo/contracts/schemas";
+import { FAKE_PERSONAL_PROJECT } from "./projects";
 import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 
@@ -249,6 +250,7 @@ function editRequest(request: FakeRequest, store: FakeStore, owner: boolean): Fa
     route: "hermes",
     status: "queued",
     title: title.length <= 80 ? title : `${title.slice(0, 79)}…`,
+    project: FAKE_PERSONAL_PROJECT,
     text: body.request,
     createdAt: now,
     updatedAt: now,

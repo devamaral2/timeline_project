@@ -290,3 +290,15 @@ test("uma releitura que falha mantém a agenda na tela, sem o aviso de erro", as
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5);
 });
+
+test("as linhas da agenda mostram a marca e o nome do projeto", async () => {
+  installApi([
+    taskFixture({ id: "ev-1", name: "Revisar proposta", status: "todo", startedAt: "2026-09-14T09:00:00-03:00", estimatedFinishAt: "2026-09-14T10:00:00-03:00", project: { id: "p-tp", name: "timeline_project", personal: false } }),
+    taskFixture({ id: "ev-2", name: "Almoço", kind: "meal", status: undefined, startedAt: "2026-09-14T12:30:00-03:00", estimatedFinishAt: "2026-09-14T13:30:00-03:00" }),
+  ]);
+  render(<AgendaScreen userId="user-1" todayKey={TODAY} />);
+
+  await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(2));
+  const lines = [...dayOf(TODAY).querySelectorAll("[data-project-line]")].map((line) => line.textContent);
+  expect(lines).toEqual(["TPtimeline_project", "PEpersonal"]);
+});
