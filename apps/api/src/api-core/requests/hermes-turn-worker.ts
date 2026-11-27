@@ -1,6 +1,6 @@
 import type { AgentTraceDto } from "@repo/contracts";
-import { isInProgressAgentStatus } from "../../domain/agent-status";
-import { hermesSessionId, type HermesChat } from "../../infrastructure/hermes/hermes.client";
+import { isTurnAgentStatus } from "../../domain/agent-status";
+import { hermesSessionId, HermesRunInterruptedError, type HermesChat } from "../../infrastructure/hermes/hermes.client";
 import { isRetryableJobError, jobErrorCode } from "../../infrastructure/jobs/jobs.service";
 import { requestErrorCode } from "./request-errors";
 import type { RequestStore } from "./request-store";
@@ -29,7 +29,8 @@ export class HermesTurnWorker {
     context: { signal: AbortSignal; progress(value: RequestProgress): Promise<void> },
   ): Promise<void> {
     const request = await this.store.find(requestId);
-    if (request?.route !== "hermes" || !isInProgressAgentStatus(request.status)) return;
+    if (request?.route !== "hermes" || !isTurnAgentStatus(request.status)) return;
+    await this.store.markStarting(request.id);
     if (!this.hermes) {
       await this.store.finish(request.id, "failed", { errorCode: "unavailable", message: HERMES_OFF_MESSAGE });
       return;
@@ -60,7 +61,8 @@ export class HermesTurnWorker {
       await writes;
       // Cancelado ou ainda com tentativa na fila: quem decide o fim do pedido nao e esta execucao.
       if (context.signal.aborted || isRetryableJobError(error)) throw error;
-      await this.store.finish(request.id, "failed", {
+      // O Hermes devolveu a execucao como cancelada ou interrompida: o pedido nao falhou, foi interrompido.
+      await this.store.finish(request.id, error instanceof HermesRunInterruptedError ? "interrupted" : "failed", {
         errorCode: requestErrorCode(jobErrorCode(error)), ...(latest ? { trace: latest } : {}),
       });
       throw error;

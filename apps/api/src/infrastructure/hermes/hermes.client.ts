@@ -39,9 +39,18 @@ export class HermesRequestError extends Error {
   }
 }
 
+/** O Hermes devolveu a execucao como cancelada ou interrompida: o pedido termina `interrupted`, nao `failed`. */
+export class HermesRunInterruptedError extends HermesRequestError {
+  constructor(message: string, status?: number) {
+    super(message, status);
+    this.name = "HermesRunInterruptedError";
+  }
+}
+
 const DEFAULT_TIMEOUT_MS = 150_000;
 const DEFAULT_POLL_MS = 1_000;
 const TERMINAL = new Set(["completed", "failed", "cancelled", "interrupted"]);
+const INTERRUPTED = new Set(["cancelled", "interrupted"]);
 
 interface RunEvent {
   event?: unknown;
@@ -108,6 +117,7 @@ export class HermesClient implements HermesChat {
   ): Promise<HermesReply> {
     let output: string | undefined;
     let failure: string | undefined;
+    let interrupted = false;
 
     try {
       const events = await this.request("GET", `/v1/runs/${encodeURIComponent(runId)}/events`, signal);
@@ -117,14 +127,17 @@ export class HermesClient implements HermesChat {
         if (trace.apply(raw as HermesTraceEvent)) onTrace?.(trace.snapshot());
         if (event.event === "run.completed" && typeof event.output === "string") output = event.output;
         if (event.event === "run.failed") failure = typeof event.error === "string" ? event.error : "Hermes run failed";
-        if (event.event === "run.cancelled" || event.event === "run.interrupted") failure = "Hermes run was cancelled";
+        if (event.event === "run.cancelled" || event.event === "run.interrupted") {
+          failure = "Hermes run was cancelled";
+          interrupted = true;
+        }
       }
     } catch (error) {
       if (signal.aborted) throw error;
       // O stream caiu no meio: o resultado ainda esta no Hermes e se le por consulta.
     }
 
-    if (failure) throw new HermesRequestError(failure);
+    if (failure) throw interrupted ? new HermesRunInterruptedError(failure) : new HermesRequestError(failure);
     if (output === undefined) output = await this.pollOutput(runId, signal);
     return { text: output, trace: trace.finish({ output }) };
   }
@@ -137,7 +150,8 @@ export class HermesClient implements HermesChat {
       const run = (await response.json()) as { status?: unknown; output?: unknown; error?: unknown };
       if (typeof run.status === "string" && TERMINAL.has(run.status)) {
         if (run.status === "completed" && typeof run.output === "string") return run.output;
-        throw new HermesRequestError(typeof run.error === "string" ? run.error : `Hermes run ${run.status}`);
+        const message = typeof run.error === "string" ? run.error : `Hermes run ${run.status}`;
+        throw INTERRUPTED.has(run.status) ? new HermesRunInterruptedError(message) : new HermesRequestError(message);
       }
       await sleep(this.config.pollMs ?? DEFAULT_POLL_MS, signal);
     }

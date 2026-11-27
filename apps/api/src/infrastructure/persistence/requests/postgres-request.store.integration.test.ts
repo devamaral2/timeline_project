@@ -44,7 +44,7 @@ describe("PostgresRequestStore", () => {
     expect(created).toBe(true);
     const [task] = await rows("SELECT actor, kind, status, name, data, started_at, finished_at FROM tasks WHERE id = $1", [requestId]);
     expect(task).toMatchObject({
-      actor: "agent", kind: "request", status: "queued", finished_at: null,
+      actor: "agent", kind: "request", status: "preparing", finished_at: null,
       data: { route: "steps", context: { screen: "agenda" }, forceFallback: true },
     });
     expect(String(task?.name).length).toBeLessThanOrEqual(80);
@@ -54,7 +54,7 @@ describe("PostgresRequestStore", () => {
     expect(await jobs()).toMatchObject([{ kind: "request-dispatch", task_id: requestId, payload: { requestId } }]);
 
     expect(await store.find(requestId)).toMatchObject({
-      id: requestId, userId: USER, kind: "request", route: "steps", status: "queued", prompt: text,
+      id: requestId, userId: USER, kind: "request", route: "steps", status: "preparing", prompt: text,
       context: { screen: "agenda" }, forceFallback: true, failedSteps: [],
     });
   });
@@ -161,6 +161,8 @@ describe("PostgresRequestStore", () => {
     await store.beginSteps(requestId, [
       { id: createStep, agent: "task-create", expected: "one" }, { id: editStep, agent: "artifact-edit", expected: "one" },
     ]);
+    await store.markStepRunning(createStep);
+    await store.markStepRunning(editStep);
     const meal = Task.create({ userId: USER, kind: "meal", name: "Almoço", startedAt: new Date("2026-10-25T15:00:00Z") });
     const food = Artifact.create({ userId: USER, type: "text", name: "Cardápio", data: { body: "arroz e feijão" } });
     const old = Artifact.create({ userId: USER, type: "text", name: "Velho", data: { body: "x" } });
@@ -264,6 +266,7 @@ describe("PostgresRequestStore", () => {
 
   test("o fim do pedido: a resposta e a ultima entrada, o raciocinio e um pensamento, e so fecha uma vez", async () => {
     const { requestId } = await start();
+    await store.markRunning(requestId);
     await store.finish(requestId, "completed", {
       failedSteps: [{ agent: "artifact-create", errorCode: "internal" }], message: "Criei a tarefa, mas não o alimento.",
       thought: "O passo de artefatos falhou.",
@@ -335,18 +338,20 @@ describe("PostgresRequestStore", () => {
     const { requestId } = await start();
     const [open, done] = [newOrderedId(), newOrderedId()];
     await store.beginSteps(requestId, [{ id: open, agent: "task-create", expected: "one" }, { id: done, agent: "query", expected: "one" }]);
+    await store.markStepRunning(done);
     await store.recordQueryResult({ requestId, stepId: done, result: { columns: [], rows: [], truncated: false }, timings: {} });
 
     expect(await store.cancel(requestId)).toEqual([requestId, open, done]);
     expect(await store.cancel(requestId)).toEqual([]);
 
-    expect(await store.find(requestId)).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
+    // O pedido rodava: fica `interrupted`; o passo que nao comecou fica `cancelled`.
+    expect(await store.find(requestId)).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
     expect((await store.steps(requestId)).map((step) => step.status)).toEqual(["cancelled", "completed"]);
     // O que chega depois do cancelamento nao reabre nada.
     await store.failStep({ requestId, stepId: open, errorCode: "internal" });
     await store.finish(requestId, "completed", { message: "x" });
     await store.beginSteps(requestId, [{ id: newOrderedId(), agent: "query", expected: "one" }]);
-    expect(await store.find(requestId)).toMatchObject({ status: "cancelled" });
+    expect(await store.find(requestId)).toMatchObject({ status: "interrupted" });
     expect(await store.steps(requestId)).toHaveLength(2);
   });
 
@@ -364,6 +369,7 @@ describe("PostgresRequestStore", () => {
       .toEqual([{ data: { stage: "dispatch", model: "jev-test", latencyMs: 9, steps: 0 } }]);
 
     // Pedido que ja terminou nao volta a andar.
+    await store.markRunning(requestId);
     await store.finish(requestId, "completed", { message: "Oi." });
     await store.handToHermes(requestId, dispatch);
     expect(await jobs()).toHaveLength(2);
@@ -382,6 +388,7 @@ describe("PostgresRequestStore", () => {
     ]);
 
     // Pedido que ja terminou nao volta a andar.
+    await store.markRunning(requestId);
     await store.finish(requestId, "completed", { message: "Opus 5.5." });
     await store.handToModel(requestId, dispatch, model);
     expect(await jobs()).toHaveLength(2);
@@ -390,6 +397,7 @@ describe("PostgresRequestStore", () => {
   test("a voz: o pedido gera a tarefa de pessoa e termina na transacao dela", async () => {
     const { requestId } = await start("comecei a estudar", { route: "voice", job: "voice-task" });
     const task = Task.create({ userId: USER, name: "Estudar", startedAt: new Date("2026-10-25T15:00:00Z") });
+    await store.markRunning(requestId);
     await writer.commit({
       userId: USER, tasks: [{ op: "create", entity: task }], artifacts: [],
       afterWrite: (tx) => store.completeVoice(tx, { requestId, taskId: task.id }),
