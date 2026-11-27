@@ -9,6 +9,7 @@ const plus = (ms: number) => new Date(CREATED.getTime() + ms);
 function request(partial: Partial<RequestRecord> = {}): RequestRecord {
   return {
     id: "r1", userId: "u1", kind: "request", route: "steps", title: "almoço ao meio-dia e o cardápio",
+    project: { id: "p1", name: "personal", personal: true },
     prompt: "almoço ao meio-dia e o cardápio", context: { screen: "agenda" }, status: "running", createdAt: CREATED,
     updatedAt: CREATED, failedSteps: [], ...partial,
   };

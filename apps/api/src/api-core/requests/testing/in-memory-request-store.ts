@@ -3,6 +3,7 @@ import type { ModelSelection, RequestQueryResult } from "@repo/contracts";
 import type { Artifact, Task } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
 import { requestTitleOf } from "../../../infrastructure/persistence/requests/postgres-request.store";
+import { personalProjectOf } from "../../projects/testing/in-memory-project.query";
 import { stepLabel } from "../request-config";
 import { REQUEST_JOBS } from "../request-steps";
 import type {
@@ -40,7 +41,7 @@ export class InMemoryRequestStore implements RequestStore {
     if (key) this.accepted.set(key, id);
     this.requests.set(id, {
       id, userId: input.userId, kind: "request", route: input.route, status: "queued",
-      title: requestTitleOf(input.text), prompt: input.text,
+      title: requestTitleOf(input.text), project: personalProjectOf(input.userId), prompt: input.text,
       ...(input.context ? { context: input.context } : {}),
       ...(input.target ? { target: input.target } : {}),
       ...(input.forceFallback ? { forceFallback: true } : {}),
@@ -56,6 +57,7 @@ export class InMemoryRequestStore implements RequestStore {
   seed(partial: Partial<RequestRecord> & Pick<RequestRecord, "id" | "prompt">): RequestRecord {
     const record: RequestRecord = {
       userId: "user-1", kind: "request", route: "steps", status: "running", title: requestTitleOf(partial.prompt),
+      project: personalProjectOf(partial.userId ?? "user-1"),
       createdAt: this.clock(), updatedAt: this.clock(), failedSteps: [], ...partial,
     };
     this.requests.set(record.id, record);

@@ -528,8 +528,9 @@ export class PostgresRequestStore implements RequestStore {
 const REQUEST_FILTER = "e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL";
 const REQUEST_SELECT = `
   SELECT e.id, e.user_id, e.kind, e.status, e.name, e.data, e.created_at, e.updated_at, e.finished_at,
-    s.from_task_id AS session_id
+    s.from_task_id AS session_id, p.id AS project_id, p.name AS project_name, p.personal AS project_personal
   FROM tasks e
+  JOIN projects p ON p.id = e.project_id
   LEFT JOIN task_task_relation s ON s.to_task_id = e.id AND s.relation = 'follow_up'`;
 
 function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord {
@@ -560,6 +561,7 @@ function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord 
     route: data.route ?? "steps",
     status: row.status as RequestRecord["status"],
     title: String(row.name),
+    project: { id: String(row.project_id), name: String(row.project_name), personal: Boolean(row.project_personal) },
     prompt: messages.find((entry) => entry.role === "user")?.content ?? "",
     ...(data.context ? { context: data.context } : {}),
     ...(data.target ? { target: data.target } : {}),

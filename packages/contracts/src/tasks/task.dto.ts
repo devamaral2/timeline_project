@@ -3,6 +3,14 @@ import type { RecurrenceRule } from "../recurrences/recurrence-rule";
 import type { TaskActor, TaskArtifactRelation, TaskKind, TaskPriority, TaskStatus } from "./task-types";
 import type { NotificationOffsetMinutes } from "./notification-offset-minutes";
 
+/** O projeto a que uma tarefa pertence. Sem escolha, e o `personal`, o projeto padrao do usuario. */
+export interface ProjectDto {
+  id: string;
+  name: string;
+  /** O projeto padrao: cada usuario tem um so, e o nome dele e `personal`. */
+  personal: boolean;
+}
+
 /** A serie de que a tarefa e uma ocorrencia. */
 export interface TaskRecurrenceDto {
   id: string;
@@ -27,6 +35,8 @@ export interface TaskCardDto {
   priority: TaskPriority;
   name: string;
   description: string;
+  /** O projeto da tarefa: toda tarefa tem um, de pessoa ou de agente. */
+  project: ProjectDto;
   /** Onde acontece, como o texto que o Google Maps entende. Ausente sem local: so existe quando alguem o informou. */
   location?: string;
   /** Inicio planejado. A meia-noite local significa "o dia, sem hora". */

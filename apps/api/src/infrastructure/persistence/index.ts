@@ -15,3 +15,5 @@ export * from "./agent-batch/postgres-entity-batch-writer";
 export * from "./recurrences/mappers/recurrence-row.mapper";
 export * from "./recurrences/repositories/postgres-recurrence.repository";
 export * from "./idempotency/postgres-idempotency.store";
+export * from "./projects/postgres-project.query";
+export * from "./projects/resolve-project";

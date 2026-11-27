@@ -64,6 +64,13 @@
       "when": 1795379878235,
       "tag": "0008_local_opcional",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795748213743,
+      "tag": "0009_projeto_em_toda_tarefa",
+      "breakpoints": true
     }
   ]
 }

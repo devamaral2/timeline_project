@@ -1,5 +1,6 @@
-/** O banco, de 13 tabelas (docs/tdd/novo-banco-de-dados.md, ADRs 0011 a 0013). */
+/** O banco, de 14 tabelas (docs/tdd/novo-banco-de-dados.md, ADRs 0011 a 0013). */
 export * from "./sets";
+export * from "./projects";
 export * from "./recurrences";
 export * from "./tasks";
 export * from "./artifacts";

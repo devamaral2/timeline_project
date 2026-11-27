@@ -178,13 +178,15 @@ const updateTaskArtifactSchema = z.union([
   foodCopySchema,
 ]);
 
+export const projectSchema = z.object({ id: z.string(), name: z.string(), personal: z.boolean() }).strict();
+
 const taskRecurrenceSchema = z.object({
   id: z.string(), occurrenceOn: z.string(), detached: z.boolean(), rule: z.object(recurrenceRuleShape).strict(),
 }).strict();
 
 const taskCardShape = {
   id: z.string(), actor: taskActorSchema, kind: taskKindSchema, status: taskStatusSchema.optional(), priority: taskPrioritySchema,
-  name: z.string(), description: z.string(), location: z.string().optional(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
+  name: z.string(), description: z.string(), project: projectSchema, location: z.string().optional(), startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(),
   finishedAt: z.string().optional(), longRunning: z.boolean(), notifyOffsetsMinutes: notificationOffsetsSchema,
   tags: z.array(z.string()), artifactTypes: z.array(artifactTypeSchema), parentTaskId: z.string().optional(), recurrence: taskRecurrenceSchema.optional(), revision: z.number().int(),
   createdAt: z.string(), updatedAt: z.string(),
@@ -330,6 +332,7 @@ export const requestSchema = z.object({
   route: z.enum(["steps", "hermes", "model", "voice", "food"]),
   status: agentTaskStatusSchema,
   title: z.string(),
+  project: projectSchema,
   sessionId: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -362,6 +365,7 @@ export const requestSchema = z.object({
 export const contractSchemas = {
   modelOptions: modelOptionsSchema,
   agendaPage: agendaPageSchema,
+  project: projectSchema,
   taskCard: taskCardSchema,
   task: taskSchema,
   createTaskInput: createTaskInputSchema,

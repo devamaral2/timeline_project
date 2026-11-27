@@ -13,6 +13,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { projects } from "./projects";
 import { recurrences } from "./recurrences";
 import {
   ACTORS,
@@ -43,6 +44,10 @@ export const tasks = pgTable(
     id: char("id", { length: 26 }).primaryKey(),
     revision: integer("revision").notNull().default(1),
     userId: text("user_id").notNull(),
+    // Todo tarefa pertence a um projeto. Sem `cascade`: um projeto com tarefas nao se apaga.
+    projectId: char("project_id", { length: 26 })
+      .notNull()
+      .references(() => projects.id),
     actor: text("actor", { enum: ACTORS }).notNull(),
     kind: text("kind", { enum: TASK_KINDS }).notNull(),
     // Nulo e a tarefa de referencia: so marca um horario na agenda.

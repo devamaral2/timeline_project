@@ -7,6 +7,7 @@ import {
   createRecurrenceInputSchema,
   dailyReadingInputSchema,
   dailyReadingResultSchema,
+  projectSchema,
   taskCardSchema,
   taskSchema,
   recurrenceSchema,
@@ -56,6 +57,7 @@ export const documentedSchemas = {
   CreateArtifactRequest: createArtifactRequestSchema,
   CreatedArtifact: createArtifactResponseSchema,
   UpdateArtifactRequest: updateArtifactRequestSchema,
+  Project: projectSchema,
   Recurrence: recurrenceSchema,
   CreateRecurrenceInput: createRecurrenceInputSchema,
   UpdateRecurrenceInput: updateRecurrenceInputSchema.omit({ recurrenceId: true }),
@@ -85,6 +87,7 @@ export const documentedTags = [
   { name: "Tags", description: "Sugestão de tags já usadas." },
   { name: "Locais", description: "Busca de locais para o campo de local da tarefa." },
   { name: "Artefatos", description: "O conteúdo que as tarefas criam e usam: texto, alimento, sono e treino." },
+  { name: "Projetos", description: "Onde cada tarefa fica guardada. Toda tarefa tem um projeto; sem escolha, é o `personal`." },
   { name: "Séries", description: "Regras de repetição e o que cada ocorrência copia." },
   { name: "Pedidos ao agente", description: "Abrir, acompanhar e cancelar pedidos em texto ou fala." },
   { name: "Configuração do agente", description: "Skills e agentes do Hermes como arquivos (ADR 0005). Só o dono acessa." },
@@ -271,6 +274,13 @@ export const documentedOperations: Record<string, OperationDoc> = {
     summary: "Apaga um artefato",
     success: { status: 204, description: "O artefato foi apagado." },
     errors: { 404: "Artefato não encontrado." },
+  },
+
+  "GET /api/projects": {
+    tag: "Projetos",
+    summary: "Lista os projetos",
+    description: "Os projetos do usuário: `personal` primeiro e os outros por nome. O `personal` nasce na primeira leitura de quem ainda não tem nenhum.",
+    success: { status: 200, description: "Os projetos do usuário.", schema: "Project", list: true },
   },
 
   "GET /api/recurrences": {

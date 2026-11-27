@@ -1,3 +1,4 @@
+import type { ProjectRef } from "../../projects/types/project";
 import type { Recurrence } from "../../recurrences/entities/recurrence.entity";
 import type { Actor, TaskPriority, TaskStatus } from "../../sets";
 import type { Task } from "../entities/task.entity";
@@ -5,6 +6,8 @@ import type { Task } from "../entities/task.entity";
 /** O que o cartao da agenda e da lista de tarefas mostra de uma tarefa. */
 export interface TaskCard {
   task: Task;
+  /** O projeto da tarefa. */
+  project: ProjectRef;
   /** Os tipos dos artefatos da tarefa, na ordem em que aparecem. */
   artifactTypes: string[];
   /** A serie de que a tarefa e uma ocorrencia, para o cartao mostrar a regra. */
