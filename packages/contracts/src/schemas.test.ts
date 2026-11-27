@@ -1,11 +1,13 @@
 import { expect, test } from "vitest";
 import {
   artifactSchema,
+  createArtifactRequestSchema,
   createTaskInputSchema,
   requestSchema,
   taskCardSchema,
   transcriptionDeliveryInputSchema,
   transcriptionLeaseInputSchema,
+  updateArtifactRequestSchema,
   updateTaskInputSchema,
 } from "./schemas";
 
@@ -131,4 +133,20 @@ test("the lease renewal takes a known stage and a percentage from 0 to 100", () 
   expect(transcriptionLeaseInputSchema.safeParse({ ...base, stage: "download", percent: 40 }).success).toBe(true);
   expect(transcriptionLeaseInputSchema.safeParse({ ...base, stage: "download", percent: 140 }).success).toBe(false);
   expect(transcriptionLeaseInputSchema.safeParse({ ...base, stage: "dancing", percent: 40 }).success).toBe(false);
+});
+
+test.each(["news", "email_summary", "youtube_transcript"] as const)("a %s artifact carries the data of a text, on read, create and update", (type) => {
+  const artifact = { id: "artifact", name: "Resumo", type, schemaVersion: 1, global: false, derived: false, tags: [], revision: 1,
+    createdAt: "", updatedAt: "", data: { body: "# Título\n\ntexto" } };
+  expect(artifactSchema.parse(artifact)).toEqual(artifact);
+  expect(artifactSchema.safeParse({ ...artifact, data: { description: "não é texto" } }).success).toBe(false);
+
+  expect(createArtifactRequestSchema.safeParse({ type, data: { body: "texto" }, tags: ["leitura"] }).success).toBe(true);
+  expect(createArtifactRequestSchema.safeParse({ type }).success).toBe(false);
+  expect(updateArtifactRequestSchema.safeParse({ expectedRevision: 1, type, data: { body: "texto novo" } }).success).toBe(true);
+});
+
+test("an artifact created without a type is still a text, and an unknown type is refused", () => {
+  expect(createArtifactRequestSchema.safeParse({ data: { body: "nota" } }).success).toBe(true);
+  expect(createArtifactRequestSchema.safeParse({ type: "podcast", data: { body: "nota" } }).success).toBe(false);
 });

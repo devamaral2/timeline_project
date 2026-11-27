@@ -36,6 +36,10 @@ interface TaskArtifactsSectionProps {
 
 const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
   text: FileText,
+  // Os desenhos próprios destes três entram com a lista e o detalhe (issue #74); até lá, a folha de texto.
+  news: FileText,
+  email_summary: FileText,
+  youtube_transcript: FileText,
   food: PlateIcon,
   sleep: MoonStarIcon,
   training: BarbellIcon,

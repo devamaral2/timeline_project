@@ -40,6 +40,9 @@ const validAgentFile = { path: "hermes/skills/agenda/SKILL.md", hash: "0f".repea
 
 const validByType: Record<(typeof ARTIFACT_TYPES)[number], unknown> = {
   text: { body: "Lembrete" },
+  news: { body: "# Manchetes\n\n- [Uma notícia](https://example.com/a)" },
+  email_summary: { body: "Três mensagens pedem resposta." },
+  youtube_transcript: { body: "00:00 Abertura" },
   food: validFood,
   sleep: { trackedSleepTime: 420, score: 85 },
   training: validTraining,

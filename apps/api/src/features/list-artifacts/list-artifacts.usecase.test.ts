@@ -108,6 +108,23 @@ describe("the artifacts of the user", () => {
     expect(await ids({ q: "quintal" })).toEqual(["note-new"]);
   });
 
+  test("filters by each free-text type and searches their bodies", async () => {
+    const { ids } = setup([
+      stored("note", 1, { name: "Compras" }),
+      stored("news", 2, { type: "news", name: "Manchetes", data: { body: "eleição no jardim botânico" } }),
+      stored("mail", 3, { type: "email_summary", name: "Caixa de entrada", data: { body: "fatura vence amanhã" } }),
+      stored("video", 4, { type: "youtube_transcript", name: "Aula", data: { body: "00:00 como podar roseiras" } }),
+    ]);
+
+    expect(await ids({ type: "news" })).toEqual(["news"]);
+    expect(await ids({ type: "email_summary" })).toEqual(["mail"]);
+    expect(await ids({ type: "youtube_transcript" })).toEqual(["video"]);
+    expect(await ids({ type: "text" })).toEqual(["note"]);
+    expect(await ids({ q: "botânico" })).toEqual(["news"]);
+    expect(await ids({ q: "fatura" })).toEqual(["mail"]);
+    expect(await ids({ q: "roseiras" })).toEqual(["video"]);
+  });
+
   test("searches the body of a router artifact too", async () => {
     const { ids } = setup([stored("router", 1, { type: "router", name: "Rota", data: { body: "passo de triagem" } })]);
 

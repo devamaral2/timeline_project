@@ -12,8 +12,8 @@
  */
 import type { ArtifactType } from "./artifacts/artifact.dto";
 
-/** Os tipos de texto livre: os que a pessoa lê e edita como nota. */
-export const FREE_TEXT_ARTIFACT_TYPES = ["text"] as const satisfies readonly ArtifactType[];
+/** Os tipos de texto livre: os que a pessoa lê e edita como nota (a nota, as notícias, o resumo de e-mail e a transcrição). */
+export const FREE_TEXT_ARTIFACT_TYPES = ["text", "news", "email_summary", "youtube_transcript"] as const satisfies readonly ArtifactType[];
 export type FreeTextArtifactType = (typeof FREE_TEXT_ARTIFACT_TYPES)[number];
 
 /** Os tipos cujo dado é `{ body }` em markdown: os de texto livre e o roteador. */

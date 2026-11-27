@@ -13,6 +13,9 @@ interface ArtifactInputBase {
   tags?: string[];
 }
 
+/** Os tipos de texto livre que precisam ser ditos na criacao: sem `type`, o artefato nasce nota (`text`). */
+type NamedFreeTextType = "news" | "email_summary" | "youtube_transcript";
+
 /**
  * Um artefato novo. `type` ausente e texto livre. O alimento entra como texto
  * (`inputText`) e passa pelo agente; o treino resolve os nomes pelos exercicios
@@ -20,6 +23,7 @@ interface ArtifactInputBase {
  */
 export type CreateArtifactInput =
   | (ArtifactInputBase & { type?: "text"; data: TextData })
+  | (ArtifactInputBase & { type: NamedFreeTextType; data: TextData })
   | (ArtifactInputBase & { type: "food"; data: FoodCreateInput })
   | (ArtifactInputBase & { type: "sleep"; data?: Partial<SleepData> })
   | (ArtifactInputBase & { type: "training"; data?: TrainingInputData });
@@ -27,6 +31,7 @@ export type CreateArtifactInput =
 /** O conteudo inteiro de um artefato, ao editar. */
 export type ArtifactDataInput =
   | { type: "text"; data: TextData }
+  | { type: NamedFreeTextType; data: TextData }
   | { type: "food"; data: FoodData }
   | { type: "sleep"; data: SleepData }
   | { type: "training"; data: TrainingData };

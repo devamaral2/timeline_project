@@ -6,7 +6,18 @@ import type { TextData } from "./types/text-data";
 import type { TrainingData } from "./types/training-data";
 import type { WorkoutData } from "./types/workout-data";
 
-export type ArtifactType = "text" | "food" | "sleep" | "training" | "workout" | "skill" | "agent" | "router";
+export type ArtifactType =
+  | "text"
+  | "news"
+  | "email_summary"
+  | "youtube_transcript"
+  | "food"
+  | "sleep"
+  | "training"
+  | "workout"
+  | "skill"
+  | "agent"
+  | "router";
 
 /** Uma tarefa em que o artefato aparece, com o necessario para listar. */
 export interface ArtifactTaskLinkDto {
@@ -40,6 +51,9 @@ export interface ArtifactDtoOf<TType extends ArtifactType, TData> {
 /** Um artefato: `type` + `schemaVersion` dizem que forma o `data` tem. */
 export type ArtifactDto =
   | ArtifactDtoOf<"text", TextData>
+  | ArtifactDtoOf<"news", TextData>
+  | ArtifactDtoOf<"email_summary", TextData>
+  | ArtifactDtoOf<"youtube_transcript", TextData>
   | ArtifactDtoOf<"food", FoodData>
   | ArtifactDtoOf<"sleep", SleepData>
   | ArtifactDtoOf<"training", TrainingData>

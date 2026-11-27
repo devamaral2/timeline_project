@@ -41,6 +41,12 @@ export class ArtifactBuilder {
       case "text":
         return Artifact.create({ ...common, type: "text", data: input.data });
 
+      // Os outros tipos de texto livre guardam o mesmo dado; o tipo e o que veio.
+      case "news":
+      case "email_summary":
+      case "youtube_transcript":
+        return Artifact.create({ ...common, type: input.type, data: input.data });
+
       case "food": {
         const description = input.data.inputText.trim();
         if (!description) throw new ArtifactValidationError("Food description cannot be empty");
