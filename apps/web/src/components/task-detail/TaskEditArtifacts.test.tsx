@@ -373,3 +373,38 @@ describe("treino: exercício do catálogo global, por referência, na ordem da l
     expect(screen.queryByRole("button", { name: "Escolher “Supino reto”" })).not.toBeInTheDocument();
   });
 });
+
+describe("notícias, resumo de e-mail e transcrição na edição", () => {
+  const FREE_TEXT: StoredArtifact[] = [
+    artifactFixture({ id: "art-noticias", name: "Notícias da manhã", type: "news", data: { body: "Manchetes" } }),
+    artifactFixture({ id: "art-email", name: "Resumo da caixa de entrada", type: "email_summary", data: { body: "Fatura" } }),
+    artifactFixture({ id: "art-video", name: "Aula de jardinagem", type: "youtube_transcript", data: { body: "Roseiras" }, links: [{ taskId: "ev-1", relation: "uses" }] }),
+  ];
+
+  it("a busca os encontra pelo nome, mostra o código do tipo e liga o escolhido; remover tira a ligação", async () => {
+    install(TASK, [...ARTIFACTS, ...FREE_TEXT]);
+    renderRoute();
+    await loaded();
+
+    // A transcrição já ligada aparece na lista com o código do tipo.
+    expect(within(linked()).getByText("Aula de jardinagem")).toBeInTheDocument();
+    expect(within(linked()).getByText("youtube_transcript")).toBeInTheDocument();
+
+    search("Buscar artefato para ligar", "Notícias");
+    const choice = await screen.findByRole("button", { name: "Escolher “Notícias da manhã”" });
+    expect(within(choice).getByText("news")).toBeInTheDocument();
+    fireEvent.click(choice);
+    search("Buscar artefato para ligar", "Resumo");
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “Resumo da caixa de entrada”" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remover artefato “Aula de jardinagem”" }));
+
+    expect(linkedNames()).toEqual(expect.arrayContaining(["Notícias da manhã", "Resumo da caixa de entrada"]));
+    expect(linkedNames()).not.toContain("Aula de jardinagem");
+    save();
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(DETAIL_PATH));
+    const sent = (patches()[0]?.body as { artifacts: Array<{ id: string; relation: string }> }).artifacts;
+    expect(sent).toEqual(expect.arrayContaining([{ id: "art-noticias", relation: "uses" }, { id: "art-email", relation: "uses" }]));
+    expect(sent.map((item) => item.id)).not.toContain("art-video");
+  });
+});

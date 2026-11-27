@@ -424,3 +424,19 @@ test("continuar um pedido que já tem sessão abre o pedido com o sessionId dele
   const sent = api.calls.find((call) => call.method === "POST" && call.pathname === "/api/requests");
   expect(sent?.body).toMatchObject({ sessionId: FIRST_ID });
 });
+
+test.each([
+  ["news", "Notícias", "lucide-newspaper"],
+  ["email_summary", "Resumo de e-mail", "lucide-letter"],
+  ["youtube_transcript", "Transcrição", "lucide-youtube"],
+] as const)("Produziu mostra um artefato %s com o rótulo e o ícone do tipo", async (artifactType, label, glyph) => {
+  install([agentTask()], [agentRequest({ entities: [{ kind: "artifact", id: "art-livre", name: "Resumo do dia", artifactType, operation: "create", linkedTo: [] }] })]);
+  renderPage();
+  await loaded();
+
+  const produced = await screen.findByRole("region", { name: "Produziu" });
+  const link = within(produced).getByRole("link", { name: /Resumo do dia/ });
+  expect(link).toHaveAttribute("href", "/user-1/notas/art-livre");
+  expect(within(link).getByText(`criado · ${label}`)).toBeInTheDocument();
+  expect(link.querySelector(`.${glyph}`)).not.toBeNull();
+});
