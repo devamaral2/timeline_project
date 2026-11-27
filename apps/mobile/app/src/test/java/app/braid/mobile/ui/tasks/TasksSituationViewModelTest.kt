@@ -75,7 +75,15 @@ class TasksSituationViewModelTest {
     private fun TasksUiState.card(id: String): TaskCard = cards.orEmpty().first { it.id == id }
 
     private fun putBody() =
-        Json.parseToJsonElement(backend.requestsTo("PUT", putPath).single().body.clone().readUtf8()).jsonObject
+        Json
+            .parseToJsonElement(
+                backend
+                    .requestsTo("PUT", putPath)
+                    .single()
+                    .body
+                    .clone()
+                    .readUtf8(),
+            ).jsonObject
 
     /** Segura a resposta do `PUT` até o teste soltar, para conferir o que a tela mostra enquanto grava. */
     private fun holdPut(response: MockResponse): CountDownLatch {
@@ -97,12 +105,27 @@ class TasksSituationViewModelTest {
 
             viewModel.chooseSituation(before.card("sit-review"), TaskSituation.Reviewed)
 
-            assertEquals(TaskSituation.Reviewed, viewModel.state.value.card("sit-review").situation)
-            assertEquals(TaskSituation.Reviewed, viewModel.state.value.facets!!.first { it.id == "sit-review" }.situation)
+            assertEquals(
+                TaskSituation.Reviewed,
+                viewModel.state.value
+                    .card("sit-review")
+                    .situation,
+            )
+            assertEquals(
+                TaskSituation.Reviewed,
+                viewModel.state.value.facets!!
+                    .first { it.id == "sit-review" }
+                    .situation,
+            )
             release.countDown()
             viewModel.state.first { !it.savingSituation }
             assertEquals("reviewed", putBody().getValue("situation").jsonPrimitive.content)
-            assertEquals(TaskSituation.Reviewed, viewModel.state.value.card("sit-review").situation)
+            assertEquals(
+                TaskSituation.Reviewed,
+                viewModel.state.value
+                    .card("sit-review")
+                    .situation,
+            )
             assertNull(viewModel.state.value.notice)
         }
 
@@ -117,7 +140,12 @@ class TasksSituationViewModelTest {
             viewModel.state.first { !it.savingSituation }
 
             assertEquals("bookmarked", putBody().getValue("situation").jsonPrimitive.content)
-            assertEquals(TaskSituation.Bookmarked, viewModel.state.value.card("sit-review").situation)
+            assertEquals(
+                TaskSituation.Bookmarked,
+                viewModel.state.value
+                    .card("sit-review")
+                    .situation,
+            )
         }
 
     @Test
@@ -128,7 +156,12 @@ class TasksSituationViewModelTest {
             val before = viewModel.settled()
 
             viewModel.chooseSituation(before.card("sit-review"), TaskSituation.Reviewed)
-            assertEquals(TaskSituation.Reviewed, viewModel.state.value.card("sit-review").situation)
+            assertEquals(
+                TaskSituation.Reviewed,
+                viewModel.state.value
+                    .card("sit-review")
+                    .situation,
+            )
             release.countDown()
             val after = viewModel.state.first { it.notice != null }
 
@@ -157,7 +190,11 @@ class TasksSituationViewModelTest {
             viewModel.chooseSituation(before.card("sit-waiting"), TaskSituation.Reviewed)
             viewModel.chooseSituation(before.card("sit-person"), TaskSituation.Reviewed)
 
-            assertNull(viewModel.state.value.card("sit-waiting").situation)
+            assertNull(
+                viewModel.state.value
+                    .card("sit-waiting")
+                    .situation,
+            )
             assertEquals(0, backend.requests.count { it.method == "PUT" })
         }
 }

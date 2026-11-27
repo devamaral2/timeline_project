@@ -228,7 +228,13 @@ class AgentTaskViewModel
         fun chooseSituation(situation: TaskSituation) {
             val before = current()?.request?.situation ?: return
             if (situation == TaskSituation.Unknown || situation == before) return
-            updateContent { it.copy(request = it.request.copy(situation = situation), situationSaves = it.situationSaves + 1, situationError = null) }
+            updateContent {
+                it.copy(
+                    request = it.request.copy(situation = situation),
+                    situationSaves = it.situationSaves + 1,
+                    situationError = null,
+                )
+            }
             viewModelScope.launch {
                 try {
                     taskList.setSituation(taskId, situation)

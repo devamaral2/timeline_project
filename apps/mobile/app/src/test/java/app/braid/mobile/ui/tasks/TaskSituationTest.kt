@@ -28,7 +28,12 @@ class TaskSituationTest {
 
     @Test
     fun `the cards read their situation, and a card without one reads as none`() {
-        val cards = Fixtures.json("task-list-situations").jsonArray.map { BraidJson.decodeFromJsonElement(TaskCardDto.serializer(), it).toDomain() }
+        val cards =
+            Fixtures
+                .json(
+                    "task-list-situations",
+                ).jsonArray
+                .map { BraidJson.decodeFromJsonElement(TaskCardDto.serializer(), it).toDomain() }
 
         assertEquals(
             mapOf(
@@ -53,7 +58,12 @@ class TaskSituationTest {
                 .jsonArray[1]
                 .jsonObject
 
-        val read = BraidJson.decodeFromJsonElement(TaskCardDto.serializer(), JsonObject(card + ("situation" to JsonPrimitive("archived")))).toDomain()
+        val read =
+            BraidJson
+                .decodeFromJsonElement(
+                    TaskCardDto.serializer(),
+                    JsonObject(card + ("situation" to JsonPrimitive("archived"))),
+                ).toDomain()
 
         assertEquals(TaskSituation.Unknown, read.situation)
         assertEquals("Situação", situationName(TaskSituation.Unknown))

@@ -194,7 +194,16 @@ class AgentTaskViewModelTest {
             assertEquals(TaskSituation.Reviewed, viewModel.content().request.situation)
             release.countDown()
             viewModel.state.first { it is AgentTaskUiState.Content && !it.savingSituation }
-            val body = Json.parseToJsonElement(backend.requestsTo("PUT", situationPath).single().body.clone().readUtf8()).jsonObject
+            val body =
+                Json
+                    .parseToJsonElement(
+                        backend
+                            .requestsTo("PUT", situationPath)
+                            .single()
+                            .body
+                            .clone()
+                            .readUtf8(),
+                    ).jsonObject
             assertEquals("reviewed", body.getValue("situation").jsonPrimitive.content)
             assertEquals(TaskSituation.Reviewed, viewModel.content().request.situation)
             assertNull(viewModel.content().situationError)
