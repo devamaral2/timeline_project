@@ -39,7 +39,7 @@ fun editEntityTypeOfArtifact(
         ArtifactType.Agent -> EditEntityType.Agent
         ArtifactType.Router, ArtifactType.Workout -> null
         // Os de texto livre já saíram acima; o ramo fica para o `when` seguir completo e o compilador apontar um tipo novo.
-        ArtifactType.Text -> EditEntityType.Text
+        ArtifactType.Text, ArtifactType.News, ArtifactType.EmailSummary, ArtifactType.YoutubeTranscript -> EditEntityType.Text
     }
 }
 

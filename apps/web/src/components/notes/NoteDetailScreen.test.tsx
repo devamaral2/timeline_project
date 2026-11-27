@@ -299,3 +299,29 @@ test("Cancelar na confirmação mantém a nota e não apaga nada", async () => {
   expect(api.calls.some((call) => call.method === "DELETE")).toBe(false);
   expect(replace).not.toHaveBeenCalled();
 });
+
+test.each([
+  ["news", "Notícias"],
+  ["email_summary", "Resumo de e-mail"],
+  ["youtube_transcript", "Transcrição"],
+] as const)("um artefato %s mostra o rótulo do tipo e o texto formatado, com os links, como a nota", async (type, label) => {
+  install({
+    artifacts: [
+      artifactFixture({
+        id: "art-livre",
+        name: "Resumo do dia",
+        type,
+        data: { body: "Resumo do dia\nTrês assuntos pedem atenção.\n\n## Fontes\n- [A notícia completa](https://example.com/noticia)" },
+        tags: ["leitura"],
+      }),
+    ],
+  });
+  renderArtifact("art-livre");
+
+  expect(await screen.findByRole("heading", { level: 1, name: "Resumo do dia" })).toBeInTheDocument();
+  expect(screen.getByText(label)).toBeInTheDocument();
+  expect(screen.getByText("#leitura")).toBeInTheDocument();
+  expect(screen.getByText("Três assuntos pedem atenção.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Fontes" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "A notícia completa" })).toHaveAttribute("href", "https://example.com/noticia");
+});

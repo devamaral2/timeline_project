@@ -192,7 +192,8 @@ private fun decodeData(
     data: JsonElement,
 ): ArtifactData =
     when (type) {
-        ArtifactType.Text, ArtifactType.Router -> TextData(BraidJson.decodeFromJsonElement(TextDataDto.serializer(), data).body)
+        ArtifactType.Text, ArtifactType.News, ArtifactType.EmailSummary, ArtifactType.YoutubeTranscript, ArtifactType.Router ->
+            TextData(BraidJson.decodeFromJsonElement(TextDataDto.serializer(), data).body)
         ArtifactType.Skill, ArtifactType.Agent ->
             BraidJson
                 .decodeFromJsonElement(

@@ -52,3 +52,14 @@ test("a router carries the compass", () => {
 
   expect(glyphOf(container)?.getAttribute("class")).toContain("lucide-compass");
 });
+
+test.each([
+  ["news", "lucide-newspaper"],
+  ["email_summary", "lucide-letter"],
+  ["youtube_transcript", "lucide-youtube"],
+])("a %s artifact carries its own glyph, not the letter of the text note", (type, glyphClass) => {
+  const { container } = render(<NoteSheet type={type} />);
+
+  expect(glyphOf(container)?.getAttribute("class")).toContain(glyphClass);
+  expect(glyphOf(container)?.getAttribute("data-glyph")).toBeNull();
+});

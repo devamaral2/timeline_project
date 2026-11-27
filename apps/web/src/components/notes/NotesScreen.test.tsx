@@ -202,3 +202,71 @@ describe("estados", () => {
     expect(await screen.findByRole("heading", { name: "Nenhum artefato ainda" })).toBeInTheDocument();
   });
 });
+
+describe("notícias, resumo de e-mail e transcrição", () => {
+  function seededWithFreeText(): Seed {
+    return {
+      artifacts: [
+        artifactFixture({ id: "art-nota", name: "Lista de compras", data: { body: "Comprar leite" }, updatedAt: "2026-09-10T10:00:00.000Z" }),
+        artifactFixture({ id: "art-noticias", name: "Notícias da manhã", type: "news", data: { body: "# Manchetes\n\n- Chuva no fim de semana" }, tags: ["leitura"], updatedAt: "2026-09-13T10:00:00.000Z" }),
+        artifactFixture({ id: "art-email", name: "Resumo da caixa de entrada", type: "email_summary", data: { body: "A fatura vence amanhã." }, updatedAt: "2026-09-12T10:00:00.000Z" }),
+        artifactFixture({ id: "art-video", name: "Aula de jardinagem", type: "youtube_transcript", data: { body: "00:00 Como podar roseiras" }, updatedAt: "2026-09-11T10:00:00.000Z" }),
+        artifactFixture({ id: "art-sono", name: "Noite", type: "sleep", data: SLEEP, updatedAt: "2026-09-09T10:00:00.000Z" }),
+      ],
+    };
+  }
+
+  function row(name: RegExp): HTMLElement {
+    return within(screen.getByRole("region", { name: "Lista de artefatos" })).getByRole("link", { name });
+  }
+
+  test("cada um aparece com o rótulo e o ícone do tipo, e leva ao detalhe", async () => {
+    install(seededWithFreeText());
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "5 artefatos" });
+
+    expect(listedIds()).toEqual(["art-noticias", "art-email", "art-video", "art-nota", "art-sono"]);
+    for (const [name, label, glyph, id] of [
+      [/Notícias da manhã/, "Notícias", "lucide-newspaper", "art-noticias"],
+      [/Resumo da caixa de entrada/, "Resumo de e-mail", "lucide-letter", "art-email"],
+      [/Aula de jardinagem/, "Transcrição", "lucide-youtube", "art-video"],
+    ] as const) {
+      const link = row(name);
+      expect(link).toHaveAttribute("href", `/user-1/notas/${id}`);
+      expect(within(link).getByText(label)).toBeInTheDocument();
+      expect(link.querySelector(`.${glyph}`), label).not.toBeNull();
+    }
+    // A nota continua com a letra, não com um desses desenhos.
+    expect(row(/Lista de compras/).querySelector('[data-glyph="letter"]')).not.toBeNull();
+  });
+
+  test("entram nos filtros de tipo logo depois da nota, e cada um filtra a consulta", async () => {
+    install(seededWithFreeText());
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "5 artefatos" });
+
+    const filters = ["Nota", "Notícias", "Resumo de e-mail", "Transcrição", "Sono"].map((name) => screen.getByRole("button", { name }));
+    for (let index = 1; index < filters.length; index += 1) {
+      expect(filters[index - 1].compareDocumentPosition(filters[index]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+
+    for (const [name, type, id] of [["Notícias", "news", "art-noticias"], ["Resumo de e-mail", "email_summary", "art-email"], ["Transcrição", "youtube_transcript", "art-video"]] as const) {
+      fireEvent.click(screen.getByRole("button", { name }));
+      await waitFor(() => expect(lastQuery()).toEqual({ type }));
+      await waitFor(() => expect(listedIds()).toEqual([id]));
+      fireEvent.click(screen.getByRole("button", { name }));
+      await waitFor(() => expect(lastQuery()).toEqual({}));
+    }
+  });
+
+  test("a busca encontra o texto dentro deles", async () => {
+    install(seededWithFreeText());
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "5 artefatos" });
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar artefatos" }), { target: { value: "roseiras" } });
+
+    await waitFor(() => expect(lastQuery()).toEqual({ q: "roseiras" }));
+    await waitFor(() => expect(listedIds()).toEqual(["art-video"]));
+  });
+});

@@ -8,7 +8,7 @@ import { TEXT_BODY_ARTIFACT_TYPES } from "@repo/contracts/artifact-types";
 import { DetailSection } from "@/components/detail/detail-parts";
 import { ArtifactContent } from "@/components/notes/ArtifactContent";
 import { ICON_STROKE_WIDTH } from "@/components/tasks/task-visuals";
-import { BarbellIcon, CompassIcon, MoonStarIcon, MovementIcon, PlateIcon } from "@/components/ui/type-icons";
+import { BarbellIcon, CompassIcon, LetterIcon, MoonStarIcon, MovementIcon, NewspaperIcon, PlateIcon, YoutubeIcon } from "@/components/ui/type-icons";
 import { isDailyReading } from "@/lib/tasks/daily-reading";
 import { mealCaloriesKcal } from "@/lib/tasks/task-read-model";
 import { ArtifactPickerDialog, artifactSource } from "./TaskEditArtifactsSection";
@@ -36,10 +36,9 @@ interface TaskArtifactsSectionProps {
 
 const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
   text: FileText,
-  // Os desenhos próprios destes três entram com a lista e o detalhe (issue #74); até lá, a folha de texto.
-  news: FileText,
-  email_summary: FileText,
-  youtube_transcript: FileText,
+  news: NewspaperIcon,
+  email_summary: LetterIcon,
+  youtube_transcript: YoutubeIcon,
   food: PlateIcon,
   sleep: MoonStarIcon,
   training: BarbellIcon,

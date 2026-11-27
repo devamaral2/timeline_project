@@ -2,6 +2,9 @@
   "now": "2026-09-14T15:00:00.000Z",
   "typeOrder": [
     "text",
+    "news",
+    "email_summary",
+    "youtube_transcript",
     "food",
     "sleep",
     "training",
@@ -15,6 +18,21 @@
       "type": "text",
       "label": "Nota",
       "visual": "text"
+    },
+    {
+      "type": "news",
+      "label": "Notícias",
+      "visual": "news"
+    },
+    {
+      "type": "email_summary",
+      "label": "Resumo de e-mail",
+      "visual": "email_summary"
+    },
+    {
+      "type": "youtube_transcript",
+      "label": "Transcrição",
+      "visual": "youtube_transcript"
     },
     {
       "type": "food",
