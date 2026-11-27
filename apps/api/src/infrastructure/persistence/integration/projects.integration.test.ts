@@ -469,6 +469,24 @@ describe("projetos", () => {
       expect((await projectOfTask(next.id)).id).toBe(braid);
     });
 
+    test("um modelo sem projectId nao muda o projeto da serie, e o do pedido vale quando o modelo nao escolheu", async () => {
+      const braid = await otherProject(USER, "braid");
+      const series = dailyRecurrence(USER, "2026-11-10", { projectId: braid });
+      await recurrences.save(series);
+
+      await recurrences.update(series.revise({ template: { name: "Serie", kind: "common" } }), USER, series.revision, "2026-11-11");
+
+      const [row] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
+      expect(row?.project_id).toBe(braid);
+
+      const { requestId } = await store.start({ userId: USER, route: "steps", text: "toda manha", job: "request-dispatch" });
+      await ctx.pool.query("UPDATE tasks SET project_id = $1 WHERE id = $2", [braid, requestId]);
+      const fromRequest = dailyRecurrence(USER, "2026-11-10");
+      await writer.commit({ userId: USER, tasks: [], artifacts: [], recurrences: [fromRequest], requestId });
+      const [again] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [fromRequest.id]);
+      expect(again?.project_id).toBe(braid);
+    });
+
     test("trocar o projeto da serie com a revisao errada da conflito", async () => {
       const braid = await otherProject(USER, "braid");
       const series = dailyRecurrence(USER, "2026-11-10");
