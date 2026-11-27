@@ -7,13 +7,16 @@ package app.braid.mobile.domain.task
  */
 
 /** O pedido ainda não terminou: espera, roda ou aguarda a pessoa. */
-val OPEN_AGENT_STATUSES: Set<TaskStatus> = setOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running, TaskStatus.Waiting)
+val OPEN_AGENT_STATUSES: Set<TaskStatus> =
+    setOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running, TaskStatus.Waiting)
 
 /** O pedido anda sozinho: sendo preparado, na fila, iniciando ou rodando, sem esperar a pessoa. */
-val IN_PROGRESS_AGENT_STATUSES: Set<TaskStatus> = setOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running)
+val IN_PROGRESS_AGENT_STATUSES: Set<TaskStatus> =
+    setOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running)
 
 /** O pedido terminou, de qualquer jeito. */
-val FINAL_AGENT_STATUSES: Set<TaskStatus> = setOf(TaskStatus.Completed, TaskStatus.Interrupted, TaskStatus.Failed, TaskStatus.Cancelled, TaskStatus.RolledBack)
+val FINAL_AGENT_STATUSES: Set<TaskStatus> =
+    setOf(TaskStatus.Completed, TaskStatus.Interrupted, TaskStatus.Failed, TaskStatus.Cancelled, TaskStatus.RolledBack)
 
 /** O pedido terminou e entregou o que devia. */
 val SUCCESS_AGENT_STATUSES: Set<TaskStatus> = setOf(TaskStatus.Completed)

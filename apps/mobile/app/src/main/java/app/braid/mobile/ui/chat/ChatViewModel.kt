@@ -635,13 +635,15 @@ class ChatViewModel
         ) {
             if (id !in following) return
             following -= id
+            // Cancelar ou parar o pedido não é falha da mensagem: ela segue sem a marca de "não enviada".
+            val stopped = code == ChatFailureCode.Cancelled || code == ChatFailureCode.Interrupted
             commit { current ->
                 val request = current.messages.firstOrNull { it.id == id } as? ChatMessage.User
                 current.copy(
                     pending = if (current.pending?.id == id) null else current.pending,
                     messages =
                         current.messages.map {
-                            if (it.id == id && it is ChatMessage.User && code != ChatFailureCode.Cancelled && code != ChatFailureCode.Interrupted) it.copy(failed = true) else it
+                            if (it.id == id && it is ChatMessage.User && !stopped) it.copy(failed = true) else it
                         } +
                             ChatMessage.Error(
                                 id = "$id-error",
