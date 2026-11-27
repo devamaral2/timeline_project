@@ -9,6 +9,7 @@ import app.braid.mobile.domain.artifact.ArtifactRepository
 import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.FoodData
 import app.braid.mobile.domain.artifact.FoodGeneration
+import app.braid.mobile.domain.artifact.isFreeText
 import app.braid.mobile.domain.polling.MEAL_POLL_MS
 import app.braid.mobile.domain.polling.PollingLoop
 import app.braid.mobile.domain.request.EditEntityType
@@ -68,7 +69,7 @@ sealed interface DocumentDetailUiState {
             }
 
         /** Editar e excluir valem só para a nota de texto própria. */
-        val canEdit: Boolean get() = artifact.type == ArtifactType.Text && !artifact.global
+        val canEdit: Boolean get() = artifact.type.isFreeText && !artifact.global
     }
 }
 

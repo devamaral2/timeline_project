@@ -1,4 +1,5 @@
 import type { ArtifactDto } from "@repo/contracts";
+import { hasTextBody } from "@repo/contracts/artifact-types";
 import { DetailFact, DetailFacts } from "@/components/detail/detail-parts";
 import { sleepAgendaOfArtifact } from "@/lib/artifacts/artifact-model";
 import { noteMarkdownOf } from "@/lib/notes/notes-model";
@@ -14,13 +15,12 @@ const workoutCategoryLabels = { cardio: "Cardio", strength: "Força", free: "Liv
  * para o qual apontam. Exercício do catálogo: a categoria e a situação.
  */
 export function ArtifactContent({ artifact }: { artifact: ArtifactDto }) {
+  if (hasTextBody(artifact)) {
+    const body = noteMarkdownOf(artifact);
+    if (body === "") return null;
+    return <article className={styles.noteCard} aria-label="Conteúdo da nota"><TextBody body={body} /></article>;
+  }
   switch (artifact.type) {
-    case "text":
-    case "router": {
-      const body = noteMarkdownOf(artifact);
-      if (body === "") return null;
-      return <article className={styles.noteCard} aria-label="Conteúdo da nota"><TextBody body={body} /></article>;
-    }
     case "food":
       return <article className={styles.noteCard} aria-label="Conteúdo da nota"><MealNote data={artifact.data} /></article>;
     case "training":

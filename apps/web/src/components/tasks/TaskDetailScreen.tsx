@@ -11,6 +11,7 @@ import {
   formatTime, longDate, type TaskPosition,
 } from "@repo/timeline";
 import type { FoodRecipe, SleepData, TaskCardDto, TaskPriority, TextData, TrainingData } from "@repo/contracts";
+import { isFreeTextArtifact } from "@repo/contracts/artifact-types";
 import { positionOf } from "@/lib/tasks/task-window";
 import { useNow } from "@/lib/tasks/use-now";
 import { ICON_STROKE_WIDTH, missedLabel, notificationOffsetLabel, visualForItemType } from "./task-visuals";
@@ -398,7 +399,7 @@ function NoteSection({ note }: { note: PreviewNote }) {
     </Section>
   );
 
-  if (note.type === "text") return (
+  if (isFreeTextArtifact(note)) return (
     <Section title={note.name}>
       <MarkdownView source={note.data.body} />
     </Section>

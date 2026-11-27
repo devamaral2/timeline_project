@@ -6,6 +6,7 @@ import type {
   TaskArtifactDto,
   TaskDto,
 } from "@repo/contracts";
+import { isTextBodyArtifactType } from "@repo/contracts/artifact-types";
 import {
   artifactSchema,
   createArtifactRequestSchema,
@@ -224,7 +225,7 @@ export function relinkTaskArtifacts(store: FakeStore, taskId: string, entries: r
 function matchesText(artifact: StoredArtifact, q: string): boolean {
   if (artifact.name.toLocaleLowerCase("pt-BR").includes(q)) return true;
   // Nos de texto (`text`, `router`), a busca também olha o corpo.
-  if (artifact.type === "text" || artifact.type === "router") {
+  if (isTextBodyArtifactType(artifact.type)) {
     const body = (artifact.data as { body?: string }).body ?? "";
     return body.toLocaleLowerCase("pt-BR").includes(q);
   }

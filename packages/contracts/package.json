@@ -24,6 +24,11 @@
       "react-native": "./src/youtube.ts",
       "types": "./dist/youtube.d.ts",
       "default": "./dist/youtube.js"
+    },
+    "./artifact-types": {
+      "react-native": "./src/artifact-types.ts",
+      "types": "./dist/artifact-types.d.ts",
+      "default": "./dist/artifact-types.js"
     }
   },
   "files": ["dist", "src"],

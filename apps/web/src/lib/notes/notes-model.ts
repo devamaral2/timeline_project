@@ -1,5 +1,6 @@
 import { TIMELINE_TIME_ZONE, dayKeyOf, formatTime } from "@repo/timeline";
 import type { ArtifactDto } from "@repo/contracts";
+import { hasTextBody } from "@repo/contracts/artifact-types";
 
 /**
  * As regras de texto que as telas de nota ainda usam: o rótulo de quando um
@@ -49,7 +50,7 @@ const HEADING_MARKER = /^\s*#{1,6}\s+/;
  * linha (a tela ja o mostra). Os outros tipos de artefato nao tem markdown: vazio.
  */
 export function noteMarkdownOf(artifact: ArtifactDto): string {
-  if (artifact.type !== "text" && artifact.type !== "router") return "";
+  if (!hasTextBody(artifact)) return "";
   const lines = artifact.data.body.split(/\r?\n/);
   const firstIndex = lines.findIndex((line) => line.trim());
   if (firstIndex >= 0 && lines[firstIndex]?.trim().replace(HEADING_MARKER, "") === artifact.name) {

@@ -6,9 +6,9 @@ import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.artifact.Artifact
 import app.braid.mobile.domain.artifact.ArtifactDraft
 import app.braid.mobile.domain.artifact.ArtifactRepository
-import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.TextContent
 import app.braid.mobile.domain.artifact.TextData
+import app.braid.mobile.domain.artifact.isFreeText
 import app.braid.mobile.domain.task.StaleRevisionException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -130,7 +130,7 @@ class DocumentEditViewModel
             }
         }
 
-        private val Artifact.editable: Boolean get() = type == ArtifactType.Text && !global && data is TextData
+        private val Artifact.editable: Boolean get() = type.isFreeText && !global && data is TextData
 
         private fun form(artifact: Artifact): DocumentEditUiState.Form {
             revision = artifact.revision

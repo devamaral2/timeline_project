@@ -1,4 +1,5 @@
 import type { ArtifactType, RequestEditEntityType } from "@repo/contracts";
+import { isFreeTextArtifactType } from "@repo/contracts/artifact-types";
 
 /**
  * O que a barra de edição com IA diz que vai editar: "Peça uma mudança nesta nota" (o "n" vem do campo).
@@ -28,8 +29,9 @@ export function isModelCommand(text: string): boolean {
  */
 export function editEntityTypeOfArtifact(artifact: { type: ArtifactType; global: boolean }): RequestEditEntityType | null {
   if (artifact.global) return null;
-  switch (artifact.type) {
-    case "text": return "artifact";
+  const { type } = artifact;
+  if (isFreeTextArtifactType(type)) return "artifact";
+  switch (type) {
     case "food": return "food_artifact";
     case "sleep": return "sleep_artifact";
     case "training": return "training_artifact";
