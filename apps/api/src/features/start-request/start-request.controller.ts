@@ -3,7 +3,7 @@ import type { StartRequestResponse } from "@repo/contracts";
 import { modelSelectionSchema } from "@repo/contracts/schemas";
 import { z } from "zod";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
-import { agentScreenContextSchema, agentTextSchema, clientMessageIdSchema, requestIdSchema } from "../../api-core/agent/agent-input.schemas";
+import { agentScreenContextSchema, agentTextSchema, clientMessageIdSchema, projectIdSchema, requestIdSchema } from "../../api-core/agent/agent-input.schemas";
 import { ApiCoreModule } from "../../api-core/api-core.module";
 import { selectionProblem } from "../../api-core/requests/model-catalog";
 import { RequestOperations } from "../../api-core/requests/request-operations";
@@ -19,6 +19,8 @@ export const startRequestBody = z.object({
   clientMessageId: clientMessageIdSchema.optional(),
   /** O provedor, o modelo e o esforco que o campo do chat mostra: os agentes do pedido rodam com ele. */
   model: modelSelectionSchema.optional(),
+  /** O projeto do pedido; vale sobre a sessao. Sem ele, o pedido fica no projeto do primeiro da sessao ou em `personal`. */
+  projectId: projectIdSchema.optional(),
 });
 
 /**

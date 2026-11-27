@@ -59,7 +59,7 @@ describe("project errors", () => {
   test("maps a bad name to 400, a repeated name to 409 and a project that is not the user's to 404", () => {
     expect(statusOf(new ProjectValidationError("Project name is required"))).toBe(400);
     expect(statusOf(new ProjectNameTakenError("Project already exists: braid"))).toBe(409);
-    expect(statusOf(new ProjectNotFoundError("Project not found: p1"))).toBe(404);
+    expect(statusOf(new ProjectNotFoundError())).toBe(404);
   });
 });
 

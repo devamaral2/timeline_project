@@ -42,7 +42,18 @@ describe("POST /api/requests/hermes", () => {
     expect(startHermes).toHaveBeenCalledWith({ userId: "owner-1", text: "crie uma tarefa", sessionId, clientMessageId: "m1" }, actor);
   });
 
+  test("aceita o projectId opcional", async () => {
+    vi.stubEnv("AI_AUTOMATION", "on");
+    const { controller, startHermes } = setup();
+    const projectId = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+
+    await controller.start({ userId: "owner-1", text: "oi", clientMessageId: "m1", projectId }, actor);
+
+    expect(startHermes).toHaveBeenCalledWith({ userId: "owner-1", text: "oi", clientMessageId: "m1", projectId }, actor);
+  });
+
   test.each([
+    { userId: "owner-1", text: "oi", clientMessageId: "m1", projectId: "nao-e-ulid" },
     { userId: "owner-1", text: "oi" },
     { userId: "owner-1", text: " ", clientMessageId: "m1" },
     { userId: "owner-1", text: "oi", clientMessageId: "bad id" },

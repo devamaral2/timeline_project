@@ -1,7 +1,8 @@
 import type { AgentTraceDto, ModelSelection } from "@repo/contracts";
+import { ulid } from "ulid";
 import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
 import { getJobsEnv } from "../../config/env";
-import { Artifact, type FoodData } from "../../domain";
+import { Artifact, ProjectNotFoundError, type FoodData } from "../../domain";
 import { ModelRequestError, type ModelChatInput } from "../../infrastructure/model-agent/model-agent";
 import { HermesRequestError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
@@ -15,6 +16,7 @@ import { PostgresJobStore } from "../../infrastructure/persistence/jobs/postgres
 import { PostgresRecurrenceRepository } from "../../infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository";
 import { PostgresCandidateQuery } from "../../infrastructure/persistence/requests/postgres-candidate.query";
 import { PostgresRequestStore } from "../../infrastructure/persistence/requests/postgres-request.store";
+import { trackedTask } from "../../infrastructure/persistence/testing/fixtures";
 import { createPostgresTestContext, type PostgresTestContext } from "../../infrastructure/persistence/testing/postgres-test-context";
 import { FastStageError } from "../agent/errors/agent.errors";
 import { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
@@ -489,3 +491,157 @@ test("o modelo fora do ar vira passo vermelho com codigo, e o texto do usuario s
   expect(traces.rows.length).toBeGreaterThan(0);
   expect(traces.rows.every((row) => row.content === null)).toBe(true);
 });
+
+// Projetos (ADR 0021): o trabalho de um pedido fica no projeto dele.
+
+const projectOf = async (taskId: string) =>
+  (await ctx.pool.query<{ name: string; personal: boolean }>(
+    "SELECT p.name, p.personal FROM tasks t JOIN projects p ON p.id = t.project_id WHERE t.id = $1", [taskId],
+  )).rows[0];
+
+async function newProject(name: string, userId = "user-1"): Promise<string> {
+  const id = ulid();
+  await ctx.pool.query("INSERT INTO projects (id, user_id, name) VALUES ($1, $2, $3)", [id, userId, name]);
+  return id;
+}
+
+const stepIdsOf = async (requestId: string) =>
+  (await ctx.pool.query<{ id: string }>(
+    "SELECT to_task_id AS id FROM task_task_relation WHERE from_task_id = $1 AND relation = 'step'", [requestId],
+  )).rows.map((row) => row.id);
+
+test("projeto: o pedido com projectId nasce nele, e os passos e a tarefa que ele cria pela rota por passos ficam la", async () => {
+  const braid = await newProject("braid");
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Revisar o PR", "common", 10)] }));
+
+  const requestId = await operations.start({ userId: "user-1", text: "revisar o PR do braid", projectId: braid }, actor);
+  await drain();
+
+  const view = await operations.view(requestId, actor);
+  expect(view.project).toMatchObject({ id: braid, name: "braid", personal: false });
+  const steps = await stepIdsOf(requestId);
+  expect(steps).toHaveLength(1);
+  expect(await projectOf(steps[0] as string)).toEqual({ name: "braid", personal: false });
+  const created = view.entities.find((entity) => entity.kind === "task");
+  expect(await projectOf(created?.id as string)).toEqual({ name: "braid", personal: false });
+});
+
+test("projeto: sem projectId, o pedido, os passos e a tarefa criada ficam em personal", async () => {
+  await newProject("braid");
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Ler", "common", 10)] }));
+
+  const requestId = await operations.start({ userId: "user-1", text: "ler um livro" }, actor);
+  await drain();
+
+  const view = await operations.view(requestId, actor);
+  expect(view.project).toMatchObject({ name: "personal", personal: true });
+  for (const id of [...(await stepIdsOf(requestId)), view.entities[0]?.id as string]) {
+    expect(await projectOf(id)).toEqual({ name: "personal", personal: true });
+  }
+});
+
+test("projeto: o pedido que continua uma sessao fica no projeto do primeiro pedido dela", async () => {
+  const braid = await newProject("braid");
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Reunião", "common", 12)] }));
+  const first = await operations.start({ userId: "user-1", text: "reunião ao meio-dia", projectId: braid }, actor);
+  await drain();
+
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Retro", "common", 15)] }));
+  const second = await operations.start({ userId: "user-1", text: "e uma retro às 15h", sessionId: first }, actor);
+  await drain();
+
+  const view = await operations.view(second, actor);
+  expect(view.project).toMatchObject({ id: braid, name: "braid" });
+  expect(await projectOf((await stepIdsOf(second))[0] as string)).toEqual({ name: "braid", personal: false });
+  expect(await projectOf(view.entities[0]?.id as string)).toEqual({ name: "braid", personal: false });
+});
+
+test("projeto: a continuacao no Hermes e no modo modelo tambem fica no projeto do primeiro pedido", async () => {
+  const braid = await newProject("braid");
+  const trace: AgentTraceDto = { route: "hermes", status: "done", fields: [], entries: [] };
+  hermesReply = async () => ({ text: "ok", trace });
+  modelReply = async () => ({ text: "ok", trace });
+  const model = { provider: "openrouter", model: "x-ai/grok-4.7", effort: "low" } as const;
+
+  const first = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "h1", projectId: braid }, actor);
+  await drain();
+  const hermes = await operations.startHermes({ userId: "user-1", text: "e agora?", sessionId: first.id, clientMessageId: "h2" }, actor);
+  const modelTurn = await operations.startModel({ userId: "user-1", text: "e agora?", sessionId: first.id, clientMessageId: "m2", model }, actor);
+  await drain();
+
+  expect(first.project.id).toBe(braid);
+  expect(hermes.project.id).toBe(braid);
+  expect(modelTurn.project.id).toBe(braid);
+});
+
+test("projeto: o pedido de edicao sobre uma tarefa fica no projeto dela, e a subtarefa que ele cria tambem", async () => {
+  const braid = await newProject("braid");
+  const parent = trackedTask("user-1", "Lançar a versão");
+  await tasks.save(parent);
+  await ctx.pool.query("UPDATE tasks SET project_id = $1 WHERE id = $2", [braid, parent.id]);
+  gateway.outputs.set("task_edit", entityEdit(parent.id, ["Escrever as notas"]));
+
+  const requestId = await operations.startEdit({ userId: "user-1", text: "divida em partes", entityType: "task", entityId: parent.id }, actor);
+  await drain();
+
+  const view = await operations.view(requestId, actor);
+  expect(view.project).toMatchObject({ id: braid, name: "braid" });
+  expect(await projectOf((await stepIdsOf(requestId))[0] as string)).toEqual({ name: "braid", personal: false });
+  const subtask = view.entities.find((entity) => entity.operation === "create");
+  expect(subtask).toBeDefined();
+  expect(await projectOf(subtask?.id as string)).toEqual({ name: "braid", personal: false });
+  // A tarefa editada continua onde estava.
+  expect(await projectOf(parent.id)).toEqual({ name: "braid", personal: false });
+});
+
+test("projeto: o projectId das tres rotas vale sobre a sessao, e o projeto de outro usuario e recusado", async () => {
+  const braid = await newProject("braid");
+  const other = await newProject("outro");
+  const alheio = await newProject("dele", "user-2");
+  const trace: AgentTraceDto = { route: "hermes", status: "done", fields: [], entries: [] };
+  hermesReply = async () => ({ text: "ok", trace });
+  modelReply = async () => ({ text: "ok", trace });
+  const model = { provider: "openrouter", model: "x-ai/grok-4.7", effort: "low" } as const;
+  const first = await operations.start({ userId: "user-1", text: "primeiro", projectId: braid }, actor);
+
+  const chat = await operations.start({ userId: "user-1", text: "segundo", sessionId: first, projectId: other }, actor);
+  const hermes = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "h1", sessionId: first, projectId: other }, actor);
+  const modelTurn = await operations.startModel({ userId: "user-1", text: "oi", clientMessageId: "m1", sessionId: first, projectId: other, model }, actor);
+
+  expect((await operations.view(chat, actor)).project.id).toBe(other);
+  expect(hermes.project.id).toBe(other);
+  expect(modelTurn.project.id).toBe(other);
+
+  const before = (await ctx.pool.query("SELECT 1 FROM tasks")).rows.length;
+  await expect(operations.start({ userId: "user-1", text: "x", projectId: alheio }, actor)).rejects.toBeInstanceOf(ProjectNotFoundError);
+  await expect(operations.startHermes({ userId: "user-1", text: "x", clientMessageId: "h9", projectId: alheio }, actor)).rejects.toBeInstanceOf(ProjectNotFoundError);
+  await expect(operations.startModel({ userId: "user-1", text: "x", clientMessageId: "m9", projectId: alheio, model }, actor)).rejects.toBeInstanceOf(ProjectNotFoundError);
+  expect((await ctx.pool.query("SELECT 1 FROM tasks")).rows).toHaveLength(before);
+});
+
+test("projeto: o pedido de voz e o calculo de alimento ficam em personal, mesmo com outros projetos", async () => {
+  await newProject("braid");
+  const spoken = await operations.startVoice({ transcript: "comecei a estudar" }, actor);
+  gateway.outputs.set("entity", entityAnswer({ tasks: [task("Refeição", "meal", 12, { foods: "300g de arroz", foodName: "Arroz" })] }));
+  const written = await operations.start({ userId: "user-1", text: "comendo 300g de arroz", projectId: await newProject("dieta") }, actor);
+  await drain();
+
+  const voice = await operations.view(spoken, actor);
+  expect(voice.project).toMatchObject({ name: "personal", personal: true });
+  expect(await projectOf(voice.entities[0]?.id as string)).toEqual({ name: "personal", personal: true });
+  const build = (await operations.list(actor)).find((request) => request.route === "food");
+  expect(build?.project).toMatchObject({ name: "personal", personal: true });
+  expect((await operations.view(written, actor)).project.name).toBe("dieta");
+});
+
+/** A saida do agente de edicao: so cria subtarefas sob a tarefa. */
+function entityEdit(id: string, subtasks: string[]) {
+  return {
+    query: null,
+    edits: [{
+      id, name: null, kind: null, status: null, priority: null, startedAt: null, estimatedFinishAt: null, finishedAt: null,
+      description: null, location: null, tags: null,
+      subtasks: subtasks.map((name) => ({ name, status: null, priority: null, startedAt: null, estimatedFinishAt: null, description: null })),
+    }],
+  };
+}

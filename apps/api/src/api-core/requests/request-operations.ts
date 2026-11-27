@@ -139,6 +139,7 @@ export class RequestOperations implements OnModuleInit {
       ...(forced ? { forceFallback: true } : {}),
       // A escolha do usuario fica no pedido: os agentes dos passos rodam com ela.
       ...(input.model ? { model: input.model } : {}),
+      ...(input.projectId ? { projectId: input.projectId } : {}),
     });
     return requestId;
   }
@@ -168,6 +169,7 @@ export class RequestOperations implements OnModuleInit {
     const { requestId } = await this.store.start({
       userId: input.userId, route: "hermes", text: input.text, sessionId: input.sessionId,
       clientMessageId: input.clientMessageId, job: REQUEST_JOBS.hermes,
+      ...(input.projectId ? { projectId: input.projectId } : {}),
     });
     return this.view(requestId, actor);
   }
@@ -183,6 +185,7 @@ export class RequestOperations implements OnModuleInit {
     const { requestId } = await this.store.start({
       userId: input.userId, route: "model", text: input.text, sessionId: input.sessionId,
       clientMessageId: input.clientMessageId, model: input.model, job: REQUEST_JOBS.model,
+      ...(input.projectId ? { projectId: input.projectId } : {}),
     });
     return this.view(requestId, actor);
   }

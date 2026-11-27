@@ -4,5 +4,9 @@ export class ProjectValidationError extends Error {}
 /** O usuario ja tem um projeto com esse nome, sem distinguir maiusculas de minusculas. */
 export class ProjectNameTakenError extends Error {}
 
-/** O projeto nao existe ou nao e do usuario: quem pede nao descobre qual dos dois. */
-export class ProjectNotFoundError extends Error {}
+/** O projeto nao existe ou nao e do usuario: os dois casos respondem igual, para nao revelar projetos de outros. */
+export class ProjectNotFoundError extends Error {
+  constructor() {
+    super("Project not found");
+  }
+}

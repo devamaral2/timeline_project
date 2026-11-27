@@ -108,6 +108,8 @@ export interface StartRequestInput {
    * vale o modelo do servidor. Um provedor sem chave ou um modelo fora da lista responde 400.
    */
   model?: ModelSelection;
+  /** O projeto do pedido: vale sobre o da sessao e precisa ser do usuario. Sem ele, vale o do primeiro pedido da sessao, ou `personal`. */
+  projectId?: string;
 }
 
 /**
@@ -141,6 +143,8 @@ export interface StartHermesRequestInput {
   text: string;
   sessionId?: string;
   clientMessageId: string;
+  /** O projeto do pedido, como em `StartRequestInput.projectId`. */
+  projectId?: string;
 }
 
 /** `POST /api/requests/voice`. Responde `202 { requestId }`; a tarefa criada aparece em `entities`. */

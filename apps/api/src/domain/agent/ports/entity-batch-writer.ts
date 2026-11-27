@@ -29,6 +29,8 @@ export interface SubtaskChange {
 
 export interface EntityBatch {
   userId: string;
+  /** O pedido que gerou o lote: as tarefas e as series novas ficam no projeto dele. */
+  requestId?: string;
   tasks: StagedChange<Task>[];
   /** Entram antes das tarefas: as relacoes de uma tarefa apontam para eles. */
   artifacts: StagedChange<Artifact>[];

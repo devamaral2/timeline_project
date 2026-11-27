@@ -188,6 +188,43 @@ describe("projetos", () => {
     });
   });
 
+  describe("o que um pedido grava herda o projeto dele", () => {
+    test("o lote do agente de escrita, com a serie nova e a ocorrencia, fica no projeto do pedido", async () => {
+      const braid = await otherProject(USER, "braid");
+      const { requestId } = await store.start({ userId: USER, route: "steps", text: "toda segunda", projectId: braid, job: "request-dispatch" });
+      const series = dailyRecurrence(USER, "2026-11-10");
+      const task = trackedTask(USER, "Do lote");
+
+      await writer.commit({ userId: USER, requestId, tasks: [{ op: "create", entity: task }], artifacts: [], recurrences: [series] });
+
+      expect((await projectOfTask(task.id)).id).toBe(braid);
+      const [row] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
+      expect(row?.project_id).toBe(braid);
+    });
+
+    test("o projeto de outro usuario e recusado e o pedido nem nasce", async () => {
+      const alheio = await otherProject(OTHER_USER, "dele");
+
+      await expect(store.start({ userId: USER, route: "steps", text: "x", projectId: alheio, job: "request-dispatch" }))
+        .rejects.toBeInstanceOf(ProjectNotFoundError);
+
+      expect(await selectRows(ctx.pool, "SELECT id FROM tasks")).toEqual([]);
+    });
+
+    test("o pedido e os passos ficam no projeto escolhido, e uma tarefa de pessoa criada depois vai para o personal", async () => {
+      const braid = await otherProject(USER, "braid");
+      const { requestId } = await store.start({ userId: USER, route: "steps", text: "x", projectId: braid, job: "request-dispatch" });
+      const step = newOrderedId();
+      await store.beginSteps(requestId, [{ id: step, agent: "task-create", expected: "many" }]);
+      const later = trackedTask(USER, "Depois");
+      await tasks.save(later);
+
+      expect((await projectOfTask(requestId)).id).toBe(braid);
+      expect((await projectOfTask(step)).id).toBe(braid);
+      expect((await projectOfTask(later.id)).personal).toBe(true);
+    });
+  });
+
   describe("GET /api/projects", () => {
     test("o personal de quem ainda nao tem nada nasce na primeira leitura e volta sempre o mesmo", async () => {
       const first = await query.list(USER);

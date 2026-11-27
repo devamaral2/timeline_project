@@ -44,6 +44,8 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
   constructor(private readonly db: Db) {}
 
   async commit(batch: EntityBatch): Promise<EntityBatchResult> {
+    // O que nasce de um pedido fica no projeto dele.
+    const scope = batch.requestId ? { requestId: batch.requestId } : undefined;
     return this.db.transaction(async (tx): Promise<EntityBatchResult> => {
       await lockTargets(tx, "tasks", batch.userId, batch.tasks);
       await lockTargets(tx, "artifacts", batch.userId, batch.artifacts);
@@ -61,7 +63,7 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
 
       // A serie antes das ocorrencias: elas apontam para ela por `recurrence_id`.
       for (const recurrence of batch.recurrences ?? []) {
-        await insertRecurrenceAggregate(tx, recurrence);
+        await insertRecurrenceAggregate(tx, recurrence, scope);
       }
       // Antes das ocorrencias novas: a serie revisada libera o dia da primeira delas.
       for (const change of batch.recurrenceChanges ?? []) {
@@ -70,7 +72,7 @@ export class PostgresEntityBatchWriter implements EntityBatchWriter {
 
       try {
         for (const task of created(batch.tasks)) {
-          if (!(await insertTaskAggregate(tx, task))) {
+          if (!(await insertTaskAggregate(tx, task, undefined, scope))) {
             throw new EntityBatchConflictError(`Tarefa ${task.id} já existe`);
           }
         }
