@@ -1,0 +1,2 @@
+ALTER TABLE "artifacts" DROP CONSTRAINT "artifacts_type_valid";--> statement-breakpoint
+ALTER TABLE "artifacts" ADD CONSTRAINT "artifacts_type_valid" CHECK ("artifacts"."type" IN ('text', 'news', 'email_summary', 'youtube_transcript', 'food', 'sleep', 'training', 'workout', 'skill', 'agent', 'router'));

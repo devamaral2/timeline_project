@@ -254,6 +254,12 @@ export function deriveArtifactName(type: string, data: unknown): string {
   switch (type) {
     case "text":
       return firstLine(typeof record.body === "string" ? record.body : "") || "Nota";
+    case "news":
+      return firstLine(typeof record.body === "string" ? record.body : "") || "Notícias";
+    case "email_summary":
+      return firstLine(typeof record.body === "string" ? record.body : "") || "Resumo de e-mail";
+    case "youtube_transcript":
+      return firstLine(typeof record.body === "string" ? record.body : "") || "Transcrição";
     case "food":
       return firstLine(typeof record.description === "string" ? record.description : "") || "Alimento";
     case "sleep":

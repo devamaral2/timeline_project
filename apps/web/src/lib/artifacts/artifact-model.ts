@@ -20,6 +20,9 @@ export const ARTIFACT_TYPE_ORDER: readonly ArtifactType[] = [
 
 const TYPE_LABELS: Record<ArtifactType, string> = {
   text: "Nota",
+  news: "Notícias",
+  email_summary: "Resumo de e-mail",
+  youtube_transcript: "Transcrição",
   food: "Refeição",
   sleep: "Sono",
   training: "Treino",

@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { RequestMethod } from "@nestjs/common";
 import type { OpenAPIObject } from "@nestjs/swagger";
 import { expect, test } from "vitest";
+import { z } from "zod";
 import { AppModule } from "../app.module";
 import { describeOperations } from "./openapi";
 import { documentedOperations, documentedSchemas, documentedTags } from "./openapi-operations";
@@ -122,4 +123,14 @@ test("o documento ganha grupo, resumo, filtros opcionais, corpo e resposta", () 
   expect(Object.keys(document.paths).filter((path) => path.startsWith(ROTA_ANTIGA))).toEqual([]);
 
   expect(document.paths["/fora/do/catalogo"].get.tags).toEqual(["Outro"]);
+});
+
+test("os tipos de texto livre aparecem no filtro da lista de artefatos e nos formatos de artefato", () => {
+  const freeText = ["text", "news", "email_summary", "youtube_transcript"];
+
+  expect(documentedOperations["GET /api/artifacts"].query?.type?.enum).toEqual(expect.arrayContaining(freeText));
+  for (const schema of ["Artifact", "CreateArtifactRequest", "UpdateArtifactRequest"] as const) {
+    const described = JSON.stringify(z.toJSONSchema(documentedSchemas[schema] as z.ZodType));
+    for (const type of freeText) expect(described, `${schema}: ${type}`).toContain(`"${type}"`);
+  }
 });

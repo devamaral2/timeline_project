@@ -101,6 +101,16 @@ describe("PostgresArtifactRepository", () => {
       expect([...read.tags].sort()).toEqual(["casa", "compras"]);
     });
 
+    test.each(["news", "email_summary", "youtube_transcript"] as const)("%s grava e volta com o tipo e o corpo, como o texto", async (type) => {
+      const artifact = await saved(Artifact.create({ userId: USER, type, data: { body: "Titulo do dia\n\ncorpo em markdown" }, tags: ["leitura"] }));
+
+      const read = await found(artifact.id);
+
+      expect(read).toMatchObject({ id: artifact.id, userId: USER, name: "Titulo do dia", type, schemaVersion: 1, revision: 1, isGlobal: false });
+      expect(read.data).toEqual({ body: "Titulo do dia\n\ncorpo em markdown" });
+      expect((await artifacts.listByUserId(USER)).map((item) => item.id)).toContain(artifact.id);
+    });
+
     test("alimento, sono e treino voltam com a data do tipo", async () => {
       const food = await saved(foodArtifact(USER, "Marmita", 520));
       const sleep = await saved(Artifact.create({ userId: USER, type: "sleep", data: { trackedSleepTime: 430, score: 82 } }));

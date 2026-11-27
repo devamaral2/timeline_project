@@ -78,6 +78,10 @@ _Avoid_: bot, responsável, dono
 Objeto que guarda conteúdo e não é um fluxo: não tem status, horário nem executor. É editável. Quem registra que ele foi criado, alterado ou usado é uma tarefa. Substitui a nota. Na tela ele tem o mesmo nome: **artefato** (a lista “Artefatos”, “Novo artefato”), como no código, nos contratos, na API e no banco (`artifact`). Entre 2026-11 e a volta a este nome a tela dizia “documento”.
 _Avoid_: nota (como entidade; fica só como rótulo de tela do artefato de texto), anexo, documento
 
+**Notícias**, **Resumo de e-mail**, **Transcrição**:
+Três tipos de artefato com o mesmo dado da nota: um texto em markdown. Notícias (`news`) é um apanhado de notícias; Resumo de e-mail (`email_summary`) é o resumo de uma caixa de e-mail; Transcrição (`youtube_transcript`) é o texto de um vídeo do YouTube. Quem os cria é o agente; a pessoa os lê e edita como nota. Junto com a nota, são os **tipos de texto livre**.
+_Avoid_: nota de notícias, nota de e-mail (são tipos próprios, não notas com tag)
+
 **Relação**:
 Ligação com sentido entre tarefas e artefatos. Vai de quem produz para o que foi produzido: a tarefa de origem cria o artefato ou gera a tarefa de destino. Entre tarefa e artefato, parte sempre da tarefa, que cria, altera, usa ou apaga o artefato.
 _Avoid_: vínculo, link, pai e filho
