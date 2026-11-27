@@ -5,6 +5,11 @@
     "route": "steps",
     "status": "running",
     "title": "Criar nota de compras",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "createdAt": "2026-09-14T14:48:00.000Z",
     "updatedAt": "2026-09-14T14:48:00.000Z",
     "text": "Criar nota de compras",
@@ -24,6 +29,11 @@
     "route": "hermes",
     "status": "running",
     "title": "Resumir meu e-mail",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "createdAt": "2026-09-14T14:48:00.000Z",
     "updatedAt": "2026-09-14T14:48:00.000Z",
     "text": "Resumir meu e-mail",
@@ -36,6 +46,11 @@
     "route": "steps",
     "status": "done",
     "title": "Já terminou",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "createdAt": "2026-09-14T14:48:00.000Z",
     "updatedAt": "2026-09-14T14:48:00.000Z",
     "text": "Já terminou",
@@ -48,6 +63,11 @@
     "route": "voice",
     "status": "running",
     "title": "Voz aberta",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "createdAt": "2026-09-14T14:48:00.000Z",
     "updatedAt": "2026-09-14T14:48:00.000Z",
     "steps": [],
@@ -59,6 +79,11 @@
     "route": "steps",
     "status": "waiting",
     "title": "Sem texto",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "createdAt": "2026-09-14T14:48:00.000Z",
     "updatedAt": "2026-09-14T14:48:00.000Z",
     "steps": [],

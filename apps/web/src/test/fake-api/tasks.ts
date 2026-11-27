@@ -10,13 +10,14 @@ import {
 } from "@repo/contracts/schemas";
 import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
+import { FAKE_PERSONAL_PROJECT } from "./projects";
 import { type ArtifactLink, type TaskArtifactEntry, artifactsOfTask, relinkTaskArtifacts } from "./artifacts";
 
 /** Área de tarefas: agenda, lista acompanhada, tarefa, hierarquia (tarefa principal e subtarefas) e tags. */
 
 const TASKS = "tasks";
 const CARD_KEYS = [
-  "id", "actor", "kind", "status", "priority", "name", "description", "location", "startedAt", "estimatedFinishAt",
+  "id", "actor", "kind", "status", "priority", "name", "description", "project", "location", "startedAt", "estimatedFinishAt",
   "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "parentTaskId",
   "recurrence", "revision", "createdAt", "updatedAt",
 ] as const;
@@ -43,6 +44,7 @@ export function taskFixture(overrides: Partial<TaskDto> & { id: string }): TaskD
     priority: "medium",
     name: "Tarefa",
     description: "",
+    project: FAKE_PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
@@ -161,6 +163,7 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
     priority: input.priority ?? "medium",
     name: input.name ?? "",
     description: input.description ?? "",
+    project: FAKE_PERSONAL_PROJECT,
     // So o local informado entra na tarefa.
     ...(input.location?.trim() ? { location: input.location.trim() } : {}),
     startedAt: input.startedAt,

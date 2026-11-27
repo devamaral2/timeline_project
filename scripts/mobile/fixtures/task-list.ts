@@ -10,6 +10,7 @@ import { cardIsOverdue, cardWhenLabel, recurrenceRuleLabel } from "../../../apps
 import { groupTrackedTasks, nestSubtasks, oneRowPerSeries, showsSeriesRule } from "../../../apps/web/src/lib/tasks/task-groups";
 import { PRIORITY_ORDER, tagsByUse, taskFilterCount, trackedFilters } from "../../../apps/web/src/lib/tasks/task-filters";
 import { NOW } from "./tasks";
+import { PERSONAL_PROJECT } from "./project";
 
 type CardInput = Record<string, unknown> & { id: string; name: string };
 
@@ -19,6 +20,7 @@ function card(input: CardInput) {
     kind: "common",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],

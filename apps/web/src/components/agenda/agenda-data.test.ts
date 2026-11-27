@@ -11,6 +11,7 @@ function card(overrides: Partial<TaskCardDto> = {}): TaskCardDto {
     priority: "medium",
     name: "Planejar o dia",
     description: "",
+    project: { id: "project-1", name: "personal", personal: true },
     startedAt: "2026-09-14T12:00:00.000Z",
     estimatedFinishAt: "2026-09-14T12:30:00.000Z",
     longRunning: false,

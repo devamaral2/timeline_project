@@ -14,6 +14,7 @@ import {
   notificationKeyOf,
 } from "../../../apps/web/src/lib/notifications/due-notifications";
 import { notificationOffsetLabel } from "../../../apps/web/src/components/tasks/task-visuals";
+import { PERSONAL_PROJECT } from "./project";
 
 type Case = { args: unknown[]; result: unknown };
 
@@ -29,6 +30,7 @@ export function reminderCard(input: CardInput) {
     kind: "common",
     priority: "medium",
     description: "",
+    project: PERSONAL_PROJECT,
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],

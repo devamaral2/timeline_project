@@ -440,3 +440,19 @@ test("uma releitura que falha mantém a lista na tela, sem o aviso de erro", asy
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Pesquisar voos/ })).toBeInTheDocument();
 });
+
+test("cada linha mostra a marca e o nome do projeto, o personal inclusive", async () => {
+  serve([
+    taskFixture({ id: "braid", name: "Revisar o PR", status: "todo", project: { id: "p-tp", name: "timeline_project", personal: false } }),
+    taskFixture({ id: "casa", name: "Pagar a luz", status: "todo" }),
+    taskFixture({ id: "voos", name: "Pesquisar voos", actor: "agent", kind: "request", status: "running", project: { id: "p-as", name: "agent-skills", personal: false } }),
+  ]);
+  const { container } = render(<TaskListScreen userId="user-1" />);
+  await screen.findByRole("link", { name: /Revisar o PR/ });
+
+  const lineOf = (title: RegExp) => (screen.getByRole("link", { name: title }).closest("li") as HTMLElement).querySelector("[data-project-line]");
+  expect(lineOf(/Revisar o PR/)).toHaveTextContent("TPtimeline_project");
+  expect(lineOf(/Pagar a luz/)).toHaveTextContent("PEpersonal");
+  expect(lineOf(/Pesquisar voos/)).toHaveTextContent("ASagent-skills");
+  expect(container.querySelectorAll("[data-project-line]")).toHaveLength(3);
+});

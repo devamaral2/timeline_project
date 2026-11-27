@@ -61,6 +61,7 @@ export function toRequestDto(
     route: request.route,
     status: request.status,
     title: request.title,
+    project: { ...request.project },
     ...(request.sessionId ? { sessionId: request.sessionId } : {}),
     createdAt: request.createdAt.toISOString(),
     updatedAt: request.updatedAt.toISOString(),

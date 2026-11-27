@@ -72,7 +72,7 @@ const TABLES: readonly LogicalTable[] = [
       { name: "finished_at", expr: "e.finished_at", type: "timestamptz", description: "conclusao real; nulo se nao terminou" },
       {
         name: "long_running", expr: "e.long_running", type: "boolean",
-        description: "tarefa longa (um projeto): fica fora da agenda e sempre tem status",
+        description: "tarefa longa: fica fora da agenda e sempre tem status",
       },
       { name: "recurrence_id", expr: "e.recurrence_id", type: "text", description: "serie de origem, se for ocorrencia" },
       { name: "occurrence_on", expr: "e.occurrence_on", type: "date" },

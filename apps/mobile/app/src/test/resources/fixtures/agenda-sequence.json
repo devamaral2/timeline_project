@@ -28,6 +28,11 @@
             "priority": "medium",
             "name": "Dia 14 cedo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T10:00:00.000Z",
             "estimatedFinishAt": "2026-09-14T11:00:00.000Z",
             "longRunning": false,
@@ -46,6 +51,11 @@
             "priority": "medium",
             "name": "Agente no 14",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T12:00:00.000Z",
             "longRunning": false,
             "notifyOffsetsMinutes": [],
@@ -63,6 +73,11 @@
             "priority": "medium",
             "name": "Dia 16",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-16T15:00:00.000Z",
             "estimatedFinishAt": "2026-09-16T16:00:00.000Z",
             "longRunning": false,
@@ -81,6 +96,11 @@
             "priority": "medium",
             "name": "Dia 21 tarde",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-21T19:00:00.000Z",
             "estimatedFinishAt": "2026-09-21T20:00:00.000Z",
             "longRunning": false,
@@ -99,6 +119,11 @@
             "priority": "medium",
             "name": "Atravessa o 21",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-22T02:00:00.000Z",
             "estimatedFinishAt": "2026-09-22T04:00:00.000Z",
             "longRunning": false,
@@ -117,6 +142,11 @@
             "priority": "medium",
             "name": "Projeto longo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T15:00:00.000Z",
             "estimatedFinishAt": "2026-11-30T15:00:00.000Z",
             "longRunning": true,
@@ -180,6 +210,11 @@
             "priority": "medium",
             "name": "Dia 14 cedo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T10:00:00.000Z",
             "estimatedFinishAt": "2026-09-14T11:00:00.000Z",
             "longRunning": false,
@@ -198,6 +233,11 @@
             "priority": "medium",
             "name": "Agente no 14",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T12:00:00.000Z",
             "longRunning": false,
             "notifyOffsetsMinutes": [],
@@ -215,6 +255,11 @@
             "priority": "medium",
             "name": "Dia 16",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-16T15:00:00.000Z",
             "estimatedFinishAt": "2026-09-16T16:00:00.000Z",
             "longRunning": false,
@@ -233,6 +278,11 @@
             "priority": "medium",
             "name": "Dia 21 tarde",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-21T19:00:00.000Z",
             "estimatedFinishAt": "2026-09-21T20:00:00.000Z",
             "longRunning": false,
@@ -251,6 +301,11 @@
             "priority": "medium",
             "name": "Atravessa o 21",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-22T02:00:00.000Z",
             "estimatedFinishAt": "2026-09-22T04:00:00.000Z",
             "longRunning": false,
@@ -269,6 +324,11 @@
             "priority": "medium",
             "name": "Dia 22",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-22T12:00:00.000Z",
             "estimatedFinishAt": "2026-09-22T13:00:00.000Z",
             "longRunning": false,
@@ -287,6 +347,11 @@
             "priority": "medium",
             "name": "Dia 28 noite",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-29T01:00:00.000Z",
             "estimatedFinishAt": "2026-09-29T02:00:00.000Z",
             "longRunning": false,
@@ -305,6 +370,11 @@
             "priority": "medium",
             "name": "Projeto longo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T15:00:00.000Z",
             "estimatedFinishAt": "2026-11-30T15:00:00.000Z",
             "longRunning": true,
@@ -380,6 +450,11 @@
             "priority": "medium",
             "name": "Dia 7",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-07T11:00:00.000Z",
             "estimatedFinishAt": "2026-09-07T12:00:00.000Z",
             "longRunning": false,
@@ -398,6 +473,11 @@
             "priority": "medium",
             "name": "Dia 10",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-10T18:00:00.000Z",
             "estimatedFinishAt": "2026-09-10T19:00:00.000Z",
             "longRunning": false,
@@ -416,6 +496,11 @@
             "priority": "medium",
             "name": "Atravessa o 13",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T02:00:00.000Z",
             "estimatedFinishAt": "2026-09-14T04:00:00.000Z",
             "longRunning": false,
@@ -434,6 +519,11 @@
             "priority": "medium",
             "name": "Dia 14 cedo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T10:00:00.000Z",
             "estimatedFinishAt": "2026-09-14T11:00:00.000Z",
             "longRunning": false,
@@ -452,6 +542,11 @@
             "priority": "medium",
             "name": "Agente no 14",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T12:00:00.000Z",
             "longRunning": false,
             "notifyOffsetsMinutes": [],
@@ -469,6 +564,11 @@
             "priority": "medium",
             "name": "Dia 16",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-16T15:00:00.000Z",
             "estimatedFinishAt": "2026-09-16T16:00:00.000Z",
             "longRunning": false,
@@ -487,6 +587,11 @@
             "priority": "medium",
             "name": "Dia 21 tarde",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-21T19:00:00.000Z",
             "estimatedFinishAt": "2026-09-21T20:00:00.000Z",
             "longRunning": false,
@@ -505,6 +610,11 @@
             "priority": "medium",
             "name": "Atravessa o 21",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-22T02:00:00.000Z",
             "estimatedFinishAt": "2026-09-22T04:00:00.000Z",
             "longRunning": false,
@@ -523,6 +633,11 @@
             "priority": "medium",
             "name": "Projeto longo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T15:00:00.000Z",
             "estimatedFinishAt": "2026-11-30T15:00:00.000Z",
             "longRunning": true,
@@ -607,6 +722,11 @@
             "priority": "medium",
             "name": "Dia 7",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-07T11:00:00.000Z",
             "estimatedFinishAt": "2026-09-07T12:00:00.000Z",
             "longRunning": false,
@@ -625,6 +745,11 @@
             "priority": "medium",
             "name": "Dia 10",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-10T18:00:00.000Z",
             "estimatedFinishAt": "2026-09-10T19:00:00.000Z",
             "longRunning": false,
@@ -643,6 +768,11 @@
             "priority": "medium",
             "name": "Atravessa o 13",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T02:00:00.000Z",
             "estimatedFinishAt": "2026-09-14T04:00:00.000Z",
             "longRunning": false,
@@ -661,6 +791,11 @@
             "priority": "medium",
             "name": "Dia 14 cedo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T10:00:00.000Z",
             "estimatedFinishAt": "2026-09-14T11:00:00.000Z",
             "longRunning": false,
@@ -679,6 +814,11 @@
             "priority": "medium",
             "name": "Agente no 14",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T12:00:00.000Z",
             "longRunning": false,
             "notifyOffsetsMinutes": [],
@@ -696,6 +836,11 @@
             "priority": "medium",
             "name": "Dia 16",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-16T15:00:00.000Z",
             "estimatedFinishAt": "2026-09-16T16:00:00.000Z",
             "longRunning": false,
@@ -714,6 +859,11 @@
             "priority": "medium",
             "name": "Dia 21 tarde",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-21T19:00:00.000Z",
             "estimatedFinishAt": "2026-09-21T20:00:00.000Z",
             "longRunning": false,
@@ -732,6 +882,11 @@
             "priority": "medium",
             "name": "Atravessa o 21",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-22T02:00:00.000Z",
             "estimatedFinishAt": "2026-09-22T04:00:00.000Z",
             "longRunning": false,
@@ -750,6 +905,11 @@
             "priority": "medium",
             "name": "Dia 22",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-22T12:00:00.000Z",
             "estimatedFinishAt": "2026-09-22T13:00:00.000Z",
             "longRunning": false,
@@ -768,6 +928,11 @@
             "priority": "medium",
             "name": "Dia 28 noite",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-29T01:00:00.000Z",
             "estimatedFinishAt": "2026-09-29T02:00:00.000Z",
             "longRunning": false,
@@ -786,6 +951,11 @@
             "priority": "medium",
             "name": "Projeto longo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T15:00:00.000Z",
             "estimatedFinishAt": "2026-11-30T15:00:00.000Z",
             "longRunning": true,
@@ -882,6 +1052,11 @@
             "priority": "medium",
             "name": "Antes de 7",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-06T13:00:00.000Z",
             "estimatedFinishAt": "2026-09-06T14:00:00.000Z",
             "longRunning": false,
@@ -900,6 +1075,11 @@
             "priority": "medium",
             "name": "Dia 7",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-07T11:00:00.000Z",
             "estimatedFinishAt": "2026-09-07T12:00:00.000Z",
             "longRunning": false,
@@ -918,6 +1098,11 @@
             "priority": "medium",
             "name": "Dia 10",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-10T18:00:00.000Z",
             "estimatedFinishAt": "2026-09-10T19:00:00.000Z",
             "longRunning": false,
@@ -936,6 +1121,11 @@
             "priority": "medium",
             "name": "Atravessa o 13",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T02:00:00.000Z",
             "estimatedFinishAt": "2026-09-14T04:00:00.000Z",
             "longRunning": false,
@@ -954,6 +1144,11 @@
             "priority": "medium",
             "name": "Dia 14 cedo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T10:00:00.000Z",
             "estimatedFinishAt": "2026-09-14T11:00:00.000Z",
             "longRunning": false,
@@ -972,6 +1167,11 @@
             "priority": "medium",
             "name": "Agente no 14",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T12:00:00.000Z",
             "longRunning": false,
             "notifyOffsetsMinutes": [],
@@ -989,6 +1189,11 @@
             "priority": "medium",
             "name": "Dia 16",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-16T15:00:00.000Z",
             "estimatedFinishAt": "2026-09-16T16:00:00.000Z",
             "longRunning": false,
@@ -1007,6 +1212,11 @@
             "priority": "medium",
             "name": "Dia 21 tarde",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-21T19:00:00.000Z",
             "estimatedFinishAt": "2026-09-21T20:00:00.000Z",
             "longRunning": false,
@@ -1025,6 +1235,11 @@
             "priority": "medium",
             "name": "Atravessa o 21",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-22T02:00:00.000Z",
             "estimatedFinishAt": "2026-09-22T04:00:00.000Z",
             "longRunning": false,
@@ -1043,6 +1258,11 @@
             "priority": "medium",
             "name": "Projeto longo",
             "description": "",
+            "project": {
+              "id": "project-personal",
+              "name": "personal",
+              "personal": true
+            },
             "startedAt": "2026-09-14T15:00:00.000Z",
             "estimatedFinishAt": "2026-11-30T15:00:00.000Z",
             "longRunning": true,

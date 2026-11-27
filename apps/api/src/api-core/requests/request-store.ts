@@ -1,5 +1,6 @@
 import type {
   AgentRequestKind,
+  ProjectDto,
   AgentTraceDto,
   ModelSelection,
   RequestEditEntityType,
@@ -88,6 +89,8 @@ export interface RequestRecord {
   status: RequestStatus;
   /** O nome da tarefa: o inicio do que o usuario pediu. */
   title: string;
+  /** O projeto do pedido. */
+  project: ProjectDto;
   /** O que o usuario escreveu ou falou, inteiro. */
   prompt: string;
   context?: RequestScreenContext;

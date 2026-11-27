@@ -1,4 +1,4 @@
-import type { Artifact, Task, Recurrence } from "../../domain";
+import type { Artifact, ProjectRef, Task, Recurrence } from "../../domain";
 import type { TaskCard, TaskRequestLink } from "../../domain/ports";
 import type { ArtifactType, TaskCardDto, TaskDto, TaskRecurrenceDto } from "@repo/contracts";
 import { toArtifactDto } from "./artifact.dto";
@@ -14,7 +14,7 @@ function recurrenceOf(task: Task, recurrence: Recurrence | undefined): TaskRecur
 }
 
 /** O cartao da agenda e da lista de tarefas: o dado como esta gravado, sem rotulos. */
-export function toTaskCardDto({ task, artifactTypes, recurrence }: TaskCard): TaskCardDto {
+export function toTaskCardDto({ task, project, artifactTypes, recurrence }: TaskCard): TaskCardDto {
   const series = recurrenceOf(task, recurrence);
   return {
     id: task.id,
@@ -24,6 +24,7 @@ export function toTaskCardDto({ task, artifactTypes, recurrence }: TaskCard): Ta
     priority: task.priority,
     name: task.name,
     description: task.description,
+    project: { id: project.id, name: project.name, personal: project.personal },
     ...(task.location ? { location: task.location } : {}),
     startedAt: task.startedAt?.toISOString(),
     estimatedFinishAt: task.estimatedFinishAt?.toISOString(),
@@ -46,6 +47,7 @@ export function toTaskCardDto({ task, artifactTypes, recurrence }: TaskCard): Ta
  */
 export function toTaskDto(
   task: Task,
+  project: ProjectRef,
   artifacts: readonly Artifact[] = [],
   recurrence?: Recurrence,
   requests: readonly TaskRequestLink[] = [],
@@ -56,7 +58,7 @@ export function toTaskDto(
     return artifact ? [{ link, artifact }] : [];
   });
   return {
-    ...toTaskCardDto({ task, artifactTypes: linked.map(({ artifact }) => artifact.type), recurrence }),
+    ...toTaskCardDto({ task, project, artifactTypes: linked.map(({ artifact }) => artifact.type), recurrence }),
     artifacts: linked.map(({ link, artifact }) => ({
       relation: link.relation,
       fromRecurrence: link.fromRecurrence,

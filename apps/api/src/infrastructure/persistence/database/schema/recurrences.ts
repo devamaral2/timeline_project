@@ -13,6 +13,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { projects } from "./projects";
 import { RECURRENCE_FREQS, sqlList } from "./sets";
 
 /**
@@ -29,6 +30,10 @@ export const recurrences = pgTable(
     id: char("id", { length: 26 }).primaryKey(),
     revision: integer("revision").notNull().default(1),
     userId: text("user_id").notNull(),
+    // As ocorrencias ficam no projeto da serie. Sem `cascade`.
+    projectId: char("project_id", { length: 26 })
+      .notNull()
+      .references(() => projects.id),
     freq: text("freq", { enum: RECURRENCE_FREQS }).notNull(),
     // `interval` e palavra reservada do Postgres.
     intervalCount: smallint("interval_count").notNull().default(1),

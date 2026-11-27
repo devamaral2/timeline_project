@@ -2,6 +2,7 @@ import { isOpenAgentStatus } from "@repo/contracts";
 import type { ModelOptionsDto, ModelSelection, RequestDto } from "@repo/contracts";
 import { modelOptionsSchema, modelSelectionSchema, requestSchema } from "@repo/contracts/schemas";
 import { z } from "zod";
+import { FAKE_PERSONAL_PROJECT } from "./projects";
 import type { FakeApi, FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 
 /**
@@ -141,6 +142,7 @@ export function requestFixture(overrides: Partial<RequestDto> & { id: string }):
     route: "steps",
     status: "queued",
     title: "Pedido",
+    project: FAKE_PERSONAL_PROJECT,
     createdAt: "2026-11-14T09:41:00-03:00",
     updatedAt: "2026-11-14T09:41:00-03:00",
     steps: [],
@@ -213,6 +215,7 @@ function accept(
     route: fields.route,
     status: "queued",
     title: titleOf(fields.text ?? ""),
+    project: FAKE_PERSONAL_PROJECT,
     sessionId: fields.sessionId,
     createdAt: now,
     updatedAt: now,

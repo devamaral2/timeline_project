@@ -10,6 +10,7 @@ import {
 } from "../../../../domain/index";
 import type { TaskRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema/index";
+import { resolveProjectId } from "../../projects/resolve-project";
 import { writeArtifacts } from "../../artifacts/repositories/postgres-artifact.repository";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
@@ -41,12 +42,17 @@ async function insertChildren(tx: Tx, task: Task): Promise<void> {
  * resto nem e tentado, porque apontaria para uma tarefa que nao entrou.
  */
 export async function insertTaskAggregate(tx: Tx, task: Task, artifacts?: ArtifactWrites): Promise<boolean> {
+  const projectId = await resolveProjectId(tx, {
+    userId: task.userId,
+    recurrenceId: task.occurrence?.recurrenceId,
+  });
   const inserted = await tx
     .insert(schema.tasks)
     .values({
       id: task.id,
       revision: task.revision,
       userId: task.userId,
+      projectId,
       actor: task.actor,
       kind: task.kind,
       status: task.status ?? null,

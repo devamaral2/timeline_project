@@ -8,6 +8,11 @@
       "priority": "medium",
       "name": "Reunião de planejamento",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T12:00:00.000Z",
       "estimatedFinishAt": "2026-09-14T12:50:00.000Z",
       "longRunning": false,
@@ -29,6 +34,11 @@
       "priority": "medium",
       "name": "Almoço",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T15:00:00.000Z",
       "estimatedFinishAt": "2026-09-14T16:30:00.000Z",
       "longRunning": false,
@@ -49,6 +59,11 @@
       "priority": "medium",
       "name": "Buscar passagens",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T14:48:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -66,6 +81,11 @@
       "priority": "medium",
       "name": "Montar relatório",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T14:57:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -83,6 +103,11 @@
       "priority": "medium",
       "name": "Qual hotel prefere?",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-14T13:00:00.000Z",
       "longRunning": false,
       "notifyOffsetsMinutes": [],
@@ -100,6 +125,11 @@
       "priority": "medium",
       "name": "Dormir",
       "description": "",
+      "project": {
+        "id": "project-personal",
+        "name": "personal",
+        "personal": true
+      },
       "startedAt": "2026-09-15T01:00:00.000Z",
       "estimatedFinishAt": "2026-09-15T09:00:00.000Z",
       "longRunning": false,

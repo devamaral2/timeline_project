@@ -7,6 +7,11 @@
     "priority": "medium",
     "name": "Projeto do trimestre",
     "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
     "longRunning": false,
     "notifyOffsetsMinutes": [],
     "tags": [],

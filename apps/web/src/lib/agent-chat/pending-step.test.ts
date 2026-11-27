@@ -10,6 +10,7 @@ function process(steps: RequestDto["steps"]): AgentChatMessage {
     id: "m1-process", role: "process",
     request: {
       id: "r1", kind: "request", route: "steps", status: "running", title: "Criar",
+      project: { id: "project-1", name: "personal", personal: true },
       createdAt: "2026-11-14T12:00:00.000Z", updatedAt: "2026-11-14T12:00:01.000Z", steps, entities: [],
     },
   };

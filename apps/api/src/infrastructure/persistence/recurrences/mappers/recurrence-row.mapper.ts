@@ -31,7 +31,8 @@ export function mapRecurrenceRow(row: RecurrenceRow): Recurrence {
   });
 }
 
-export function recurrenceColumnsOf(recurrence: Recurrence): RecurrenceInsert {
+/** As colunas da regra. O projeto nao e da regra: quem grava resolve (`resolveProjectId`). */
+export function recurrenceColumnsOf(recurrence: Recurrence): Omit<RecurrenceInsert, "projectId"> {
   const { rule } = recurrence;
   return {
     id: recurrence.id,

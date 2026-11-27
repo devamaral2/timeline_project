@@ -4,6 +4,11 @@
   "route": "steps",
   "status": "queued",
   "title": "Preparar a viagem",
+  "project": {
+    "id": "project-personal",
+    "name": "personal",
+    "personal": true
+  },
   "createdAt": "2026-09-14T15:30:00.000Z",
   "updatedAt": "2026-09-14T15:30:05.000Z",
   "text": "Preparar a mala",
