@@ -110,7 +110,10 @@ class ExecutionDrawerViewModelTest {
             assertEquals(listOf("run-newest", "run-preparing", "run-mid", "run-old", "run-nostart"), viewModel.ids())
             val url = backend.requestsTo("GET", listPath).first().requestUrl!!
             assertEquals("agent", url.queryParameter("actor"))
-            assertEquals(setOf("preparing", "queued", "starting", "running", "awaiting_transcription"), url.queryParameter("status")!!.split(",").toSet())
+            assertEquals(
+                setOf("preparing", "queued", "starting", "running", "awaiting_transcription"),
+                url.queryParameter("status")!!.split(",").toSet(),
+            )
         }
 
     @Test

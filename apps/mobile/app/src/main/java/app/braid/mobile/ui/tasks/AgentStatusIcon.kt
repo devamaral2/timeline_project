@@ -319,7 +319,12 @@ private fun DrawScope.drawInside(
     when (shape) {
         is AgentIconShape.Dot -> drawCircle(color, shape.r, Offset(shape.cx, shape.cy), style = Fill)
         is AgentIconShape.Hollow ->
-            drawCircle(color, shape.r, Offset(shape.cx, shape.cy), style = Stroke(width = STROKE, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawCircle(
+                color,
+                shape.r,
+                Offset(shape.cx, shape.cy),
+                style = Stroke(width = STROKE, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
         is AgentIconShape.Pulse ->
             drawRoundRect(
                 color.copy(alpha = pulseAlpha),

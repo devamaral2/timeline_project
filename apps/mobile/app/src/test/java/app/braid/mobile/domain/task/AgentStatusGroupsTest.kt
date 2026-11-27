@@ -60,8 +60,8 @@ class AgentStatusGroupsTest {
         val moving = Groups(open = true, inProgress = true, final = false, success = false)
         val ended = Groups(open = false, inProgress = false, final = true, success = false)
         for (
-            status in
-            listOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running, TaskStatus.AwaitingTranscription)
+        status in
+        listOf(TaskStatus.Preparing, TaskStatus.Queued, TaskStatus.Starting, TaskStatus.Running, TaskStatus.AwaitingTranscription)
         ) {
             assertEquals("$status", moving, groupsOf(status))
         }
