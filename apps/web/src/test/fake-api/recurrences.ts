@@ -6,6 +6,7 @@ import {
 } from "@repo/contracts/schemas";
 import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
+import { fakeProjectById } from "./projects";
 
 /**
  * Área de séries: lista, leitura, criação, edição e remoção. A regra é conferida
@@ -111,6 +112,8 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
   const { template, ...rule } = request.body as CreateRecurrenceInput;
   const checked = checkedRule(rule);
   if (!checked) return { status: 400 };
+  // O projeto do modelo tem de existir, como na API.
+  if (typeof template.projectId === "string" && !fakeProjectById(store, template.projectId)) return { status: 404 };
   const id = store.nextId("rec");
   const now = new Date().toISOString();
   table(store).set(id, recurrenceSchema.parse({ ...checked, id, template, revision: 1, createdAt: now, updatedAt: now }));
@@ -131,6 +134,7 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
 
   const checked = checkedRule({ ...ruleOf(current), ...patch });
   if (!checked) return { status: 400 };
+  if (typeof template?.projectId === "string" && !fakeProjectById(store, template.projectId)) return { status: 404 };
   table(store).set(
     current.id,
     recurrenceSchema.parse({

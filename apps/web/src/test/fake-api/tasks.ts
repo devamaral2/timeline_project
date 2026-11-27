@@ -10,7 +10,7 @@ import {
 } from "@repo/contracts/schemas";
 import { z } from "zod";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
-import { FAKE_PERSONAL_PROJECT } from "./projects";
+import { FAKE_PERSONAL_PROJECT, fakeProjectById } from "./projects";
 import { type ArtifactLink, type TaskArtifactEntry, artifactsOfTask, relinkTaskArtifacts } from "./artifacts";
 
 /** Área de tarefas: agenda, lista acompanhada, tarefa, hierarquia (tarefa principal e subtarefas) e tags. */
@@ -152,6 +152,9 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
   // A hierarquia que a API recusa (ponta que não existe, ciclo) é recusada antes de criar qualquer coisa.
   const plan = planHierarchy(store, NEW_TASK, [], { parentTaskId: input.parentTaskId, subtaskIds: input.subtaskIds });
   if ("status" in plan) return plan;
+  // O projeto escolhido tem de existir (e ser do usuário: a API falsa só tem um usuário); sem escolha, é o `personal`.
+  const project = input.projectId === undefined ? FAKE_PERSONAL_PROJECT : fakeProjectById(store, input.projectId);
+  if (!project) return { status: 404 };
   // O contador não sabe das tarefas semeadas: pula os ids já usados, para a nova não sobrescrever uma delas.
   let id = store.nextId("ev");
   while (table(store).has(id)) id = store.nextId("ev");
@@ -163,7 +166,7 @@ function create(request: FakeRequest, store: FakeStore): FakeResult {
     priority: input.priority ?? "medium",
     name: input.name ?? "",
     description: input.description ?? "",
-    project: FAKE_PERSONAL_PROJECT,
+    project,
     // So o local informado entra na tarefa.
     ...(input.location?.trim() ? { location: input.location.trim() } : {}),
     startedAt: input.startedAt,
@@ -214,7 +217,12 @@ function update(request: FakeRequest, store: FakeStore): FakeResult {
     if (!relinkTaskArtifacts(store, task.id, entries as TaskArtifactEntry[])) return { status: 404 };
   }
 
-  const next: Record<string, unknown> = { ...task };
+  // Ausente não muda o projeto; `null` devolve a tarefa a `personal`; um id precisa existir.
+  const projectId = input.projectId as string | null | undefined;
+  const project = projectId === undefined ? task.project : projectId === null ? FAKE_PERSONAL_PROJECT : fakeProjectById(store, projectId);
+  if (!project) return { status: 404 };
+
+  const next: Record<string, unknown> = { ...task, project };
   for (const key of EDITABLE_KEYS) {
     if (!(key in input)) continue;
     const value = input[key];

@@ -7,6 +7,7 @@ export type * from "./tasks/ports/task-card-query";
 export type * from "./tasks/ports/task-request-link-query";
 export type * from "./tasks/ports/tag-repository";
 export type * from "./projects/ports/project-query";
+export type * from "./projects/ports/project-repository";
 export type * from "./artifacts/ports/artifact-repository";
 export type * from "./artifacts/ports/artifact-task-link-query";
 export type * from "./artifacts/ports/food-generation-repository";

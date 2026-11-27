@@ -17,7 +17,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "now": "2026-09-14T15:30:45.123Z",
     "input": {
@@ -51,7 +52,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "now": "2026-09-14T15:30:45.123Z",
     "input": {
@@ -91,7 +93,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "now": "2026-09-14T15:30:45.123Z",
     "input": {
@@ -121,7 +124,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "now": "2026-09-14T15:30:45.123Z",
     "input": {
@@ -152,7 +156,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "now": "2026-09-14T15:30:45.123Z",
     "input": {

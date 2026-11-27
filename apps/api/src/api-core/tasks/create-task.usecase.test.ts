@@ -661,3 +661,30 @@ describe("location", () => {
     expect((await kit.taskRepository.findById(taskId))?.location).toBe("Parque Ibirapuera");
   });
 });
+
+describe("project", () => {
+  test("a task created with a projectId is prepared and saved in that project", async () => {
+    const kit = setup();
+
+    const { taskId } = await kit.createTask.execute({ name: "Escrever", projectId: "project-1" }, actor);
+
+    expect((await kit.taskRepository.findById(taskId))?.projectId).toBe("project-1");
+    expect(kit.batchWriter.commits[0]?.tasks).toMatchObject([{ op: "create", entity: { projectId: "project-1" } }]);
+  });
+
+  test("without a projectId the task carries none, so the writer resolves personal", async () => {
+    const kit = setup();
+
+    const { taskId } = await kit.createTask.execute({ name: "Escrever" }, actor);
+
+    expect((await kit.taskRepository.findById(taskId))?.projectId).toBeUndefined();
+  });
+
+  test("an occurrence rehearsal keeps the project the template carries", async () => {
+    const kit = setup();
+
+    const prepared = await kit.createTask.prepare({ name: "Correr", projectId: "project-1" }, actor);
+
+    expect(prepared.task.projectId).toBe("project-1");
+  });
+});

@@ -10,6 +10,7 @@ import {
 import {
   assertAgendaCursor,
   assertArtifactRequest,
+  assertProjectFields,
   assertTaskFields,
   assertExpectedRevision,
   assertRecurrenceTemplate,
@@ -103,6 +104,15 @@ describe("assertTaskFields", () => {
     expect(editing({ parentTaskId: null })).not.toThrow();
     expect(creating({ parentTaskId: ["p1"] })).toThrow("Invalid parentTaskId");
     expect(editing({ parentTaskId: 1 })).toThrow("Invalid parentTaskId");
+  });
+
+  test("projectId is a project id, and only an edit may send null to go back to personal", () => {
+    expect(creating({ projectId: "p1" })).not.toThrow();
+    expect(editing({ projectId: "p1" })).not.toThrow();
+    expect(editing({ projectId: null })).not.toThrow();
+    expect(creating({ projectId: null })).toThrow("Invalid projectId");
+    expect(creating({ projectId: 1 })).toThrow("Invalid projectId");
+    expect(editing({ projectId: ["p1"] })).toThrow("Invalid projectId");
   });
 
   test("artifacts is a list", () => {
@@ -275,5 +285,18 @@ describe("the fields each body knows come from the contract schemas", () => {
   test("the PATCH of an artifact needs nothing besides what the body carries: the id comes in the path", () => {
     expect(() => assertArtifactRequest({ name: "Novo nome" } as never, false)).not.toThrow();
     expect(() => assertArtifactRequest({ expectedRevision: 3, tags: [] } as never, false)).not.toThrow();
+  });
+});
+
+describe("assertProjectFields", () => {
+  test("accepts the name and nothing else", () => {
+    expect(() => assertProjectFields({ name: "braid" })).not.toThrow();
+    expect(() => assertProjectFields({ name: "braid", personal: true })).toThrow("Invalid field personal");
+  });
+
+  test("refuses a body that is not an object", () => {
+    for (const body of [undefined, null, "braid", ["braid"]]) {
+      expect(() => assertProjectFields(body as never), String(body)).toThrow("Invalid body");
+    }
   });
 });

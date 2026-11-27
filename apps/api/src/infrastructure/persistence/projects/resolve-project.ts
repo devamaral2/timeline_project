@@ -36,8 +36,11 @@ export async function ensurePersonalProject(tx: Tx, userId: string): Promise<str
  */
 export interface ProjectResolutionInput {
   userId: string;
-  /** 1. O projeto que veio na entrada: precisa ser do usuario, senao `ProjectNotFoundError`. */
-  projectId?: string;
+  /**
+   * 1. O projeto que veio na entrada: precisa ser do usuario, senao `ProjectNotFoundError`. `null` pede o `personal`
+   * de proposito e vale ate para a ocorrencia de uma serie de outro projeto (a edicao que devolve a tarefa a `personal`).
+   */
+  projectId?: string | null;
   /** 2 e 3. O pedido de que a tarefa e passo, ou que a cria pela rota por passos: ela fica no projeto dele. */
   requestId?: string;
   /** 4. O primeiro pedido da sessao que o pedido continua: fica no projeto dele. */
@@ -67,6 +70,7 @@ async function projectOfTask(tx: Tx, userId: string, taskId: string): Promise<st
  * adiante, e o que sobra cai em `personal`.
  */
 export async function resolveProjectId(tx: Tx, input: ProjectResolutionInput): Promise<string> {
+  if (input.projectId === null) return ensurePersonalProject(tx, input.userId);
   if (input.projectId) {
     const [owned] = await tx
       .select({ id: schema.projects.id })
@@ -88,3 +92,4 @@ export async function resolveProjectId(tx: Tx, input: ProjectResolutionInput): P
   }
   return ensurePersonalProject(tx, input.userId);
 }
+

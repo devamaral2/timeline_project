@@ -25,7 +25,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -77,7 +78,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -130,7 +132,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -173,7 +176,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -218,7 +222,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -264,7 +269,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -308,7 +314,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {
@@ -353,7 +360,8 @@
       "longRunning": false,
       "parentTaskId": null,
       "subtaskIds": [],
-      "artifacts": []
+      "artifacts": [],
+      "project": null
     },
     "timeZone": "America/Sao_Paulo",
     "input": {

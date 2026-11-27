@@ -180,6 +180,9 @@ const updateTaskArtifactSchema = z.union([
 
 export const projectSchema = z.object({ id: z.string(), name: z.string(), personal: z.boolean() }).strict();
 
+/** `POST /api/projects`: o nome do projeto novo. A API tira os espacos das pontas e confere o tamanho. */
+export const createProjectInputSchema = z.object({ name: z.string() }).strict();
+
 const taskRecurrenceSchema = z.object({
   id: z.string(), occurrenceOn: z.string(), detached: z.boolean(), rule: z.object(recurrenceRuleShape).strict(),
 }).strict();
@@ -217,13 +220,13 @@ const taskFieldsShape = {
 const locationSchema = z.string().max(300);
 
 export const createTaskInputSchema = z.object({
-  ...taskFieldsShape, location: locationSchema.optional(), kind: humanTaskKindSchema.optional(), status: humanTaskStatusSchema.optional(),
+  ...taskFieldsShape, projectId: z.string().optional(), location: locationSchema.optional(), kind: humanTaskKindSchema.optional(), status: humanTaskStatusSchema.optional(),
   startedAt: z.string().optional(), estimatedFinishAt: z.string().optional(), finishedAt: z.string().optional(),
   artifacts: z.array(createTaskArtifactSchema).optional(), artifactIds: z.array(z.string()).optional(),
 }).strict();
 
 export const updateTaskInputSchema = z.object({
-  ...taskFieldsShape, location: locationSchema.nullable().optional(), taskId: z.string(), expectedRevision: z.number().int(), kind: humanTaskKindSchema.optional(),
+  ...taskFieldsShape, projectId: z.string().nullable().optional(), location: locationSchema.nullable().optional(), taskId: z.string(), expectedRevision: z.number().int(), kind: humanTaskKindSchema.optional(),
   status: humanTaskStatusSchema.nullable().optional(), startedAt: z.string().nullable().optional(),
   estimatedFinishAt: z.string().nullable().optional(), finishedAt: z.string().nullable().optional(),
   artifacts: z.array(updateTaskArtifactSchema).optional(),

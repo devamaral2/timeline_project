@@ -14,7 +14,9 @@ import {
   ArtifactRevisionConflictError,
   ArtifactValidationError,
   EntityBatchConflictError,
+  ProjectNameTakenError,
   ProjectNotFoundError,
+  ProjectValidationError,
   TaskNotFoundError,
   TaskOwnershipError,
   TaskRevisionConflictError,
@@ -66,11 +68,13 @@ export class DomainExceptionFilter implements ExceptionFilter {
     if (exception instanceof AgentTargetForbiddenError) return HttpStatus.FORBIDDEN;
     if (exception instanceof AgentLimitReachedError) return HttpStatus.UNPROCESSABLE_ENTITY;
     if (exception instanceof EntityBatchConflictError) return HttpStatus.CONFLICT;
-    if (exception instanceof ProjectNotFoundError) return HttpStatus.NOT_FOUND;
     if (exception instanceof ArtifactValidationError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof ArtifactOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof ArtifactNotFoundError) return HttpStatus.NOT_FOUND;
     if (exception instanceof ArtifactRevisionConflictError) return HttpStatus.CONFLICT;
+    if (exception instanceof ProjectValidationError) return HttpStatus.BAD_REQUEST;
+    if (exception instanceof ProjectNameTakenError) return HttpStatus.CONFLICT;
+    if (exception instanceof ProjectNotFoundError) return HttpStatus.NOT_FOUND;
     if (exception instanceof TaskValidationError) return HttpStatus.BAD_REQUEST;
     if (exception instanceof TaskOwnershipError) return HttpStatus.FORBIDDEN;
     if (exception instanceof TaskNotFoundError) return HttpStatus.NOT_FOUND;

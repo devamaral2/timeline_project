@@ -247,3 +247,21 @@ test("a agent task cannot be edited", async () => {
     "A agent task cannot be edited",
   );
 });
+
+test("a wrong revision is a conflict even when only the project changes", async () => {
+  const { useCase } = setup({ tasks: [meeting({ projectId: "project-1" })] });
+
+  await expect(useCase.execute({ taskId: "task-1", expectedRevision: 5, projectId: "project-2" }, actor)).rejects.toBeInstanceOf(
+    TaskRevisionConflictError,
+  );
+});
+
+test("swaps the project and null puts the task back in personal", async () => {
+  const { useCase, taskRepository } = setup({ tasks: [meeting({ projectId: "project-1" })] });
+
+  await useCase.execute({ taskId: "task-1", expectedRevision: 1, projectId: "project-2" }, actor);
+  expect(await taskRepository.findById("task-1")).toMatchObject({ projectId: "project-2", revision: 2 });
+
+  await useCase.execute({ taskId: "task-1", expectedRevision: 2, projectId: null }, actor);
+  expect((await taskRepository.findById("task-1"))?.projectId).toBeNull();
+});

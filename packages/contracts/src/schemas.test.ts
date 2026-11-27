@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { artifactSchema, createTaskInputSchema, projectSchema, requestSchema, taskCardSchema, updateTaskInputSchema } from "./schemas";
+import { artifactSchema, createProjectInputSchema, createRecurrenceInputSchema, createTaskInputSchema, projectSchema, requestSchema, taskCardSchema, updateTaskInputSchema } from "./schemas";
 
 const food = {
   description: "arroz", items: [],
@@ -89,4 +89,22 @@ test("a request carries its project, and a request without one is refused", () =
   expect(requestSchema.parse(request)).toEqual(request);
   const { project: _project, ...withoutProject } = request;
   expect(requestSchema.safeParse(withoutProject).success).toBe(false);
+});
+
+test("the task input schemas take the project: a string on create, a string or null on update", () => {
+  expect(createTaskInputSchema.safeParse({ projectId: "p1" }).success).toBe(true);
+  expect(createTaskInputSchema.safeParse({ projectId: null }).success).toBe(false);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, projectId: "p1" }).success).toBe(true);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, projectId: null }).success).toBe(true);
+  expect(updateTaskInputSchema.safeParse({ taskId: "t1", expectedRevision: 1, projectId: 3 }).success).toBe(false);
+});
+
+test("the series template takes the project of the series", () => {
+  expect(createRecurrenceInputSchema.shape.template.safeParse({ name: "Correr", projectId: "p1" }).success).toBe(true);
+});
+
+test("the new project takes only a name", () => {
+  expect(createProjectInputSchema.safeParse({ name: "braid" }).success).toBe(true);
+  expect(createProjectInputSchema.safeParse({ name: "braid", personal: true }).success).toBe(false);
+  expect(createProjectInputSchema.safeParse({}).success).toBe(false);
 });
