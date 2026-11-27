@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import type { ArtifactDto } from "@repo/contracts";
+import { isFreeTextArtifact } from "@repo/contracts/artifact-types";
 import { ArtifactEditView } from "@/components/artifact-edit/ArtifactEditView";
 import { BackButton, DetailFrame, DetailMessage, DetailNav } from "@/components/detail/detail-parts";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
@@ -58,7 +59,7 @@ export function EditNoteRoute({ userId, noteId }: { userId: string; noteId: stri
 
   if (failed) return frame(<DetailMessage alert>Não foi possível carregar o artefato. Tente novamente.</DetailMessage>);
   if (!note) return frame(<DetailMessage>Carregando artefato…</DetailMessage>);
-  if (note.type !== "text" || note.global) return frame(<DetailMessage alert>Este artefato não se edita aqui.</DetailMessage>);
+  if (!isFreeTextArtifact(note) || note.global) return frame(<DetailMessage alert>Este artefato não se edita aqui.</DetailMessage>);
 
   return <ArtifactEditView existing={note} onSaved={back} onLeave={back} />;
 }

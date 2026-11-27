@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.request
 
 import app.braid.mobile.domain.artifact.ArtifactType
+import app.braid.mobile.domain.artifact.isFreeText
 
 /*
  * A edição da entidade aberta pela IA (ADR 0006): port de `entity-edit-target.ts` do web. [code] é o `entityType` que
@@ -29,14 +30,16 @@ fun editEntityTypeOfArtifact(
     global: Boolean,
 ): EditEntityType? {
     if (global) return null
+    if (type.isFreeText) return EditEntityType.Text
     return when (type) {
-        ArtifactType.Text -> EditEntityType.Text
         ArtifactType.Food -> EditEntityType.Food
         ArtifactType.Sleep -> EditEntityType.Sleep
         ArtifactType.Training -> EditEntityType.Training
         ArtifactType.Skill -> EditEntityType.Skill
         ArtifactType.Agent -> EditEntityType.Agent
         ArtifactType.Router, ArtifactType.Workout -> null
+        // Os de texto livre já saíram acima; o ramo fica para o `when` seguir completo e o compilador apontar um tipo novo.
+        ArtifactType.Text -> EditEntityType.Text
     }
 }
 

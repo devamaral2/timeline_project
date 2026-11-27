@@ -5,12 +5,13 @@ import {
   updateArtifactRequestSchema,
   updateTaskInputSchema,
 } from "@repo/contracts/schemas";
+import { FREE_TEXT_ARTIFACT_TYPES } from "@repo/contracts/artifact-types";
 import type { ZodType } from "zod";
 import { HUMAN_KINDS, HUMAN_STATUSES, PRIORITIES, isNotificationOffsetMinutes } from "../domain";
 import { decodeAgendaCursor } from "../infrastructure/persistence";
 
 /** Os tipos de artefato que o usuario cria e edita. Os demais sao do servidor. */
-const EDITABLE_ARTIFACT_TYPES = ["text", "food", "sleep", "training"];
+const EDITABLE_ARTIFACT_TYPES: readonly string[] = [...FREE_TEXT_ARTIFACT_TYPES, "food", "sleep", "training"];
 
 /**
  * Os campos de um esquema do contrato: as chaves do objeto ou, numa uniao de

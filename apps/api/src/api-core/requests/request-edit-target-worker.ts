@@ -5,15 +5,20 @@ import { newOrderedId } from "../../infrastructure/persistence/requests/request-
 import { AgentFileNotFoundError, type AgentFilesService } from "../agent/config/agent-files.service";
 import { EDIT_TARGET_AGENTS } from "./request-steps";
 import type { EditTarget, RequestStore } from "./request-store";
+import { isFreeTextArtifactType } from "@repo/contracts/artifact-types";
 
 /** Por que o alvo nao pode ser editado; cada codigo tem o seu texto predefinido em `ui.json`. */
 export type TargetFailure = "not_found" | "type_mismatch" | "busy";
 
-/** O tipo de artefato que cada `entityType` de artefato exige. */
+/** O tipo de artefato que cada `entityType` de artefato exige. O alvo `artifact` vale para qualquer tipo de texto livre. */
 const ARTIFACT_TYPES: Partial<Record<RequestEditEntityType, string>> = {
-  artifact: "text", food_artifact: "food", sleep_artifact: "sleep", training_artifact: "training",
+  food_artifact: "food", sleep_artifact: "sleep", training_artifact: "training",
   skill_artifact: "skill", agent_artifact: "agent",
 };
+
+function matchesTarget(artifactType: string, entityType: RequestEditEntityType): boolean {
+  return entityType === "artifact" ? isFreeTextArtifactType(artifactType) : artifactType === ARTIFACT_TYPES[entityType];
+}
 
 const iso = (value: Date | undefined) => value?.toISOString() ?? null;
 
@@ -70,7 +75,7 @@ export class RequestEditTargetWorker {
     }
     const artifact = await artifacts.findById(id);
     if (!artifact || artifact.userId !== userId) return { failure: "not_found" };
-    if (artifact.type !== ARTIFACT_TYPES[entityType]) return { failure: "type_mismatch" };
+    if (!matchesTarget(artifact.type, entityType)) return { failure: "type_mismatch" };
     return this.artifactSnapshot(artifact, entityType);
   }
 

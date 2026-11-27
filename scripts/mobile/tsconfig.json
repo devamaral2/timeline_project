@@ -11,6 +11,7 @@
     "paths": {
       "@repo/contracts": ["../../packages/contracts/src/index.ts"],
       "@repo/contracts/youtube": ["../../packages/contracts/src/youtube.ts"],
+      "@repo/contracts/artifact-types": ["../../packages/contracts/src/artifact-types.ts"],
       "@repo/theme": ["../../packages/theme/src/index.ts"],
       "@repo/timeline": ["../../packages/timeline/src/index.ts"],
       "@/*": ["../../apps/web/src/*"]

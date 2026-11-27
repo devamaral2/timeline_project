@@ -1,6 +1,7 @@
 "use client";
 
 import type { ArtifactDto, ArtifactTaskLinkDto } from "@repo/contracts";
+import { isFreeTextArtifact } from "@repo/contracts/artifact-types";
 import { Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -75,7 +76,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
 
   const tasks = artifact.tasks ?? [];
   const dates = now ? { created: whenLabel(artifact.createdAt, now), updated: whenLabel(artifact.updatedAt, now) } : null;
-  const ownsText = artifact.type === "text" && !artifact.global;
+  const ownsText = isFreeTextArtifact(artifact) && !artifact.global;
   // Skill e agente têm o próprio campo, o pedido de edição do arquivo (`AgentFileEditBar`, dentro do conteúdo).
   const editType = artifact.type === "skill" || artifact.type === "agent" ? null : editEntityTypeOfArtifact(artifact);
 
