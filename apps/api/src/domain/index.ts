@@ -10,6 +10,7 @@ export * from "./tasks/types/notification-offset-minutes";
 export * from "./tasks/errors/task.errors";
 
 export type * from "./projects/types/project";
+export * from "./projects/errors/project.errors";
 
 export * from "./artifacts/entities/artifact.entity";
 export * from "./artifacts/value-objects/artifact-id";

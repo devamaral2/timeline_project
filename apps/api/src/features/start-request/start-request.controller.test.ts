@@ -29,6 +29,14 @@ describe("POST /api/requests", () => {
     expect(start).toHaveBeenCalledWith({ ...body, model }, owner);
   });
 
+  test("aceita o projectId opcional e recusa um que nao e id", async () => {
+    const { start, controller } = setup();
+    const projectId = "01ARZ3NDEKTSV4RRFFQ69G5FAV";
+    await controller.start({ ...body, projectId }, owner);
+    expect(start).toHaveBeenCalledWith({ ...body, projectId }, owner);
+    await expect(controller.start({ ...body, projectId: "braid" }, owner)).rejects.toBeInstanceOf(InvalidInputError);
+  });
+
   test.each([
     ["de um provedor sem chave", { provider: "openai", model: "gpt-6.2-sol", effort: "low" }, { ANTHROPIC_API_KEY: "sk-test", OPENAI_API_KEY: "" }],
     ["fora da lista do provedor", { provider: "anthropic", model: "claude-3", effort: "low" }, { ANTHROPIC_API_KEY: "sk-test" }],

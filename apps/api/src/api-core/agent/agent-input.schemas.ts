@@ -18,3 +18,6 @@ export const requestIdSchema = z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/);
 
 /** Estavel por mensagem, escolhido pelo cliente: reenviar o mesmo id devolve o pedido ja aceito. */
 export const clientMessageIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
+
+/** O id de um projeto (ULID). */
+export const projectIdSchema = z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/);

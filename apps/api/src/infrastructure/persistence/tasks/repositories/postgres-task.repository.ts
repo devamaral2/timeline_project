@@ -10,7 +10,7 @@ import {
 } from "../../../../domain/index";
 import type { TaskRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema/index";
-import { resolveProjectId } from "../../projects/resolve-project";
+import { resolveProjectId, type ProjectScope } from "../../projects/resolve-project";
 import { writeArtifacts } from "../../artifacts/repositories/postgres-artifact.repository";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
@@ -41,8 +41,14 @@ async function insertChildren(tx: Tx, task: Task): Promise<void> {
  * ocorrencia de um dia que a serie ja gerou: o indice unico recusa a linha e o
  * resto nem e tentado, porque apontaria para uma tarefa que nao entrou.
  */
-export async function insertTaskAggregate(tx: Tx, task: Task, artifacts?: ArtifactWrites): Promise<boolean> {
+export async function insertTaskAggregate(
+  tx: Tx,
+  task: Task,
+  artifacts?: ArtifactWrites,
+  scope?: ProjectScope,
+): Promise<boolean> {
   const projectId = await resolveProjectId(tx, {
+    ...scope,
     userId: task.userId,
     recurrenceId: task.occurrence?.recurrenceId,
   });

@@ -11,7 +11,7 @@ import {
 import type { RecurrenceRepository } from "../../../../domain/ports";
 import * as schema from "../../database/schema";
 import { writeArtifacts } from "../../artifacts/repositories/postgres-artifact.repository";
-import { resolveProjectId } from "../../projects/resolve-project";
+import { resolveProjectId, type ProjectScope } from "../../projects/resolve-project";
 import { insertTaskAggregate } from "../../tasks/repositories/postgres-task.repository";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
 import { lockUser, type Db, type Tx } from "../../shared/tx";
@@ -24,8 +24,8 @@ const errors = {
 };
 
 /** A regra. Os artefatos que o template aponta ja precisam estar gravados. */
-export async function insertRecurrenceAggregate(tx: Tx, recurrence: Recurrence): Promise<void> {
-  const projectId = await resolveProjectId(tx, { userId: recurrence.userId });
+export async function insertRecurrenceAggregate(tx: Tx, recurrence: Recurrence, scope?: ProjectScope): Promise<void> {
+  const projectId = await resolveProjectId(tx, { ...scope, userId: recurrence.userId });
   await tx.insert(schema.recurrences).values({ ...recurrenceColumnsOf(recurrence), projectId });
 }
 

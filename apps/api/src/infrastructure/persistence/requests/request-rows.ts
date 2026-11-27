@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { monotonicFactory } from "ulid";
 import type { AgentTaskKind, AgentTaskStatus, EntryKind, EntryRole } from "../../../domain";
 import * as schema from "../database/schema";
-import { resolveProjectId } from "../projects/resolve-project";
+import { resolveProjectId, type ProjectScope } from "../projects/resolve-project";
 import type { Tx } from "../shared/tx";
 
 /**
@@ -22,6 +22,8 @@ export interface NewAgentTask {
   name: string;
   /** Pequeno: a rota do pedido, o agente interno do passo, o contexto de tela. */
   data: Record<string, unknown>;
+  /** O que decide o projeto da tarefa alem do dono: o projeto pedido, o pedido de que ela e passo, a sessao, o alvo. */
+  project?: ProjectScope;
 }
 
 /** Um pedido ou um passo: tarefa de agente. Comeca agora; a conclusao vem quando ele termina. */
@@ -29,7 +31,7 @@ export async function insertAgentTask(tx: Tx, task: NewAgentTask): Promise<void>
   await tx.insert(schema.tasks).values({
     id: task.id,
     userId: task.userId,
-    projectId: await resolveProjectId(tx, { userId: task.userId }),
+    projectId: await resolveProjectId(tx, { ...task.project, userId: task.userId }),
     actor: "agent",
     kind: task.kind,
     status: task.status,
