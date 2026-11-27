@@ -1,5 +1,6 @@
 "use client";
 
+import { isCancelledAgentStatus, isOpenAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
 import type { RequestEditEntityType } from "@repo/contracts";
 import { ArrowUp, Check, Circle, LoaderCircle, X } from "lucide-react";
 import { type KeyboardEvent, useCallback, useRef, useState } from "react";
@@ -90,10 +91,10 @@ export function EntityAiEditBar({ userId, entityType, entityId, onEdited, disabl
               {steps.map((step) => (
                 <li key={step.id} data-status={step.status}>
                   <span className={styles.mark} aria-hidden>
-                    {step.status === "done" && <Check />}
-                    {(step.status === "failed" || step.status === "cancel") && <X />}
+                    {isSuccessAgentStatus(step.status) && <Check />}
+                    {(step.status === "failed" || isCancelledAgentStatus(step.status)) && <X />}
                     {step.status === "running" && <LoaderCircle data-spin />}
-                    {(step.status === "queued" || step.status === "waiting") && <Circle />}
+                    {isOpenAgentStatus(step.status) && step.status !== "running" && <Circle />}
                   </span>
                   {step.label}
                 </li>
