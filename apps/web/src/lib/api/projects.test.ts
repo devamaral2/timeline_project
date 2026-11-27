@@ -33,14 +33,14 @@ test("the others come by name, whatever the order they were created in", async (
   await createProject("zeta");
   await createProject("Alfa");
 
-  expect((await listProjects()).map((project) => project.name)).toEqual(["personal", "Alfa", "zeta"]);
+  expect((await listProjects()).map((project) => project.name)).toEqual(["diario", "Alfa", "zeta"]);
 });
 
 test("a repeated name is a conflict, with no regard to case or the spaces at the ends", async () => {
   await createProject("Braid");
 
   await expect(createProject(" braid ")).rejects.toMatchObject({ kind: "conflict", status: 409 });
-  await expect(createProject("PERSONAL")).rejects.toBeInstanceOf(ApiRequestError);
+  await expect(createProject("DIARIO")).rejects.toBeInstanceOf(ApiRequestError);
 });
 
 test.each(["", "   ", "a".repeat(61)])("an invalid name is refused as invalid input: %j", async (name) => {

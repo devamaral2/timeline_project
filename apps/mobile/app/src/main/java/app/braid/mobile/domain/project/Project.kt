@@ -7,7 +7,7 @@ data class Project(
     val personal: Boolean,
 ) {
     companion object {
-        /** O que o formulário mostra enquanto ninguém escolheu: a tarefa nasce em `personal`. A marca só depende do nome. */
-        val Personal = Project(id = "", name = "personal", personal = true)
+        /** O que o formulário mostra enquanto ninguém escolheu: a tarefa nasce em `diario`. A marca só depende do nome. */
+        val Personal = Project(id = "", name = "diario", personal = true)
     }
 }

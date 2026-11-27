@@ -69,7 +69,7 @@ test("the update schema identifies the task by taskId, not by its old name", () 
 
 const card = {
   id: "task", actor: "human", kind: "common", status: "todo", priority: "medium", name: "Ler", description: "",
-  project: { id: "project", name: "personal", personal: true }, longRunning: false, notifyOffsetsMinutes: [], tags: [],
+  project: { id: "project", name: "diario", personal: true }, longRunning: false, notifyOffsetsMinutes: [], tags: [],
   artifactTypes: [], revision: 1, createdAt: "2026-01-01", updatedAt: "2026-01-01",
 };
 
@@ -77,7 +77,7 @@ test("a task card carries its project, and a card without one is refused", () =>
   expect(taskCardSchema.parse(card)).toEqual(card);
   const { project: _project, ...withoutProject } = card;
   expect(taskCardSchema.safeParse(withoutProject).success).toBe(false);
-  expect(taskCardSchema.safeParse({ ...card, project: { id: "project", name: "personal" } }).success).toBe(false);
+  expect(taskCardSchema.safeParse({ ...card, project: { id: "project", name: "diario" } }).success).toBe(false);
   expect(projectSchema.safeParse({ ...card.project, color: "red" }).success).toBe(false);
 });
 

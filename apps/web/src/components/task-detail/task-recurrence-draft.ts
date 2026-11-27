@@ -166,7 +166,7 @@ function templateOf(form: TaskDraft): CreateRecurrenceInput["template"] {
     priority: form.priority,
     ...(form.tags.length ? { tags: form.tags } : {}),
     ...(form.reminders.length ? { notifyOffsetsMinutes: form.reminders } : {}),
-    // O projeto da série é o da tarefa que a cria, e cada ocorrência nasce nele. O `personal` leva o id dele, como qualquer outro.
+    // O projeto da série é o da tarefa que a cria, e cada ocorrência nasce nele. O `diario` leva o id dele, como qualquer outro.
     ...(form.project ? { projectId: form.project.id } : {}),
   };
 }

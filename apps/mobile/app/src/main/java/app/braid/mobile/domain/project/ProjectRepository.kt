@@ -2,7 +2,7 @@ package app.braid.mobile.domain.project
 
 /** Os projetos do usuário e a criação de um novo, pelo mesmo campo "Projeto" do formulário da tarefa. */
 interface ProjectRepository {
-    /** Os projetos do usuário (`GET /api/projects`): `personal` primeiro e os outros por nome. */
+    /** Os projetos do usuário (`GET /api/projects`): `diario` primeiro e os outros por nome. */
     suspend fun list(): List<Project>
 
     /**

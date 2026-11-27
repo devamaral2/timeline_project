@@ -11,8 +11,8 @@ export class PostgresProjectRepository implements ProjectRepository {
 
   async create(userId: string, name: string): Promise<ProjectRef> {
     return this.db.transaction(async (tx) => {
-      // A trava por usuario serializa duas criacoes do mesmo nome. O `personal` nasce antes: o nome dele tambem
-      // esta tomado, e criar "Personal" antes de ele existir faria a primeira tarefa sem projeto bater no indice unico.
+      // A trava por usuario serializa duas criacoes do mesmo nome. O `diario` nasce antes: o nome dele tambem
+      // esta tomado, e criar "Diario" antes de ele existir faria a primeira tarefa sem projeto bater no indice unico.
       await lockUser(tx, userId);
       await ensurePersonalProject(tx, userId);
 

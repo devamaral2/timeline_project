@@ -17,7 +17,7 @@ export const startHermesRequestBody = z.object({
   sessionId: requestIdSchema.optional(),
   /** Estavel por mensagem: reenviar o mesmo id devolve o pedido ja aceito, sem uma segunda mensagem ao Hermes. */
   clientMessageId: clientMessageIdSchema,
-  /** O projeto do pedido; vale sobre a sessao. Sem ele, o pedido fica no projeto do primeiro da sessao ou em `personal`. */
+  /** O projeto do pedido; vale sobre a sessao. Sem ele, o pedido fica no projeto do primeiro da sessao ou em `diario`. */
   projectId: projectIdSchema.optional(),
 });
 

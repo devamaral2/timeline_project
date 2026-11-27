@@ -11,7 +11,7 @@
       "description": "Pauta do trimestre.",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "location": "Rua Augusta, 100 - São Paulo",
@@ -44,7 +44,7 @@
       "description": "Pauta do trimestre.",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "location": "Novo endereço",
@@ -90,7 +90,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     },
@@ -117,7 +117,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }
@@ -134,7 +134,7 @@
       "description": "Pauta do trimestre.",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "location": "Rua Augusta, 100 - São Paulo",
@@ -167,7 +167,7 @@
       "description": "Pauta do trimestre.",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "location": "Novo endereço",
@@ -214,7 +214,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     },
@@ -242,7 +242,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }
@@ -259,7 +259,7 @@
       "description": "Pauta do trimestre.",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "location": "Rua Augusta, 100 - São Paulo",
@@ -292,7 +292,7 @@
       "description": "Pauta do trimestre.",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "location": "Novo endereço",
@@ -339,7 +339,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     },
@@ -367,7 +367,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }
@@ -582,7 +582,7 @@
       "description": "Pauta do trimestre.",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "location": "Rua Augusta, 100 - São Paulo",
@@ -615,7 +615,7 @@
       "description": "Pauta do trimestre.",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "location": "Rua Augusta, 100 - São Paulo",
@@ -663,7 +663,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     },
@@ -692,7 +692,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }

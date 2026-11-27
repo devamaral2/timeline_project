@@ -76,7 +76,7 @@ describe("pedido de transcricao no Postgres", () => {
 
     const projects = await selectRows(ctx.pool, "SELECT id, name, personal FROM projects WHERE user_id = $1", [USER]);
     expect(projects).toHaveLength(1);
-    expect(projects[0]).toMatchObject({ name: "personal", personal: true });
+    expect(projects[0]).toMatchObject({ name: "diario", personal: true });
     const owned = await selectRows(ctx.pool, "SELECT kind, project_id, situation FROM tasks WHERE user_id = $1 ORDER BY kind", [USER]);
     expect(owned.map((row) => row.kind)).toEqual(["common", "save_content", "save_content_with_transcription"]);
     for (const row of owned) {

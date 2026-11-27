@@ -25,7 +25,7 @@ function task(startedAt: string, estimatedFinishAt: string | null): AgendaTaskCa
     notifyOffsetsMinutes: [],
     name: "tarefa",
     description: "",
-    project: { id: "project-1", name: "personal", personal: true },
+    project: { id: "project-1", name: "diario", personal: true },
     startedAt,
     estimatedFinishAt: estimatedFinishAt ?? undefined,
     tags: [],

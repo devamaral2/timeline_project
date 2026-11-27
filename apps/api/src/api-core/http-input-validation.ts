@@ -93,7 +93,7 @@ export function assertTaskFields(body: Record<string, unknown>, editing: boolean
     throw new BadRequestException("Invalid parentTaskId");
   }
   if (body?.artifacts !== undefined && !Array.isArray(body.artifacts)) throw new BadRequestException("Invalid artifacts");
-  // Na edicao, `null` devolve a tarefa a `personal`; ausente nao muda.
+  // Na edicao, `null` devolve a tarefa a `diario`; ausente nao muda.
   if (body?.projectId !== undefined && !(editing && body.projectId === null) && typeof body.projectId !== "string") {
     throw new BadRequestException("Invalid projectId");
   }

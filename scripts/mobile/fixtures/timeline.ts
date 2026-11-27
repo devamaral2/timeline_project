@@ -52,23 +52,21 @@ const TAG_NAMES = ["saúde", "casa", "trabalho", "a", "Treino", "reunião-semana
 
 /** Os nomes de projeto dos fixtures da marca: os exemplos da spec, nomes de uma letra, com acento, com dígito e com emoji. */
 const PROJECT_NAMES = [
-  "timeline_project", "agent-skills", "t3code", "personal", "a", "7", "ágil", "órbita_ação", "meu projeto", "api.gateway",
+  "timeline_project", "agent-skills", "t3code", "diario", "a", "7", "ágil", "órbita_ação", "meu projeto", "api.gateway",
   "acme/web", "timelineProject", "--lead--", "日本語", "x1", "TP", "😀proj", "x".repeat(60),
 ];
 
-/** `personal` é o único projeto com a marca neutra; o nome dele vem sempre com o booleano ligado. */
-const projectOf = (name: string) => ({ name, personal: name === "personal" });
+/** `diario` é o único projeto com a marca neutra; o nome dele vem sempre com o booleano ligado. */
+const projectOf = (name: string) => ({ name, personal: name === "diario" });
 
 /**
- * A marca como o Android a desenha: o fundo, o texto e o contorno quando há. A cor de um projeto comum é a das tags
- * (`tagColors`, com o matiz do nome) e o texto é a cor do fundo da tela; o `personal` usa os tokens neutros do tema.
+ * A marca como o Android a desenha: as iniciais, o fundo e o texto, que é a cor do fundo da tela. O fundo de um projeto
+ * comum é a cor das tags (`tagColors`, com o matiz do nome); o do `diario` é o neutro do texto apagado.
  */
 function projectMark(project: { name: string; personal: boolean }, theme: Theme) {
-  const initials = projectInitials(project.name);
-  if (project.personal) {
-    return { initials, personal: true, background: theme.colors.muted, text: theme.colors.mutedForeground, outline: theme.colors.border };
-  }
-  return { initials, personal: false, hue: hueForTag(project.name), background: tagColors(project.name, theme).color, text: theme.colors.background };
+  const mark = { initials: projectInitials(project.name), personal: project.personal, text: theme.colors.background };
+  if (project.personal) return { ...mark, background: theme.colors.mutedForeground };
+  return { ...mark, hue: hueForTag(project.name), background: tagColors(project.name, theme).color };
 }
 
 export function timelineFixtures(): Record<string, unknown> {

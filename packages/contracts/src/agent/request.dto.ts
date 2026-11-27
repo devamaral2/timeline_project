@@ -110,7 +110,7 @@ export interface StartRequestInput {
    * vale o modelo do servidor. Um provedor sem chave ou um modelo fora da lista responde 400.
    */
   model?: ModelSelection;
-  /** O projeto do pedido: vale sobre o da sessao e precisa ser do usuario. Sem ele, vale o do primeiro pedido da sessao, ou `personal`. */
+  /** O projeto do pedido: vale sobre o da sessao e precisa ser do usuario. Sem ele, vale o do primeiro pedido da sessao, ou `diario`. */
   projectId?: string;
 }
 

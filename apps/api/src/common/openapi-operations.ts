@@ -105,7 +105,7 @@ export const documentedTags = [
   { name: "Tags", description: "Sugestão de tags já usadas." },
   { name: "Locais", description: "Busca de locais para o campo de local da tarefa." },
   { name: "Artefatos", description: "O conteúdo que as tarefas criam e usam: texto, alimento, sono e treino." },
-  { name: "Projetos", description: "Onde cada tarefa fica guardada. Toda tarefa tem um projeto; sem escolha, é o `personal`." },
+  { name: "Projetos", description: "Onde cada tarefa fica guardada. Toda tarefa tem um projeto; sem escolha, é o `diario`." },
   { name: "Séries", description: "Regras de repetição e o que cada ocorrência copia." },
   { name: "Pedidos ao agente", description: "Abrir, acompanhar e cancelar pedidos em texto ou fala." },
   {
@@ -196,7 +196,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
   "POST /api/tasks": {
     tag: "Tarefas",
     summary: "Cria uma tarefa",
-    description: "Cria uma tarefa de pessoa, com os artefatos novos ou já existentes que ela carrega. `projectId` põe a tarefa num projeto do usuário; sem ele, ela fica em `personal`.",
+    description: "Cria uma tarefa de pessoa, com os artefatos novos ou já existentes que ela carrega. `projectId` põe a tarefa num projeto do usuário; sem ele, ela fica em `diario`.",
     body: "CreateTaskInput",
     success: { status: 201, description: "A tarefa foi criada.", schema: "CreatedTask" },
     errors: { 400: invalid, 404: "Projeto não encontrado (não existe ou não é do usuário).", 409: idempotencyClash, 422: idempotencyReuse },
@@ -253,7 +253,7 @@ export const documentedOperations: Record<string, OperationDoc> = {
   "PATCH /api/tasks/{taskId}": {
     tag: "Tarefas",
     summary: "Edita uma tarefa",
-    description: "Envie só os campos que mudam, mais o `expectedRevision` lida da tarefa. `null` em `status` ou numa data apaga o valor; `null` em `projectId` devolve a tarefa a `personal`.",
+    description: "Envie só os campos que mudam, mais o `expectedRevision` lida da tarefa. `null` em `status` ou numa data apaga o valor; `null` em `projectId` devolve a tarefa a `diario`.",
     body: "UpdateTaskInput",
     success: { status: 204, description: "A tarefa foi editada." },
     errors: { 400: invalid, 404: "Tarefa ou projeto não encontrado.", 409: stale },
@@ -342,13 +342,13 @@ export const documentedOperations: Record<string, OperationDoc> = {
   "GET /api/projects": {
     tag: "Projetos",
     summary: "Lista os projetos",
-    description: "Os projetos do usuário: `personal` primeiro e os outros por nome. O `personal` nasce na primeira leitura de quem ainda não tem nenhum.",
+    description: "Os projetos do usuário: `diario` primeiro e os outros por nome. O `diario` nasce na primeira leitura de quem ainda não tem nenhum.",
     success: { status: 200, description: "Os projetos do usuário.", schema: "Project", list: true },
   },
   "POST /api/projects": {
     tag: "Projetos",
     summary: "Cria um projeto",
-    description: "O nome vale sem os espaços das pontas: de 1 a 60 caracteres, único por usuário sem distinguir maiúsculas de minúsculas (`personal` já existe para todos).",
+    description: "O nome vale sem os espaços das pontas: de 1 a 60 caracteres, único por usuário sem distinguir maiúsculas de minúsculas (`diario` já existe para todos).",
     body: "CreateProjectInput",
     success: { status: 201, description: "O projeto foi criado.", schema: "Project" },
     errors: { 400: invalid, 409: "O usuário já tem um projeto com esse nome." },

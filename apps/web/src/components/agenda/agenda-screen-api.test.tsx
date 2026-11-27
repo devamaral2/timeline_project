@@ -300,5 +300,5 @@ test("as linhas da agenda mostram a marca e o nome do projeto", async () => {
 
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(2));
   const marks = [...dayOf(TODAY).querySelectorAll("[data-project-mark]")].map((mark) => `${mark.textContent} ${mark.getAttribute("aria-label")}`);
-  expect(marks).toEqual(["TP timeline_project", "PE personal"]);
+  expect(marks).toEqual(["TP timeline_project", "D diario"]);
 });

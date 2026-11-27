@@ -3,7 +3,7 @@ import type { ProjectRepository } from "../../../domain/ports";
 import { personalProjectOf } from "./in-memory-project.query";
 
 /**
- * `ProjectRepository` sem banco: os projetos de cada usuario numa lista, com o `personal` ja ali (nos testes sem banco
+ * `ProjectRepository` sem banco: os projetos de cada usuario numa lista, com o `diario` ja ali (nos testes sem banco
  * ele nasce junto da primeira leitura). O nome repetido e conferido como o banco faz, sem distinguir maiusculas.
  */
 export class InMemoryProjectRepository implements ProjectRepository {

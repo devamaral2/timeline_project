@@ -35,7 +35,7 @@ test("a repeated name is refused whatever the case or the spaces at the ends", a
 test("personal is taken from the start: nobody makes a second one", async () => {
   const { controller } = setup();
 
-  await expect(controller.execute({ name: "Personal" }, actor)).rejects.toBeInstanceOf(ProjectNameTakenError);
+  await expect(controller.execute({ name: "Diario" }, actor)).rejects.toBeInstanceOf(ProjectNameTakenError);
 });
 
 test("the same name is free for another user", async () => {

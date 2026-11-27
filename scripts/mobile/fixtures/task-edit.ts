@@ -107,7 +107,7 @@ const occurrence = task({
   revision: 6,
 });
 
-/** Uma tarefa que já está num projeto que não é o `personal`. */
+/** Uma tarefa que já está num projeto que não é o `diario`. */
 const inProject = task({ id: "task-p", name: "Revisar o contrato", status: "todo", project: TIMELINE_PROJECT, startedAt: "2026-09-14T21:30:00.000Z", revision: 2 });
 
 /** A ocorrência da série `rec-1` quando a série mora no projeto `timeline_project` (`weeklyInProject` de `recurrence.ts`). */

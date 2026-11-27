@@ -16,13 +16,13 @@
       "args": [
         "t3code"
       ],
-      "result": "T3"
+      "result": "T"
     },
     {
       "args": [
-        "personal"
+        "diario"
       ],
-      "result": "PE"
+      "result": "D"
     },
     {
       "args": [
@@ -40,7 +40,7 @@
       "args": [
         "ágil"
       ],
-      "result": "ÁG"
+      "result": "Á"
     },
     {
       "args": [
@@ -76,37 +76,37 @@
       "args": [
         "--lead--"
       ],
-      "result": "LE"
+      "result": "L"
     },
     {
       "args": [
         "日本語"
       ],
-      "result": "日本"
+      "result": "日"
     },
     {
       "args": [
         "x1"
       ],
-      "result": "X1"
+      "result": "X"
     },
     {
       "args": [
         "TP"
       ],
-      "result": "TP"
+      "result": "T"
     },
     {
       "args": [
         "😀proj"
       ],
-      "result": "😀P"
+      "result": "😀"
     },
     {
       "args": [
         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
       ],
-      "result": "XX"
+      "result": "X"
     }
   ],
   "light": [
@@ -114,145 +114,144 @@
       "name": "timeline_project",
       "initials": "TP",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 227,
-      "background": "#227694",
-      "text": "#f1f5f6"
+      "background": "#227694"
     },
     {
       "name": "agent-skills",
       "initials": "AS",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 338,
-      "background": "#8d577e",
-      "text": "#f1f5f6"
+      "background": "#8d577e"
     },
     {
       "name": "t3code",
-      "initials": "T3",
+      "initials": "T",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 188,
-      "background": "#0b7c75",
-      "text": "#f1f5f6"
+      "background": "#0b7c75"
     },
     {
-      "name": "personal",
-      "initials": "PE",
+      "name": "diario",
+      "initials": "D",
       "personal": true,
-      "background": "#e5edf0",
-      "text": "#586a70",
-      "outline": "#d9e3e6"
+      "text": "#f1f5f6",
+      "background": "#586a70"
     },
     {
       "name": "a",
       "initials": "A",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 97,
-      "background": "#7b6c27",
-      "text": "#f1f5f6"
+      "background": "#7b6c27"
     },
     {
       "name": "7",
       "initials": "7",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 55,
-      "background": "#945d36",
-      "text": "#f1f5f6"
+      "background": "#945d36"
     },
     {
       "name": "ágil",
-      "initials": "ÁG",
+      "initials": "Á",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 241,
-      "background": "#35729b",
-      "text": "#f1f5f6"
+      "background": "#35729b"
     },
     {
       "name": "órbita_ação",
       "initials": "ÓA",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 254,
-      "background": "#456e9f",
-      "text": "#f1f5f6"
+      "background": "#456e9f"
     },
     {
       "name": "meu projeto",
       "initials": "MP",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 312,
-      "background": "#7d5c92",
-      "text": "#f1f5f6"
+      "background": "#7d5c92"
     },
     {
       "name": "api.gateway",
       "initials": "AG",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 256,
-      "background": "#486d9f",
-      "text": "#f1f5f6"
+      "background": "#486d9f"
     },
     {
       "name": "acme/web",
       "initials": "AW",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 279,
-      "background": "#61669f",
-      "text": "#f1f5f6"
+      "background": "#61669f"
     },
     {
       "name": "timelineProject",
       "initials": "TP",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 120,
-      "background": "#657334",
-      "text": "#f1f5f6"
+      "background": "#657334"
     },
     {
       "name": "--lead--",
-      "initials": "LE",
+      "initials": "L",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 108,
-      "background": "#716f2b",
-      "text": "#f1f5f6"
+      "background": "#716f2b"
     },
     {
       "name": "日本語",
-      "initials": "日本",
+      "initials": "日",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 143,
-      "background": "#4b7948",
-      "text": "#f1f5f6"
+      "background": "#4b7948"
     },
     {
       "name": "x1",
-      "initials": "X1",
+      "initials": "X",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 169,
-      "background": "#287c63",
-      "text": "#f1f5f6"
+      "background": "#287c63"
     },
     {
       "name": "TP",
-      "initials": "TP",
+      "initials": "T",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 164,
-      "background": "#2f7c5e",
-      "text": "#f1f5f6"
+      "background": "#2f7c5e"
     },
     {
       "name": "😀proj",
-      "initials": "😀P",
+      "initials": "😀",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 216,
-      "background": "#12788d",
-      "text": "#f1f5f6"
+      "background": "#12788d"
     },
     {
       "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      "initials": "XX",
+      "initials": "X",
       "personal": false,
+      "text": "#f1f5f6",
       "hue": 352,
-      "background": "#935571",
-      "text": "#f1f5f6"
+      "background": "#935571"
     }
   ],
   "dark": [
@@ -260,145 +259,144 @@
       "name": "timeline_project",
       "initials": "TP",
       "personal": false,
+      "text": "#171720",
       "hue": 227,
-      "background": "#85c9e6",
-      "text": "#171720"
+      "background": "#85c9e6"
     },
     {
       "name": "agent-skills",
       "initials": "AS",
       "personal": false,
+      "text": "#171720",
       "hue": 338,
-      "background": "#e0aad0",
-      "text": "#171720"
+      "background": "#e0aad0"
     },
     {
       "name": "t3code",
-      "initials": "T3",
+      "initials": "T",
       "personal": false,
+      "text": "#171720",
       "hue": 188,
-      "background": "#7ecfc7",
-      "text": "#171720"
+      "background": "#7ecfc7"
     },
     {
-      "name": "personal",
-      "initials": "PE",
+      "name": "diario",
+      "initials": "D",
       "personal": true,
-      "background": "#202330",
-      "text": "#a0a7cb",
-      "outline": "#323444"
+      "text": "#171720",
+      "background": "#a0a7cb"
     },
     {
       "name": "a",
       "initials": "A",
       "personal": false,
+      "text": "#171720",
       "hue": 97,
-      "background": "#ccbe82",
-      "text": "#171720"
+      "background": "#ccbe82"
     },
     {
       "name": "7",
       "initials": "7",
       "personal": false,
+      "text": "#171720",
       "hue": 55,
-      "background": "#e7b18c",
-      "text": "#171720"
+      "background": "#e7b18c"
     },
     {
       "name": "ágil",
-      "initials": "ÁG",
+      "initials": "Á",
       "personal": false,
+      "text": "#171720",
       "hue": 241,
-      "background": "#8fc5ed",
-      "text": "#171720"
+      "background": "#8fc5ed"
     },
     {
       "name": "órbita_ação",
       "initials": "ÓA",
       "personal": false,
+      "text": "#171720",
       "hue": 254,
-      "background": "#9ac1f1",
-      "text": "#171720"
+      "background": "#9ac1f1"
     },
     {
       "name": "meu projeto",
       "initials": "MP",
       "personal": false,
+      "text": "#171720",
       "hue": 312,
-      "background": "#cfafe4",
-      "text": "#171720"
+      "background": "#cfafe4"
     },
     {
       "name": "api.gateway",
       "initials": "AG",
       "personal": false,
+      "text": "#171720",
       "hue": 256,
-      "background": "#9cc0f1",
-      "text": "#171720"
+      "background": "#9cc0f1"
     },
     {
       "name": "acme/web",
       "initials": "AW",
       "personal": false,
+      "text": "#171720",
       "hue": 279,
-      "background": "#b2b9f1",
-      "text": "#171720"
+      "background": "#b2b9f1"
     },
     {
       "name": "timelineProject",
       "initials": "TP",
       "personal": false,
+      "text": "#171720",
       "hue": 120,
-      "background": "#b7c68b",
-      "text": "#171720"
+      "background": "#b7c68b"
     },
     {
       "name": "--lead--",
-      "initials": "LE",
+      "initials": "L",
       "personal": false,
+      "text": "#171720",
       "hue": 108,
-      "background": "#c2c285",
-      "text": "#171720"
+      "background": "#c2c285"
     },
     {
       "name": "日本語",
-      "initials": "日本",
+      "initials": "日",
       "personal": false,
+      "text": "#171720",
       "hue": 143,
-      "background": "#a0cc9c",
-      "text": "#171720"
+      "background": "#a0cc9c"
     },
     {
       "name": "x1",
-      "initials": "X1",
+      "initials": "X",
       "personal": false,
+      "text": "#171720",
       "hue": 169,
-      "background": "#89cfb5",
-      "text": "#171720"
+      "background": "#89cfb5"
     },
     {
       "name": "TP",
-      "initials": "TP",
+      "initials": "T",
       "personal": false,
+      "text": "#171720",
       "hue": 164,
-      "background": "#8dceb0",
-      "text": "#171720"
+      "background": "#8dceb0"
     },
     {
       "name": "😀proj",
-      "initials": "😀P",
+      "initials": "😀",
       "personal": false,
+      "text": "#171720",
       "hue": 216,
-      "background": "#7fcbdf",
-      "text": "#171720"
+      "background": "#7fcbdf"
     },
     {
       "name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      "initials": "XX",
+      "initials": "X",
       "personal": false,
+      "text": "#171720",
       "hue": 352,
-      "background": "#e7a9c3",
-      "text": "#171720"
+      "background": "#e7a9c3"
     }
   ]
 }

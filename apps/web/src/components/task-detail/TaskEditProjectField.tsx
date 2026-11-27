@@ -13,13 +13,13 @@ interface TaskEditProjectFieldProps {
   onChange: <K extends TaskDraftField>(field: K, value: TaskDraft[K]) => void;
 }
 
-/** O que o campo mostra enquanto ninguém escolheu: a tarefa nasce em `personal`. A marca só depende do nome. */
-const DEFAULT_PROJECT: ProjectDto = { id: "", name: "personal", personal: true };
+/** O que o campo mostra enquanto ninguém escolheu: a tarefa nasce em `diario`. A marca só depende do nome. */
+const DEFAULT_PROJECT: ProjectDto = { id: "", name: "diario", personal: true };
 
 /**
  * A linha "Projeto" de Informações, na criação e na edição: a marca e o nome do projeto num campo que abre a
- * escolha (`ProjectPickerDialog`). Sem escolha, mostra `personal`, o padrão. A troca só mexe no rascunho: a
- * gravação fica para o Salvar, que manda `projectId` (e `null` para voltar a `personal`).
+ * escolha (`ProjectPickerDialog`). Sem escolha, mostra `diario`, o padrão. A troca só mexe no rascunho: a
+ * gravação fica para o Salvar, que manda `projectId` (e `null` para voltar a `diario`).
  */
 export function TaskEditProjectField({ draft, onChange }: TaskEditProjectFieldProps) {
   const [picking, setPicking] = useState(false);

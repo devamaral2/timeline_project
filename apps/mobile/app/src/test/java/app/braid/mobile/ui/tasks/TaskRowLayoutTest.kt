@@ -89,7 +89,7 @@ class TaskRowLayoutTest {
 
         assertEquals(TaskRowTop.Duration("1h30"), layout.side.top)
         assertEquals(TaskPriority.High, layout.side.marks.priority)
-        assertEquals("personal", layout.side.marks.project.name)
+        assertEquals("diario", layout.side.marks.project.name)
         assertNull(layout.side.marks.provider)
         // A duração não se repete na linha do tipo.
         assertNull(layout.meta.duration)
@@ -110,7 +110,7 @@ class TaskRowLayoutTest {
         assertEquals(TaskRowTop.AgentStatus(TaskStatus.Completed), layout.side.top)
         assertNull(layout.side.marks.priority)
         assertEquals(ModelProvider.Anthropic, layout.side.marks.provider)
-        assertEquals("personal", layout.side.marks.project.name)
+        assertEquals("diario", layout.side.marks.project.name)
     }
 
     @Test

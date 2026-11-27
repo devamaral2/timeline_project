@@ -47,7 +47,7 @@ interface TaskFields {
 }
 
 export interface CreateTaskInput extends TaskFields {
-  /** O projeto da tarefa, que precisa ser do usuario. Ausente, a tarefa fica em `personal`. */
+  /** O projeto da tarefa, que precisa ser do usuario. Ausente, a tarefa fica em `diario`. */
   projectId?: string;
   /**
    * Onde acontece, como o texto que o Google Maps entende. So a tarefa de pessoa tem, e so quando alguem informa:
@@ -74,7 +74,7 @@ export interface CreateTaskInput extends TaskFields {
 export interface UpdateTaskInput extends TaskFields {
   taskId: string;
   expectedRevision: number;
-  /** O projeto da tarefa, que precisa ser do usuario. Ausente nao muda; `null` devolve a tarefa a `personal`. */
+  /** O projeto da tarefa, que precisa ser do usuario. Ausente nao muda; `null` devolve a tarefa a `diario`. */
   projectId?: string | null;
   /** Ausente nao muda; `null` ou vazio tira o local. */
   location?: string | null;

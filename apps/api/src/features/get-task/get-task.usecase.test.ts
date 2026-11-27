@@ -186,7 +186,7 @@ test("returns the project of the task, which is the personal project while nothi
 
   expect((await useCase.execute({ taskId: "task-1" }, actor))?.project).toEqual({
     id: `personal-${actor.userId}`,
-    name: "personal",
+    name: "diario",
     personal: true,
   });
 });

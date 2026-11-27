@@ -54,7 +54,7 @@ class TaskEditProjectViewModelTest {
     private val now = Instant.parse("2026-09-14T15:30:45.123Z")
     private val timeline = Project("project-timeline", "timeline_project", personal = false)
     private val skills = Project("project-skills", "agent-skills", personal = false)
-    private val personal = Project("project-personal", "personal", personal = true)
+    private val personal = Project("project-personal", "diario", personal = true)
     private val created = Project("project-new", "braid", personal = false)
 
     private lateinit var backend: TestBackend
@@ -148,7 +148,7 @@ class TaskEditProjectViewModelTest {
             viewModel.openProjectPicker()
             val picker = viewModel.listed()
 
-            assertEquals(listOf("personal", "Açaí", "agent-skills", "timeline_project"), names(picker))
+            assertEquals(listOf("diario", "Açaí", "agent-skills", "timeline_project"), names(picker))
             assertTrue(
                 picker.search.results
                     .first()
@@ -337,7 +337,7 @@ class TaskEditProjectViewModelTest {
             viewModel.openProjectPicker()
             viewModel.listed()
 
-            viewModel.projectPicker.type("PERSONAL")
+            viewModel.projectPicker.type("DIARIO")
             viewModel.projectPicker.create()
             val failed = viewModel.projectPicker.state.first { it?.footer is ProjectFooter.Failed }
 

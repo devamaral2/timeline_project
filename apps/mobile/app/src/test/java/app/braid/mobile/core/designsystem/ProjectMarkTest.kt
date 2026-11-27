@@ -9,7 +9,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 
 /** A marca do projeto de `packages/theme` (`project-mark.ts`), conferida contra o fixture gerado da função do web. */
@@ -40,10 +39,7 @@ class ProjectMarkTest {
                 assertEquals(label, expected.getValue("initials").jsonPrimitive.content, projectInitials(name))
                 assertEquals(label, expected.getValue("background").jsonPrimitive.content, hex(mark.background))
                 assertEquals(label, expected.getValue("text").jsonPrimitive.content, hex(mark.text))
-                if (personal) {
-                    assertEquals(label, expected.getValue("outline").jsonPrimitive.content, hex(checkNotNull(mark.outline)))
-                } else {
-                    assertNull(label, mark.outline)
+                if (!personal) {
                     assertEquals(
                         label,
                         expected

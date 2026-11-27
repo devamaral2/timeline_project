@@ -22,7 +22,7 @@ const NAME_TAKEN = "Já existe um projeto com esse nome. Escolha-o na lista ou u
 const NAME_INVALID = "O nome do projeto tem de 1 a 60 caracteres.";
 const CREATE_FAILED = "Não foi possível criar o projeto. Tente de novo.";
 
-/** Os projetos do usuário (`personal` primeiro, os outros por nome) cujo nome tem o texto da busca. */
+/** Os projetos do usuário (`diario` primeiro, os outros por nome) cujo nome tem o texto da busca. */
 async function searchProjects(query: string): Promise<ProjectDto[]> {
   const projects = await listProjects();
   const needle = plainText(query);
@@ -30,7 +30,7 @@ async function searchProjects(query: string): Promise<ProjectDto[]> {
 }
 
 /**
- * A escolha do projeto da tarefa: o modal de seleção com a lista (`personal` primeiro e os outros por nome), a busca
+ * A escolha do projeto da tarefa: o modal de seleção com a lista (`diario` primeiro e os outros por nome), a busca
  * pelo nome e, embaixo, a criação de um projeto novo com o texto digitado. Escolher ou criar devolve o projeto e
  * fecha; um nome repetido mostra a mensagem e deixa o modal aberto.
  */

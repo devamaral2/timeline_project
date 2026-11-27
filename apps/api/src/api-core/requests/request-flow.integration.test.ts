@@ -607,9 +607,9 @@ test("projeto: sem projectId, o pedido, os passos e a tarefa criada ficam em per
   await drain();
 
   const view = await operations.view(requestId, actor);
-  expect(view.project).toMatchObject({ name: "personal", personal: true });
+  expect(view.project).toMatchObject({ name: "diario", personal: true });
   for (const id of [...(await stepIdsOf(requestId)), view.entities[0]?.id as string]) {
-    expect(await projectOf(id)).toEqual({ name: "personal", personal: true });
+    expect(await projectOf(id)).toEqual({ name: "diario", personal: true });
   }
 });
 
@@ -700,10 +700,10 @@ test("projeto: o pedido de voz e o calculo de alimento ficam em personal, mesmo 
   await drain();
 
   const voice = await operations.view(spoken, actor);
-  expect(voice.project).toMatchObject({ name: "personal", personal: true });
-  expect(await projectOf(voice.entities[0]?.id as string)).toEqual({ name: "personal", personal: true });
+  expect(voice.project).toMatchObject({ name: "diario", personal: true });
+  expect(await projectOf(voice.entities[0]?.id as string)).toEqual({ name: "diario", personal: true });
   const build = (await operations.list(actor)).find((request) => request.route === "food");
-  expect(build?.project).toMatchObject({ name: "personal", personal: true });
+  expect(build?.project).toMatchObject({ name: "diario", personal: true });
   expect((await operations.view(written, actor)).project.name).toBe("dieta");
 });
 

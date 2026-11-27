@@ -54,7 +54,7 @@ const TABLES: readonly LogicalTable[] = [
       { name: "name", expr: "e.name", type: "text" },
       {
         name: "project", expr: "pr.name", type: "text",
-        description: "nome do projeto da tarefa; `personal` quando nenhum foi escolhido",
+        description: "nome do projeto da tarefa; `diario` quando nenhum foi escolhido",
       },
       { name: "description", expr: "e.description", type: "text" },
       { name: "location", expr: "e.location", type: "text", description: "onde a tarefa acontece; nulo se ninguem informou" },

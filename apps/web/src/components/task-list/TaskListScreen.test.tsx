@@ -592,7 +592,7 @@ test("cada linha mostra a marca e o nome do projeto, o personal inclusive", asyn
   const lineOf = (title: RegExp) => (screen.getByRole("link", { name: title }).closest("li") as HTMLElement).querySelector("[data-project-mark]");
   expect(lineOf(/Revisar o PR/)).toHaveAccessibleName("timeline_project");
   expect(lineOf(/Revisar o PR/)).toHaveTextContent("TP");
-  expect(lineOf(/Pagar a luz/)).toHaveAccessibleName("personal");
+  expect(lineOf(/Pagar a luz/)).toHaveAccessibleName("diario");
   expect(lineOf(/Pesquisar voos/)).toHaveAccessibleName("agent-skills");
   expect(container.querySelectorAll("[data-project-mark]")).toHaveLength(3);
 });

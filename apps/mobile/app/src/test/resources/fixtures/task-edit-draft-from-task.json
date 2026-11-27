@@ -11,7 +11,7 @@
       "description": "Pauta do trimestre.",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "location": "Rua Augusta, 100 - São Paulo",
@@ -59,7 +59,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }
@@ -75,7 +75,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-14T03:00:00.000Z",
@@ -110,7 +110,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }
@@ -127,7 +127,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-01T12:00:00.000Z",
@@ -166,7 +166,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }
@@ -183,7 +183,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-13T15:00:00.000Z",
@@ -218,7 +218,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }
@@ -235,7 +235,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "longRunning": false,
@@ -268,7 +268,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }
@@ -285,7 +285,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-23T13:30:00.000Z",
@@ -334,7 +334,7 @@
       "artifacts": [],
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       }
     }

@@ -3,7 +3,7 @@ import type { ProjectRef } from "../types/project";
 /** As leituras de projeto: o catalogo do usuario e o projeto de cada tarefa. */
 export interface ProjectQuery {
   /**
-   * Os projetos do usuario, `personal` primeiro e os outros por nome. O `personal` nasce nesta leitura quando o
+   * Os projetos do usuario, `diario` primeiro e os outros por nome. O `diario` nasce nesta leitura quando o
    * usuario ainda nao tem nenhum projeto: e a primeira necessidade dele.
    */
   list(userId: string): Promise<ProjectRef[]>;

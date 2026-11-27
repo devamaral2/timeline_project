@@ -205,7 +205,7 @@ class ChatFixturesTest {
                         "project",
                         buildJsonObject {
                             put("id", "project-personal")
-                            put("name", "personal")
+                            put("name", "diario")
                             put("personal", true)
                         },
                     )

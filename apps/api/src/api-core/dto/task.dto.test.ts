@@ -7,7 +7,7 @@ const userId = "auth-user-1";
 const startedAt = new Date("2026-08-17T15:00:00.000Z");
 const rule = { frequency: "daily" as const, interval: 1, timeOfDay: "12:00", timeZone: "America/Sao_Paulo", startsOn: "2026-08-01" };
 const series = Recurrence.create({ id: "rec-1", userId, rule, template: { name: "Almoço" } });
-const project = { id: "project-1", name: "personal", personal: true };
+const project = { id: "project-1", name: "diario", personal: true };
 const occurrence = { recurrenceId: "rec-1", occurrenceOn: "2026-08-17", detached: false };
 
 function artifact(id: string, body = id): Artifact {

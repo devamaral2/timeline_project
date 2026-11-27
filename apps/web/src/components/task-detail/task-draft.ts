@@ -45,7 +45,7 @@ export interface TaskDraft {
   artifacts: DraftArtifact[];
   /**
    * O projeto da tarefa, com a marca e o nome que o campo mostra. `null` na criação, enquanto ninguém escolheu: a
-   * tarefa nasce em `personal`, e o campo mostra esse.
+   * tarefa nasce em `diario`, e o campo mostra esse.
    */
   project: ProjectDto | null;
 }
@@ -153,7 +153,7 @@ export function buildCreateTaskInput(draft: TaskDraft, now: Date): CreateTaskInp
   if (draft.location.trim()) input.location = draft.location.trim();
   if (draft.reminders.length) input.notifyOffsetsMinutes = draft.reminders;
   if (draft.tags.length) input.tags = draft.tags;
-  // Sem escolha, ou com o `personal` (o padrão), a API põe a tarefa em `personal`.
+  // Sem escolha, ou com o `diario` (o padrão), a API põe a tarefa em `diario`.
   if (draft.project && !draft.project.personal) input.projectId = draft.project.id;
   return input;
 }
@@ -198,7 +198,7 @@ export function buildTaskPatch(task: TaskDto, draft: TaskDraft, now: Date): Edit
   if (draft.parentTaskId !== base.parentTaskId) patch.parentTaskId = draft.parentTaskId;
   if (!sameList(draft.subtaskIds, base.subtaskIds)) patch.subtaskIds = draft.subtaskIds;
   if (!sameArtifactLinks(draft.artifacts, base.artifacts)) patch.artifacts = artifactLinkInputs(draft.artifacts);
-  // Voltar ao `personal` manda `null`; outro projeto manda o id.
+  // Voltar ao `diario` manda `null`; outro projeto manda o id.
   if (draft.project && draft.project.id !== base.project?.id) patch.projectId = draft.project.personal ? null : draft.project.id;
   return Object.keys(patch).length > 1 ? patch : null;
 }
