@@ -184,16 +184,18 @@ test("Informações mostra o início com o tempo decorrido e 'ainda não conclu�
   expect(screen.queryByText("Job")).not.toBeInTheDocument();
 });
 
-test("o detalhe do pedido mostra o projeto, só para leitura", async () => {
+test("o detalhe do pedido mostra o projeto no cabeçalho, só para leitura, e não repete nas Informações", async () => {
   install([agentTask({ project: { id: "p-tp", name: "timeline_project", personal: false } })], [agentRequest()]);
   renderPage();
   await loaded();
 
-  const info = await screen.findByRole("region", { name: "Informações" });
-  expect(within(info).getByText("Projeto")).toBeInTheDocument();
-  expect(within(info).getByText("timeline_project")).toBeInTheDocument();
-  expect(within(info).getByText("TP")).toBeInTheDocument();
-  expect(within(info).queryByRole("button")).not.toBeInTheDocument();
+  const top = await screen.findByRole("region", { name: "Resumo da tarefa" });
+  expect(within(top).getByText("timeline_project")).toBeInTheDocument();
+  expect(within(top).getByText("TP")).toBeInTheDocument();
+  expect(within(top).queryByRole("button", { name: /timeline_project/ })).not.toBeInTheDocument();
+  const info = screen.getByRole("region", { name: "Informações" });
+  expect(within(info).queryByText("Projeto")).not.toBeInTheDocument();
+  expect(within(info).queryByText("timeline_project")).not.toBeInTheDocument();
 });
 
 test("a tarefa de agente mostra a tarefa principal e as subtarefas, somente leitura, com pontas de pessoa e de agente", async () => {

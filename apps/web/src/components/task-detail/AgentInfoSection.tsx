@@ -1,7 +1,6 @@
 "use client";
 
 import type { TaskDto } from "@repo/contracts";
-import { ProjectLine } from "@/components/projects/project-line";
 import { DetailFact, DetailFacts, DetailSection } from "@/components/detail/detail-parts";
 import { useNow } from "@/lib/tasks/use-now";
 import { elapsedLabel } from "@/lib/tasks/card-text";
@@ -10,7 +9,7 @@ import styles from "./task-detail.module.css";
 
 /**
  * A seção "Informações" da tarefa de agente: o início, com o tempo decorrido, e a conclusão, ou "ainda não
- * concluído". Fim estimado e Job não entram: o contrato não traz esses dados.
+ * concluído". O projeto está no cabeçalho. Fim estimado e Job não entram: o contrato não traz esses dados.
  */
 export function AgentInfoSection({ task }: { task: TaskDto }) {
   const now = useNow();
@@ -18,8 +17,6 @@ export function AgentInfoSection({ task }: { task: TaskDto }) {
   return (
     <DetailSection title="Informações" labelId="agent-info">
       <DetailFacts label="Informações">
-        {/* Só leitura: o projeto de uma tarefa de agente não muda depois que ela nasce. */}
-        <DetailFact label="Projeto"><ProjectLine project={task.project} /></DetailFact>
         <DetailFact label="Início">
           {task.startedAt ? (
             <span className={styles.stack}>
