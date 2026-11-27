@@ -25,6 +25,7 @@ import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.ProjectLine
 import app.braid.mobile.core.designsystem.SvgIcon
+import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.domain.task.TaskActor
 import app.braid.mobile.domain.task.TaskCard
@@ -48,6 +49,11 @@ fun TaskRow(
     onClick: (() -> Unit)? = null,
     /** Quando a tela deixa o glifo de status ser tocado, o que acontece com o toque; sem isso o glifo é só leitura. */
     onStatusClick: (() -> Unit)? = null,
+    /**
+     * Na tarefa de agente que terminou, o toque no glifo da esquerda, que mostra a situação; sem isso (a Agenda) ou sem
+     * situação (esperando você, execução agendada) o glifo é um ponto inerte.
+     */
+    onSituationClick: (() -> Unit)? = null,
     /** A lista pede a regra da série no lugar do horário, quando a ocorrência segue uma. */
     ruleInPlaceOfTime: Boolean = false,
     /** Um controle na ponta da linha, fora da linha tocável: a fração das subtarefas. */
@@ -59,6 +65,7 @@ fun TaskRow(
             now = now,
             onClick = onClick,
             onStatusClick = onStatusClick,
+            onSituationClick = onSituationClick,
             ruleInPlaceOfTime = ruleInPlaceOfTime,
             modifier = Modifier.weight(1f),
         )
@@ -73,6 +80,7 @@ private fun TaskRowBody(
     now: Instant,
     onClick: (() -> Unit)?,
     onStatusClick: (() -> Unit)?,
+    onSituationClick: (() -> Unit)?,
     ruleInPlaceOfTime: Boolean,
     modifier: Modifier,
 ) {
@@ -91,10 +99,20 @@ private fun TaskRowBody(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Top,
     ) {
+        val situation = if (isAgent && onSituationClick != null) card.situation else null
         val glyphBox =
-            if (onStatusClick == null) Modifier.size(24.dp) else Modifier.size(24.dp).clickable(role = Role.Button, onClick = onStatusClick)
+            when {
+                situation != null -> Modifier.size(24.dp).clickable(role = Role.Button, onClick = checkNotNull(onSituationClick))
+                onStatusClick == null || isAgent -> Modifier.size(24.dp)
+                else -> Modifier.size(24.dp).clickable(role = Role.Button, onClick = onStatusClick)
+            }
         Box(glyphBox, contentAlignment = Alignment.Center) {
-            TaskStatusGlyph(actor = card.actor, status = card.status)
+            when {
+                situation != null ->
+                    TaskSituationGlyph(situation, description = "${situationName(situation)}. Mudar situação de “${card.name}”")
+                isAgent -> InertDot()
+                else -> TaskStatusGlyph(actor = card.actor, status = card.status)
+            }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
@@ -135,4 +153,15 @@ private fun TaskRowBody(
             )
         }
     }
+}
+
+/** O que ocupa a esquerda da tarefa de agente sem controle de situação: um ponto, na caixa de 24 dp do glifo de pessoa. */
+@Composable
+private fun InertDot() {
+    SvgIcon(
+        parts = listOf(SvgPart("M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z", fill = true)),
+        size = 22.dp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+        modifier = Modifier.clearAndSetSemantics {},
+    )
 }

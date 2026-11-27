@@ -142,4 +142,6 @@ data class TaskCard(
     val notifyOffsetsMinutes: List<Int> = emptyList(),
     /** O projeto da tarefa: a lista o mostra abaixo do título; o formulário da pessoa o troca. */
     val project: Project = Project.Personal,
+    /** A situação da tarefa de agente que terminou; ausente em pessoa, passo, execução agendada e pedido aberto. */
+    val situation: TaskSituation? = null,
 )

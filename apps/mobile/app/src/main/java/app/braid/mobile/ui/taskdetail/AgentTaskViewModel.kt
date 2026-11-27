@@ -21,6 +21,8 @@ import app.braid.mobile.domain.speech.SpeechRecognizer
 import app.braid.mobile.domain.task.TaskDetail
 import app.braid.mobile.domain.task.TaskDetailRepository
 import app.braid.mobile.domain.task.TaskNotFoundException
+import app.braid.mobile.domain.task.TaskRepository
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.isOpenAgentStatus
 import app.braid.mobile.domain.time.AppClock
@@ -43,6 +45,7 @@ const val REQUEST_NOT_FOUND_TEXT = "Pedido não encontrado."
 const val REQUEST_LOAD_FAILED_TEXT = "Não foi possível carregar o pedido. Tente novamente."
 const val AGENT_TASK_NOT_FOUND_TEXT = "Tarefa não encontrada."
 const val AGENT_TASK_LOAD_FAILED_TEXT = "Não foi possível carregar a tarefa. Tente novamente."
+const val SITUATION_FAILED_TEXT = "Não foi possível mudar a situação. Tente novamente."
 
 /** O campo do rodapé: o texto, o envio e o cancelamento em voo e o pedido novo que a tela passou a acompanhar. */
 data class Composer(
@@ -77,7 +80,13 @@ sealed interface AgentTaskUiState {
         val subtasks: LinkedTasks? = null,
         val previous: PreviousRequest = PreviousRequest.None,
         val composer: Composer = Composer(),
+        /** Quantas gravações de situação estão em curso: a mudança já está na tela e a API ainda não respondeu. */
+        val situationSaves: Int = 0,
+        /** A gravação da situação falhou e a tela voltou ao que era; some na próxima escolha. */
+        val situationError: String? = null,
     ) : AgentTaskUiState {
+        val savingSituation: Boolean get() = situationSaves > 0
+
         /** O pedido que o rodapé mostra e cancela: o que o campo abriu, ou o da tarefa enquanto nenhum foi aberto. */
         val tracked: AgentRequest? get() = if (composer.followId != null) composer.followed else request
         val statusLine: String get() = requestStatusLine(tracked)
@@ -103,6 +112,7 @@ class AgentTaskViewModel
     constructor(
         savedState: SavedStateHandle,
         private val tasks: TaskDetailRepository,
+        private val taskList: TaskRepository,
         private val requests: AgentRequestRepository,
         private val session: SessionRepository,
         private val clock: AppClock,
@@ -209,6 +219,33 @@ class AgentTaskViewModel
         override fun onCleared() {
             dictation.cancel()
             super.onCleared()
+        }
+
+        /**
+         * Muda a situação do pedido que terminou: aparece na hora e é gravada pelo `PUT`; se a gravação falha, volta ao que
+         * era e a tela avisa. Pedido sem situação (aberto) ou a mesma situação não gravam nada.
+         */
+        fun chooseSituation(situation: TaskSituation) {
+            val before = current()?.request?.situation ?: return
+            if (situation == TaskSituation.Unknown || situation == before) return
+            updateContent { it.copy(request = it.request.copy(situation = situation), situationSaves = it.situationSaves + 1, situationError = null) }
+            viewModelScope.launch {
+                try {
+                    taskList.setSituation(taskId, situation)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (failure: Exception) {
+                    // Só desfaz se a tela ainda mostra a escolha que falhou: uma escolha mais nova não é apagada por esta.
+                    updateContent {
+                        it.copy(
+                            request = if (it.request.situation == situation) it.request.copy(situation = before) else it.request,
+                            situationError = SITUATION_FAILED_TEXT,
+                        )
+                    }
+                } finally {
+                    updateContent { it.copy(situationSaves = it.situationSaves - 1) }
+                }
+            }
         }
 
         /** Abre um pedido novo na mesma sessão e passa a acompanhá-lo. Falha mantém o texto e avisa. */

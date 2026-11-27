@@ -11,6 +11,7 @@ import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskKind
 import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.TaskRecurrence
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.timeline.toIsoMillis
 import kotlinx.serialization.SerialName
@@ -33,6 +34,7 @@ data class TaskCardDto(
     val name: String,
     val description: String,
     val project: ProjectDto,
+    val situation: String? = null,
     val location: String? = null,
     val startedAt: String? = null,
     val estimatedFinishAt: String? = null,
@@ -68,6 +70,12 @@ data class RecurrenceRuleDto(
     val endsOn: String? = null,
 )
 
+/** `setTaskSituationInputSchema`: só a situação nova. */
+@Serializable
+data class SetSituationBody(
+    val situation: String,
+)
+
 /** `agendaPageSchema`: a página e o cursor da próxima, que some na última. */
 @Serializable
 data class AgendaPageDto(
@@ -92,6 +100,7 @@ fun TaskCardDto.toDomain(): TaskCard =
         parentTaskId = parentTaskId,
         notifyOffsetsMinutes = notifyOffsetsMinutes.map { it.toInt() },
         project = project.toDomain(),
+        situation = TaskSituation.fromCode(situation),
     )
 
 fun TaskRecurrenceDto.toDomain() =
