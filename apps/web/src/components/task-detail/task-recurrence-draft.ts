@@ -1,4 +1,4 @@
-import type { CreateRecurrenceInput, RecurrenceDto, RecurrenceRule } from "@repo/contracts";
+import type { CreateRecurrenceInput, ProjectDto, RecurrenceDto, RecurrenceRule } from "@repo/contracts";
 import { shiftDayKey } from "@repo/timeline";
 import type { EditRecurrenceInput } from "@/lib/api/recurrences";
 import { type TaskDraft, instantFromDraft } from "./task-draft";
@@ -166,8 +166,8 @@ function templateOf(form: TaskDraft): CreateRecurrenceInput["template"] {
     priority: form.priority,
     ...(form.tags.length ? { tags: form.tags } : {}),
     ...(form.reminders.length ? { notifyOffsetsMinutes: form.reminders } : {}),
-    // O projeto da série é um campo do modelo: cada ocorrência nasce nele. Sem escolha, ou no `personal`, nada vai.
-    ...(form.project && !form.project.personal ? { projectId: form.project.id } : {}),
+    // O projeto da série é um campo do modelo: cada ocorrência nasce nele. O `personal` leva o id dele, como qualquer outro.
+    ...(form.project ? { projectId: form.project.id } : {}),
   };
 }
 
@@ -180,8 +180,11 @@ export function buildCreateRecurrenceInput(draft: RecurrenceDraft, form: TaskDra
  * O `PATCH` da série com só a regra que mudou em relação à série lida, com a
  * revisão dela. `null` quando nada mudou. Uma troca que a API recusa (semanal
  * para mensal, por exemplo) sai assim mesmo: a recusa volta como mensagem.
+ *
+ * `project`: o projeto que a pessoa escolheu no formulário, só quando mudou. O projeto é um campo do modelo da série, e o
+ * `PATCH` troca o modelo inteiro: vai o modelo que a série já tem, com o `projectId` novo (o do `personal` volta a ele).
  */
-export function planSeriesEdit(series: RecurrenceDto, draft: RecurrenceDraft): EditRecurrenceInput | null {
+export function planSeriesEdit(series: RecurrenceDto, draft: RecurrenceDraft, project?: ProjectDto): EditRecurrenceInput | null {
   const current: Record<string, unknown> = { ...series };
   const target: Record<string, unknown> = { ...editableRuleOf(draft) };
   const patch: Record<string, unknown> = { expectedRevision: series.revision };
@@ -191,6 +194,10 @@ export function planSeriesEdit(series: RecurrenceDto, draft: RecurrenceDraft): E
       patch[key] = value;
       changed = true;
     }
+  }
+  if (project) {
+    patch.template = { ...series.template, projectId: project.id };
+    changed = true;
   }
   return changed ? (patch as EditRecurrenceInput) : null;
 }
