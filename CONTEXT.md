@@ -95,7 +95,7 @@ Tarefa executada por um agente a partir de algo que o usuário pediu no chat ou 
 _Avoid_: prompt, comando, tarefa do agente
 
 **Conteúdo guardado**:
-Tarefa de agente que registra o que o botão da extensão ou o botão "Adicionar vídeo" guardou, em vez de um pedido de conversa. Tem dois tipos: `save_content`, a página de texto guardada (nasce e termina feita), e `save_content_with_transcription`, o vídeo do YouTube guardado para transcrever (nasce no status `awaiting_transcription`, à espera do serviço local). Aparece na lista de pedidos e na lista de tarefas, nunca na agenda (ADR 0021).
+Tarefa de agente que registra o que o botão da extensão ou o botão "Adicionar vídeo" guardou, em vez de um pedido de conversa. Tem dois tipos: `save_content`, a página de texto guardada (nasce e termina `completed`), e `save_content_with_transcription`, o vídeo do YouTube guardado para transcrever (nasce no status `awaiting_transcription`, à espera do serviço local). Aparece na lista de pedidos e na lista de tarefas, nunca na agenda (ADR 0021), e nunca tem situação (ADR 0023): terminada, cai em Finalizadas; esperando a transcrição ou rodando, aparece na gaveta de execução.
 _Avoid_: pedido de página, favorito, clipe
 
 **Lease de transcrição**:
