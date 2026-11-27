@@ -118,6 +118,29 @@ describe("Auth HTTP contract baseline", () => {
       expect(fromDocument).toEqual(fromInventory);
     });
 
+    it("mantém status, corpo e autenticação do inventário iguais aos do documento", () => {
+      type DocumentedOperation = { security?: unknown; responses: Record<string, unknown> };
+      const paths = authOpenApiDocument.paths as unknown as Record<string, Record<string, DocumentedOperation>>;
+
+      for (const operation of documentedOperations()) {
+        const documented = paths[operation.path]?.[operation.method.toLowerCase()];
+        expect(documented, `${operation.method} ${operation.path}`).toBeDefined();
+
+        const response = documented?.responses[String(operation.success.status)] as
+          | { content?: Record<string, { schema?: { $ref?: string } }> }
+          | undefined;
+        expect(response, `${operation.method} ${operation.path} -> ${operation.success.status}`).toBeDefined();
+        if (operation.success.body.kind === "json") {
+          expect(response?.content?.["application/json"]?.schema?.$ref).toBe(
+            `#/components/schemas/${operation.success.body.schema}`,
+          );
+        }
+
+        const requiresBearer = operation.authentication === "bearer" || operation.authentication === "bearer-super-admin";
+        expect(Boolean(documented?.security), `${operation.method} ${operation.path} security`).toBe(requiresBearer);
+      }
+    });
+
     it.each(AUTH_HTTP_OPERATIONS.map((operation) => [operation.method, operation.path, operation.withoutCredential, operation.headers] as const))(
       "responde %s %s com %i quando não há credencial",
       async (method, path, expectedStatus, headers) => {
