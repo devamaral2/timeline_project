@@ -8,6 +8,7 @@ import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskChanges
 import app.braid.mobile.domain.task.TaskFilters
 import app.braid.mobile.domain.task.TaskRepository
+import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.trackedQuery
 import app.braid.mobile.domain.timeline.toIsoMillis
 import retrofit2.HttpException
@@ -38,11 +39,17 @@ class DefaultTaskRepository
         override suspend fun tracked(
             filters: TaskFilters,
             actor: TaskActor?,
+            statuses: Set<TaskStatus>,
         ): List<TaskCard> {
             val query = trackedQuery(filters)
             return api
-                .tracked(actor?.code, query.priorities.takeIf { it.isNotEmpty() }?.joinToString(",") { it.code }, query.tag, query.query)
-                .map(TaskCardDto::toDomain)
+                .tracked(
+                    actor?.code,
+                    query.priorities.takeIf { it.isNotEmpty() }?.joinToString(",") { it.code },
+                    query.tag,
+                    query.query,
+                    statuses.takeIf { it.isNotEmpty() }?.joinToString(",") { it.code },
+                ).map(TaskCardDto::toDomain)
         }
 
         override suspend fun changeStatus(

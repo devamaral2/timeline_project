@@ -16,6 +16,7 @@ import app.braid.mobile.domain.request.HermesOffException
 import app.braid.mobile.domain.request.ModelOffException
 import app.braid.mobile.domain.request.ModelOptions
 import app.braid.mobile.domain.request.ModelSelection
+import app.braid.mobile.domain.request.RequestStarted
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -27,6 +28,7 @@ class DefaultChatRepository
     @Inject
     constructor(
         private val api: RequestsApi,
+        private val started: RequestStarted = RequestStarted(),
     ) : ChatRepository {
         override suspend fun start(
             userId: String,
@@ -36,6 +38,7 @@ class DefaultChatRepository
             selection: ModelSelection?,
         ): String =
             call { api.start(StartRequestBody(userId, text, sessionId, clientMessageId, AgendaContext, selection?.toDto())).requestId }
+                .also { started.notifyStarted() }
 
         override suspend fun sendHermes(
             userId: String,
@@ -44,7 +47,7 @@ class DefaultChatRepository
             clientMessageId: String,
         ): AgentRequest =
             try {
-                call { api.startHermes(StartHermesBody(userId, text, sessionId, clientMessageId)).toDomain() }
+                call { api.startHermes(StartHermesBody(userId, text, sessionId, clientMessageId)).toDomain() }.also { started.notifyStarted() }
             } catch (failure: ChatRequestException) {
                 // Desligado, a API responde 404 antes de ler o corpo.
                 if ((failure.cause as? HttpException)?.code() == HTTP_NOT_FOUND) throw HermesOffException(failure.cause)
@@ -60,7 +63,7 @@ class DefaultChatRepository
         ): AgentRequest =
             offWhenMissing {
                 call { api.startModel(StartModelBody(userId, text, sessionId, clientMessageId, selection.toDto())).toDomain() }
-            }
+            }.also { started.notifyStarted() }
 
         override suspend fun modelOptions(): ModelOptions =
             offWhenMissing {

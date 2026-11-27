@@ -1,0 +1,221 @@
+[
+  {
+    "id": "run-old",
+    "actor": "agent",
+    "kind": "build_request",
+    "status": "queued",
+    "priority": "medium",
+    "name": "Montar relatório",
+    "description": "",
+    "project": {
+      "id": "project-timeline",
+      "name": "timeline_project",
+      "personal": false
+    },
+    "startedAt": "2026-09-14T14:10:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "run-newest",
+    "actor": "agent",
+    "kind": "search_request",
+    "status": "running",
+    "priority": "medium",
+    "name": "Buscar passagens",
+    "description": "",
+    "project": {
+      "id": "project-skills",
+      "name": "agent-skills",
+      "personal": false
+    },
+    "startedAt": "2026-09-14T14:58:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "step-1",
+    "actor": "agent",
+    "kind": "step",
+    "status": "running",
+    "priority": "medium",
+    "name": "Passo: abrir o site",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:59:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "run-mid",
+    "actor": "agent",
+    "kind": "request",
+    "status": "starting",
+    "priority": "medium",
+    "name": "Resumir os e-mails da semana",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:40:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "cron-1",
+    "actor": "agent",
+    "kind": "cron",
+    "status": "running",
+    "priority": "medium",
+    "name": "Backup diário",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:30:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "run-preparing",
+    "actor": "agent",
+    "kind": "request",
+    "status": "preparing",
+    "priority": "medium",
+    "name": "Entender o pedido",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:50:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "waiting-1",
+    "actor": "agent",
+    "kind": "inquiry_request",
+    "status": "waiting",
+    "priority": "medium",
+    "name": "Qual hotel prefere?",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:55:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "done-1",
+    "actor": "agent",
+    "kind": "review_request",
+    "status": "completed",
+    "priority": "medium",
+    "name": "Resumo pronto",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T13:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "run-nostart",
+    "actor": "agent",
+    "kind": "request",
+    "status": "queued",
+    "priority": "medium",
+    "name": "Sem início ainda",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  },
+  {
+    "id": "human-1",
+    "actor": "human",
+    "kind": "common",
+    "status": "doing",
+    "priority": "medium",
+    "name": "Revisar contrato",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "personal",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T14:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-14T14:00:00.000Z",
+    "updatedAt": "2026-09-14T14:00:00.000Z"
+  }
+]

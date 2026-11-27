@@ -25,6 +25,8 @@ interface TasksApi {
         @Query("priority") priority: String?,
         @Query("tag") tag: String?,
         @Query("q") q: String?,
+        /** Um ou mais status separados por vírgula (`queued,running`); ausente traz todos. */
+        @Query("status") status: String?,
     ): List<TaskCardDto>
 
     /** `PATCH /api/tasks/{id}` responde 204; o corpo é o `UpdateTaskInput` sem o id. */
