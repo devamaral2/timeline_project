@@ -46,7 +46,7 @@ data class CreatedRecurrenceDto(
     val recurrenceId: String,
 )
 
-/** `recurrenceSchema`: a regra, a revisão e o modelo (que o app só devolve inteiro ao trocar o projeto). */
+/** `recurrenceSchema`: a regra, a revisão e o modelo (que o app não lê). */
 @Serializable
 data class RecurrenceSeriesDto(
     val id: String,
@@ -59,7 +59,6 @@ data class RecurrenceSeriesDto(
     val timeOfDay: String,
     val startsOn: String,
     val endsOn: String? = null,
-    val template: JsonObject = JsonObject(emptyMap()),
 )
 
 fun RecurrenceSeriesDto.toDomain(): RecurrenceSeries =
@@ -77,5 +76,4 @@ fun RecurrenceSeriesDto.toDomain(): RecurrenceSeries =
                 startsOn = startsOn,
                 endsOn = endsOn,
             ),
-        template = template,
     )

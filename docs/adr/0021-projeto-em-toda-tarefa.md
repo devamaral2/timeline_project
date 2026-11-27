@@ -54,7 +54,10 @@ atrapalha dar o nome a quem de fato agrupa tarefas.
    com `expectedRevision`, que destaca a ocorrência da série como qualquer outro campo. O projeto de uma série é um campo
    do modelo dela (`template.projectId`): o `projectId` do modelo vale antes das regras do pedido, e um modelo sem ele não
    muda o projeto da série (para voltar a `personal`, o modelo leva o id dele). A coluna `recurrences.project_id` guarda
-   a resolução e as ocorrências novas nascem nela; as que já existem ficam onde estavam. No formulário o campo
+   a resolução e as ocorrências novas nascem nela; as que já existem ficam onde estavam. A série recebe o projeto
+   quando é criada, o da tarefa que a cria (o `personal` leva o id dele); depois disso nenhuma tela o troca, como
+   também não troca o nome nem as etiquetas dela. Editar o projeto de uma ocorrência muda só a ocorrência, que se
+   destaca da série, e o editor de regra da série não manda projeto. No formulário o campo
    "Projeto" mostra a marca e o nome, abre a escolha (`personal` primeiro, os outros por nome, busca pelo nome) e cria um
    projeto com o texto digitado, sem fechar a escolha quando o nome já existe.
 

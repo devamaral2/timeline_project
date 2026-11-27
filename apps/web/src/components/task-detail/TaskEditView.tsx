@@ -87,10 +87,8 @@ export function TaskEditView({ task: loaded, userId, initialName, onReload, onLe
     if (Object.keys(problems).length > 0 || Object.keys(ruleProblems).length > 0) return;
 
     const patch = task ? buildTaskPatch(task, draft, new Date()) : null;
-    // O projeto é um campo do modelo da série: trocar o da ocorrência troca o da série (e `personal` leva o id dele).
-    const movedProject = task && draft.project && draft.project.id !== task.project?.id ? draft.project : undefined;
     const seriesPatch = task && recurrence.series && recurrence.draft && !draft.longRunning
-      ? planSeriesEdit(recurrence.series, recurrence.draft, movedProject)
+      ? planSeriesEdit(recurrence.series, recurrence.draft)
       : null;
     const newSeries = startsSeries && recurrence.draft ? buildCreateRecurrenceInput(recurrence.draft, seriesSchedule, browserTimeZone()) : null;
     if (task && !patch && !seriesPatch && !newSeries) {
@@ -106,12 +104,8 @@ export function TaskEditView({ task: loaded, userId, initialName, onReload, onLe
         // A série vai primeiro: se a API recusar a regra, a tarefa fica como estava. A mesma chave a cada toque em
         // Salvar: se a série saiu e a tarefa não, a nova tentativa não cria uma segunda.
         if (newSeries) await createRecurrence(newSeries, { idempotencyKey });
-        // Com projeto novo a série regera as ocorrências de hoje em diante que ninguém editou: a tarefa vai antes, e
-        // editada ela deixa de ser regerada.
-        const taskFirst = movedProject !== undefined && seriesPatch !== null;
-        if (taskFirst && patch) await updateTask(task.id, patch);
         if (seriesPatch && recurrence.series) await editRecurrence(recurrence.series.id, seriesPatch);
-        if (!taskFirst && patch) await updateTask(task.id, patch);
+        if (patch) await updateTask(task.id, patch);
       } else if (newSeries) {
         await createRecurrence(newSeries, { idempotencyKey });
       } else {
