@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.artifact.Artifact
 import app.braid.mobile.domain.artifact.ArtifactDraft
 import app.braid.mobile.domain.artifact.ArtifactRepository
+import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.TextContent
 import app.braid.mobile.domain.artifact.TextData
 import app.braid.mobile.domain.artifact.isFreeText
@@ -104,6 +105,9 @@ class DocumentEditViewModel
         private val lastBodies = mutableMapOf<NewDocumentKind, ArtifactDraft>()
         private var revision = 0
 
+        // O tipo do artefato aberto para edição: o texto novo é gravado nele.
+        private var type = ArtifactType.Text
+
         // A guarda vale antes da próxima emissão do estado: dois toques seguidos não mandam duas requisições.
         private var busy = false
 
@@ -134,6 +138,7 @@ class DocumentEditViewModel
 
         private fun form(artifact: Artifact): DocumentEditUiState.Form {
             revision = artifact.revision
+            type = artifact.type
             return DocumentEditUiState.Form(
                 existing = true,
                 name = artifact.name,
@@ -182,7 +187,7 @@ class DocumentEditViewModel
                     val savedId =
                         when {
                             documentId != null -> {
-                                artifacts.updateText(documentId, revision, content)
+                                artifacts.updateText(documentId, revision, content, type)
                                 documentId
                             }
                             form.isMeal -> create(NewDocumentKind.Meal, ArtifactDraft.Meal(form.meal.trim()))

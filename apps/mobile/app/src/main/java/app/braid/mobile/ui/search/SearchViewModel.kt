@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.artifact.Artifact
 import app.braid.mobile.domain.artifact.ArtifactFilters
 import app.braid.mobile.domain.artifact.ArtifactRepository
+import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.task.TaskCard
 import app.braid.mobile.domain.task.TaskPickerRepository
 import app.braid.mobile.ui.picker.EntityPickerController
@@ -31,6 +32,13 @@ sealed interface SearchResult {
         override val id: String get() = artifact.id
     }
 }
+
+/** A legenda da linha do resultado: "Tarefa" ou "Artefato · Notícias", com o rótulo do tipo do artefato. */
+fun searchKindLabel(result: SearchResult): String =
+    when (result) {
+        is SearchResult.Task -> "Tarefa"
+        is SearchResult.Document -> "Artefato · ${artifactTypeLabel(result.artifact.type)}"
+    }
 
 /** Quantos itens de cada lista a pesquisa pede: o limite dos seletores. */
 private const val SEARCH_LIMIT = 50

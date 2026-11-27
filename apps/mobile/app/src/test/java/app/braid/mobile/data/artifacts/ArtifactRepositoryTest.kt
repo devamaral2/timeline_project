@@ -9,6 +9,7 @@ import app.braid.mobile.domain.artifact.FoodGeneration
 import app.braid.mobile.domain.artifact.SleepData
 import app.braid.mobile.domain.artifact.TextData
 import app.braid.mobile.domain.artifact.TrainingData
+import app.braid.mobile.domain.artifact.UnknownData
 import app.braid.mobile.domain.artifact.WorkoutCatalogData
 import app.braid.mobile.domain.artifact.WorkoutCategory
 import app.braid.mobile.domain.artifact.WorkoutSnapshot
@@ -51,7 +52,7 @@ class ArtifactRepositoryTest {
 
             val request = backend.requestsTo("GET", "/api/artifacts").single()
             assertNull(request.requestUrl!!.query)
-            assertEquals(ArtifactType.entries.toList(), artifacts.map { it.type })
+            assertEquals(ArtifactType.known, artifacts.map { it.type })
         }
 
     @Test
@@ -99,6 +100,72 @@ class ArtifactRepositoryTest {
             assertEquals(listOf("creates", "uses"), artifact.tasks.map { it.relation })
             assertEquals(TaskKind.SearchRequest, artifact.tasks[1].kind)
             assertNotNull(artifact.tasks[0].startedAt)
+        }
+
+    @Test
+    fun `the new free text types keep their type, body, tags and linked tasks`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-news", fixture("documents-detail-news"))
+            backend.route("GET", "/api/artifacts/doc-email", fixture("documents-detail-email-summary"))
+            backend.route("GET", "/api/artifacts/doc-youtube", fixture("documents-detail-youtube-transcript"))
+
+            val news = repository.get("doc-news")
+            val email = repository.get("doc-email")
+            val transcript = repository.get("doc-youtube")
+
+            val all = listOf(news, email, transcript)
+            assertEquals(listOf(ArtifactType.News, ArtifactType.EmailSummary, ArtifactType.YoutubeTranscript), all.map { it.type })
+            assertEquals(listOf("news", "email_summary", "youtube_transcript"), all.map { it.typeCode })
+            assertEquals(listOf("leitura"), news.tags)
+            assertTrue((news.data as TextData).body.startsWith("# Notícias da manhã"))
+            assertTrue((email.data as TextData).body.contains("A fatura vence amanhã"))
+            assertTrue((transcript.data as TextData).body.contains("Como podar roseiras"))
+        }
+
+    @Test
+    fun `a list with a type this app does not know keeps every item, the unknown ones included`() =
+        runTest {
+            backend.route("GET", "/api/artifacts", fixture("documents-list-unknown"))
+
+            val artifacts = repository.list()
+
+            assertEquals(
+                listOf("Ideias para o projeto", "Mapa do futuro", "Projeção sem texto", "Notícias da manhã"),
+                artifacts.map { it.name },
+            )
+            assertEquals(
+                listOf(ArtifactType.Text, ArtifactType.Unknown, ArtifactType.Unknown, ArtifactType.News),
+                artifacts.map { it.type },
+            )
+            assertEquals(listOf("text", "hologram", "hologram", "news"), artifacts.map { it.typeCode })
+            assertTrue((artifacts[1].data as TextData).body.startsWith("# Mapa do futuro"))
+            assertEquals(UnknownData, artifacts[2].data)
+        }
+
+    @Test
+    fun `the detail of an unknown type reads its body as text, with tags and linked tasks`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-future", fixture("documents-detail-unknown"))
+
+            val artifact = repository.get("doc-future")
+
+            assertEquals(ArtifactType.Unknown, artifact.type)
+            assertEquals("hologram", artifact.typeCode)
+            assertEquals(listOf("novo"), artifact.tags)
+            assertTrue((artifact.data as TextData).body.contains("Texto de um tipo que este app não conhece."))
+            assertEquals(listOf("task-1", "task-3"), artifact.tasks.map { it.taskId })
+        }
+
+    @Test
+    fun `the detail of an unknown type without a body keeps only the name`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-future-bare", fixture("documents-detail-unknown-no-body"))
+
+            val artifact = repository.get("doc-future-bare")
+
+            assertEquals(ArtifactType.Unknown, artifact.type)
+            assertEquals("Projeção sem texto", artifact.name)
+            assertEquals(UnknownData, artifact.data)
         }
 
     @Test

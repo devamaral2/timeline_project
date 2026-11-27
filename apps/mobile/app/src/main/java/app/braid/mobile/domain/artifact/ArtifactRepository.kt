@@ -26,13 +26,15 @@ interface ArtifactRepository {
     ): String
 
     /**
-     * Grava o conteúdo inteiro do artefato de texto com a [revision] que a tela leu. Revisão velha (409) sobe como
+     * Grava o conteúdo inteiro do artefato de texto livre com a [revision] que a tela leu, no [type] que ele já tem:
+     * corrigir o texto de um resumo de e-mail não o transforma em nota. Revisão velha (409) sobe como
      * [app.braid.mobile.domain.task.StaleRevisionException]; qualquer outra falha sobe como exceção.
      */
     suspend fun updateText(
         id: String,
         revision: Int,
         text: TextContent,
+        type: ArtifactType = ArtifactType.Text,
     )
 
     /** Exclui o artefato. */

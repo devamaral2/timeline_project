@@ -5,6 +5,18 @@
       "actor": "human"
     },
     {
+      "type": "news",
+      "actor": "human"
+    },
+    {
+      "type": "email_summary",
+      "actor": "human"
+    },
+    {
+      "type": "youtube_transcript",
+      "actor": "human"
+    },
+    {
       "type": "food",
       "actor": "human"
     },

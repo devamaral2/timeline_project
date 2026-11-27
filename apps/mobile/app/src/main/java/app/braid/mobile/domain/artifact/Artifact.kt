@@ -21,6 +21,8 @@ data class Artifact(
     val updatedAt: Instant,
     /** As tarefas em que o artefato aparece; vazio no que uma lista devolve sem elas. */
     val tasks: List<ArtifactTaskLink> = emptyList(),
+    /** O código do tipo como a API o mandou: o do [type] ou, num tipo desconhecido, o que o app não conhece. */
+    val typeCode: String = type.code,
 )
 
 /** Uma tarefa em que o artefato aparece. [relation] é o código do contrato (`creates`, `updates`, `uses`, `deletes`), que a tela mostra como está. */
@@ -35,6 +37,9 @@ data class ArtifactTaskLink(
 )
 
 sealed interface ArtifactData
+
+/** O dado de um tipo desconhecido que não traz um `body` em texto: só o nome do artefato aparece. */
+data object UnknownData : ArtifactData
 
 data class TextData(
     val body: String,

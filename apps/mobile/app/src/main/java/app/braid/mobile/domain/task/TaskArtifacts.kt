@@ -4,6 +4,8 @@ import app.braid.mobile.domain.artifact.Artifact
 import app.braid.mobile.domain.artifact.ArtifactFilters
 import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.FoodData
+import app.braid.mobile.domain.artifact.TEXT_BODY_ARTIFACT_TYPES
+import app.braid.mobile.domain.artifact.TextData
 
 /** A relação de um artefato com a tarefa, como a API a guarda; a tela mostra o [code] como está. */
 enum class ArtifactRelation(
@@ -132,6 +134,23 @@ fun artifactPositions(relations: List<ArtifactRelation>): List<Int?> {
     var next = 0
     return relations.map { if (it == ArtifactRelation.Creates) null else ++next }
 }
+
+/**
+ * Os tipos cujo conteúdo aparece inteiro dentro da tarefa: o texto livre (nota, notícias, resumo de e-mail e transcrição),
+ * o roteador, o alimento, o treino e o sono. Skill e agente ficam só no cabeçalho (o arquivo do Hermes tem leitura e edição
+ * no detalhe do artefato), e o exercício do catálogo também.
+ */
+private val INLINE_TYPES = TEXT_BODY_ARTIFACT_TYPES + setOf(ArtifactType.Food, ArtifactType.Training, ArtifactType.Sleep)
+
+/** O cartão do artefato na tarefa tem conteúdo embaixo da linha (que a seta recolhe)? Um tipo desconhecido, só se o dado traz um texto. */
+fun hasInlineContent(artifact: Artifact): Boolean =
+    artifact.type in INLINE_TYPES || (artifact.type == ArtifactType.Unknown && artifact.data is TextData)
+
+/** A linha em mono do artefato na tarefa: `posição · código do tipo · relação` (`1 · news · uses`); o que a tarefa criou não tem posição. */
+fun artifactMetaLine(
+    position: Int?,
+    link: TaskArtifact,
+): String = listOfNotNull(position?.toString(), link.artifact.typeCode, link.relation.code).joinToString(" · ")
 
 /**
  * A lista como o `PATCH` da tarefa a manda: a ordem da tela. Um artefato ligado vai com id e relação; uma cópia nova

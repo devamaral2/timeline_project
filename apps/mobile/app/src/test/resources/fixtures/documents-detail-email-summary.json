@@ -1,0 +1,15 @@
+{
+  "id": "doc-email",
+  "name": "Resumo da caixa de entrada",
+  "schemaVersion": 1,
+  "global": false,
+  "derived": false,
+  "tags": [],
+  "revision": 1,
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "updatedAt": "2026-09-14T12:12:00.000Z",
+  "type": "email_summary",
+  "data": {
+    "body": "Três mensagens pedem resposta.\n\n- A fatura vence amanhã"
+  }
+}

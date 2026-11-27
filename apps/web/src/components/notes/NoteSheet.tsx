@@ -1,14 +1,23 @@
 import { Bot, FileText, Wrench, type LucideIcon } from "lucide-react";
 import { visualForItemType } from "@/components/tasks/task-visuals";
-import { CompassIcon, MovementIcon } from "@/components/ui/type-icons";
+import { CompassIcon, LetterIcon, MovementIcon, NewspaperIcon, YoutubeIcon } from "@/components/ui/type-icons";
 import styles from "./note-sheet.module.css";
 
-/** Os tipos de artefato sem tarefa de mesmo nome: o exercício e os arquivos do Hermes. */
-const OWN_ICONS: Record<string, LucideIcon> = { workout: MovementIcon, skill: Wrench, agent: Bot, router: CompassIcon };
+/** Os tipos de artefato sem tarefa de mesmo nome: os de texto livre que não são a nota, o exercício e os arquivos do Hermes. */
+const OWN_ICONS: Record<string, LucideIcon> = {
+  news: NewspaperIcon,
+  email_summary: LetterIcon,
+  youtube_transcript: YoutubeIcon,
+  workout: MovementIcon,
+  skill: Wrench,
+  agent: Bot,
+  router: CompassIcon,
+};
 
 /**
  * O ícone de um tipo de artefato, pelo tipo visual (`artifactVisualType`): o do tipo de tarefa na refeição, no
- * treino e no sono, o desenho próprio no exercício e nos arquivos do Hermes, a folha do Lucide no texto.
+ * treino e no sono, o desenho próprio nas notícias, no resumo de e-mail, na transcrição, no exercício e nos arquivos do
+ * Hermes, a folha do Lucide na nota.
  */
 export function noteTypeIcon(type: string): LucideIcon {
   if (type === "meal" || type === "training" || type === "sleep") return visualForItemType(type).Icon;

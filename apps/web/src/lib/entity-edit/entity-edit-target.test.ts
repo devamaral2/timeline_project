@@ -38,3 +38,8 @@ test("so /model sozinho no campo abre a escolha do modelo; /modelo e o modo mode
   const cases = ["/model", "/MODEL", "  /Model  ", "/modelo", "/models", "/model haiku", "model", "/", "mude o /model", ""];
   expect(cases.filter(isModelCommand)).toEqual(["/model", "/MODEL", "  /Model  "]);
 });
+
+test.each(["news", "email_summary", "youtube_transcript"] as const)("um artefato %s é editado pelo mesmo alvo da nota, sem entityType próprio", (type) => {
+  expect(editEntityTypeOfArtifact({ type, global: false })).toBe("artifact");
+  expect(editEntityTypeOfArtifact({ type, global: true })).toBeNull();
+});

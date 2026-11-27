@@ -83,6 +83,7 @@ import app.braid.mobile.ui.chat.HermesSend
 import app.braid.mobile.ui.chat.HermesStatusLine
 import app.braid.mobile.ui.chat.VoiceButton
 import app.braid.mobile.ui.chat.VoiceUiState
+import app.braid.mobile.ui.documents.DocumentIcons
 import app.braid.mobile.ui.tasks.SituationMenu
 import app.braid.mobile.ui.tasks.TaskKindMark
 import app.braid.mobile.ui.tasks.TaskSituationGlyph
@@ -403,7 +404,7 @@ private fun ProducedRow(
     ) {
         Box(Modifier.size(width = 20.dp, height = 24.dp), contentAlignment = Alignment.Center) {
             SvgIcon(
-                if (entity.kind == EntityKind.Task) BraidIcons.calendarDays else BraidIcons.fileText,
+                if (entity.kind == EntityKind.Task) BraidIcons.calendarDays else DocumentIcons.producedGlyph(entity.artifactType),
                 size = 18.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 strokeWidth = 1.75f,

@@ -9,6 +9,9 @@ import { dateLineOf, minutesBetween } from "@/lib/tasks/task-detail-format";
 
 export const ARTIFACT_TYPE_ORDER: readonly ArtifactType[] = [
   "text",
+  "news",
+  "email_summary",
+  "youtube_transcript",
   "food",
   "sleep",
   "training",
