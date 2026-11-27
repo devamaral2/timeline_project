@@ -78,8 +78,8 @@ import app.braid.mobile.domain.markdown.splitPictures
 import coil3.compose.SubcomposeAsyncImage
 
 /**
- * O markdown de um documento de texto, como o `MarkdownView` do web: títulos, listas, ênfase, código e links. O
- * `#` desce para o tamanho de seção, porque o título da tela é o nome do documento; a caixa de tarefa é só leitura.
+ * O markdown de um artefato de texto, como o `MarkdownView` do web: títulos, listas, ênfase, código e links. O
+ * `#` desce para o tamanho de seção, porque o título da tela é o nome do artefato; a caixa de tarefa é só leitura.
  */
 @Composable
 fun MarkdownView(
@@ -87,13 +87,13 @@ fun MarkdownView(
     modifier: Modifier = Modifier,
 ) {
     val blocks = remember(source) { parseMarkdown(source, images = true) }
-    // As imagens do documento aparecem todas juntas, quando a pessoa pede; o estado é desta leitura, não é guardado.
+    // As imagens do artefato aparecem todas juntas, quando a pessoa pede; o estado é desta leitura, não é guardado.
     var shown by remember { mutableStateOf(false) }
     val images = remember(shown) { ImagesState(shown) { shown = true } }
     CompositionLocalProvider(LocalImages provides images) { MarkdownBlocks(blocks, modifier) }
 }
 
-/** Se as imagens do documento já foram pedidas, e como pedi-las. */
+/** Se as imagens do artefato já foram pedidas, e como pedi-las. */
 private class ImagesState(
     val shown: Boolean,
     val show: () -> Unit,
@@ -334,7 +334,7 @@ private const val VIDEO_RADIUS = 10
 private const val PLAY_BUTTON = 44
 
 /**
- * O vídeo de um link do YouTube sozinho no parágrafo. No app não há player embutido nem miniatura: abrir o documento
+ * O vídeo de um link do YouTube sozinho no parágrafo. No app não há player embutido nem miniatura: abrir o artefato
  * não faz requisição nenhuma, e "Assistir no YouTube" entrega o endereço original ao YouTube (ou ao navegador). Sob o
  * cartão fica o link, como no web.
  */
@@ -391,7 +391,7 @@ private const val IMAGE_ALT_PLACEHOLDER = "Imagem"
 private const val SHOW_IMAGES = "Mostrar imagens"
 
 /**
- * Uma imagem do documento. Até a pessoa pedir ela é só um botão com o texto alternativo, porque abrir um documento não
+ * Uma imagem do artefato. Até a pessoa pedir ela é só um botão com o texto alternativo, porque abrir um artefato não
  * pode disparar requisição a um servidor qualquer; pedida (qualquer botão libera todas), é buscada por um cliente sem
  * a sessão do app, sem `Referer` e sem cookies (`thirdPartyImageLoader`).
  */

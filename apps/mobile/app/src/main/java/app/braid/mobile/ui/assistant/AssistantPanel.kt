@@ -498,7 +498,7 @@ private fun RecordCard(
 
 /**
  * A cor do ponto do cartão: a do tipo da tarefa (refeição, sono, treino), o azul de rotina para as demais, e o cinza para o
- * documento e para o registro apagado.
+ * artefato e para o registro apagado.
  */
 @Composable
 private fun recordColor(

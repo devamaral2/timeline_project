@@ -16,19 +16,19 @@ data object TasksRoute
 @Serializable
 data object DocumentsRoute
 
-/** O detalhe de um documento, aberto pela lista; o ViewModel lê o [documentId] do argumento. */
+/** O detalhe de um artefato, aberto pela lista; o ViewModel lê o [documentId] do argumento. */
 @Serializable
 data class DocumentDetailRoute(
     val documentId: String,
 )
 
-/** O formulário de um documento novo, aberto pelo `/nota` do chat; [name] é o que foi digitado depois do comando. */
+/** O formulário de um artefato novo, aberto pelo `/nota` do chat; [name] é o que foi digitado depois do comando. */
 @Serializable
 data class NewDocumentRoute(
     val name: String? = null,
 )
 
-/** A edição da nota de texto própria, aberta pelo detalhe do documento. */
+/** A edição da nota de texto própria, aberta pelo detalhe do artefato. */
 @Serializable
 data class EditDocumentRoute(
     val documentId: String,

@@ -132,12 +132,12 @@ enum class RequestOperation(
 
 enum class EntityKind { Task, Artifact }
 
-/** Uma tarefa ou documento que o pedido criou, alterou ou apagou. */
+/** Uma tarefa ou artefato que o pedido criou, alterou ou apagou. */
 data class RequestEntity(
     val kind: EntityKind,
     val id: String,
     val name: String,
-    /** Só no documento; ausente, a tela escreve "Nota". */
+    /** Só no artefato; ausente, a tela escreve "Nota". */
     val artifactType: ArtifactType?,
     val operation: RequestOperation,
 )

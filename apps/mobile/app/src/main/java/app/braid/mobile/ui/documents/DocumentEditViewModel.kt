@@ -53,7 +53,7 @@ sealed interface DocumentEditUiState {
     data object NotEditable : DocumentEditUiState
 
     data class Form(
-        /** Editando um documento que já existe; senão é a criação. */
+        /** Editando um artefato que já existe; senão é a criação. */
         val existing: Boolean,
         val kind: NewDocumentKind = NewDocumentKind.Text,
         val name: String = "",
@@ -65,7 +65,7 @@ sealed interface DocumentEditUiState {
         val mode: EditorMode = EditorMode.Write,
         val saving: Boolean = false,
         val error: String? = null,
-        /** O id do documento salvo ou criado: a tela abre a leitura dele. */
+        /** O id do artefato salvo ou criado: a tela abre a leitura dele. */
         val savedId: String? = null,
     ) : DocumentEditUiState {
         /** O alimento só existe na criação e vai só com o texto do que foi comido. */
@@ -74,7 +74,7 @@ sealed interface DocumentEditUiState {
 }
 
 /**
- * O formulário do documento, na criação (`/nota` do chat) e na edição da nota de texto. A criação guarda uma chave de
+ * O formulário do artefato, na criação (`/nota` do chat) e na edição da nota de texto. A criação guarda uma chave de
  * idempotência por tipo enquanto o formulário está aberto; a edição manda a revisão lida e o conteúdo inteiro.
  */
 @HiltViewModel
@@ -206,7 +206,7 @@ class DocumentEditViewModel
             }
         }
 
-        /** A mesma chave enquanto o corpo for o mesmo (tocar em Salvar de novo não cria outro documento); corpo novo, chave nova. */
+        /** A mesma chave enquanto o corpo for o mesmo (tocar em Salvar de novo não cria outro artefato); corpo novo, chave nova. */
         private suspend fun create(
             kind: NewDocumentKind,
             draft: ArtifactDraft,

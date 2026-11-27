@@ -1,9 +1,13 @@
 import type { TaskKind, HumanTaskKind } from "@repo/contracts";
+import { TypeIconPaths, typeIconNodes } from "@/components/ui/type-icons";
 import styles from "./task-glyphs.module.css";
 
 const humanKinds: readonly HumanTaskKind[] = ["common", "meal", "sleep", "training"];
 
-/** O desenho de cada tipo, copiado do quadro Tipos do canvas (traco 2, cantos redondos). */
+/**
+ * O desenho de cada tipo, copiado do quadro Tipos do canvas (traco 2, cantos redondos). Refeicao, sono e treino vem de
+ * `components/ui/type-icons.tsx`, os mesmos desenhos dos artefatos desses tipos.
+ */
 function KindPaths({ kind }: { kind: TaskKind }) {
   switch (kind) {
     case "common":
@@ -17,25 +21,11 @@ function KindPaths({ kind }: { kind: TaskKind }) {
         </>
       );
     case "meal":
-      return (
-        <>
-          <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
-          <path d="M7 2v20" />
-          <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
-        </>
-      );
+      return <TypeIconPaths node={typeIconNodes.plate} />;
     case "sleep":
-      return <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />;
+      return <TypeIconPaths node={typeIconNodes.moonStar} />;
     case "training":
-      return (
-        <>
-          <path d="M6.5 6.5v11" />
-          <path d="M17.5 6.5v11" />
-          <path d="M3.5 9v6" />
-          <path d="M20.5 9v6" />
-          <path d="M6.5 12h11" />
-        </>
-      );
+      return <TypeIconPaths node={typeIconNodes.barbell} />;
     case "request":
       return <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />;
     case "search_request":

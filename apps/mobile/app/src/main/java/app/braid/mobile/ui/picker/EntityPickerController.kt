@@ -27,7 +27,7 @@ data class EntityPickerState<T>(
 )
 
 /**
- * O motor da folha de seleção de entidade (tarefas da hierarquia hoje, documentos da tarefa depois): abre buscando os
+ * O motor da folha de seleção de entidade (tarefas da hierarquia hoje, artefatos da tarefa depois): abre buscando os
  * primeiros itens, refaz a busca 250 ms depois da última tecla e descarta a resposta de uma busca que já foi trocada.
  * Não sabe de que é a lista: quem o usa passa a fonte ([search]) e quem fica de fora ([keep]).
  */

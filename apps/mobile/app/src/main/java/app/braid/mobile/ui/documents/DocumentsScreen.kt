@@ -62,7 +62,7 @@ import app.braid.mobile.ui.shell.PublishSectionMenu
 import app.braid.mobile.ui.shell.SectionMenuModel
 import app.braid.mobile.ui.shell.SectionSearch
 
-/** A aba Documentos: os documentos do usuário, do mais recente para o mais antigo, e o menu da seção com a busca. */
+/** A aba Artefatos: os artefatos do usuário, do mais recente para o mais antigo, e o menu da seção com a busca. */
 @Composable
 fun DocumentsScreen(
     onOpenDocument: (String) -> Unit,
@@ -76,13 +76,13 @@ fun DocumentsScreen(
         onPauseOrDispose {}
     }
     DocumentsContent(state, onOpenDocument, onRetry = viewModel::retry, onClear = viewModel::clearFilters)
-    // O menu da seção: a busca só aparece quando há documento; as listas são as de executor, do shell.
+    // O menu da seção: a busca só aparece quando há artefato; as listas são as de executor, do shell.
     PublishSectionMenu(
         tab = MainTab.Documents,
         model =
             SectionMenuModel(
                 count = state.shown?.size,
-                search = if (state.hasArtifacts) SectionSearch("Buscar nos documentos", state.query, viewModel::search) else null,
+                search = if (state.hasArtifacts) SectionSearch("Buscar nos artefatos", state.query, viewModel::search) else null,
                 filtered = state.filtered,
                 onClear = viewModel::clearFilters,
             ),
@@ -178,7 +178,7 @@ private fun LoadingList() {
     Column {
         ListSkeleton()
         Text(
-            text = "Carregando documentos…",
+            text = "Carregando artefatos…",
             modifier = Modifier.padding(top = 8.dp).semantics { liveRegion = LiveRegionMode.Polite },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontFamily = BraidMonoFont,
@@ -193,7 +193,7 @@ private fun LoadingList() {
 private fun LoadFailed(onRetry: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            text = "Não foi possível carregar os documentos.",
+            text = "Não foi possível carregar os artefatos.",
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 14.sp,
@@ -212,8 +212,8 @@ private fun EmptyList(
     val dash = MaterialTheme.colorScheme.outlineVariant
     val (title, text) =
         when (kind) {
-            EmptyKind.NoneYet -> "Nenhum documento ainda" to "Os documentos aparecem aqui assim que existirem."
-            EmptyKind.NothingFound -> "Nenhum documento encontrado" to "Nada combina com os filtros escolhidos."
+            EmptyKind.NoneYet -> "Nenhum artefato ainda" to "Os artefatos aparecem aqui assim que existirem."
+            EmptyKind.NothingFound -> "Nenhum artefato encontrado" to "Nada combina com os filtros escolhidos."
         }
     Column(
         modifier =

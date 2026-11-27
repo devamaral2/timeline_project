@@ -1,4 +1,4 @@
-/* As páginas do documento: a caixa tem o lado do quadrado da tarefa (44) para o
+/* As páginas do artefato: a caixa tem o lado do quadrado da tarefa (44) para o
    texto da linha não mudar de lugar; o desenho, mais estreito, fica centrado nela. */
 .sheet { position: relative; flex: none; display: block; width: 44px; height: 44px; color: var(--muted-foreground); }
 .sheet[data-size="cite"] { width: 32px; height: 32px; }

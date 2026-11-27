@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
 
-/** Espera depois da última tecla antes de consultar a API pelo texto, como a aba de documentos do web. */
+/** Espera depois da última tecla antes de consultar a API pelo texto, como a aba de artefatos do web. */
 const val TASK_SEARCH_DEBOUNCE_MS = 250L
 
 const val STALE_TASK_LIST_NOTICE = "Esta tarefa mudou em outro lugar. Carregamos a lista atual; confira e tente de novo."

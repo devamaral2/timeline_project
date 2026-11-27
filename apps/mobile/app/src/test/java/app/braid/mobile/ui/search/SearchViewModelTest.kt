@@ -23,7 +23,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
-/** A pesquisa do chat pela rede: as tarefas acompanhadas e os documentos, filtrados pelo texto. */
+/** A pesquisa do chat pela rede: as tarefas acompanhadas e os artefatos, filtrados pelo texto. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
     private val trackedPath = "/api/tasks/tracked"

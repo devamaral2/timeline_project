@@ -13,7 +13,7 @@ import java.time.Instant
  * Um ticket que acrescenta uma seção ao formulário acrescenta o campo aqui (sem valor padrão, para o compilador mostrar
  * cada lugar que precisa dele), em [TaskDraftField], em [draftFromTask], [emptyTaskDraft] e [rebaseDraft], na
  * conferência de [validateTaskDraft] se houver, e num ramo de [buildTaskPatch] (e de [buildCreateTask], se a criação o
- * enviar). Os tickets 14 (recorrência), 15 (hierarquia) e 16 (documentos) entram por aqui.
+ * enviar). Os tickets 14 (recorrência), 15 (hierarquia) e 16 (artefatos) entram por aqui.
  */
 data class TaskDraft(
     val kind: TaskKind,
@@ -40,7 +40,7 @@ data class TaskDraft(
     val parentTaskId: String?,
     /** As subtarefas (ids), na ordem da API; a lista inteira vai no `PATCH`. Só a edição as tem. */
     val subtaskIds: List<String>,
-    /** Os documentos ligados, na ordem da tela; a lista inteira vai no `PATCH`. Só a edição os tem. */
+    /** Os artefatos ligados, na ordem da tela; a lista inteira vai no `PATCH`. Só a edição os tem. */
     val artifacts: List<DraftArtifact>,
 )
 
@@ -163,7 +163,7 @@ data class CreateTask(
 /**
  * O corpo da criação. Sem data, a API põe agora e estima o fim; sem status, a tarefa nasce de referência. Criar já
  * concluída manda `finishedAt`. Lembretes e tags entram só quando a pessoa escolheu algum. A tarefa persistente, a
- * hierarquia e os documentos não existem na criação.
+ * hierarquia e os artefatos não existem na criação.
  */
 fun buildCreateTask(
     draft: TaskDraft,
@@ -205,7 +205,7 @@ data class TaskPatch(
     val parentTaskId: Clearable<String>? = null,
     /** A lista completa, não o que mudou. */
     val subtaskIds: List<String>? = null,
-    /** A lista completa de documentos, na ordem da tela; cópias novas de alimento levam `copyOf` e a quantidade. */
+    /** A lista completa de artefatos, na ordem da tela; cópias novas de alimento levam `copyOf` e a quantidade. */
     val artifacts: List<ArtifactLink>? = null,
 ) {
     /** Nada além da revisão: não há o que enviar. */

@@ -32,8 +32,8 @@ const STALE_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a versão at
  * O detalhe de tarefa em modo de leitura, a rota única para agenda e lista de
  * tarefas. A tela é uma coluna de seções separadas: o topo (este arquivo e
  * `TaskDetailHeader`), as Informações (`TaskInfoSection`), e as seções de
- * relação: Tarefa principal e Subtarefas (`TaskHierarchySection`), Documentos (`TaskArtifactsSection`) e Pedidos (`TaskRequestsSection`: criado e atualizado por). "Excluir" fica no menu "Mais ações" do
- * topo, ao lado de "Editar" (ticket 23). Documentos aparece sempre, com a ação de ligar um documento embaixo, que
+ * relação: Tarefa principal e Subtarefas (`TaskHierarchySection`), Artefatos (`TaskArtifactsSection`) e Pedidos (`TaskRequestsSection`: criado e atualizado por). "Excluir" fica no menu "Mais ações" do
+ * topo, ao lado de "Editar" (ticket 23). Artefatos aparece sempre, com a ação de ligar um artefato embaixo, que
  * grava na hora, sem passar pela edição. A hierarquia só se lê aqui: subtarefa se liga na edição ou pelo agente.
  */
 export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps) {
@@ -73,7 +73,7 @@ export function TaskDetailView({ userId, task, onChanged }: TaskDetailViewProps)
   const addArtifact = (artifact: ArtifactDto) => {
     const current = draftArtifactsFromTask(task.artifacts);
     const next = task.kind === "meal" ? addFoodCopy(current, artifact, crypto.randomUUID()) : addDraftArtifact(current, artifact);
-    return change({ expectedRevision: task.revision, artifacts: artifactLinkInputs(next) }, "Não foi possível ligar o documento. Tente novamente.");
+    return change({ expectedRevision: task.revision, artifacts: artifactLinkInputs(next) }, "Não foi possível ligar o artefato. Tente novamente.");
   };
 
   const lead = (

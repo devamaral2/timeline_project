@@ -47,10 +47,10 @@ import app.braid.mobile.ui.documents.RecipeView
 const val TASK_MEAL_FOOTNOTE = "Estimativa nutricional da IA"
 
 /**
- * O alimento (ou a refeição) dentro do cartão do documento, no detalhe da tarefa (`TaskMealContent` do web): em cima, as
+ * O alimento (ou a refeição) dentro do cartão do artefato, no detalhe da tarefa (`TaskMealContent` do web): em cima, as
  * calorias à esquerda e os macros em lista à direita, com a barra de proporção embaixo; depois os alimentos, que recolhem
  * pela linha "Alimentos"; a receita, quando há; e o aviso de que os números são estimativa da IA. Enquanto o agente calcula,
- * ou se falhou, só o texto digitado e o aviso do documento.
+ * ou se falhou, só o texto digitado e o aviso do artefato.
  */
 @Composable
 fun TaskMealContent(

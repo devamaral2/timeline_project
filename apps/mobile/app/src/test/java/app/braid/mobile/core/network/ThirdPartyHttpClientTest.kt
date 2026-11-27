@@ -7,7 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-/** As imagens de um documento vão a servidores de terceiros: nada que identifique a pessoa ou o app vai junto. */
+/** As imagens de um artefato vão a servidores de terceiros: nada que identifique a pessoa ou o app vai junto. */
 class ThirdPartyHttpClientTest {
     @Test
     fun `an image request carries no referer, no auth header and no cookie`() {

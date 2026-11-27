@@ -11,7 +11,7 @@ import styles from "./markdown.module.css";
 
 const remarkPlugins = [remarkGfm];
 
-/** As imagens de um documento aparecem todas juntas, quando a pessoa pede. */
+/** As imagens de um artefato aparecem todas juntas, quando a pessoa pede. */
 const ImagesContext = createContext<{ shown: boolean; show: () => void }>({ shown: false, show: () => {} });
 
 function isRemote(href: string | undefined): boolean {
@@ -27,7 +27,7 @@ function ExternalLink({ href, children }: { href?: string; children?: ReactNode 
 }
 
 /**
- * Uma imagem só é buscada depois que a pessoa pede: abrir um documento não
+ * Uma imagem só é buscada depois que a pessoa pede: abrir um artefato não
  * dispara requisição ao servidor de quem hospeda a imagem, que poderia medir a
  * leitura ou receber dados pelo endereço. Pedida, vai sem `Referer`.
  */

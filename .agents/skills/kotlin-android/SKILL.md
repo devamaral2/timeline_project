@@ -20,7 +20,7 @@ português:
 | Código | Tela |
 |---|---|
 | `Task` (pessoa, agente, referência, longa, recorrente) | tarefa |
-| `Artifact` | documento (a lista é "Documentos") |
+| `Artifact` | artefato (a lista é "Artefatos") |
 | `Request` | pedido |
 | `Step`, `Entry`, `Relation`, `Recurrence`, `Actor` | passo, entrada, relação, recorrência, executor |
 

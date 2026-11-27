@@ -13,7 +13,7 @@ export const HUB_COMMANDS: readonly HubCommand[] = [
   // Um só atalho cria a tarefa, com status ou sem.
   { id: "task", slug: "tarefa", label: "Criar tarefa", hint: "Tipo, status, início e término" },
   { id: "note", slug: "nota", label: "Criar nota", hint: "A primeira linha vira o título" },
-  { id: "search", slug: "buscar", label: "Pesquisar", hint: "Tarefas e documentos" },
+  { id: "search", slug: "buscar", label: "Pesquisar", hint: "Tarefas e artefatos" },
   { id: "notifications", slug: "notificacoes", label: "Notificações", hint: "Avisos recentes e próximos" },
   { id: "settings", slug: "configuracoes", label: "Configurações", hint: "Tema e conta" },
 ];

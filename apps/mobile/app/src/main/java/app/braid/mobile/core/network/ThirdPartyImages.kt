@@ -8,7 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Response
 
 /**
- * As imagens de um documento vêm de servidores de terceiros. O cliente delas é um [OkHttpClient] novo, fora do
+ * As imagens de um artefato vêm de servidores de terceiros. O cliente delas é um [OkHttpClient] novo, fora do
  * `ApiClientFactory`: sem o bearer, sem o `Authenticator` e sem cookies, e o interceptor abaixo tira o que
  * sobrar de identificação, inclusive no que um redirecionamento carregar. Nunca reuse o cliente da API aqui.
  */
@@ -27,7 +27,7 @@ private object StripIdentity : Interceptor {
 @Volatile
 private var imageLoader: ImageLoader? = null
 
-/** O carregador de imagens dos documentos, um só para o app, sobre [thirdPartyHttpClient]. */
+/** O carregador de imagens dos artefatos, um só para o app, sobre [thirdPartyHttpClient]. */
 fun thirdPartyImageLoader(context: Context): ImageLoader =
     imageLoader ?: synchronized(StripIdentity) {
         imageLoader ?: ImageLoader

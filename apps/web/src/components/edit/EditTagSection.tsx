@@ -12,7 +12,7 @@ interface EditTagSectionProps {
   tags: string[];
   /** O id do título da seção: cada formulário tem o seu. */
   labelId: string;
-  /** O nome da lista para o leitor de tela: "Tags da tarefa", "Tags do documento". */
+  /** O nome da lista para o leitor de tela: "Tags da tarefa", "Tags do artefato". */
   listLabel: string;
   onChange: (tags: string[]) => void;
 }

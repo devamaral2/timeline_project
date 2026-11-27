@@ -150,7 +150,7 @@ fun AppNavHost(
                         chat.close()
                         navController.navigate(TaskEditRoute(name = argument.ifBlank { null }))
                     },
-                    // `/nota ideias` abre a criação do documento já com o nome; o chat fecha para a tela aparecer.
+                    // `/nota ideias` abre a criação do artefato já com o nome; o chat fecha para a tela aparecer.
                     ChatCommand.Document to { argument ->
                         chat.close()
                         navController.navigate(NewDocumentRoute(argument.trim().ifEmpty { null }))
@@ -271,7 +271,7 @@ fun AppNavHost(
                         onBack = { navController.popBackStack() },
                         onOpenTask = { navController.navigate(TaskDetailRoute(it)) },
                         onEdit = { navController.navigate(EditDocumentRoute(it)) },
-                        // Excluído, o documento some: volta para a lista, não para a leitura dele.
+                        // Excluído, o artefato some: volta para a lista, não para a leitura dele.
                         onDeleted = { navController.openTab(MainTab.Documents) },
                     )
                 }

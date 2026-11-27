@@ -13,7 +13,7 @@ data class TaskRequest(
 )
 
 /**
- * A tarefa do detalhe (`TaskDto`): o [card] que as listas leem mais o que só o detalhe mostra. Os documentos
+ * A tarefa do detalhe (`TaskDto`): o [card] que as listas leem mais o que só o detalhe mostra. Os artefatos
  * (`artifacts`) vêm junto.
  */
 data class TaskDetail(
@@ -27,7 +27,7 @@ data class TaskDetail(
     val recurrence: TaskRecurrence?,
     val subtaskIds: List<String>,
     val requests: List<TaskRequest>,
-    /** Os documentos ligados, na ordem da API (ticket 16). */
+    /** Os artefatos ligados, na ordem da API (ticket 16). */
     val artifacts: List<TaskArtifact> = emptyList(),
 ) {
     val id: String get() = card.id

@@ -164,7 +164,7 @@ fun TaskDetailScreen(
     onDismissDelete: () -> Unit,
     onConfirmDelete: () -> Unit,
     onOpenArtifact: (String) -> Unit = {},
-    /** O "+" da seção Documentos: abre o seletor do tipo da tarefa e grava a escolha na hora. */
+    /** O "+" da seção Artefatos: abre o seletor do tipo da tarefa e grava a escolha na hora. */
     onAddArtifact: () -> Unit = {},
     /** A barra de edição por IA, fixa no pé da tela. */
     footer: (@Composable () -> Unit)? = null,

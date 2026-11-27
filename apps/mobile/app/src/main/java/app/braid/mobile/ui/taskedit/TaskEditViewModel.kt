@@ -190,7 +190,7 @@ class TaskEditViewModel
                 clock = clock,
             )
 
-        /** O seletor de documentos da tarefa (ticket 16): a escolha entra no rascunho, a gravação fica para o Salvar. */
+        /** O seletor de artefatos da tarefa (ticket 16): a escolha entra no rascunho, a gravação fica para o Salvar. */
         val artifactPicker = TaskArtifactPicker(viewModelScope, artifacts)
 
         init {
@@ -207,7 +207,7 @@ class TaskEditViewModel
             }
         }
 
-        /** O "+" da seção Documentos: abre o seletor da fonte do tipo que o rascunho tem agora. */
+        /** O "+" da seção Artefatos: abre o seletor da fonte do tipo que o rascunho tem agora. */
         fun openArtifactPicker() {
             val draft = (mutableState.value as? TaskEditUiState.Form)?.draft ?: return
             artifactPicker.open(draft.kind, draft.artifacts.map { it.id }) { artifact ->

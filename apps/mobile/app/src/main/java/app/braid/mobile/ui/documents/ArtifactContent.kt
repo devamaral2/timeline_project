@@ -79,9 +79,9 @@ const val FAILED_MEAL_MESSAGE = "Não foi possível gerar as informações da re
 const val MODEL_ESTIMATE_MESSAGE = "Estimativa nutricional gerada por IA."
 
 /**
- * O conteúdo de um documento aberto, conforme o tipo, como o `ArtifactContent` do web: texto e roteador em markdown
+ * O conteúdo de um artefato aberto, conforme o tipo, como o `ArtifactContent` do web: texto e roteador em markdown
  * (sem o título repetido na primeira linha), alimento, treino e sono com o número principal na serifa, exercício do
- * catálogo com categoria e situação. É o mesmo componente do detalhe do documento e do da tarefa. Skill e agente
+ * catálogo com categoria e situação. É o mesmo componente do detalhe do artefato e do da tarefa. Skill e agente
  * são o arquivo do Hermes (`AgentFileSection`).
  */
 @Composable

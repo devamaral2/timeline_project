@@ -57,12 +57,12 @@ beforeEach(() => {
   push.mockReset();
 });
 
-test("criar nota envia um documento de texto com o nome e o conteúdo", async () => {
+test("criar nota envia um artefato de texto com o nome e o conteúdo", async () => {
   install();
   render(<NewNoteRoute userId="user-1" />);
 
-  expect(screen.getByRole("heading", { level: 1, name: "Novo documento" })).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("Nome do documento"), { target: { value: "Ideias" } });
+  expect(screen.getByRole("heading", { level: 1, name: "Novo artefato" })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Nome do artefato"), { target: { value: "Ideias" } });
   fireEvent.change(screen.getByLabelText("Conteúdo da nota"), { target: { value: "Ideias\nPrimeiro ponto" } });
   save();
 
@@ -83,7 +83,7 @@ test("criar alimento envia só o texto do que foi comido e abre o alimento, que 
   chooseFood();
   // O formulário de nota some: fica só o campo do que foi comido, sem nome e sem tags.
   expect(screen.queryByLabelText("Conteúdo da nota")).not.toBeInTheDocument();
-  expect(screen.queryByLabelText("Nome do documento")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Nome do artefato")).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("O que você comeu"), { target: { value: "  Arroz, feijão e salada  " } });
   save();
 
@@ -200,7 +200,7 @@ test("editar mostra as tarefas ligadas; ligar outra e desligar uma manda a lista
   install({ tasks: [DINNER, GYM], artifacts: [artifactFixture({ ...NOTE, revision: 2, links: [{ taskId: "ev-1", relation: "uses" }] })] });
   render(<EditNoteRoute userId="user-1" noteId="art-1" />);
 
-  expect(await screen.findByRole("heading", { level: 1, name: "Editar documento" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Editar artefato" })).toBeInTheDocument();
   const linked = screen.getByRole("list", { name: "Tarefas ligadas" });
   expect(within(linked).getByText("Jantar leve")).toBeInTheDocument();
 
@@ -236,11 +236,11 @@ test("Descartar volta para a lista na criação e para a leitura na edição, se
   expect(api.calls.some((call) => call.method !== "GET")).toBe(false);
 });
 
-test("um documento que não é nota de texto própria não se edita aqui", async () => {
+test("um artefato que não é nota de texto própria não se edita aqui", async () => {
   // Uma nota do catálogo global: só se lê.
   install({ artifacts: [artifactFixture({ id: "art-9", name: "Guia", global: true, data: { body: "Guia" } })] });
   render(<EditNoteRoute userId="user-1" noteId="art-9" />);
 
-  expect(await screen.findByRole("alert")).toHaveTextContent("Este documento não se edita aqui.");
+  expect(await screen.findByRole("alert")).toHaveTextContent("Este artefato não se edita aqui.");
   expect(screen.queryByRole("button", { name: "Salvar" })).not.toBeInTheDocument();
 });

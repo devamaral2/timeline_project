@@ -1,12 +1,13 @@
 "use client";
 
-import { Apple, Bot, ChevronDown, Dumbbell, FileCode, FileText, type LucideIcon, Moon, Plus, Route } from "lucide-react";
+import { Bot, ChevronDown, FileCode, FileText, type LucideIcon, Plus } from "lucide-react";
 import Link from "next/link";
 import { useId, useState } from "react";
 import type { ArtifactDto, ArtifactType, HumanTaskKind, TaskArtifactDto, TaskDto } from "@repo/contracts";
 import { DetailSection } from "@/components/detail/detail-parts";
 import { ArtifactContent } from "@/components/notes/ArtifactContent";
 import { ICON_STROKE_WIDTH } from "@/components/tasks/task-visuals";
+import { BarbellIcon, CompassIcon, MoonStarIcon, MovementIcon, PlateIcon } from "@/components/ui/type-icons";
 import { mealCaloriesKcal } from "@/lib/tasks/task-read-model";
 import { ArtifactPickerDialog, artifactSource } from "./TaskEditArtifactsSection";
 import { TaskMealContent } from "./TaskMealContent";
@@ -27,13 +28,13 @@ interface TaskArtifactsSectionProps {
 
 const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
   text: FileText,
-  food: Apple,
-  sleep: Moon,
-  training: Dumbbell,
-  workout: Dumbbell,
+  food: PlateIcon,
+  sleep: MoonStarIcon,
+  training: BarbellIcon,
+  workout: MovementIcon,
   skill: FileCode,
   agent: Bot,
-  router: Route,
+  router: CompassIcon,
 };
 
 /**
@@ -44,7 +45,7 @@ const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
 const INLINE_TYPES: ReadonlySet<ArtifactType> = new Set(["text", "router", "food", "training", "sleep"]);
 
 /**
- * A seção Documentos do detalhe: os documentos da tarefa, na ordem em que vieram
+ * A seção Artefatos do detalhe: os artefatos da tarefa, na ordem em que vieram
  * (`task.artifacts`, sem outra chamada). Cada artefato é um cartão: no cabeçalho, o
  * ícone do tipo, o nome e, em mono, a posição, o código do tipo e a relação
  * (`1 · text · uses`); o que a tarefa criou (`creates`) não está na lista e vem sem
@@ -61,7 +62,7 @@ export function TaskArtifactsSection({ userId, task, onAddArtifact, busy = false
   const positions = artifactPositions(task.artifacts);
 
   return (
-    <DetailSection title="Documentos" labelId="task-artifacts" count={task.artifacts.length}>
+    <DetailSection title="Artefatos" labelId="task-artifacts" count={task.artifacts.length}>
       {task.artifacts.length > 0 ? (
         <ul className={styles.list}>
           {task.artifacts.map((link, index) => (

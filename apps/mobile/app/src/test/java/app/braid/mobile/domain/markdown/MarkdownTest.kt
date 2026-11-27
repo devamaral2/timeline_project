@@ -19,7 +19,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import app.braid.mobile.domain.markdown.MarkdownInline.Code as InlineCode
 
-/** O markdown que os documentos de texto mostram: títulos, listas, ênfase, código e links; HTML cru e imagem não. */
+/** O markdown que os artefatos de texto mostram: títulos, listas, ênfase, código e links; HTML cru e imagem não. */
 class MarkdownTest {
     private fun text(value: String) = Text(value)
 

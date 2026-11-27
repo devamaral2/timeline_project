@@ -15,7 +15,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Instant
 
-/** As regras de texto dos documentos, conferidas contra as saídas das funções do web (`documents-model.json`). */
+/** As regras de texto dos artefatos, conferidas contra as saídas das funções do web (`documents-model.json`). */
 class DocumentsModelFixturesTest {
     private val model = Fixtures.json("documents-model").jsonObject
     private val now = Instant.parse(model.getValue("now").jsonPrimitive.content)

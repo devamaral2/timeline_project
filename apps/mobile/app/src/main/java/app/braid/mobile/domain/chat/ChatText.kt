@@ -23,7 +23,7 @@ const val HERMES_ENTER_TEXT = "Agora você está falando com o Hermes. Escreva /
 
 const val STEPS_PENDING_LABEL = "Realizando processos"
 
-/** "Tarefa criada", "Nota alterada"…: a linha de um registro que o pedido tocou. Todo documento aparece como "Nota". */
+/** "Tarefa criada", "Nota alterada"…: a linha de um registro que o pedido tocou. Todo artefato aparece como "Nota". */
 fun chatEntityText(entity: RequestEntity): String {
     val noun = if (entity.kind == EntityKind.Task) "Tarefa" else "Nota"
     val change =
