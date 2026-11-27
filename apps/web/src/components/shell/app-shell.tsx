@@ -1,6 +1,8 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ExecutionDrawer } from "./execution-drawer";
 import { HeaderActions } from "./header-actions";
 import { type HubHandle, MobileNavigation } from "./mobile-navigation";
 import { NavigationMotion } from "./navigation-motion";
@@ -10,6 +12,13 @@ import styles from "./shell.module.css";
 /** A assinatura: "Agente pessoal" na serifa, sem símbolo. */
 function BrandLogo() {
   return <span className={styles.wordmark}>Agente pessoal</span>;
+}
+
+/** As três abas (Agenda, Tarefas e Documentos) são as telas que têm a barra inferior; o detalhe, a edição e a criação não. */
+function isTabRoot(pathname: string | null, userId: string | undefined): boolean {
+  if (!userId || !pathname) return false;
+  const path = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
+  return path === `/${userId}` || path === `/${userId}/tarefas` || path === `/${userId}/notas`;
 }
 
 export function AppShell({
@@ -26,6 +35,7 @@ export function AppShell({
   // abri-lo e mostra se está aberto.
   const hubRef = useRef<HubHandle | null>(null);
   const [hubOpen, setHubOpen] = useState(false);
+  const pathname = usePathname();
 
   // O tema ja chega resolvido no <html> pelo script do layout raiz (sistema ou
   // escolha salva); aqui so se le e, ao trocar, se fixa a escolha.
@@ -61,6 +71,8 @@ export function AppShell({
       </header>
       {children}
       <MobileNavigation userId={userId} hubRef={hubRef} onHubOpenChange={setHubOpen} darkMode={darkMode} onThemeToggle={toggleTheme} />
+      {/* Depois da barra no DOM, para ficar por cima do degradê que apaga o conteúdo atrás dela. */}
+      {userId ? <ExecutionDrawer userId={userId} active={isTabRoot(pathname, userId)} covered={hubOpen} /> : null}
     </div>
   );
 }

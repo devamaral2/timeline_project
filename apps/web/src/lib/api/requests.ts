@@ -23,6 +23,16 @@ export const requestsRoutes = {
   cancelRequest: "POST /api/requests/{requestId}/cancel",
 } as const;
 
+/**
+ * Aviso da mesma aba de que o cliente acabou de abrir um pedido: a gaveta de execução se relê na hora, em vez de
+ * esperar a batida de 30 s. Quem abre um pedido (chat, edição, voz, Hermes, modo modelo) passa por uma destas funções.
+ */
+export const REQUEST_STARTED_SIGNAL = "braid:request-started";
+
+function announceRequestStarted(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(REQUEST_STARTED_SIGNAL));
+}
+
 /** O Hermes está desligado nesta API (`AI_AUTOMATION`): a rota dele responde não encontrado. */
 export class HermesOffError extends Error {
   constructor() {
@@ -50,12 +60,14 @@ export class FoodCancelConflictError extends Error {
 /** Abre um pedido em texto (chat). Devolve só o id; acompanhe com `getRequest`. */
 export async function startRequest(input: StartRequestInput): Promise<string> {
   const accepted = await apiRequest<StartRequestResponse>("POST", "/api/requests", { body: input });
+  announceRequestStarted();
   return accepted.requestId;
 }
 
 /** Abre o pedido de edição da entidade que a tela de detalhe tem aberta. Devolve o id do pedido. */
 export async function startEditRequest(input: StartEditRequestInput): Promise<string> {
   const accepted = await apiRequest<StartRequestResponse>("POST", "/api/requests/edit", { body: input });
+  announceRequestStarted();
   return accepted.requestId;
 }
 
@@ -65,7 +77,9 @@ export async function startEditRequest(input: StartEditRequestInput): Promise<st
  */
 export async function sendHermesMessage(input: StartHermesRequestInput): Promise<RequestDto> {
   try {
-    return await apiRequest<RequestDto>("POST", "/api/requests/hermes", { body: input });
+    const request = await apiRequest<RequestDto>("POST", "/api/requests/hermes", { body: input });
+    announceRequestStarted();
+    return request;
   } catch (error) {
     if (error instanceof ApiRequestError && error.kind === "not_found") throw new HermesOffError();
     throw error;
@@ -78,7 +92,9 @@ export async function sendHermesMessage(input: StartHermesRequestInput): Promise
  */
 export async function sendModelMessage(input: StartModelRequestInput): Promise<RequestDto> {
   try {
-    return await apiRequest<RequestDto>("POST", "/api/requests/model", { body: input });
+    const request = await apiRequest<RequestDto>("POST", "/api/requests/model", { body: input });
+    announceRequestStarted();
+    return request;
   } catch (error) {
     if (error instanceof ApiRequestError && error.kind === "not_found") throw new ModelOffError();
     throw error;
@@ -98,6 +114,7 @@ export async function getModelOptions(): Promise<ModelOptionsDto> {
 /** Abre um pedido de voz. A tarefa criada aparece em `entities` do pedido quando ele termina. */
 export async function startVoiceRequest(input: StartVoiceRequestInput): Promise<string> {
   const accepted = await apiRequest<StartRequestResponse>("POST", "/api/requests/voice", { body: input });
+  announceRequestStarted();
   return accepted.requestId;
 }
 
