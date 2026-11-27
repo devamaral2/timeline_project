@@ -1,6 +1,6 @@
 import type { Artifact, ProjectRef, Task, Recurrence } from "../../domain";
 import type { TaskCard, TaskRequestLink } from "../../domain/ports";
-import type { ArtifactType, TaskCardDto, TaskDto, TaskRecurrenceDto } from "@repo/contracts";
+import type { ArtifactType, ModelSelection, TaskCardDto, TaskDto, TaskRecurrenceDto } from "@repo/contracts";
 import { toArtifactDto } from "./artifact.dto";
 
 function recurrenceOf(task: Task, recurrence: Recurrence | undefined): TaskRecurrenceDto | undefined {
@@ -13,9 +13,29 @@ function recurrenceOf(task: Task, recurrence: Recurrence | undefined): TaskRecur
   };
 }
 
+const MODEL_PROVIDERS: readonly string[] = ["anthropic", "openai", "openrouter"];
+const MODEL_EFFORTS: readonly string[] = ["low", "medium", "high", "max"];
+
+/**
+ * A escolha de provedor, modelo e esforco que o pedido levou, gravada em `data.model`. So a tarefa de agente a tem.
+ * No Hermes ela nao vale (o Hermes responde com o modelo dele), como no `RequestDto`; um valor que nao e uma escolha
+ * inteira e ignorado, para o cartao nunca sair fora do contrato.
+ */
+function modelChoiceOf(task: Task): ModelSelection | undefined {
+  if (task.actor !== "agent" || task.data.route === "hermes") return undefined;
+  const stored = task.data.model;
+  if (typeof stored !== "object" || stored === null) return undefined;
+  const { provider, model, effort } = stored as Record<string, unknown>;
+  if (typeof provider !== "string" || !MODEL_PROVIDERS.includes(provider)) return undefined;
+  if (typeof model !== "string" || model.length === 0) return undefined;
+  if (typeof effort !== "string" || !MODEL_EFFORTS.includes(effort)) return undefined;
+  return { provider: provider as ModelSelection["provider"], model, effort: effort as ModelSelection["effort"] };
+}
+
 /** O cartao da agenda e da lista de tarefas: o dado como esta gravado, sem rotulos. */
 export function toTaskCardDto({ task, project, artifactTypes, recurrence }: TaskCard): TaskCardDto {
   const series = recurrenceOf(task, recurrence);
+  const model = modelChoiceOf(task);
   return {
     id: task.id,
     actor: task.actor,
@@ -39,6 +59,7 @@ export function toTaskCardDto({ task, project, artifactTypes, recurrence }: Task
     revision: task.revision,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
+    ...(model ? { model } : {}),
   };
 }
 

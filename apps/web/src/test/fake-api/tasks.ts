@@ -21,7 +21,7 @@ const TASKS = "tasks";
 const CARD_KEYS = [
   "id", "actor", "kind", "status", "situation", "priority", "name", "description", "project", "location", "startedAt", "estimatedFinishAt",
   "finishedAt", "longRunning", "notifyOffsetsMinutes", "tags", "artifactTypes", "parentTaskId",
-  "recurrence", "revision", "createdAt", "updatedAt",
+  "recurrence", "revision", "createdAt", "updatedAt", "model",
 ] as const;
 /**
  * Campos que a edição aceita e que o fake aplica; `artifacts` não está aqui porque os vínculos vivem no artefato, e

@@ -372,11 +372,11 @@ test("a tarefa de agente esperando você e a execução agendada têm ponto iner
 
   const waiting = (await screen.findByRole("link", { name: /Aguardando resposta/ })).closest("li") as HTMLElement;
   expect(within(waiting).queryByRole("button")).not.toBeInTheDocument();
-  expect(waiting.querySelector("[data-inert-dot]")).toBeInTheDocument();
+  expect(waiting.querySelector("[data-row-lead]")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Feitas/ }));
   const cron = screen.getByRole("link", { name: /Rotina da manhã/ }).closest("li") as HTMLElement;
   expect(within(cron).queryByRole("button")).not.toBeInTheDocument();
-  expect(cron.querySelector("[data-inert-dot]")).toBeInTheDocument();
+  expect(cron.querySelector("[data-row-lead]")).toBeInTheDocument();
 });
 
 test("revisão desatualizada: a tela avisa, relê a lista e não grava nada", async () => {

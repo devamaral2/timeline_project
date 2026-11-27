@@ -15,7 +15,7 @@ import {
   stepProgress,
 } from "../../../apps/web/src/lib/tasks/agent-request-model";
 import { taskDetailFixtures } from "./task-detail";
-import { PERSONAL_PROJECT } from "./project";
+import { AGENT_SKILLS_PROJECT, PERSONAL_PROJECT } from "./project";
 
 type RequestInput = Record<string, unknown> & { id: string };
 
@@ -56,6 +56,7 @@ const entities = [
 
 const running = request({
   id: "task-agent",
+  project: AGENT_SKILLS_PROJECT,
   sessionId: "req-first",
   text: "Buscar passagens para sexta",
   steps,

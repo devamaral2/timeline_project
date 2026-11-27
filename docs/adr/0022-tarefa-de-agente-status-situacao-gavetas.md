@@ -121,3 +121,20 @@ não tem onde marcar.
   fica pendente.
 - Os clientes não escrevem a lista de status finais para decidir se mostram o controle: o cartão só traz `situation` quando
   a tarefa aceita.
+
+## A linha da tarefa de agente
+
+### Decisão
+
+1. **O status sai da esquerda e vai para o canto direito da linha:** o nome do status à esquerda do ícone quadrado e,
+   abaixo do ícone, o símbolo do provedor que rodou a tarefa, só quando o pedido levou a escolha. O robô que fechava a
+   linha saiu. O status do agente não abre escolha nenhuma. À esquerda fica um ponto inerte, o lugar do controle de
+   situação.
+2. **Cada status tem um ícone quadrado, um SVG só na grade de 20:** quadrado de canto arredondado (18 de lado, raio 5,
+   traço 1,6) e o desenho de dentro centrado em (10, 10). Não são bordas nem pseudo-elementos de CSS, que o navegador
+   arredonda e tira do centro. As cores são tokens (apagada, destaque, aviso, sucesso, erro); o giro de `starting` e o
+   pulso de `running` param com `prefers-reduced-motion`. O ícone é o mesmo na lista, na agenda, no cabeçalho do detalhe,
+   nos passos e na gaveta de subtarefas.
+3. **O cartão da tarefa de agente traz `model` (provedor, modelo e esforço)** quando o pedido levou a escolha, lida de
+   `tasks.data.model`. No Hermes, que responde com o modelo dele, e na tarefa de pessoa o campo não vai, como no
+   `RequestDto`. A lista só desenha o símbolo do provedor.

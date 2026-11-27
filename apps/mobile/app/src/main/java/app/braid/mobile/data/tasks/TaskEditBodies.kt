@@ -33,6 +33,7 @@ fun CreateTask.toBody(): JsonObject =
         location?.let { put("location", it) }
         notifyOffsetsMinutes?.let { put("notifyOffsetsMinutes", JsonArray(it.map(::JsonPrimitive))) }
         tags?.let { put("tags", JsonArray(it.map(::JsonPrimitive))) }
+        projectId?.let { put("projectId", it) }
     }
 
 /** O `PATCH` de uma edição: o campo ausente não muda e `null` apaga, então não dá para ser um DTO com padrão. */
@@ -58,6 +59,7 @@ fun TaskPatch.toBody(): JsonObject =
         parentTaskId?.let { put("parentTaskId", it.json(::JsonPrimitive)) }
         subtaskIds?.let { put("subtaskIds", JsonArray(it.map(::JsonPrimitive))) }
         artifacts?.let { put("artifacts", JsonArray(it.map(ArtifactLink::json))) }
+        projectId?.let { put("projectId", it.json(::JsonPrimitive)) }
     }
 
 /** Um documento ligado vai com `id` e `relation`; a cópia nova de alimento, com `copyOf` e a quantidade, se houver. */

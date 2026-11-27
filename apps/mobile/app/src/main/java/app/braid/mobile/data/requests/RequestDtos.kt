@@ -1,5 +1,7 @@
 package app.braid.mobile.data.requests
 
+import app.braid.mobile.data.projects.ProjectDto
+import app.braid.mobile.data.projects.toDomain
 import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.request.AgentRequest
 import app.braid.mobile.domain.request.AgentTrace
@@ -39,6 +41,7 @@ data class RequestDto(
     val route: String,
     val status: String,
     val title: String,
+    val project: ProjectDto,
     /** O que o usuário escreveu ou falou. */
     val text: String? = null,
     val sessionId: String? = null,
@@ -231,6 +234,7 @@ fun RequestDto.toDomain(): AgentRequest =
         text = text,
         trace = trace?.toDomain(),
         model = model?.toDomain(),
+        project = project.toDomain(),
     )
 
 fun ModelSelection.toDto() = ModelSelectionDto(provider.code, model, effort.code)

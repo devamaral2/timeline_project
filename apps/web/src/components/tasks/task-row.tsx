@@ -1,12 +1,14 @@
-import { Bot } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus, TaskSituation } from "@repo/contracts";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/tasks/card-text";
+import { ProviderMark, providerNames } from "@/components/hub/provider-marks";
 import { ProjectLine } from "@/components/projects/project-line";
 import { TaskKindMark } from "./task-kind-mark";
 import { SituationMenu } from "./situation-menu";
-import { TaskInertDot, TaskSituationGlyph, situationNames } from "./task-situation";
+import { TaskSituationGlyph, situationNames } from "./task-situation";
+import { AgentStatusIcon } from "./agent-status-icon";
+import { agentStatusNames } from "./agent-status-names";
 import { TaskStatusGlyph, taskStatusName } from "./task-status-glyph";
 import styles from "./task-row.module.css";
 
@@ -23,7 +25,7 @@ export interface TaskRowProps {
   onStatusClick?: (card: TaskCardDto, anchor: HTMLElement) => void;
   /**
    * A lista trata a situação do pedido de agente: o glifo da esquerda mostra a situação e abre as três opções na
-   * própria linha. Sem isto (a agenda), a linha do agente continua com o status à esquerda e sem toque.
+   * própria linha. Sem isto (a agenda), o lugar fica com o ponto inerte.
    */
   onSituationPick?: (card: TaskCardDto, situation: TaskSituation) => void;
   /** Controle na ponta direita da linha, fora do link (a fração das subtarefas na lista). */
@@ -35,8 +37,10 @@ export interface TaskRowProps {
 /**
  * A linha única das listas: glifo de status, título, a linha do projeto (marca e
  * nome), uma linha com o tipo, o "quando" e as tags, e a duração à direita. Pessoa e agente usam a
- * mesma grade; a tarefa de agente fecha a linha com o robô, a sua assinatura.
- * O glifo de pessoa é um botão; o de agente não muda status.
+ * mesma grade. A tarefa de agente leva à direita o nome do status, o ícone quadrado dele e, abaixo,
+ * o símbolo do provedor (quando o pedido levou a escolha); o status do agente não se edita.
+ * O glifo de pessoa é um botão; à esquerda da tarefa de agente fica o glifo da situação, que abre as três
+ * opções na própria linha, ou um ponto inerte (esperando você, execução agendada e a linha sem quem trate a situação).
  */
 export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, onSituationPick, aside, children }: TaskRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -47,34 +51,23 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
   // O contrato garante que o status e de agente quando o ator e agente, e de pessoa (ou ausente) no outro caso.
   const agentStatus = card.status as AgentTaskStatus;
   const humanStatus = (card.status ?? null) as HumanTaskStatus | null;
-  const glyph = isAgent ? (
-    <TaskStatusGlyph actor="agent" status={agentStatus} />
-  ) : (
-    <TaskStatusGlyph actor="human" status={humanStatus} />
-  );
-
-  // Na lista, o glifo da esquerda é a situação (ou o ponto inerte) e o status passa para a ponta direita.
-  const situationMode = isAgent && onSituationPick !== undefined;
-  const situation = situationMode ? card.situation : undefined;
+  // O contrato só traz a situação quando a tarefa a aceita (pedido de agente que terminou).
+  const situation = isAgent && onSituationPick ? card.situation : undefined;
 
   return (
     <li className={styles.row} data-actor={card.actor} data-status={card.status ?? "reference"}>
-      {situationMode ? (
-        situation ? (
-          <button
-            type="button"
-            className={styles.glyphButton}
-            aria-label={`${situationNames[situation]}. Mudar situação de “${card.name}”`}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((current) => !current)}
-          >
-            <TaskSituationGlyph situation={situation} />
-          </button>
-        ) : (
-          <span className={styles.glyphSlot}><TaskInertDot /></span>
-        )
+      {situation ? (
+        <button
+          type="button"
+          className={styles.glyphButton}
+          aria-label={`${situationNames[situation]}. Mudar situação de “${card.name}”`}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((current) => !current)}
+        >
+          <TaskSituationGlyph situation={situation} />
+        </button>
       ) : isAgent ? (
-        <span className={styles.glyphSlot}>{glyph}</span>
+        <AgentLead />
       ) : (
         <button
           type="button"
@@ -82,7 +75,7 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
           aria-label={`${taskStatusName("human", humanStatus)}. Mudar status de “${card.name}”`}
           onClick={(event) => onStatusClick?.(card, event.currentTarget)}
         >
-          {glyph}
+          <TaskStatusGlyph actor="human" status={humanStatus} />
         </button>
       )}
       <Link href={`/${userId}/tarefas/${card.id}`} className={styles.body}>
@@ -103,10 +96,7 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
           </span>
         </span>
         {duration ? <span className={styles.duration}>{duration}</span> : null}
-        {/* O status do agente fica onde estava o glifo; o ticket do ícone quadrado o leva para a direita. */}
-        {situationMode ? <TaskStatusGlyph actor="agent" status={agentStatus} size={18} /> : null}
-        {/* Decorativo: o nome do glifo de status já diz "Agente". */}
-        {isAgent ? <Bot className={styles.agentMark} size={18} strokeWidth={1.9} aria-hidden="true" data-agent-mark /> : null}
+        {isAgent ? <AgentSide status={agentStatus} model={card.model} /> : null}
       </Link>
       {aside}
       {menuOpen && situation ? (
@@ -120,5 +110,37 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
       ) : null}
       {children}
     </li>
+  );
+}
+
+/**
+ * O que ocupa a esquerda da tarefa de agente: um ponto inerte, na caixa de 24px do glifo de pessoa. O
+ * controle de situação entra neste lugar.
+ */
+function AgentLead() {
+  return (
+    <span className={styles.glyphSlot} data-row-lead>
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" className={styles.idleDot}>
+        <path d="M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z" fill="currentColor" />
+      </svg>
+    </span>
+  );
+}
+
+/** A ponta direita da tarefa de agente: o nome e o ícone do status, e o provedor que rodou a tarefa embaixo. */
+function AgentSide({ status, model }: { status: AgentTaskStatus; model: TaskCardDto["model"] }) {
+  return (
+    <span className={styles.side} data-row-side>
+      <span className={styles.status} data-status={status}>
+        {/* O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */}
+        <span aria-hidden="true">{agentStatusNames[status]}</span>
+        <AgentStatusIcon status={status} />
+      </span>
+      {model ? (
+        <span className={styles.provider} role="img" aria-label={providerNames[model.provider]}>
+          <ProviderMark provider={model.provider} />
+        </span>
+      ) : null}
+    </span>
   );
 }

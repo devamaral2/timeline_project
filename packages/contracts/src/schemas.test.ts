@@ -143,3 +143,15 @@ test("the situation body takes one of the three values and nothing else", () => 
   expect(setTaskSituationInputSchema.safeParse({ situation: "reviewed", expectedRevision: 1 }).success).toBe(false);
   expect(setTaskSituationInputSchema.safeParse({}).success).toBe(false);
 });
+
+const choice = { provider: "anthropic", model: "claude-opus-5-5", effort: "high" };
+
+test("an agent card passes with and without the model choice of its request", () => {
+  expect(taskCardSchema.parse(agentCard)).toEqual(agentCard);
+  expect(taskCardSchema.parse({ ...agentCard, model: choice })).toEqual({ ...agentCard, model: choice });
+});
+
+test("the model choice on a card must be a whole choice", () => {
+  expect(taskCardSchema.safeParse({ ...agentCard, model: { provider: "anthropic" } }).success).toBe(false);
+  expect(taskCardSchema.safeParse({ ...agentCard, model: { ...choice, provider: "google" } }).success).toBe(false);
+});

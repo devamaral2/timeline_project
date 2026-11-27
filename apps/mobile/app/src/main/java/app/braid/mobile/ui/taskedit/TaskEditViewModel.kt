@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.artifact.ArtifactRepository
+import app.braid.mobile.domain.project.ProjectRepository
 import app.braid.mobile.domain.request.AgentRequestRepository
 import app.braid.mobile.domain.session.SessionRepository
 import app.braid.mobile.domain.task.CreateTask
@@ -159,6 +160,7 @@ class TaskEditViewModel
         requests: AgentRequestRepository,
         session: SessionRepository,
         artifacts: ArtifactRepository,
+        projects: ProjectRepository,
     ) : ViewModel() {
         private val taskId: String? = savedState["taskId"]
         private val mutableState = MutableStateFlow<TaskEditUiState>(TaskEditUiState.Loading)
@@ -193,6 +195,9 @@ class TaskEditViewModel
         /** O seletor de documentos da tarefa (ticket 16): a escolha entra no rascunho, a gravação fica para o Salvar. */
         val artifactPicker = TaskArtifactPicker(viewModelScope, artifacts)
 
+        /** A escolha do projeto da tarefa (spec 51): a escolha entra no rascunho, a gravação fica para o Salvar. */
+        val projectPicker = TaskProjectPicker(viewModelScope, projects)
+
         init {
             viewModelScope.launch {
                 mutableState
@@ -214,6 +219,9 @@ class TaskEditViewModel
                 update { it.copy(artifacts = draftWithPickedArtifact(it.artifacts, it.kind, artifact, UUID.randomUUID().toString())) }
             }
         }
+
+        /** A linha "Projeto" de Informações: abre a escolha; o projeto escolhido ou criado entra no rascunho. */
+        fun openProjectPicker() = projectPicker.open { project -> update { it.copy(project = project) } }
 
         fun setArtifactQuantity(
             key: String,

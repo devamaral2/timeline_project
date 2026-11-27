@@ -66,6 +66,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
+import app.braid.mobile.core.designsystem.ProjectLine
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.core.designsystem.tagColors
@@ -516,6 +517,8 @@ private fun InfoSection(task: TaskDetail) {
     Section("Informações") {
         Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+            // Só leitura: o projeto da tarefa troca pela edição.
+            FactRow("Projeto") { ProjectLine(task.card.project) }
             info.start?.let { FactRow("Início") { FactText(it) } }
             FactRow(info.endLabel) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

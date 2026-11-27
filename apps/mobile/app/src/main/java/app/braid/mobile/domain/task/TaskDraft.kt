@@ -1,5 +1,6 @@
 package app.braid.mobile.domain.task
 
+import app.braid.mobile.domain.project.Project
 import app.braid.mobile.domain.timeline.dayKeyOf
 import app.braid.mobile.domain.timeline.formatTime
 import app.braid.mobile.domain.timeline.zonedDayStart
@@ -42,6 +43,11 @@ data class TaskDraft(
     val subtaskIds: List<String>,
     /** Os documentos ligados, na ordem da tela; a lista inteira vai no `PATCH`. Só a edição os tem. */
     val artifacts: List<DraftArtifact>,
+    /**
+     * O projeto da tarefa, com a marca e o nome que o campo mostra. `null` na criação, enquanto ninguém escolheu: a
+     * tarefa nasce em `personal`, e o campo mostra esse.
+     */
+    val project: Project?,
 )
 
 /** Os campos que a validação sabe recusar; cada um aparece no controle que o causou. */
@@ -97,6 +103,7 @@ fun emptyTaskDraft(name: String = ""): TaskDraft =
         parentTaskId = null,
         subtaskIds = emptyList(),
         artifacts = emptyList(),
+        project = null,
     )
 
 /** O rascunho que a edição abre: a tarefa lida, campo a campo. */
@@ -120,6 +127,7 @@ fun draftFromTask(task: TaskDetail): TaskDraft {
         parentTaskId = task.parentTaskId,
         subtaskIds = task.subtaskIds,
         artifacts = draftArtifactsFromTask(task.artifacts),
+        project = task.card.project,
     )
 }
 
@@ -158,6 +166,8 @@ data class CreateTask(
     val location: String? = null,
     val notifyOffsetsMinutes: List<Int>? = null,
     val tags: List<String>? = null,
+    /** O projeto escolhido; ausente (o `personal` também não vai) a API resolve para `personal`. */
+    val projectId: String? = null,
 )
 
 /**
@@ -181,6 +191,7 @@ fun buildCreateTask(
         location = draft.location.trim().ifEmpty { null },
         notifyOffsetsMinutes = draft.reminders.ifEmpty { null },
         tags = draft.tags.ifEmpty { null },
+        projectId = draft.project?.takeUnless { it.personal }?.id,
     )
 
 /**
@@ -207,6 +218,8 @@ data class TaskPatch(
     val subtaskIds: List<String>? = null,
     /** A lista completa de documentos, na ordem da tela; cópias novas de alimento levam `copyOf` e a quantidade. */
     val artifacts: List<ArtifactLink>? = null,
+    /** `Clearable(null)` devolve a tarefa ao `personal`; um id a muda de projeto. */
+    val projectId: Clearable<String>? = null,
 ) {
     /** Nada além da revisão: não há o que enviar. */
     val isEmpty: Boolean
@@ -267,6 +280,11 @@ fun buildTaskPatch(
             parentTaskId = if (draft.parentTaskId != base.parentTaskId) Clearable(draft.parentTaskId) else null,
             subtaskIds = draft.subtaskIds.takeIf { it != base.subtaskIds },
             artifacts = if (sameArtifactLinks(draft.artifacts, base.artifacts)) null else artifactLinkInputs(draft.artifacts),
+            // Voltar ao `personal` manda `null`; outro projeto manda o id. Rascunho sem projeto não mexe.
+            projectId =
+                draft.project
+                    ?.takeIf { it.id != base.project?.id }
+                    ?.let { Clearable(if (it.personal) null else it.id) },
         )
     return patch.takeUnless { it.isEmpty }
 }
@@ -331,5 +349,6 @@ fun rebaseDraft(
         parentTaskId = pick(draft.parentTaskId, before.parentTaskId, after.parentTaskId),
         subtaskIds = pick(draft.subtaskIds, before.subtaskIds, after.subtaskIds),
         artifacts = pick(draft.artifacts, before.artifacts, after.artifacts),
+        project = pick(draft.project, before.project, after.project),
     )
 }

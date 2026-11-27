@@ -9,6 +9,7 @@ import {
   recurrenceSchema,
   updateRecurrenceInputSchema,
 } from "../../../packages/contracts/src/schemas";
+import { AGENT_SKILLS_PROJECT, PERSONAL_PROJECT } from "./project";
 import { emptyTaskDraft, type TaskDraft } from "../../../apps/web/src/components/task-detail/task-draft";
 import {
   buildCreateRecurrenceInput,
@@ -108,6 +109,8 @@ const createCases = [
   { name: "yearly", draft: { ...base, frequency: "yearly", monthDay: 5, month: 3 }, form: scheduled },
   { name: "end equal to start has no duration", draft: base, form: form({ startDate: "2026-09-21", startTime: "10:30", endDate: "2026-09-21", endTime: "10:30" }) },
   { name: "name with spaces", draft: base, form: { ...scheduled, name: "  Corrida  " } },
+  { name: "project goes in the template", draft: base, form: { ...scheduled, project: AGENT_SKILLS_PROJECT } },
+  { name: "personal project is left out of the template", draft: base, form: { ...scheduled, project: PERSONAL_PROJECT } },
   { name: "joining task starts next day", draft: base, form: scheduleAfterTask(scheduled) },
 ].map((item) => {
   const input = buildCreateRecurrenceInput(item.draft, item.form, ZONE);

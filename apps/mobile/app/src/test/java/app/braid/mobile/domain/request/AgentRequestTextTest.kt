@@ -40,6 +40,14 @@ class AgentRequestTextTest {
                         "route" to JsonPrimitive("steps"),
                         "status" to JsonPrimitive("running"),
                         "title" to JsonPrimitive("t"),
+                        "project" to
+                            JsonObject(
+                                mapOf(
+                                    "id" to JsonPrimitive("project-personal"),
+                                    "name" to JsonPrimitive("personal"),
+                                    "personal" to JsonPrimitive(true),
+                                ),
+                            ),
                         "createdAt" to JsonPrimitive("2026-09-14T14:48:00.000Z"),
                         "updatedAt" to JsonPrimitive("2026-09-14T14:48:00.000Z"),
                         "steps" to steps,

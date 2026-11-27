@@ -73,6 +73,46 @@ describe("toTaskCardDto", () => {
     expect(card).not.toHaveProperty("missed");
   });
 
+  describe("the model choice of an agent request", () => {
+    const choice = { provider: "openrouter", model: "google/gemini-4-neon", effort: "medium" };
+    const agentOf = (status: "queued" | "completed", data: Record<string, unknown>, actor: "agent" | "human" = "agent") =>
+      Task.rehydrate({
+        id: "req-1", userId, actor, kind: actor === "agent" ? "request" : "common", status: actor === "agent" ? status : "todo",
+        priority: "medium", name: "Pedido", data, revision: 1,
+        createdAt: new Date("2026-08-01T10:00:00.000Z"), updatedAt: new Date("2026-08-01T10:00:00.000Z"),
+      });
+
+    test("carries the choice the request took", () => {
+      const card = toTaskCardDto({ task: agentOf("completed", { route: "model", model: choice }), project, artifactTypes: [] });
+
+      expect(card.model).toEqual(choice);
+    });
+
+    test("leaves it out when the request took none", () => {
+      const card = toTaskCardDto({ task: agentOf("queued", { route: "steps" }), project, artifactTypes: [] });
+
+      expect(card).not.toHaveProperty("model");
+    });
+
+    test("leaves it out on the Hermes route, which answers with its own model", () => {
+      const card = toTaskCardDto({ task: agentOf("completed", { route: "hermes", model: choice }), project, artifactTypes: [] });
+
+      expect(card).not.toHaveProperty("model");
+    });
+
+    test("leaves it out when the stored choice is not a whole one", () => {
+      const card = toTaskCardDto({ task: agentOf("completed", { route: "model", model: { provider: "anthropic" } }), project, artifactTypes: [] });
+
+      expect(card).not.toHaveProperty("model");
+    });
+
+    test("never shows a choice on a person's task", () => {
+      const card = toTaskCardDto({ task: agentOf("queued", { model: choice }, "human"), project, artifactTypes: [] });
+
+      expect(card).not.toHaveProperty("model");
+    });
+  });
+
   test("maps a tracked task without dates, with its status and its main task", () => {
     const task = Task.rehydrate({
       id: "task-1",
