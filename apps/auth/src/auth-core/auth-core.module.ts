@@ -9,6 +9,9 @@ import type { AuthDatabase } from '../db/client';
 import { HttpPwnedPasswordsGateway } from './password/http-pwned-passwords.gateway';
 import { PreparePassword } from './password/prepare-password';
 import { ScryptPasswordHasher } from './password/scrypt-password-hasher';
+import { PostgresDeviceKeyRepository } from './persistence/postgres-device-key.repository';
+import { AuthenticateDeviceKeyUseCase } from '../features/device-keys/usecases/authenticate-device-key.usecase';
+import { DeviceKeyAuthGuard } from './security/device-key-auth.guard';
 import { PostgresInviteRepository } from './persistence/postgres-invite.repository';
 import { PostgresRbacRepository } from './persistence/postgres-rbac.repository';
 import { PostgresSessionRepository } from './persistence/postgres-session.repository';
@@ -38,6 +41,17 @@ export class AuthCoreModule {
         inject: [HttpPwnedPasswordsGateway, ScryptPasswordHasher],
         useFactory: (pwned: HttpPwnedPasswordsGateway, hasher: ScryptPasswordHasher) => new PreparePassword(pwned, hasher),
       },
+      {
+        provide: PostgresDeviceKeyRepository,
+        inject: [AUTH_DATABASE],
+        useFactory: (db: AuthDatabase) => new PostgresDeviceKeyRepository(db),
+      },
+      {
+        provide: AuthenticateDeviceKeyUseCase,
+        inject: [PostgresDeviceKeyRepository, Clock],
+        useFactory: (keys: PostgresDeviceKeyRepository, clock: Clock) => new AuthenticateDeviceKeyUseCase(keys, clock),
+      },
+      { provide: DeviceKeyAuthGuard, useClass: DeviceKeyAuthGuard },
       {
         provide: PostgresInviteRepository,
         inject: [AUTH_DATABASE],
@@ -92,6 +106,9 @@ export class AuthCoreModule {
         ScryptPasswordHasher,
         HttpPwnedPasswordsGateway,
         PreparePassword,
+        PostgresDeviceKeyRepository,
+        AuthenticateDeviceKeyUseCase,
+        DeviceKeyAuthGuard,
         PostgresInviteRepository,
         PostgresRbacRepository,
         PostgresSessionRepository,

@@ -25,6 +25,7 @@ const groupOfStatus: Record<TaskStatus, TaskGroupKey> = {
   toDefine: "toDefine",
   inHold: "waiting",
   waiting: "waiting",
+  awaiting_transcription: "waiting",
   done: "done",
   cancel: "closed",
   missed: "closed",

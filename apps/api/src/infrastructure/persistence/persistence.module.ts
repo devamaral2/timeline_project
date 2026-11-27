@@ -24,6 +24,10 @@ import { PostgresTaskRepository } from "./tasks/repositories/postgres-task.repos
 import { PostgresTagRepository } from "./tasks/repositories/postgres-tag.repository";
 import { PostgresIdempotencyStore } from "./idempotency/postgres-idempotency.store";
 import { PostgresRecurrenceRepository } from "./recurrences/repositories/postgres-recurrence.repository";
+import { PostgresTranscriptionRequests } from "./transcription/postgres-transcription-requests";
+import { PostgresTaskRelations } from "./tasks/relations/postgres-task-relations";
+import type { TaskRelations } from "../../api-core/tasks/task-relations";
+import type { TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 
 /**
  * Tokens de injecao. Sao strings, e nao symbols, porque o Nest os imprime tal
@@ -45,6 +49,8 @@ export const RECURRENCE_REPOSITORY = "RECURRENCE_REPOSITORY";
 export const SCOPED_SQL_QUERY = "SCOPED_SQL_QUERY";
 export const ENTITY_BATCH_WRITER = "ENTITY_BATCH_WRITER";
 export const IDEMPOTENCY_STORE = "IDEMPOTENCY_STORE";
+export const TRANSCRIPTION_REQUESTS = "TRANSCRIPTION_REQUESTS";
+export const TASK_RELATIONS = "TASK_RELATIONS";
 
 function requireDatabaseUrl(): string {
   const value = process.env.DATABASE_URL;
@@ -115,6 +121,12 @@ function requireDatabaseUrl(): string {
       inject: [DATABASE],
       useFactory: (database: PostgresDatabase): IdempotencyStore => new PostgresIdempotencyStore(database.db),
     },
+    { provide: TASK_RELATIONS, useFactory: (): TaskRelations => new PostgresTaskRelations() },
+    {
+      provide: TRANSCRIPTION_REQUESTS,
+      inject: [DATABASE],
+      useFactory: (database: PostgresDatabase): TranscriptionRequests => new PostgresTranscriptionRequests(database.db),
+    },
   ],
   exports: [
     DATABASE,
@@ -129,6 +141,8 @@ function requireDatabaseUrl(): string {
     SCOPED_SQL_QUERY,
     ENTITY_BATCH_WRITER,
     IDEMPOTENCY_STORE,
+    TRANSCRIPTION_REQUESTS,
+    TASK_RELATIONS,
   ],
 })
 export class PersistenceModule {}

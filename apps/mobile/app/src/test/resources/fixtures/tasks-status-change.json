@@ -563,6 +563,11 @@
     },
     {
       "actor": "agent",
+      "status": "awaiting_transcription",
+      "open": true
+    },
+    {
+      "actor": "agent",
       "status": "done",
       "open": false
     },

@@ -87,6 +87,7 @@ describe("banco novo: checks, restricoes e indices", () => {
 
       await expect(task({ kind: "request" })).rejects.toThrow(/tasks_kind_matches_actor/);
       await expect(task({ kind: "step" })).rejects.toThrow(/tasks_kind_matches_actor/);
+      await expect(task({ kind: "save_content" })).rejects.toThrow(/tasks_kind_matches_actor/);
     });
 
     test("agente aceita os tipos de agente e recusa tipo de pessoa", async () => {
@@ -98,6 +99,8 @@ describe("banco novo: checks, restricoes e indices", () => {
         "review_request",
         "cron",
         "step",
+        "save_content",
+        "save_content_with_transcription",
       ]) {
         await agentTask({ kind });
       }
@@ -118,9 +121,10 @@ describe("banco novo: checks, restricoes e indices", () => {
 
     test("cada executor so aceita os seus status; done e cancel valem para os dois", async () => {
       for (const status of ["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]) await task({ status });
-      for (const status of ["queued", "running", "waiting", "done", "failed", "cancel"]) await agentTask({ status });
+      for (const status of ["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"]) await agentTask({ status });
 
       await expect(task({ status: "queued" })).rejects.toThrow(/tasks_status_matches_actor/);
+      await expect(task({ status: "awaiting_transcription" })).rejects.toThrow(/tasks_status_matches_actor/);
       await expect(task({ status: "scheduled" })).rejects.toThrow(/tasks_status_matches_actor/);
       await expect(agentTask({ status: "todo" })).rejects.toThrow(/tasks_status_matches_actor/);
       await expect(agentTask({ status: "missed" })).rejects.toThrow(/tasks_status_matches_actor/);
@@ -514,7 +518,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("janela da agenda", async () => {
       const plan = await planOf(`
         SELECT id FROM tasks
-        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind <> 'step'
+        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind NOT IN ('step', 'save_content', 'save_content_with_transcription')
           AND started_at <= '2026-11-21T03:00:00Z'
           AND started_at >= timestamptz '2026-11-14T03:00:00Z' - interval '31 days'
           AND coalesce(estimated_finish_at, finished_at, started_at) >= '2026-11-14T03:00:00Z'
@@ -536,7 +540,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("agenda so de pessoa", async () => {
       const plan = await planOf(`
         SELECT id FROM tasks
-        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind <> 'step'
+        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind NOT IN ('step', 'save_content', 'save_content_with_transcription')
           AND actor = 'human' AND started_at BETWEEN '2026-11-14T03:00:00Z' AND '2026-11-21T03:00:00Z'
         ORDER BY started_at, id`);
 

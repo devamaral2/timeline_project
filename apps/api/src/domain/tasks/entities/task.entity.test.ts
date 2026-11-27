@@ -137,14 +137,16 @@ describe("Task.create", () => {
       expect(() => Task.create(props({ kind: "step", status: "todo" }))).toThrow(TaskValidationError);
       expect(() => Task.create(props({ status: "queued" }))).toThrow("Invalid status for a human task: queued");
       expect(() => Task.create(props({ status: "failed" }))).toThrow(TaskValidationError);
+      expect(() => Task.create(props({ kind: "save_content" }))).toThrow(TaskValidationError);
+      expect(() => Task.create(props({ status: "awaiting_transcription" }))).toThrow(TaskValidationError);
     });
 
     test("a agent task accepts every agent kind and status, with or without dates", () => {
-      const kinds = ["request", "search_request", "build_request", "inquiry_request", "review_request", "cron", "step"] as const;
+      const kinds = ["request", "search_request", "build_request", "inquiry_request", "review_request", "cron", "step", "save_content", "save_content_with_transcription"] as const;
       for (const kind of kinds) {
         expect(Task.create(props({ actor: "agent", kind, status: "queued", startedAt: undefined })).kind).toBe(kind);
       }
-      for (const status of ["queued", "running", "waiting", "done", "failed", "cancel"] as const) {
+      for (const status of ["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"] as const) {
         expect(Task.create(props({ actor: "agent", kind: "request", status })).status).toBe(status);
       }
     });

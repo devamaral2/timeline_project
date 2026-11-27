@@ -8,8 +8,10 @@ import { DetailSection } from "@/components/detail/detail-parts";
 import { ArtifactContent } from "@/components/notes/ArtifactContent";
 import { ICON_STROKE_WIDTH } from "@/components/tasks/task-visuals";
 import { BarbellIcon, CompassIcon, MoonStarIcon, MovementIcon, PlateIcon } from "@/components/ui/type-icons";
+import { isDailyReading } from "@/lib/tasks/daily-reading";
 import { mealCaloriesKcal } from "@/lib/tasks/task-read-model";
 import { ArtifactPickerDialog, artifactSource } from "./TaskEditArtifactsSection";
+import { TaskAddVideo } from "./TaskAddVideo";
 import { TaskMealContent } from "./TaskMealContent";
 import styles from "./task-artifacts.module.css";
 import relations from "./task-relations.module.css";
@@ -24,6 +26,11 @@ interface TaskArtifactsSectionProps {
   onAddArtifact?: (artifact: ArtifactDto) => void;
   /** Uma troca está sendo gravada: a ação espera. */
   busy?: boolean;
+  /**
+   * Na Leitura diária, a seção ganha "Adicionar vídeo", que pede a transcrição de um vídeo do YouTube. Chamado quando
+   * o pedido foi gravado, para a tela reler a tarefa (o artefato do vídeo já está nela).
+   */
+  onVideoRequested?: () => void;
 }
 
 const TYPE_ICONS: Record<ArtifactType, LucideIcon> = {
@@ -55,9 +62,10 @@ const INLINE_TYPES: ReadonlySet<ArtifactType> = new Set(["text", "router", "food
  * aberto, e a seta no fim do cabeçalho recolhe e estende. Tocar no nome abre o
  * detalhe do artefato. Tarefa sem artefato não mostra a seção, a não ser que o detalhe ligue
  * artefatos (`onAddArtifact`): aí a seção fica, com a ação embaixo da lista.
- * Na refeição, o total de calorias são os alimentos ligados somados (cópias incluídas).
+ * Na refeição, o total de calorias são os alimentos ligados somados (cópias incluídas). Na Leitura diária, "Adicionar vídeo"
+ * (`onVideoRequested`) pede a transcrição de um vídeo do YouTube.
  */
-export function TaskArtifactsSection({ userId, task, onAddArtifact, busy = false }: TaskArtifactsSectionProps) {
+export function TaskArtifactsSection({ userId, task, onAddArtifact, busy = false, onVideoRequested }: TaskArtifactsSectionProps) {
   if (task.artifacts.length === 0 && !onAddArtifact) return null;
   const positions = artifactPositions(task.artifacts);
 
@@ -71,6 +79,7 @@ export function TaskArtifactsSection({ userId, task, onAddArtifact, busy = false
         </ul>
       ) : null}
       {onAddArtifact ? <AddArtifact task={task} busy={busy} onAdd={onAddArtifact} /> : null}
+      {onVideoRequested && isDailyReading(task) ? <TaskAddVideo onRequested={onVideoRequested} /> : null}
       {task.kind === "meal" && task.artifacts.length > 0 ? (
         <p className={styles.total}>
           <span>Total de calorias</span>

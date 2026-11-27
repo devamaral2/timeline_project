@@ -2,8 +2,11 @@ package app.braid.mobile.domain.task
 
 import app.braid.mobile.domain.timeline.taskDayKeysOf
 
-/** Um cartão que entra na agenda: tem início e não é tarefa longa nem passo, mesmo quando a resposta os traz. */
-fun TaskCard.isAgendaCard(): Boolean = startedAt != null && !longRunning && kind != TaskKind.Step
+/** Tarefas de agente que a agenda nunca mostra (ADR 0021): o passo e o conteúdo guardado. */
+private val OFF_AGENDA_KINDS = setOf(TaskKind.Step, TaskKind.SaveContent, TaskKind.SaveContentWithTranscription)
+
+/** Um cartão que entra na agenda: tem início e não é tarefa longa, passo nem conteúdo guardado, mesmo quando a resposta os traz. */
+fun TaskCard.isAgendaCard(): Boolean = startedAt != null && !longRunning && kind !in OFF_AGENDA_KINDS
 
 /**
  * Agrupa e ordena os cartões por dia. Uma tarefa que atravessa a meia-noite

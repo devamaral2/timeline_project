@@ -21,6 +21,7 @@ const agentNames: Record<AgentTaskStatus, string> = {
   queued: "Agente, na fila",
   running: "Agente, executando",
   waiting: "Agente, aguardando você",
+  awaiting_transcription: "Agente, aguardando a transcrição",
   done: "Agente, feito",
   failed: "Agente, falhou",
   cancel: "Agente, cancelado",
@@ -74,6 +75,7 @@ export function TaskStatusGlyph(props: TaskStatusGlyphProps) {
           <path d="M14 9v6" />
         </>
       ) : null}
+      {dataStatus === "awaiting_transcription" ? <path d="M12 7.5V12l3 2" /> : null}
       {dataStatus === "done" ? <path d="m8.5 12.2 2.4 2.4 4.6-4.9" /> : null}
       {dataStatus === "failed" ? (
         <>

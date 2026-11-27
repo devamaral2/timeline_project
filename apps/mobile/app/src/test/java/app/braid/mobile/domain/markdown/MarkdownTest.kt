@@ -319,4 +319,56 @@ class MarkdownTest {
         assertEquals(false, nested.ordered)
         assertEquals(listOf<Boolean?>(true, false), (blocks[2] as ListBlock).items.map { it.checked })
     }
+
+    private val transcript =
+        listOf(
+            "## Resumo",
+            "- [O ponto central](#t-125)\n- [Fonte](https://exemplo.dev/a)",
+            "{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Ana:** Bem-vindos.",
+            "{#t-125} [02:05](https://youtu.be/dQw4w9WgXcQ?t=125) **Bia:** O ponto central é este.",
+            "{#outro} fica como texto",
+        ).joinToString("\n\n")
+
+    @Test
+    fun `a paragraph that opens with a time mark is that moment's anchor and the mark is not shown`() {
+        val blocks = parseMarkdown(transcript)
+        val anchored = blocks.filterIsInstance<Paragraph>().filter { it.anchor != null }
+
+        assertEquals(listOf("t-0", "t-125"), anchored.map { it.anchor })
+        assertEquals(
+            Paragraph(
+                listOf(
+                    Link("https://youtu.be/dQw4w9WgXcQ?t=125", listOf(text("02:05"))),
+                    text(" "),
+                    Strong(listOf(text("Bia:"))),
+                    text(" O ponto central é este."),
+                ),
+                anchor = "t-125",
+            ),
+            anchored[1],
+        )
+        // Só a forma t-<segundos> vira âncora; qualquer outro {#id} segue como texto.
+        assertEquals(Paragraph(listOf(text("{#outro} fica como texto"))), blocks.last())
+    }
+
+    @Test
+    fun `an internal link points at the anchor, and only an existing anchor can be scrolled to`() {
+        val blocks = parseMarkdown(transcript)
+
+        assertEquals("t-125", internalAnchorOf("#t-125"))
+        assertNull(internalAnchorOf("#outro"))
+        assertNull(internalAnchorOf("https://exemplo.dev/a#t-125"))
+        assertNull(internalAnchorOf("/tarefas#t-125"))
+        assertEquals("t-125", scrollTargetOf(blocks, "#t-125"))
+        assertNull(scrollTargetOf(blocks, "#t-999"))
+        assertNull(scrollTargetOf(blocks, "https://exemplo.dev/a"))
+    }
+
+    @Test
+    fun `an anchor inside a list or a quote can still be scrolled to`() {
+        val blocks = parseMarkdown("- {#t-7} sete\n\n> {#t-9} nove")
+
+        assertEquals("t-7", scrollTargetOf(blocks, "#t-7"))
+        assertEquals("t-9", scrollTargetOf(blocks, "#t-9"))
+    }
 }

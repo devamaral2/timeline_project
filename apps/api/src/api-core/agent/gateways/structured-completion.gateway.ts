@@ -23,6 +23,12 @@ export interface StructuredCompletionInput {
    * esforco dela (o `reasoning` nao vale); sem ela, ao modelo fixo do servidor.
    */
   model?: ModelSelection;
+  /**
+   * Pede a saida presa ao schema (`output_config.format` da Anthropic), em vez do schema escrito no prompt. So para
+   * schemas pequenos e simples: o limite de campos com uniao de tipos da saida presa nao cabe nos agentes de escrita.
+   * Os provedores que nao a tem seguem pelo prompt.
+   */
+  strictSchema?: boolean;
   signal?: AbortSignal;
 }
 

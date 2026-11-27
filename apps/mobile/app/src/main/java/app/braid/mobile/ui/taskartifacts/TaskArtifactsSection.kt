@@ -71,6 +71,8 @@ fun TaskArtifactsSection(
     onOpenArtifact: (String) -> Unit,
     onAdd: (() -> Unit)?,
     busy: Boolean,
+    /** Na Leitura diária, o "Adicionar vídeo" (pede a transcrição de um vídeo do YouTube) sob o "+" dos artefatos. */
+    video: (@Composable () -> Unit)? = null,
 ) {
     if (artifacts.isEmpty() && onAdd == null) return
     val positions = artifactPositions(artifacts.map { it.relation })
@@ -84,6 +86,7 @@ fun TaskArtifactsSection(
                     AddButton(ArtifactSource.of(kind).addLabel, onClick = { if (!busy) onAdd() })
                 }
             }
+            video?.invoke()
             if (kind == TaskKind.Meal && artifacts.isNotEmpty()) {
                 Row(
                     Modifier.fillMaxWidth(),

@@ -9,6 +9,7 @@ import {
   updateTaskInputSchema,
 } from "@repo/contracts/schemas";
 import { z } from "zod";
+import { isAgendaCard } from "@/components/agenda/agenda-data";
 import type { FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 import { type ArtifactLink, type TaskArtifactEntry, artifactsOfTask, relinkTaskArtifacts } from "./artifacts";
 
@@ -105,9 +106,9 @@ function agenda(request: FakeRequest, store: FakeStore): FakeResult {
   if (!Number.isInteger(offset) || offset < 0) return { status: 400 };
   const limit = Math.min(Number(request.query.get("limit") ?? store.pageSize), 100);
 
-  // A agenda mostra o que tem horário e não é tarefa longa; passos nunca aparecem.
+  // A agenda mostra o que tem horário e não é tarefa longa; passos e conteúdo guardado nunca aparecem.
   const tasks = [...table(store).values()]
-    .filter((task) => task.kind !== "step" && !task.longRunning)
+    .filter((task) => isAgendaCard(toCard(task)))
     .filter((task) => inWindow(task, from, to))
     .filter((task) => !actor || task.actor === actor)
     .filter((task) => !tag || task.tags.includes(tag))

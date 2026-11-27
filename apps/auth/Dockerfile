@@ -4,8 +4,9 @@
 #
 #   docker build -f apps/auth/Dockerfile -t timeline-auth .
 #
-# O auth nao depende de nenhum @repo/*: o turbo prune aqui poda o monorepo a
-# um workspace so. O contexto continua sendo a raiz porque o lockfile e o
+# O auth depende de um unico workspace, @repo/contracts (so as constantes da chave
+# de dispositivo, em @repo/contracts/device-key): o turbo prune poda o monorepo a
+# esses dois. O contexto continua sendo a raiz porque o lockfile e o
 # pnpm-workspace.yaml vivem la.
 #
 # Duas particularidades deste servico, as duas verificadas no codigo:
@@ -60,6 +61,7 @@ COPY --from=pruner /app/out/json/ ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
+COPY --from=builder /app/packages/contracts/dist ./packages/contracts/dist
 COPY --from=builder /app/apps/auth/dist ./apps/auth/dist
 COPY --from=pruner /app/scripts/onepassword ./scripts/onepassword
 COPY --from=pruner /app/.env.example ./.env.example

@@ -28,6 +28,18 @@ function KindPaths({ kind }: { kind: TaskKind }) {
       return <TypeIconPaths node={typeIconNodes.barbell} />;
     case "request":
       return <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />;
+    case "save_content":
+      return <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />;
+    case "save_content_with_transcription":
+      return (
+        <>
+          <rect width="20" height="14" x="2" y="5" rx="2" />
+          <path d="M7 15h4" />
+          <path d="M15 15h2" />
+          <path d="M7 11h2" />
+          <path d="M13 11h4" />
+        </>
+      );
     case "search_request":
       return (
         <>

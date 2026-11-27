@@ -1,5 +1,13 @@
 import { expect, test } from "vitest";
-import { artifactSchema, createTaskInputSchema, updateTaskInputSchema } from "./schemas";
+import {
+  artifactSchema,
+  createTaskInputSchema,
+  requestSchema,
+  taskCardSchema,
+  transcriptionDeliveryInputSchema,
+  transcriptionLeaseInputSchema,
+  updateTaskInputSchema,
+} from "./schemas";
 
 const food = {
   description: "arroz", items: [],
@@ -65,4 +73,62 @@ test.each(["previousTaskIds", "nextTaskIds"])("the task input schemas refuse %s 
 
 test("the update schema identifies the task by taskId, not by its old name", () => {
   expect(updateTaskInputSchema.safeParse({ [nomeAntigo("taskId")]: "t1", expectedRevision: 1 }).success).toBe(false);
+});
+
+const agentCard = (kind: string, status: string) => ({
+  id: "t1", actor: "agent", kind, status, priority: "medium", name: "Guardar", description: "", longRunning: false,
+  notifyOffsetsMinutes: [], tags: [], artifactTypes: [], revision: 1, createdAt: "2026-11-26T12:00:00Z", updatedAt: "2026-11-26T12:00:00Z",
+});
+
+test.each([
+  ["save_content", "done"],
+  ["save_content_with_transcription", "awaiting_transcription"],
+  ["save_content_with_transcription", "running"],
+  ["request", "awaiting_transcription"],
+])("a task card accepts the agent kind %s with the status %s", (kind, status) => {
+  expect(taskCardSchema.safeParse(agentCard(kind, status)).success).toBe(true);
+});
+
+test("a task card refuses a kind or a status that no set has", () => {
+  expect(taskCardSchema.safeParse(agentCard("save_page", "done")).success).toBe(false);
+  expect(taskCardSchema.safeParse(agentCard("save_content", "transcribing")).success).toBe(false);
+});
+
+test("the request list accepts the saved content and the awaiting transcription status", () => {
+  const request = {
+    id: "r1", kind: "save_content_with_transcription", route: "steps", status: "awaiting_transcription", title: "Vídeo",
+    createdAt: "2026-11-26T12:00:00Z", updatedAt: "2026-11-26T12:00:00Z", steps: [], entities: [],
+  };
+  expect(requestSchema.safeParse(request).success).toBe(true);
+  expect(requestSchema.safeParse({ ...request, kind: "save_content", status: "done" }).success).toBe(true);
+});
+
+const transcriptionResult = {
+  video: { title: "Entrevista", channel: "Canal", durationSeconds: 3600, description: "Links", chapters: [{ startSeconds: 0, title: "Abertura" }] },
+  source: "whisper",
+  segments: [{ startSeconds: 0, endSeconds: 4.2, speaker: "Falante 1", text: "Olá." }],
+  hotMoments: [{ startSeconds: 600, endSeconds: 660, score: 0.9 }],
+  comments: [{ author: "ana", text: "Ótimo", likes: 3, publishedAt: "2026-11-20T10:00:00Z" }],
+};
+
+test("a transcription delivery carries either the result or a closed failure code", () => {
+  const base = { requestId: "r1", leaseToken: "t" };
+  expect(transcriptionDeliveryInputSchema.safeParse({ ...base, outcome: "completed", result: transcriptionResult }).success).toBe(true);
+  expect(transcriptionDeliveryInputSchema.safeParse({ ...base, outcome: "failed", code: "no_audio" }).success).toBe(true);
+  expect(transcriptionDeliveryInputSchema.safeParse({ ...base, outcome: "failed", code: "yt-dlp: ERROR boom" }).success).toBe(false);
+  expect(transcriptionDeliveryInputSchema.safeParse({ ...base, outcome: "failed" }).success).toBe(false);
+  expect(transcriptionDeliveryInputSchema.safeParse({ ...base, outcome: "completed", code: "failed" }).success).toBe(false);
+});
+
+test("a transcription delivery takes at most 50 comments", () => {
+  const comments = Array.from({ length: 51 }, () => transcriptionResult.comments[0]);
+  const delivery = { requestId: "r1", leaseToken: "t", outcome: "completed", result: { ...transcriptionResult, comments } };
+  expect(transcriptionDeliveryInputSchema.safeParse(delivery).success).toBe(false);
+});
+
+test("the lease renewal takes a known stage and a percentage from 0 to 100", () => {
+  const base = { requestId: "r1", leaseToken: "t" };
+  expect(transcriptionLeaseInputSchema.safeParse({ ...base, stage: "download", percent: 40 }).success).toBe(true);
+  expect(transcriptionLeaseInputSchema.safeParse({ ...base, stage: "download", percent: 140 }).success).toBe(false);
+  expect(transcriptionLeaseInputSchema.safeParse({ ...base, stage: "dancing", percent: 40 }).success).toBe(false);
 });

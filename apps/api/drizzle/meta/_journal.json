@@ -64,6 +64,13 @@
       "when": 1795379878235,
       "tag": "0008_local_opcional",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795666036071,
+      "tag": "0009_tipos_de_conteudo_guardado",
+      "breakpoints": true
     }
   ]
 }

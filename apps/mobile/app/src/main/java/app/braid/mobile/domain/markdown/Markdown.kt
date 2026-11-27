@@ -14,8 +14,10 @@ sealed interface MarkdownBlock {
         val content: List<MarkdownInline>,
     ) : MarkdownBlock
 
+    /** [anchor] é o id `t-<segundos>` quando o parágrafo abre com `{#t-<segundos>}` (ver `Anchors.kt`); a marca não fica no conteúdo. */
     data class Paragraph(
         val content: List<MarkdownInline>,
+        val anchor: String? = null,
     ) : MarkdownBlock
 
     data class ListBlock(
@@ -304,7 +306,9 @@ private class BlockParser(
             joined.append(if (hard) line.trimEnd().removeSuffix("\\") else line.trim())
             if (!last) joined.append(if (hard) "\n" else " ")
         }
-        blocks += MarkdownBlock.Paragraph(parseInline(joined.toString().trim(), images))
+        val body = joined.toString().trim()
+        val mark = splitAnchorMark(body)
+        blocks += MarkdownBlock.Paragraph(parseInline(mark?.second ?: body, images), mark?.first)
         return index
     }
 

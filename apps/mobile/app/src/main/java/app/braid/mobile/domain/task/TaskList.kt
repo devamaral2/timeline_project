@@ -37,7 +37,7 @@ private fun groupOf(status: TaskStatus): TaskGroupKey =
         TaskStatus.Doing, TaskStatus.Running -> TaskGroupKey.Doing
         TaskStatus.Todo, TaskStatus.Queued -> TaskGroupKey.Todo
         TaskStatus.ToDefine -> TaskGroupKey.ToDefine
-        TaskStatus.InHold, TaskStatus.Waiting -> TaskGroupKey.Waiting
+        TaskStatus.InHold, TaskStatus.Waiting, TaskStatus.AwaitingTranscription -> TaskGroupKey.Waiting
         TaskStatus.Done -> TaskGroupKey.Done
         TaskStatus.Cancel, TaskStatus.Missed, TaskStatus.Failed -> TaskGroupKey.Closed
     }

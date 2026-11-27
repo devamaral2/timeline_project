@@ -179,6 +179,20 @@ test("defines minimal production scopes without requiring mobile or test variabl
   assert.deepEqual(scopeKeys("mcp-runtime").required, ["MCP_TOKEN", "AUTH_INTERNAL_SERVICE_KEY", "MCP_OWNER_USER_ID"]);
 });
 
+test("the transcriber scope asks only for the device key and the gateway address", () => {
+  assert.deepEqual(scopeKeys("transcriber-runtime").required, ["TRANSCRIBER_API_URL", "TRANSCRIBER_DEVICE_KEY"]);
+  assert.ok(scopeKeys("transcriber-runtime").optional.includes("HF_TOKEN"));
+});
+
+test("the default scope loads the transcriber keys when present but does not require them", () => {
+  const scope = defaultScope();
+
+  for (const key of ["TRANSCRIBER_API_URL", "TRANSCRIBER_DEVICE_KEY"]) {
+    assert.ok(scope.optional.includes(key));
+    assert.ok(!scope.required.includes(key));
+  }
+});
+
 test("the default scope loads the Hermes key when present but does not require it", () => {
   const scope = defaultScope();
 

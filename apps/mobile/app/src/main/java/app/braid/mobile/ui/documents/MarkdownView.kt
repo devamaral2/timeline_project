@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -31,6 +33,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -72,10 +75,14 @@ import app.braid.mobile.domain.markdown.MarkdownBlock
 import app.braid.mobile.domain.markdown.MarkdownInline
 import app.braid.mobile.domain.markdown.MarkdownListItem
 import app.braid.mobile.domain.markdown.VideoLink
+import app.braid.mobile.domain.markdown.internalAnchorOf
 import app.braid.mobile.domain.markdown.parseMarkdown
+import app.braid.mobile.domain.markdown.scrollTargetOf
 import app.braid.mobile.domain.markdown.soleYouTubeLink
 import app.braid.mobile.domain.markdown.splitPictures
 import coil3.compose.SubcomposeAsyncImage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * O markdown de um artefato de texto, como o `MarkdownView` do web: títulos, listas, ênfase, código e links. O
@@ -90,8 +97,28 @@ fun MarkdownView(
     // As imagens do artefato aparecem todas juntas, quando a pessoa pede; o estado é desta leitura, não é guardado.
     var shown by remember { mutableStateOf(false) }
     val images = remember(shown) { ImagesState(shown) { shown = true } }
-    CompositionLocalProvider(LocalImages provides images) { MarkdownBlocks(blocks, modifier) }
+    // Os trechos com âncora (`{#t-125}`) sabem rolar até si; tocar num link `#t-125` pede a rolagem ao trecho do artefato.
+    val scope = rememberCoroutineScope()
+    val anchors = remember(blocks, scope) { Anchors(blocks, scope) }
+    CompositionLocalProvider(LocalImages provides images, LocalAnchors provides anchors) { MarkdownBlocks(blocks, modifier) }
 }
+
+/** Os trechos com âncora de um artefato e a rolagem até eles; a tela que rola (a do artefato) recebe o pedido. */
+private class Anchors(
+    private val blocks: List<MarkdownBlock>,
+    private val scope: CoroutineScope,
+) {
+    private val requesters = mutableMapOf<String, BringIntoViewRequester>()
+
+    fun requester(id: String): BringIntoViewRequester = requesters.getOrPut(id) { BringIntoViewRequester() }
+
+    fun follow(href: String) {
+        val id = scrollTargetOf(blocks, href) ?: return
+        scope.launch { requester(id).bringIntoView() }
+    }
+}
+
+private val LocalAnchors = staticCompositionLocalOf<Anchors?> { null }
 
 /** Se as imagens do artefato já foram pedidas, e como pedi-las. */
 private class ImagesState(
@@ -139,7 +166,12 @@ private fun HeadingBlock(block: MarkdownBlock.Heading) {
 @Composable
 private fun ParagraphBlock(block: MarkdownBlock.Paragraph) {
     val video = remember(block) { soleYouTubeLink(block) }
-    if (video != null) VideoBlock(video) else InlineText(block.content, BODY)
+    if (video != null) {
+        VideoBlock(video)
+        return
+    }
+    val requester = block.anchor?.let { LocalAnchors.current?.requester(it) }
+    InlineText(block.content, BODY, if (requester != null) Modifier.bringIntoViewRequester(requester) else Modifier)
 }
 
 @Composable
@@ -171,7 +203,8 @@ private fun RunText(
     modifier: Modifier = Modifier,
 ) {
     val wash = MaterialTheme.colorScheme.onBackground.copy(alpha = WASH_ALPHA)
-    val text = remember(content, wash) { annotated(content, wash) }
+    val anchors = LocalAnchors.current
+    val text = remember(content, wash, anchors) { annotated(content, wash, anchors) }
     Text(
         text = text,
         modifier = modifier,
@@ -185,6 +218,7 @@ private const val WASH_ALPHA = 0.07f
 private fun annotated(
     content: List<MarkdownInline>,
     wash: Color,
+    anchors: Anchors?,
 ): AnnotatedString =
     buildAnnotatedString {
         fun append(nodes: List<MarkdownInline>) {
@@ -205,6 +239,11 @@ private fun annotated(
                         // Só endereços de fora abrem; um caminho relativo do web não tem para onde ir no app.
                         if (opensOutside(node.href)) {
                             withLink(LinkAnnotation.Url(node.href, TextLinkStyles(style))) { append(node.content) }
+                        } else if (anchors != null && internalAnchorOf(node.href) != null) {
+                            // Um link `#t-125` rola até o trecho do mesmo artefato.
+                            withLink(LinkAnnotation.Clickable("anchor", TextLinkStyles(style)) { anchors.follow(node.href) }) {
+                                append(node.content)
+                            }
                         } else {
                             withStyle(style) { append(node.content) }
                         }

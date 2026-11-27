@@ -5,6 +5,11 @@ import { IdempotencyInterceptor } from "./http/idempotency/idempotency.intercept
 import { PersistenceModule } from "./infrastructure/persistence";
 import { CreateTaskModule } from "./features/create-task/create-task.module";
 import { SaveDailyReadingModule } from "./features/save-daily-reading/save-daily-reading.controller";
+import { RequestTranscriptionModule } from "./features/request-transcription/request-transcription.controller";
+import { ReserveTranscriptionModule } from "./features/reserve-transcription/reserve-transcription.controller";
+import { RenewTranscriptionLeaseModule } from "./features/renew-transcription-lease/renew-transcription-lease.controller";
+import { DeliverTranscriptionModule } from "./features/deliver-transcription/deliver-transcription.controller";
+import { FormatTranscriptionModule } from "./features/format-transcription/format-transcription.module";
 import { GetTaskModule } from "./features/get-task/get-task.module";
 import { ListAgendaTasksModule } from "./features/list-agenda-tasks/list-agenda-tasks.module";
 import { ListTrackedTasksModule } from "./features/list-tracked-tasks/list-tracked-tasks.module";
@@ -46,6 +51,11 @@ import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/r
     ListAgendaTasksModule,
     CreateTaskModule,
     SaveDailyReadingModule,
+    RequestTranscriptionModule,
+    ReserveTranscriptionModule,
+    RenewTranscriptionLeaseModule,
+    DeliverTranscriptionModule,
+    FormatTranscriptionModule,
     GetTaskModule,
     UpdateTaskModule,
     DeleteTaskModule,

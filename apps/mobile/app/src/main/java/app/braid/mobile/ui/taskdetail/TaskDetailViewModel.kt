@@ -18,6 +18,7 @@ import app.braid.mobile.domain.task.draftArtifactsFromTask
 import app.braid.mobile.domain.task.draftWithPickedArtifact
 import app.braid.mobile.domain.task.statusPatch
 import app.braid.mobile.domain.time.AppClock
+import app.braid.mobile.domain.transcription.TranscriptionRepository
 import app.braid.mobile.ui.taskartifacts.TaskArtifactPicker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
@@ -89,6 +90,7 @@ class TaskDetailViewModel
         private val tasks: TaskDetailRepository,
         private val clock: AppClock,
         artifacts: ArtifactRepository,
+        transcription: TranscriptionRepository,
     ) : ViewModel() {
         private val taskId: String = checkNotNull(savedState["taskId"]) { "O detalhe abre com o id da tarefa" }
         private val mutableState = MutableStateFlow<TaskDetailUiState>(TaskDetailUiState.Loading)
@@ -97,6 +99,9 @@ class TaskDetailViewModel
 
         /** O seletor do "+" da seção Artefatos: a escolha liga o artefato e grava na hora. */
         val artifactPicker = TaskArtifactPicker(viewModelScope, artifacts)
+
+        /** O "Adicionar vídeo" da Leitura diária: com o pedido gravado, a tarefa é relida (o artefato do vídeo já está nela). */
+        val addVideo = AddVideoForm(viewModelScope, transcription, onRequested = ::reload)
 
         init {
             load()
