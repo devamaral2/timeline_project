@@ -60,8 +60,9 @@ import app.braid.mobile.domain.request.QueryTable
 import app.braid.mobile.domain.request.RequestEntity
 import app.braid.mobile.domain.request.RequestOperation
 import app.braid.mobile.domain.request.TraceStatus
-import app.braid.mobile.domain.request.isOpenRequest
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isOpenAgentStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import kotlinx.coroutines.delay
 
 /** Para onde leva cada registro que a resposta tocou; `null` quando a tela de destino ainda não existe, e a linha é só texto. */
@@ -297,7 +298,8 @@ internal fun EntityRows(
 }
 
 /** A resposta escrita de um pedido por passos: só quando ele termina bem. */
-internal fun processText(request: AgentRequest): String? = request.message?.takeIf { request.status == TaskStatus.Done && it.isNotEmpty() }
+internal fun processText(request: AgentRequest): String? =
+    request.message?.takeIf { isSuccessAgentStatus(request.status) && it.isNotEmpty() }
 
 /**
  * Se um pedido por passos deixa algo na conversa. Enquanto roda, nada: o passo atual vai na linha de status do campo e os
@@ -305,7 +307,7 @@ internal fun processText(request: AgentRequest): String? = request.message?.take
  * que ele gravou (um pedido que falhou ou foi cancelado pode ter gravado algo antes de parar).
  */
 internal fun processAnswerShows(request: AgentRequest?): Boolean {
-    if (request == null || isOpenRequest(request.status)) return false
+    if (request == null || isOpenAgentStatus(request.status)) return false
     return processText(request) != null || request.steps.any { it.result != null } || request.entities.isNotEmpty()
 }
 
@@ -334,7 +336,7 @@ internal fun pendingStepLabel(
             val steps = message.request?.steps.orEmpty()
             val current =
                 steps.firstOrNull { it.status == TaskStatus.Running }
-                    ?: steps.firstOrNull { it.status == TaskStatus.Queued || it.status == TaskStatus.Waiting }
+                    ?: steps.firstOrNull { isOpenAgentStatus(it.status) }
                     ?: steps.lastOrNull()
             return current?.label ?: UNDERSTANDING
         }

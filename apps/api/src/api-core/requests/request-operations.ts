@@ -4,6 +4,7 @@ import type {
   StartVoiceRequestInput,
 } from "@repo/contracts";
 import type { FoodGenerationPayload } from "../../domain/ports";
+import { isInProgressAgentStatus } from "../../domain/agent-status";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { jobErrorCode, type JobFailureHandler, type JobsService } from "../../infrastructure/jobs/jobs.service";
 import { FOOD_GENERATION_JOB } from "../../infrastructure/persistence/artifacts/repositories/food-generation";
@@ -219,7 +220,7 @@ export class RequestOperations implements OnModuleInit {
 
   private async toDto(request: RequestRecord, detailed: boolean): Promise<RequestDto> {
     const live = detailed && (request.route === "hermes" || request.route === "model")
-      && (request.status === "queued" || request.status === "running");
+      && isInProgressAgentStatus(request.status);
     const [steps, entities, progress] = await Promise.all([
       this.store.steps(request.id),
       this.store.entities(request.id),

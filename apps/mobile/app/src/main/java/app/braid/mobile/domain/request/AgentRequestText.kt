@@ -2,15 +2,14 @@ package app.braid.mobile.domain.request
 
 import app.braid.mobile.domain.artifact.artifactTypeLabel
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isOpenAgentStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 
 /*
  * Port do modelo do pedido (`lib/tasks/agent-request-model.ts`), dos textos de falha (`agentFailureText`, em
  * `use-agent-chat.ts`) e dos nomes das entradas (`KIND_NAMES`, em `agent-trace.tsx`). Funções puras, conferidas
  * contra as fixtures geradas pelo web (`AgentRequestTextTest`).
  */
-
-/** Fila, execução ou espera do usuário: a tela continua relendo. */
-fun isOpenRequest(status: TaskStatus): Boolean = status == TaskStatus.Queued || status == TaskStatus.Running || status == TaskStatus.Waiting
 
 data class StepProgress(
     val done: Int,
@@ -19,7 +18,7 @@ data class StepProgress(
 
 /** Quantos passos terminaram e quantos há. */
 fun stepProgress(steps: List<RequestStep>): StepProgress =
-    StepProgress(done = steps.count { it.status == TaskStatus.Done }, total = steps.size)
+    StepProgress(done = steps.count { isSuccessAgentStatus(it.status) }, total = steps.size)
 
 /** O texto do passo que está executando agora, quando há um. */
 fun runningStepLabel(steps: List<RequestStep>): String? = steps.firstOrNull { it.status == TaskStatus.Running }?.label
@@ -73,8 +72,8 @@ fun agentFailureText(code: String?): String = FAILURE_TEXTS[code ?: "internal"] 
 fun requestStatusLine(tracked: AgentRequest?): String =
     when {
         tracked == null -> "Enviando o pedido…"
-        isOpenRequest(tracked.status) -> tracked.progress ?: runningStepLabel(tracked.steps) ?: "Entendendo o pedido…"
-        tracked.status == TaskStatus.Done -> "Pronto"
+        isOpenAgentStatus(tracked.status) -> tracked.progress ?: runningStepLabel(tracked.steps) ?: "Entendendo o pedido…"
+        isSuccessAgentStatus(tracked.status) -> "Pronto"
         tracked.status == TaskStatus.Failed -> "Não deu certo"
         tracked.status == TaskStatus.Cancel -> "Pedido cancelado"
         else -> "Esperando o seu pedido"

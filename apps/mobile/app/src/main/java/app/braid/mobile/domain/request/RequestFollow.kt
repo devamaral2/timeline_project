@@ -3,6 +3,7 @@ package app.braid.mobile.domain.request
 import app.braid.mobile.domain.polling.AGENT_POLL_MS
 import app.braid.mobile.domain.polling.POLL_FAILURES_LIMIT
 import app.braid.mobile.domain.polling.PROCESS_TIMEOUT_MS
+import app.braid.mobile.domain.task.isOpenAgentStatus
 import app.braid.mobile.domain.time.AppClock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -49,7 +50,7 @@ suspend fun followRequest(
             val view = read()
             failures = 0
             onRead(view)
-            if (!isOpenRequest(view.status)) return RequestFollow.Closed(view)
+            if (!isOpenAgentStatus(view.status)) return RequestFollow.Closed(view)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {

@@ -27,6 +27,8 @@ import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.domain.request.RequestStep
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.isFinalAgentStatus
+import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.ui.chat.BotState
 import app.braid.mobile.ui.chat.HermesComposer
 import app.braid.mobile.ui.chat.HermesContextCard
@@ -174,10 +176,10 @@ private fun StepList(steps: List<RequestStep>) {
 
 /** O ✓ do passo pronto, o ✕ do que falhou ou foi cancelado, o arco do que roda e o círculo do que espera. */
 private fun stepMark(status: TaskStatus): List<SvgPart> =
-    when (status) {
-        TaskStatus.Done -> BraidIcons.check
-        TaskStatus.Failed, TaskStatus.Cancel -> BraidIcons.close
-        TaskStatus.Running -> BraidIcons.spinner
+    when {
+        isSuccessAgentStatus(status) -> BraidIcons.check
+        isFinalAgentStatus(status) -> BraidIcons.close
+        status == TaskStatus.Running -> BraidIcons.spinner
         else -> BraidIcons.circle
     }
 

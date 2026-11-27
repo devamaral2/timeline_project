@@ -1,3 +1,4 @@
+import { isOpenAgentStatus, isSuccessAgentStatus } from "@repo/contracts";
 import type { AgentTaskStatus, AgentTraceEntryDto, TaskCardDto, RequestDto, RequestEntityDto } from "@repo/contracts";
 import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
 
@@ -6,14 +7,12 @@ import { artifactTypeLabel } from "@/lib/artifacts/artifact-model";
  * contagem de passos feitos, o texto das entradas e o que o pedido produziu. Funções puras; a tela só as chama.
  */
 
-const OPEN_STATUSES: readonly AgentTaskStatus[] = ["queued", "running", "waiting"];
-
 /** De quanto em quanto tempo uma tela se relê enquanto há pedido de agente em aberto (detalhe e listas). */
 export const AGENT_REQUEST_POLL_MS = 3000;
 
 /** Pedido em fila, executando ou aguardando o usuário: a tela continua relendo. */
 export function isOpenRequest(status: AgentTaskStatus): boolean {
-  return OPEN_STATUSES.includes(status);
+  return isOpenAgentStatus(status);
 }
 
 /**
@@ -26,7 +25,7 @@ export function hasOpenAgentTask(cards: readonly TaskCardDto[]): boolean {
 
 /** Quantos passos terminaram e quantos há no total. */
 export function stepProgress(steps: RequestDto["steps"]): { done: number; total: number } {
-  return { done: steps.filter((step) => step.status === "done").length, total: steps.length };
+  return { done: steps.filter((step) => isSuccessAgentStatus(step.status)).length, total: steps.length };
 }
 
 /** "2 de 4 passos", "1 de 1 passo", "0 de 0 passos". */

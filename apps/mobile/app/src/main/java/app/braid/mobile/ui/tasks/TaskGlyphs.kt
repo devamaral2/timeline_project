@@ -40,6 +40,7 @@ fun taskStatusName(
             TaskStatus.Done -> "Agente, feito"
             TaskStatus.Failed -> "Agente, falhou"
             TaskStatus.Cancel -> "Agente, cancelado"
+            // O status desconhecido não tem nome próprio: o leitor de tela só diz quem executa.
             else -> "Agente"
         }
     } else {
@@ -52,6 +53,7 @@ fun taskStatusName(
             TaskStatus.Done -> "Feito"
             TaskStatus.Cancel -> "Cancelado"
             TaskStatus.Missed -> "Não realizado"
+            TaskStatus.Unknown -> "Tarefa"
             else -> "A fazer"
         }
     }

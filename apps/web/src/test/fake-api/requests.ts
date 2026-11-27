@@ -1,3 +1,4 @@
+import { isOpenAgentStatus } from "@repo/contracts";
 import type { ModelOptionsDto, ModelSelection, RequestDto } from "@repo/contracts";
 import { modelOptionsSchema, modelSelectionSchema, requestSchema } from "@repo/contracts/schemas";
 import { z } from "zod";
@@ -14,7 +15,6 @@ import type { FakeApi, FakeArea, FakeRequest, FakeResult, FakeStore } from ".";
 const REQUESTS = "requests";
 const OWNERS = "requestOwners";
 const CLIENT_MESSAGES = "clientMessages";
-const OPEN = new Set<RequestDto["status"]>(["queued", "running", "waiting"]);
 
 const requestId = z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/);
 const clientMessageId = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
@@ -334,7 +334,7 @@ function cancel(request: FakeRequest, store: FakeStore): FakeResult {
   if (!current) return { status: 404 };
   // Pedido de alimento se apaga pelo artefato: o cálculo não para por aqui.
   if (current.route === "food") return { status: 409 };
-  if (!OPEN.has(current.status)) return { status: 200, body: current };
+  if (!isOpenAgentStatus(current.status)) return { status: 200, body: current };
   const cancelled = requestSchema.parse({
     ...current,
     status: "cancel",
