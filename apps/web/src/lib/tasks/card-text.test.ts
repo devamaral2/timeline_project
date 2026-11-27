@@ -158,6 +158,13 @@ describe("cardWhenLabel", () => {
     const waiting = card({ actor: "agent", kind: "build_request", status: "waiting", startedAt: "2026-11-14T09:12:00-03:00" });
     expect(cardWhenLabel(waiting, NOW)).toBe("aguarda sua resposta");
   });
+
+  it("vídeo esperando o serviço local mostra 'aguarda a transcrição'", () => {
+    const video = card({
+      actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription", startedAt: "2026-11-14T09:12:00-03:00",
+    });
+    expect(cardWhenLabel(video, NOW)).toBe("aguarda a transcrição");
+  });
 });
 
 describe("cardDurationLabel", () => {

@@ -1,10 +1,11 @@
 "use client";
 
 import { Image as ImageIcon } from "lucide-react";
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { Children, createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Components, ExtraProps } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { internalAnchorOf, splitAnchorMark } from "@/lib/notes/anchors";
 import { youtubeEmbedUrl, youtubeVideoOf, type YouTubeVideo } from "@/lib/notes/youtube";
 import { cn } from "@/lib/utils";
 import styles from "./markdown.module.css";
@@ -106,7 +107,17 @@ const components: Components = {
   a: ({ href, children }) => <ExternalLink href={href}>{children}</ExternalLink>,
   p: ({ node, children }) => {
     const link = soleYouTubeLink(node);
-    return link ? <YouTubePlayer {...link} /> : <p>{children}</p>;
+    if (link) return <YouTubePlayer {...link} />;
+    // Um parágrafo que abre com `{#t-125}` é o trecho daquele instante: a marca vira o id e não aparece.
+    const [first, ...rest] = Children.toArray(children);
+    const mark = typeof first === "string" ? splitAnchorMark(first) : null;
+    if (!mark) return <p>{children}</p>;
+    return (
+      <p id={mark.id} className={styles.anchor}>
+        {mark.rest}
+        {rest}
+      </p>
+    );
   },
   img: ({ src, alt }) => <MarkdownImage src={src} alt={alt} />,
   input: ({ checked }) => <input type="checkbox" checked={Boolean(checked)} readOnly disabled aria-label={checked ? "Feito" : "A fazer"} />,
@@ -115,8 +126,24 @@ const components: Components = {
 export function MarkdownView({ source, className }: { source: string; className?: string }) {
   const [shown, setShown] = useState(false);
   const images = useMemo(() => ({ shown, show: () => setShown(true) }), [shown]);
+  const root = useRef<HTMLDivElement>(null);
+  // Um link `#t-125` rola até o trecho deste documento; o resto do documento da página não é tocado. O ouvinte é do
+  // próprio nó (os links já são focáveis e respondem ao teclado), então a `div` não precisa de papel interativo.
+  useEffect(() => {
+    const node = root.current;
+    if (!node) return;
+    const followAnchor = (event: Event) => {
+      const link = event.target instanceof Element ? event.target.closest("a") : null;
+      const id = internalAnchorOf(link?.getAttribute("href"));
+      if (!id) return;
+      event.preventDefault();
+      node.querySelector(`[id="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    node.addEventListener("click", followAnchor);
+    return () => node.removeEventListener("click", followAnchor);
+  }, []);
   return (
-    <div className={cn(styles.markdown, className)}>
+    <div ref={root} className={cn(styles.markdown, className)}>
       <ImagesContext.Provider value={images}>
         <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
           {source}

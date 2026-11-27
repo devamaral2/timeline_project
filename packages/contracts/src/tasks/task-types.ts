@@ -3,16 +3,27 @@ export type TaskActor = "human" | "agent";
 
 export type HumanTaskKind = "common" | "meal" | "sleep" | "training";
 
-/** Um pedido do usuario ao agente, ou uma execucao agendada (`cron`). */
+/**
+ * Um pedido ao agente, ou uma execucao agendada (`cron`). `request` e so o
+ * pedido do chat e da voz; `save_content` e a pagina de texto guardada pela
+ * extensao; `save_content_with_transcription` e o video do YouTube guardado
+ * para transcrever.
+ */
 export type AgentRequestKind =
   | "request"
+  | "save_content"
+  | "save_content_with_transcription"
   | "search_request"
   | "build_request"
   | "inquiry_request"
   | "review_request"
   | "cron";
 
-/** `step` e o passo em que um pedido se desdobra; nao aparece na agenda nem na lista de pedidos. */
+/**
+ * `step` e o passo em que um pedido se desdobra; nao aparece na agenda nem na
+ * lista de pedidos. `save_content` e `save_content_with_transcription` tambem
+ * ficam fora da agenda (ADR 0021), mas aparecem na lista de pedidos.
+ */
 export type AgentTaskKind = AgentRequestKind | "step";
 
 export type TaskKind = HumanTaskKind | AgentTaskKind;
@@ -24,7 +35,8 @@ export type TaskKind = HumanTaskKind | AgentTaskKind;
  */
 export type HumanTaskStatus = "todo" | "toDefine" | "doing" | "inHold" | "done" | "cancel" | "missed";
 
-export type AgentTaskStatus = "queued" | "running" | "waiting" | "done" | "failed" | "cancel";
+/** `awaiting_transcription`: o pedido espera o servico local transcrever o video. */
+export type AgentTaskStatus = "queued" | "running" | "waiting" | "awaiting_transcription" | "done" | "failed" | "cancel";
 
 export type TaskStatus = HumanTaskStatus | AgentTaskStatus;
 

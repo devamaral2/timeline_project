@@ -6,11 +6,11 @@ import { requestTitleOf } from "../../../infrastructure/persistence/requests/pos
 import { stepLabel } from "../request-config";
 import { REQUEST_JOBS } from "../request-steps";
 import type {
-  DispatchRecord, EntitySummary, FailedStep, LinkRecord, NewEntity, NewRequest, NewStep, RequestEntityRecord,
+  DispatchRecord, EntitySummary, LinkRecord, NewEntity, NewRequest, NewStep, RequestEntityRecord,
   RequestOutcome, RequestRecord, RequestStore, StepRecord, StepThought,
 } from "../request-store";
 
-const OPEN = new Set(["queued", "running", "waiting"]);
+const OPEN = new Set(["queued", "running", "waiting", "awaiting_transcription"]);
 
 /**
  * O `RequestStore` em memoria: o que o Postgres grava na mesma transacao aqui fica em listas conferiveis. O

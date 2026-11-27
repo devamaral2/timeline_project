@@ -105,6 +105,7 @@ function weekdayList(mask: number): string {
 
 function agentWhenLabel(card: TaskCardDto, now: Date): string {
   if (card.status === "waiting") return "aguarda sua resposta";
+  if (card.status === "awaiting_transcription") return "aguarda a transcrição";
   if (card.status === "queued") {
     return card.startedAt ? `na fila · ${elapsedLabel(card.startedAt, now)}` : "na fila";
   }

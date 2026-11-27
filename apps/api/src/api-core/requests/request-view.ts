@@ -42,7 +42,7 @@ export function toRequestDto(
   options: { progress?: RequestProgress; withTrace?: boolean } = {},
 ): RequestDto {
   const message = messageOf(request);
-  const open = request.status === "queued" || request.status === "running" || request.status === "waiting";
+  const open = request.status === "queued" || request.status === "running" || request.status === "waiting" || request.status === "awaiting_transcription";
   const trace = request.route === "steps"
     ? toRequestTrace(request, steps, entities, message)
     : request.trace ?? (open ? options.progress?.trace : undefined);

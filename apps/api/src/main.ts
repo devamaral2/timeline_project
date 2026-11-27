@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { Logger } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
+import { TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES } from "@repo/contracts/device-key";
 import { AppModule } from "./app.module";
 import { DomainExceptionFilter } from "./common/domain-exception.filter";
 import { configureApiDocumentation } from "./common/openapi";
@@ -28,9 +29,10 @@ async function bootstrap(): Promise<void> {
 
   const { API_PORT, API_HOST } = getServerEnv();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  // O markdown de uma pagina lida passa dos 100 kB padrao. A API so ouve o
-  // gateway, que ja segura as demais rotas no teto dele; aqui o teto e um so.
-  app.useBodyParser("json", { limit: DAILY_READING_BODY_LIMIT_BYTES });
+  // O markdown de uma pagina lida e a entrega do servico de transcricao passam
+  // dos 100 kB padrao. A API so ouve o gateway, que ja segura cada rota no teto
+  // dela; aqui o teto e um so, o da maior (a entrega).
+  app.useBodyParser("json", { limit: Math.max(DAILY_READING_BODY_LIMIT_BYTES, TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES) });
   app.useGlobalFilters(new DomainExceptionFilter());
   app.enableShutdownHooks();
   configureApiDocumentation(app);

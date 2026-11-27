@@ -3,11 +3,14 @@ import { taskDayKeysOf, formatTime } from "@repo/timeline";
 import { cardDurationLabel } from "@/lib/tasks/card-text";
 import type { ExampleTask } from "./agenda-examples";
 
-/** Um cartão que tem horário e entra na grade: tarefa longa e passo ficam de fora mesmo quando a resposta os traz. */
+/** Tarefas de agente que a grade nunca mostra (ADR 0021); a lista de pedidos mostra as duas de conteúdo guardado. */
+const OFF_AGENDA_KINDS: readonly TaskCardDto["kind"][] = ["step", "save_content", "save_content_with_transcription"];
+
+/** Um cartão que tem horário e entra na grade: tarefa longa, passo e conteúdo guardado ficam de fora mesmo quando a resposta os traz. */
 export type AgendaCard = TaskCardDto & { startedAt: string };
 
 export function isAgendaCard(card: TaskCardDto): card is AgendaCard {
-  return card.startedAt !== undefined && !card.longRunning && card.kind !== "step";
+  return card.startedAt !== undefined && !card.longRunning && !OFF_AGENDA_KINDS.includes(card.kind);
 }
 
 /**

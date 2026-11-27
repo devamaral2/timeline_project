@@ -40,6 +40,11 @@ function occurrence(seriesId: string, occurrenceOn: string, ruleOverrides: Recor
 
 const WEEKLY = { frequency: "weekly", timeOfDay: "18:30", byWeekday: 2 + 8 + 32 };
 
+const savedContentCards = [
+  card({ id: "saved-1", name: "Página guardada", actor: "agent", kind: "save_content", status: "done", startedAt: "2026-09-14T13:30:00.000Z" }),
+  card({ id: "saved-2", name: "Vídeo guardado", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription", startedAt: "2026-09-14T14:10:00.000Z" }),
+];
+
 /** A lista que o servidor devolve sem filtro, na ordem dele: uma tarefa de cada grupo, três séries e uma ocorrência destacada. */
 const cards = [
   card({ id: "task-1", name: "Reunião de planejamento", status: "todo", priority: "high", startedAt: "2026-09-14T12:00:00.000Z", estimatedFinishAt: "2026-09-14T12:50:00.000Z", tags: ["trabalho", "saúde"], revision: 3 }),
@@ -170,6 +175,13 @@ export function taskListFixtures(): Record<string, unknown> {
     "task-list-subtasks-no-parent": subtaskCards.filter((item) => item.id !== "trip"),
     /** O filtro de executor "Agentes": só a subtarefa de agente chega, sem a principal de pessoa. */
     "task-list-subtasks-agents": subtaskCards.filter((item) => item.actor === "agent"),
+    /** Conteúdo guardado na lista: o vídeo à espera do serviço local cai em "Em espera" e a página guardada em "Feitas". */
+    "task-list-saved-content": {
+      now: NOW,
+      cards: savedContentCards,
+      groups: groupTrackedTasks(savedContentCards).map((group) => ({ key: group.key, ids: group.cards.map((item) => item.id) })),
+      whens: savedContentCards.map((item) => ({ id: item.id, when: cardWhenLabel(item, new Date(NOW)) })),
+    },
     "task-list-nesting": {
       now: NOW,
       cards: subtaskCards,

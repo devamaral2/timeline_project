@@ -7,6 +7,8 @@ export type * from "./tasks/task-types";
 export type * from "./tasks/task.dto";
 export type * from "./tasks/task.input";
 export type * from "./tasks/daily-reading";
+export type * from "./tasks/transcription-request";
+export type * from "./tasks/transcription-worker";
 export type * from "./tasks/tag-suggestion.dto";
 export type * from "./tasks/place-suggestion.dto";
 export type * from "./tasks/notification-offset-minutes";

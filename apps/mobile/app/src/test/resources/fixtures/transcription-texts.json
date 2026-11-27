@@ -1,0 +1,9 @@
+{
+  "chatPending": "Pedindo a transcrição",
+  "chatQueued": "O vídeo entrou na fila de transcrição. O documento já está na Leitura diária de hoje e o texto chega quando a transcrição terminar.",
+  "alreadyQueued": "Esse vídeo já estava na fila de transcrição. Nada foi duplicado.",
+  "invalidLink": "Esse link não é de um vídeo do YouTube.",
+  "formQueued": "O vídeo entrou na fila de transcrição. O texto chega na Leitura diária quando a transcrição terminar.",
+  "formFailed": "Não foi possível pedir a transcrição. Tente novamente.",
+  "dailyReading": "Leitura diária"
+}

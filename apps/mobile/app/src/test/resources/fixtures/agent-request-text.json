@@ -13,6 +13,10 @@
       "open": true
     },
     {
+      "status": "awaiting_transcription",
+      "open": true
+    },
+    {
       "status": "done",
       "open": false
     },

@@ -22,6 +22,7 @@ import {
   RecurrenceRevisionConflictError,
   RecurrenceValidationError,
 } from "../domain";
+import { TranscriptionLeaseLostError } from "../api-core/transcription/transcription-requests";
 import { DomainExceptionFilter } from "./domain-exception.filter";
 
 /** Roda o erro pelo filtro de producao e devolve o que o cliente veria e o que foi para o log. */
@@ -98,6 +99,10 @@ describe("recurrence errors", () => {
 });
 
 describe("batch and agent errors", () => {
+  test("maps TranscriptionLeaseLostError to 409: the local service no longer holds the request", () => {
+    expect(statusOf(new TranscriptionLeaseLostError())).toBe(409);
+  });
+
   test("maps EntityBatchConflictError to 409: something changed between preparing and writing", () => {
     expect(statusOf(new EntityBatchConflictError("task-1 mudou antes do commit"))).toBe(409);
   });

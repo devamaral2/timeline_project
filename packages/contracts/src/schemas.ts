@@ -7,11 +7,13 @@ import { z } from "zod";
  */
 const taskActorSchema = z.enum(["human", "agent"]);
 const humanTaskKindSchema = z.enum(["common", "meal", "sleep", "training"]);
-const agentRequestKindSchema = z.enum(["request", "search_request", "build_request", "inquiry_request", "review_request", "cron"]);
+const agentRequestKindSchema = z.enum([
+  "request", "save_content", "save_content_with_transcription", "search_request", "build_request", "inquiry_request", "review_request", "cron",
+]);
 const taskKindSchema = z.enum([...humanTaskKindSchema.options, ...agentRequestKindSchema.options, "step"]);
 const humanTaskStatusSchema = z.enum(["todo", "toDefine", "doing", "inHold", "done", "cancel", "missed"]);
-const agentTaskStatusSchema = z.enum(["queued", "running", "waiting", "done", "failed", "cancel"]);
-const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, "queued", "running", "waiting", "failed"]);
+const agentTaskStatusSchema = z.enum(["queued", "running", "waiting", "awaiting_transcription", "done", "failed", "cancel"]);
+const taskStatusSchema = z.enum([...humanTaskStatusSchema.options, "queued", "running", "waiting", "awaiting_transcription", "failed"]);
 const taskPrioritySchema = z.enum(["urgent", "high", "medium", "low"]);
 const taskArtifactRelationSchema = z.enum(["creates", "updates", "uses", "deletes"]);
 const artifactTypeSchema = z.enum(["text", "food", "sleep", "training", "workout", "skill", "agent", "router"]);
@@ -242,6 +244,53 @@ export const dailyReadingInputSchema = z.object({
 export const dailyReadingResultSchema = z.object({
   taskId: z.string(), artifactId: z.string(), taskCreated: z.boolean(), artifactCreated: z.boolean(),
 }).strict();
+
+/** `POST /api/tasks/transcription-requests`: o link de um video do YouTube a transcrever. */
+export const transcriptionRequestInputSchema = z.object({
+  url: z.string().max(2048).regex(/^https?:\/\/\S+$/i),
+}).strict();
+
+export const transcriptionRequestResultSchema = z.object({
+  requestId: z.string(), taskId: z.string(), artifactId: z.string(), created: z.boolean(),
+}).strict();
+
+/** O servico local de transcricao (`/api/transcription-worker/*`). */
+export const transcriptionStageSchema = z.enum(["metadata", "download", "transcription", "speakers", "comments"]);
+export const transcriptionFailureCodeSchema = z.enum(["too_large", "private", "unavailable", "no_audio", "failed"]);
+
+export const transcriptionReservationSchema = z.object({
+  requestId: z.string(), url: z.string(), leaseToken: z.string(), leaseExpiresAt: z.string(),
+}).strict();
+
+export const transcriptionLeaseInputSchema = z.object({
+  requestId: z.string(), leaseToken: z.string(), stage: transcriptionStageSchema, percent: z.number().min(0).max(100),
+}).strict();
+
+export const transcriptionLeaseResultSchema = z.object({ leaseExpiresAt: z.string() }).strict();
+
+const seconds = z.number().min(0);
+export const transcriptionResultSchema = z.object({
+  video: z.object({
+    title: z.string(), channel: z.string(), durationSeconds: seconds, description: z.string(),
+    chapters: z.array(z.object({ startSeconds: seconds, title: z.string() }).strict()),
+  }).strict(),
+  source: z.enum(["subtitles", "whisper"]),
+  segments: z.array(z.object({ startSeconds: seconds, endSeconds: seconds, speaker: z.string(), text: z.string() }).strict()),
+  hotMoments: z.array(z.object({ startSeconds: seconds, endSeconds: seconds, score: z.number().min(0).max(1) }).strict()),
+  comments: z.array(z.object({
+    author: z.string(), text: z.string(), likes: z.number().int().min(0), publishedAt: z.string(),
+  }).strict()).max(50),
+}).strict();
+
+export const transcriptionDeliveryInputSchema = z.discriminatedUnion("outcome", [
+  z.object({ requestId: z.string(), leaseToken: z.string(), outcome: z.literal("completed"), result: transcriptionResultSchema }).strict(),
+  z.object({ requestId: z.string(), leaseToken: z.string(), outcome: z.literal("failed"), code: transcriptionFailureCodeSchema }).strict(),
+]);
+
+export const transcriptionDeliveryResultSchema = z.discriminatedUnion("status", [
+  z.object({ requestId: z.string(), status: z.literal("running") }).strict(),
+  z.object({ requestId: z.string(), status: z.literal("failed"), code: transcriptionFailureCodeSchema }).strict(),
+]);
 
 /** `POST /api/artifacts`: o artefato e as tarefas em que ele ja nasce aparecendo. */
 export const createArtifactRequestSchema = z.union(createArtifactVariants({ taskIds: z.array(z.string()).optional() }));
