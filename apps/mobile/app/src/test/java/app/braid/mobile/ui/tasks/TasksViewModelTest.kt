@@ -4,9 +4,10 @@ import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.domain.task.TaskCard
-import app.braid.mobile.domain.task.TaskGroupKey
+import app.braid.mobile.domain.task.TaskDrawerKey
 import app.braid.mobile.domain.task.TaskPriority
 import app.braid.mobile.domain.task.TaskStatus
+import app.braid.mobile.domain.task.toNowLabel
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.Fixtures
 import app.braid.mobile.support.TestBackend
@@ -46,7 +47,7 @@ import java.time.Instant
 /** A lista de Tarefas por status, pela rede: leitura, filtros, status pelo glifo e a releitura das tarefas de agente. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TasksViewModelTest {
-    private val pipeline = Fixtures.json("task-list-pipeline").jsonObject
+    private val pipeline = Fixtures.json("task-list-rules").jsonObject
     private val patches = pipeline.getValue("patches").jsonObject
     private val now = Instant.parse(pipeline.getValue("now").jsonPrimitive.content)
     private val listPath = "/api/tasks/tracked"
@@ -99,11 +100,8 @@ class TasksViewModelTest {
         id: String,
     ): TaskCard = state.cards.orEmpty().first { it.id == id }
 
-    private fun groupIds(state: TasksUiState): Map<TaskGroupKey, List<String>> =
-        state.groups.associate { group ->
-            group.key to
-                group.cards.map { it.id }
-        }
+    private fun drawerIds(state: TasksUiState): Map<TaskDrawerKey, List<String>> =
+        state.drawers.associate { drawer -> drawer.key to drawer.cards.map { it.id } }
 
     private fun patchBody(path: String): JsonObject =
         Json
@@ -117,7 +115,7 @@ class TasksViewModelTest {
             ).jsonObject
 
     @Test
-    fun `it reads the tracked list with no filter and groups it as the web does`() =
+    fun `it reads the tracked list with no filter and puts it in the web's four drawers`() =
         runTest {
             backend.route("GET", listPath, fixture("task-list-all"))
             val viewModel = newViewModel()
@@ -127,47 +125,70 @@ class TasksViewModelTest {
             val query = lastRead()
             assertEquals(setOf<String>(), query.queryParameterNames)
             assertEquals(
+                // Pessoa antes de agente em cada gaveta; o trabalho em andamento (task-3, task-4) não está na lista.
                 mapOf(
-                    TaskGroupKey.Doing to listOf("task-2", "task-3", "task-13"),
-                    TaskGroupKey.Todo to listOf("task-1", "task-4", "series-a-2", "series-a-4"),
-                    TaskGroupKey.ToDefine to listOf("task-6"),
-                    TaskGroupKey.Waiting to listOf("task-5", "task-7", "series-c-2"),
-                    TaskGroupKey.Done to listOf("task-8", "task-9", "series-b-2"),
-                    TaskGroupKey.Closed to listOf("task-10", "task-11", "task-12"),
+                    TaskDrawerKey.Now to listOf("task-1", "task-2", "series-a-2", "series-a-4", "task-5"),
+                    TaskDrawerKey.Continuous to listOf("task-13", "task-10"),
+                    TaskDrawerKey.Later to listOf("task-6", "task-7", "series-c-2"),
+                    TaskDrawerKey.Ended to listOf("task-8", "task-12", "series-b-2", "task-9", "task-11"),
                 ),
-                groupIds(state),
+                drawerIds(state),
             )
+            assertEquals(listOf("Para agora", "Contínuas", "Para depois", "Finalizadas"), state.drawers.map { it.title })
             assertEquals(false, state.failed)
             assertEquals(now, state.now)
         }
 
     @Test
-    fun `a recurring series is one row, and the count is the rows of the groups that are not collapsed`() =
+    fun `a recurring series is one row, and the count is the tasks for now`() =
         runTest {
             backend.route("GET", listPath, fixture("task-list-all"))
             val state = newViewModel().settled()
 
-            assertEquals(1, state.groups.flatMap { it.cards }.count { it.name == "Meditar" })
-            assertEquals(1, state.groups.flatMap { it.cards }.count { it.name == "Academia" })
-            // Em curso 3 + A fazer 4 + Sem data 1 + Em espera 3; Feitas e Encerradas não contam.
-            assertEquals(11, state.openCount)
+            assertEquals(1, state.drawers.flatMap { it.cards }.count { it.name == "Meditar" })
+            assertEquals(1, state.drawers.flatMap { it.cards }.count { it.name == "Academia" })
+            // Para agora: duas tarefas da pessoa, as duas ocorrências de "Meditar" que ficam e a pergunta do agente.
+            assertEquals(5, state.toNowCount)
+            assertEquals("5 tarefas para agora", toNowLabel(state.toNowCount))
         }
 
     @Test
-    fun `Feitas and Encerradas start collapsed and open on a tap`() =
+    fun `Para agora and Contínuas start open, the others closed, and every drawer opens and closes on a tap`() =
         runTest {
             backend.route("GET", listPath, fixture("task-list-all"))
             val viewModel = newViewModel()
             val state = viewModel.settled()
-            val done = state.groups.first { it.key == TaskGroupKey.Done }
-            val doing = state.groups.first { it.key == TaskGroupKey.Doing }
+            val byKey = state.drawers.associateBy { it.key }
 
-            assertFalse(state.isExpanded(done))
-            assertTrue(state.isExpanded(doing))
-            viewModel.toggleGroup(TaskGroupKey.Done)
-            assertTrue(viewModel.state.value.isExpanded(done))
-            viewModel.toggleGroup(TaskGroupKey.Done)
-            assertFalse(viewModel.state.value.isExpanded(done))
+            assertEquals(
+                mapOf(
+                    TaskDrawerKey.Now to true,
+                    TaskDrawerKey.Continuous to true,
+                    TaskDrawerKey.Later to false,
+                    TaskDrawerKey.Ended to false,
+                ),
+                byKey.mapValues { (_, drawer) -> state.isExpanded(drawer) },
+            )
+            viewModel.toggleDrawer(TaskDrawerKey.Ended)
+            assertTrue(viewModel.state.value.isExpanded(byKey.getValue(TaskDrawerKey.Ended)))
+            viewModel.toggleDrawer(TaskDrawerKey.Ended)
+            assertFalse(viewModel.state.value.isExpanded(byKey.getValue(TaskDrawerKey.Ended)))
+            viewModel.toggleDrawer(TaskDrawerKey.Now)
+            assertFalse(viewModel.state.value.isExpanded(byKey.getValue(TaskDrawerKey.Now)))
+            viewModel.toggleDrawer(TaskDrawerKey.Now)
+            assertTrue(viewModel.state.value.isExpanded(byKey.getValue(TaskDrawerKey.Now)))
+        }
+
+    @Test
+    fun `no task in progress is in the list, and only agent work leaves the empty state quiet`() =
+        runTest {
+            backend.route("GET", listPath, fixture("task-list-all"))
+            val state = newViewModel().settled()
+
+            assertTrue(state.cards.orEmpty().any { it.id == "task-3" })
+            assertTrue(state.drawers.flatMap { it.cards }.none { it.id == "task-3" || it.id == "task-4" })
+            assertFalse(state.tree.roots.any { it.id == "task-3" || it.id == "task-4" })
+            assertTrue(state.onlyAgentWork)
         }
 
     @Test
@@ -306,13 +327,14 @@ class TasksViewModelTest {
             val viewModel = newViewModel()
             val empty = viewModel.settled()
 
-            assertTrue(empty.groups.isEmpty())
+            assertTrue(empty.drawers.isEmpty())
+            assertFalse(empty.onlyAgentWork)
             assertFalse(empty.hasTasks)
             assertEquals(0, empty.filters.count)
 
             viewModel.toggleTag("casa")
             val filtered = viewModel.state.first { it.filters.count == 1 }
-            assertTrue(filtered.groups.isEmpty())
+            assertTrue(filtered.drawers.isEmpty())
             assertEquals(1, filtered.filters.count)
         }
 
@@ -362,7 +384,7 @@ class TasksViewModelTest {
         }
 
     @Test
-    fun `choosing a status sends the revision that was read and the row changes group with the re-read`() =
+    fun `choosing a status sends the revision that was read and the row changes drawer with the re-read`() =
         runTest {
             var saved = false
             backend.route("GET", listPath) { if (saved) fixture("task-list-after-doing") else fixture("task-list-all") }
@@ -379,8 +401,7 @@ class TasksViewModelTest {
 
             assertEquals(patches.getValue("doing").jsonObject, patchBody("/api/tasks/task-1"))
             assertEquals(4, card(after, "task-1").revision)
-            assertEquals(setOf("task-1", "task-2", "task-3", "task-13"), groupIds(after).getValue(TaskGroupKey.Doing).toSet())
-            assertFalse("task-1" in groupIds(after).getValue(TaskGroupKey.Todo))
+            assertEquals(listOf("task-1", "task-2", "series-a-2", "series-a-4", "task-5"), drawerIds(after).getValue(TaskDrawerKey.Now))
             assertNull(after.notice)
         }
 
@@ -399,7 +420,9 @@ class TasksViewModelTest {
 
             viewModel.openStatusPicker(card(loaded, "task-1"))
             viewModel.chooseStatus(TaskStatus.Done)
-            viewModel.state.first { card(it, "task-1").status == TaskStatus.Done && !it.saving }
+            val finished = viewModel.state.first { card(it, "task-1").status == TaskStatus.Done && !it.saving }
+            assertTrue("task-1" in drawerIds(finished).getValue(TaskDrawerKey.Ended))
+            assertFalse("task-1" in drawerIds(finished).getValue(TaskDrawerKey.Now))
             val finish = patchBody("/api/tasks/task-1")
             assertEquals("done", finish["status"]?.jsonPrimitive?.content)
             assertEquals("2026-09-14T15:30:45.123Z", finish["finishedAt"]?.jsonPrimitive?.content)

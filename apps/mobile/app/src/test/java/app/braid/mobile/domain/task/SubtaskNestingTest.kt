@@ -64,16 +64,6 @@ class SubtaskNestingTest {
     }
 
     @Test
-    fun `groups are made of the rows alone, as the web does`() {
-        val groups = groupTrackedTasks(nestSubtasks(oneRowPerSeries(cards)).roots)
-        val expected = fixture.getValue("groups").jsonArray.map { it.jsonObject }
-
-        val keys = groups.map { it.key.name.replaceFirstChar(Char::lowercase) }
-        assertEquals(expected.map { it.getValue("key").jsonPrimitive.content }, keys)
-        assertEquals(expected.map { strings(it.getValue("ids")) }, groups.map { group -> group.cards.map { it.id } })
-    }
-
-    @Test
     fun `the when and the overdue tone of a drawer line are the web's`() {
         for (entry in fixture.getValue("drawer").jsonArray) {
             val expected = entry.jsonObject

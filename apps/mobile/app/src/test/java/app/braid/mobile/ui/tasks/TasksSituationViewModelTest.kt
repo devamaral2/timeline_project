@@ -3,6 +3,7 @@ package app.braid.mobile.ui.tasks
 import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.task.TaskCard
+import app.braid.mobile.domain.task.TaskDrawerKey
 import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.TestBackend
@@ -25,6 +26,7 @@ import okhttp3.mockwebserver.MockResponse
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -74,6 +76,10 @@ class TasksSituationViewModelTest {
 
     private fun TasksUiState.card(id: String): TaskCard = cards.orEmpty().first { it.id == id }
 
+    /** A gaveta da lista em que a linha está, ou `null` se não está em nenhuma. */
+    private fun TasksUiState.drawerOfRow(id: String): TaskDrawerKey? =
+        drawers.firstOrNull { drawer -> drawer.cards.any { it.id == id } }?.key
+
     private fun putBody() =
         Json
             .parseToJsonElement(
@@ -102,8 +108,12 @@ class TasksSituationViewModelTest {
             val viewModel = newViewModel()
             val before = viewModel.settled()
             assertEquals(TaskSituation.ToReview, before.card("sit-review").situation)
+            assertEquals(TaskDrawerKey.Now, before.drawerOfRow("sit-review"))
 
             viewModel.chooseSituation(before.card("sit-review"), TaskSituation.Reviewed)
+            // Revisada leva a linha a Finalizadas na hora, antes de a gravação responder.
+            assertEquals(TaskDrawerKey.Ended, viewModel.state.value.drawerOfRow("sit-review"))
+            assertEquals(before.toNowCount - 1, viewModel.state.value.toNowCount)
 
             assertEquals(
                 TaskSituation.Reviewed,
@@ -137,6 +147,8 @@ class TasksSituationViewModelTest {
             val before = viewModel.settled()
 
             viewModel.chooseSituation(before.card("sit-review"), TaskSituation.Bookmarked)
+            // Guardada leva a linha a Para depois na hora.
+            assertEquals(TaskDrawerKey.Later, viewModel.state.value.drawerOfRow("sit-review"))
             viewModel.state.first { !it.savingSituation }
 
             assertEquals("bookmarked", putBody().getValue("situation").jsonPrimitive.content)
@@ -156,18 +168,25 @@ class TasksSituationViewModelTest {
             val before = viewModel.settled()
 
             viewModel.chooseSituation(before.card("sit-review"), TaskSituation.Reviewed)
-            assertEquals(
-                TaskSituation.Reviewed,
-                viewModel.state.value
-                    .card("sit-review")
-                    .situation,
-            )
+            assertEquals(TaskDrawerKey.Ended, viewModel.state.value.drawerOfRow("sit-review"))
             release.countDown()
             val after = viewModel.state.first { it.notice != null }
 
+            assertEquals(TaskDrawerKey.Now, after.drawerOfRow("sit-review"))
             assertEquals(TaskSituation.ToReview, after.card("sit-review").situation)
             assertEquals(TaskSituation.ToReview, after.facets!!.first { it.id == "sit-review" }.situation)
             assertEquals(FAILED_SITUATION_NOTICE, after.notice)
+        }
+
+    @Test
+    fun `an agent task that is still in progress is not a row, so no situation can move it`() =
+        runTest {
+            val viewModel = newViewModel()
+            val loaded = viewModel.settled()
+
+            assertTrue(loaded.drawers.flatMap { it.cards }.none { it.id == "sit-running" })
+            assertEquals(null, loaded.drawerOfRow("sit-running"))
+            assertEquals(TaskDrawerKey.Continuous, loaded.drawerOfRow("sit-cron"))
         }
 
     @Test

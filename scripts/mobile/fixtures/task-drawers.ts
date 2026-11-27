@@ -2,8 +2,7 @@
  * Fixture das quatro gavetas da lista de Tarefas (ticket 65): os casos da regra `drawerOf` do web (um por status de
  * pessoa, com e sem tarefa longa; um por status de agente, com cada situação e sem nenhuma; a execução agendada com
  * qualquer status) e o que a tela faz com eles (`listedCards`, `nestSubtasks`, `drawersOf`, `toNowLabel`). O Android
- * porta a regra e confere contra este arquivo. O fixture antigo (`task-list-pipeline`, seis grupos por status) segue
- * sendo gerado em `task-list.ts` até o Android trocar de regra.
+ * porta a regra e confere contra este arquivo (`TaskDrawersTest`).
  */
 import { agentTaskStatusSchema, taskCardSchema } from "../../../packages/contracts/src/schemas";
 import { nestSubtasks, oneRowPerSeries } from "../../../apps/web/src/lib/tasks/task-groups";

@@ -4,7 +4,7 @@ import app.braid.mobile.data.tasks.DefaultTaskRepository
 import app.braid.mobile.data.tasks.TasksApi
 import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.domain.task.TaskCard
-import app.braid.mobile.domain.task.TaskGroupKey
+import app.braid.mobile.domain.task.TaskDrawerKey
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.Fixtures
@@ -88,8 +88,8 @@ class TasksSubtasksViewModelTest {
         id: String,
     ): TaskCard = state.cards.orEmpty().first { it.id == id }
 
-    private fun groupIds(state: TasksUiState): Map<TaskGroupKey, List<String>> =
-        state.groups.associate { group -> group.key to group.cards.map { it.id } }
+    private fun drawerIds(state: TasksUiState): Map<TaskDrawerKey, List<String>> =
+        state.drawers.associate { drawer -> drawer.key to drawer.cards.map { it.id } }
 
     private fun patchBody(path: String): JsonObject =
         Json
@@ -103,7 +103,7 @@ class TasksSubtasksViewModelTest {
             ).jsonObject
 
     @Test
-    fun `a subtask whose parent is in the list leaves the groups and goes into the drawer`() =
+    fun `a subtask whose parent is in the list leaves the list drawers and goes into its parent's subtask drawer`() =
         runTest {
             backend.route("GET", listPath, fixture("task-list-subtasks"))
 
@@ -111,15 +111,15 @@ class TasksSubtasksViewModelTest {
 
             assertEquals(
                 mapOf(
-                    TaskGroupKey.Doing to listOf("trip"),
-                    TaskGroupKey.Todo to listOf("orphan", "cyc-a", "cyc-b", "cyc-tail"),
-                    TaskGroupKey.Waiting to listOf("self"),
-                    TaskGroupKey.Done to listOf("closed-parent"),
+                    TaskDrawerKey.Now to listOf("trip", "orphan", "cyc-a", "cyc-b", "cyc-tail"),
+                    TaskDrawerKey.Later to listOf("self"),
+                    TaskDrawerKey.Ended to listOf("closed-parent"),
                 ),
-                groupIds(state),
+                drawerIds(state),
             )
+            // A "sub-3" é pedido de agente em andamento: está na gaveta de execução, não na da principal.
             assertEquals(
-                listOf("sub-1", "sub-2", "sub-3", "sub-7"),
+                listOf("sub-1", "sub-2", "sub-7"),
                 state.tree
                     .subtasksOf("trip")
                     .map { it.id }
@@ -130,14 +130,14 @@ class TasksSubtasksViewModelTest {
         }
 
     @Test
-    fun `the open count and the groups count rows only, not the subtasks`() =
+    fun `the tasks for now and the drawers count rows only, not the subtasks`() =
         runTest {
             backend.route("GET", listPath, fixture("task-list-subtasks"))
 
             val state = newViewModel().settled()
 
-            // Em curso 1 + A fazer 4 + Em espera 1; Feitas não conta, e as 8 subtarefas não são linha.
-            assertEquals(6, state.openCount)
+            // Para agora 5 (a principal e as quatro soltas); Para depois e Finalizadas não contam, e as subtarefas não são linha.
+            assertEquals(5, state.toNowCount)
             assertEquals(15, state.cards!!.size)
         }
 
@@ -165,16 +165,16 @@ class TasksSubtasksViewModelTest {
         }
 
     @Test
-    fun `the subtasks of a done parent stay in its drawer, in the collapsed group`() =
+    fun `the subtasks of a done parent stay in its drawer, in the closed drawer`() =
         runTest {
             backend.route("GET", listPath, fixture("task-list-subtasks"))
             val viewModel = newViewModel()
             val state = viewModel.settled()
-            val done = state.groups.first { it.key == TaskGroupKey.Done }
+            val ended = state.drawers.first { it.key == TaskDrawerKey.Ended }
 
             assertEquals(listOf("sub-6"), state.tree.subtasksOf("closed-parent").map { it.id })
-            assertFalse(state.isExpanded(done))
-            assertFalse("sub-6" in groupIds(state).values.flatten())
+            assertFalse(state.isExpanded(ended))
+            assertFalse("sub-6" in drawerIds(state).values.flatten())
         }
 
     @Test
@@ -205,7 +205,7 @@ class TasksSubtasksViewModelTest {
             assertTrue(backend.requestsTo("PATCH", "/api/tasks/trip").isEmpty())
             assertEquals(4, card(after, "sub-2").revision)
             // A principal continua na mesma linha e a subtarefa continua na gaveta dela.
-            assertEquals(listOf("trip"), groupIds(after).getValue(TaskGroupKey.Doing))
+            assertTrue("trip" in drawerIds(after).getValue(TaskDrawerKey.Now))
             assertTrue(after.tree.subtasksOf("trip").any { it.id == "sub-2" })
             assertNull(after.notice)
         }
@@ -273,7 +273,7 @@ class TasksSubtasksViewModelTest {
 
             viewModel.toggleTag("viagem")
             val filtered = viewModel.state.first { it.tag == "viagem" && it.cards!!.none { c -> c.id == "trip" } }
-            val rows = filtered.groups.flatMap { it.cards }.map { it.id }
+            val rows = filtered.drawers.flatMap { it.cards }.map { it.id }
             assertTrue("sub-2" in rows)
             assertTrue("sub-1" in rows)
             // A sub-4 continua dentro da sub-2, que agora é linha.
@@ -285,7 +285,9 @@ class TasksSubtasksViewModelTest {
             viewModes.repository.select(ViewMode.Agent)
             val agents = viewModel.state.first { it.viewMode == ViewMode.Agent && it.cards?.map { c -> c.id } == listOf("sub-3") }
 
-            assertEquals(listOf("sub-3"), agents.groups.flatMap { it.cards }.map { it.id })
-            assertEquals(1, agents.openCount)
+            // A única tarefa de agente (sub-3) está em andamento: não é linha, e a tela fica quieta.
+            assertTrue(agents.drawers.isEmpty())
+            assertTrue(agents.onlyAgentWork)
+            assertEquals(0, agents.toNowCount)
         }
 }

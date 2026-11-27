@@ -1,13 +1,13 @@
 /**
  * Fixtures da lista de Tarefas: as respostas de `GET /api/tasks/tracked` validadas pelo schema do contrato e as
- * saídas das funções do web que a tela usa (`oneRowPerSeries`, `groupTrackedTasks`, `showsSeriesRule`,
+ * saídas das funções do web que a tela usa (`oneRowPerSeries`, `showsSeriesRule`,
  * `recurrenceRuleLabel`, `cardWhenLabel` com a regra no lugar do horário, `taskFilterCount`, `trackedFilters`,
  * `tagsByUse`) e a gaveta de subtarefas (`nestSubtasks`, ticket 08).
  */
 import { taskCardSchema } from "../../../packages/contracts/src/schemas";
 import { statusPatch } from "../../../apps/web/src/lib/tasks/task-read-model";
 import { cardIsOverdue, cardWhenLabel, recurrenceRuleLabel } from "../../../apps/web/src/lib/tasks/card-text";
-import { groupTrackedTasks, nestSubtasks, oneRowPerSeries, showsSeriesRule } from "../../../apps/web/src/lib/tasks/task-groups";
+import { nestSubtasks, oneRowPerSeries, showsSeriesRule } from "../../../apps/web/src/lib/tasks/task-groups";
 import { PRIORITY_ORDER, tagsByUse, taskFilterCount, trackedFilters } from "../../../apps/web/src/lib/tasks/task-filters";
 import { TASK_SITUATIONS, situationNames } from "../../../apps/web/src/components/tasks/task-situation";
 import { NOW } from "./tasks";
@@ -206,10 +206,6 @@ export function taskListFixtures(): Record<string, unknown> {
         nestingOf(subtaskCards.filter((item) => item.id !== "trip")),
         nestingOf(subtaskCards.filter((item) => item.id !== "sub-2")),
       ],
-      groups: groupTrackedTasks(nestSubtasks(oneRowPerSeries(subtaskCards)).roots).map((group) => ({
-        key: group.key,
-        ids: group.cards.map((item) => item.id),
-      })),
       /** O quando e o atraso de cada cartão na gaveta (sem a regra da série). */
       drawer: subtaskCards.map((item) => ({
         id: item.id,
@@ -217,16 +213,10 @@ export function taskListFixtures(): Record<string, unknown> {
         overdue: cardIsOverdue(item, new Date(NOW)),
       })),
     },
-    "task-list-pipeline": {
+    "task-list-rules": {
       now: NOW,
       cards,
       rowIds: rows.map((item) => item.id),
-      groups: groupTrackedTasks(rows).map((group) => ({
-        key: group.key,
-        title: group.title,
-        collapsedByDefault: group.collapsedByDefault,
-        ids: group.cards.map((item) => item.id),
-      })),
       whens: cards.map((item) => ({
         id: item.id,
         showsRule: showsSeriesRule(item),

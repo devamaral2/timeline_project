@@ -675,35 +675,6 @@
       }
     }
   ],
-  "groups": [
-    {
-      "key": "doing",
-      "ids": [
-        "trip"
-      ]
-    },
-    {
-      "key": "todo",
-      "ids": [
-        "orphan",
-        "cyc-a",
-        "cyc-b",
-        "cyc-tail"
-      ]
-    },
-    {
-      "key": "waiting",
-      "ids": [
-        "self"
-      ]
-    },
-    {
-      "key": "done",
-      "ids": [
-        "closed-parent"
-      ]
-    }
-  ],
   "drawer": [
     {
       "id": "sub-4",
