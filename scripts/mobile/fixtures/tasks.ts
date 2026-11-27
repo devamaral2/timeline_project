@@ -81,6 +81,15 @@ export function tasksFixtures(): Record<string, unknown> {
   return {
     "tasks-agenda-page-1": agendaPageSchema.parse({ items: pageOne, nextCursor: "cursor-1" }),
     "tasks-agenda-page-2": agendaPageSchema.parse({ items: pageTwo }),
+    /** Cartões de agente com a escolha de modelo do pedido (um por provedor) e sem ela: a linha só desenha o provedor quando o cartão a traz. */
+    "tasks-agent-model": agendaPageSchema.parse({
+      items: [
+        card({ id: "model-anthropic", name: "Com a Anthropic", actor: "agent", kind: "search_request", status: "running", startedAt: "2026-09-14T14:48:00.000Z", model: { provider: "anthropic", model: "claude-sonnet-5-5", effort: "medium" } }),
+        card({ id: "model-openai", name: "Com a OpenAI", actor: "agent", kind: "build_request", status: "completed", startedAt: "2026-09-14T14:00:00.000Z", model: { provider: "openai", model: "gpt-6.2-sol", effort: "high" } }),
+        card({ id: "model-openrouter", name: "Com o OpenRouter", actor: "agent", kind: "request", status: "queued", startedAt: "2026-09-14T14:57:00.000Z", model: { provider: "openrouter", model: "google/gemini-4-neon", effort: "low" } }),
+        card({ id: "model-none", name: "Sem escolha de modelo", actor: "agent", kind: "request", status: "failed", startedAt: "2026-09-14T13:00:00.000Z" }),
+      ],
+    }),
     "tasks-agenda-empty": agendaPageSchema.parse({ items: [] }),
     "tasks-agenda-reference-doing": agendaPageSchema.parse({ items: [referenceCard("doing", 5)] }),
     "tasks-agenda-reference-done": agendaPageSchema.parse({ items: [referenceCard("done", 5)] }),

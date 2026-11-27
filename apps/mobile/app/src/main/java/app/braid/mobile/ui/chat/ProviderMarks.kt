@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import app.braid.mobile.domain.request.ModelProvider
 
@@ -85,12 +86,16 @@ private fun markOf(provider: ModelProvider): Mark =
             )
     }
 
-/** A marca de um provedor numa cor só. Quem a usa dá o nome acessível (o quadrado que a contém). */
+/**
+ * A marca de um provedor numa cor só. Quem a usa dá o nome acessível (o quadrado que a contém). Com [fitIn] a marca cabe
+ * inteira nessa caixa, centrada, como o `svg` do web dentro da caixa que o CSS lhe dá; sem ele tem o tamanho do desenho.
+ */
 @Composable
 internal fun ProviderMark(
     provider: ModelProvider,
     color: Color,
     modifier: Modifier = Modifier,
+    fitIn: DpSize? = null,
 ) {
     val mark = remember(provider) { markOf(provider) }
     val paths =
@@ -101,11 +106,15 @@ internal fun ProviderMark(
                 }
             }
         }
-    Canvas(modifier.size(mark.displayWidth, mark.displayHeight)) {
-        val factor = size.width / mark.width
-        scale(factor, factor, pivot = Offset.Zero) {
-            translate(-mark.minX, -mark.minY) {
-                for (path in paths) drawPath(path, color)
+    Canvas(modifier.size(fitIn ?: DpSize(mark.displayWidth, mark.displayHeight))) {
+        val factor = if (fitIn == null) size.width / mark.width else minOf(size.width / mark.width, size.height / mark.height)
+        val left = if (fitIn == null) 0f else (size.width - mark.width * factor) / 2f
+        val top = if (fitIn == null) 0f else (size.height - mark.height * factor) / 2f
+        translate(left, top) {
+            scale(factor, factor, pivot = Offset.Zero) {
+                translate(-mark.minX, -mark.minY) {
+                    for (path in paths) drawPath(path, color)
+                }
             }
         }
     }

@@ -3,10 +3,12 @@ package app.braid.mobile.domain.request
 /** Quem atende o modo modelo (ADR 0019): a API da Anthropic, a da OpenAI ou o OpenRouter; [code] é o id do contrato. */
 enum class ModelProvider(
     val code: String,
+    /** O nome do provedor na tela e para o leitor de tela (`providerNames` do web). */
+    val label: String,
 ) {
-    Anthropic("anthropic"),
-    OpenAi("openai"),
-    OpenRouter("openrouter"),
+    Anthropic("anthropic", "Anthropic"),
+    OpenAi("openai", "OpenAI"),
+    OpenRouter("openrouter", "OpenRouter"),
     ;
 
     companion object {
