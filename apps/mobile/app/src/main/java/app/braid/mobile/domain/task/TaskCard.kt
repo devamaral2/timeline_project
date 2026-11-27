@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.task
 
 import app.braid.mobile.domain.project.Project
+import app.braid.mobile.domain.request.ModelSelection
 import java.time.Instant
 
 /** Quem executa a tarefa: a pessoa ou um agente. */
@@ -142,4 +143,6 @@ data class TaskCard(
     val notifyOffsetsMinutes: List<Int> = emptyList(),
     /** O projeto da tarefa: a lista o mostra abaixo do título; o formulário da pessoa o troca. */
     val project: Project = Project.Personal,
+    /** A escolha de provedor, modelo e esforço do pedido; só o cartão de agente a traz, e a linha só desenha o provedor com ela. */
+    val model: ModelSelection? = null,
 )

@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { RetryableJobError } from "../jobs/jobs.service";
-import { HermesClient, HermesRequestError, hermesSessionId } from "./hermes.client";
+import { HermesClient, HermesRequestError, HermesRunInterruptedError, hermesSessionId } from "./hermes.client";
 import type { AgentTraceDto } from "@repo/contracts";
 
 const KEY = "k".repeat(32);
@@ -138,6 +138,22 @@ describe("HermesClient", () => {
 
     expect(error).toBeInstanceOf(HermesRequestError);
     expect((error as Error).message).toBe("provider exploded");
+  });
+
+  test.each(["run.cancelled", "run.interrupted"])("a run Hermes reports as %s is an interruption, not a failure", async (event) => {
+    const fetchImpl = hermes({ events: () => sse([{ event }]) });
+    const error = await client(fetchImpl).chat({ text: "oi", sessionId: "s" }).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(HermesRunInterruptedError);
+  });
+
+  test.each(["cancelled", "interrupted"])("polling a run that ended as %s is an interruption; failed stays a failure", async (status) => {
+    const stopped = hermes({ events: () => sse([]), status: () => json({ status }) });
+    expect(await client(stopped).chat({ text: "oi", sessionId: "s" }).catch((cause: unknown) => cause)).toBeInstanceOf(HermesRunInterruptedError);
+
+    const broken = hermes({ events: () => sse([]), status: () => json({ status: "failed", error: "boom" }) });
+    const error = await client(broken).chat({ text: "oi", sessionId: "s" }).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(HermesRequestError);
+    expect(error).not.toBeInstanceOf(HermesRunInterruptedError);
   });
 
   test("if the event stream drops, the result is read by polling the run", async () => {
