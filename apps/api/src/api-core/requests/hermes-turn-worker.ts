@@ -1,4 +1,5 @@
 import type { AgentTraceDto } from "@repo/contracts";
+import { isInProgressAgentStatus } from "../../domain/agent-status";
 import { hermesSessionId, type HermesChat } from "../../infrastructure/hermes/hermes.client";
 import { isRetryableJobError, jobErrorCode } from "../../infrastructure/jobs/jobs.service";
 import { requestErrorCode } from "./request-errors";
@@ -28,7 +29,7 @@ export class HermesTurnWorker {
     context: { signal: AbortSignal; progress(value: RequestProgress): Promise<void> },
   ): Promise<void> {
     const request = await this.store.find(requestId);
-    if (request?.route !== "hermes" || (request.status !== "queued" && request.status !== "running")) return;
+    if (request?.route !== "hermes" || !isInProgressAgentStatus(request.status)) return;
     if (!this.hermes) {
       await this.store.finish(request.id, "failed", { errorCode: "unavailable", message: HERMES_OFF_MESSAGE });
       return;

@@ -12,6 +12,8 @@ import type {
   RequestScreenContext,
 } from "@repo/contracts";
 import { stepLabel } from "../../../api-core/requests/request-config";
+import { IN_PROGRESS_AGENT_STATUSES, OPEN_AGENT_STATUSES } from "../../../domain/agent-status";
+import { sqlList } from "../database/schema/sets";
 import { finalizeConcurrencyKey, REQUEST_JOBS, type RequestAgent } from "../../../api-core/requests/request-steps";
 import type {
   DispatchRecord,
@@ -57,7 +59,8 @@ export const REQUEST_IDEMPOTENCY_SCOPE = "request";
 
 const TITLE_CHARS = 80;
 const TEXT_PREVIEW_CHARS = 200;
-const OPEN_REQUEST = sql`('queued', 'running', 'waiting')`;
+const OPEN_REQUEST = sql`(${sqlList(OPEN_AGENT_STATUSES)})`;
+const IN_PROGRESS = sql`(${sqlList(IN_PROGRESS_AGENT_STATUSES)})`;
 
 const TASK_RELATION = { create: "generates", update: "updates", delete: "deletes" } as const;
 const ARTIFACT_RELATION = { create: "creates", update: "updates", delete: "deletes" } as const;
@@ -335,7 +338,7 @@ export class PostgresRequestStore implements RequestStore {
     await this.db.execute(sql`
       UPDATE tasks SET status = 'running', updated_at = now(),
         started_at = CASE WHEN status = 'queued' THEN now() ELSE started_at END
-      WHERE id = ${stepId} AND kind = 'step' AND status IN ('queued', 'running')`);
+      WHERE id = ${stepId} AND kind = 'step' AND status IN ${IN_PROGRESS}`);
   }
 
   async recordThought(stepId: string, thought: StepThought): Promise<void> {
@@ -410,7 +413,7 @@ export class PostgresRequestStore implements RequestStore {
     const closed = await tx.execute<{ user_id: string }>(sql`
       UPDATE tasks SET status = ${status}, finished_at = now(), updated_at = now(),
         data = data || ${json(detail.errorCode ? { errorCode: detail.errorCode } : {})}::jsonb
-      WHERE id = ${stepId} AND kind = 'step' AND status IN ('queued', 'running')
+      WHERE id = ${stepId} AND kind = 'step' AND status IN ${IN_PROGRESS}
       RETURNING user_id`);
     const userId = closed.rows[0]?.user_id;
     if (userId && (detail.timings || detail.errorCode)) {
@@ -493,7 +496,7 @@ export class PostgresRequestStore implements RequestStore {
         UPDATE tasks s SET status = 'cancel', finished_at = now(), updated_at = now()
         FROM task_task_relation r
         WHERE r.from_task_id = ${requestId} AND r.relation = 'step' AND r.to_task_id = s.id
-          AND s.kind = 'step' AND s.status IN ('queued', 'running')`);
+          AND s.kind = 'step' AND s.status IN ${IN_PROGRESS}`);
       const steps = await tx.execute<{ id: string }>(sql`
         SELECT to_task_id AS id FROM task_task_relation WHERE from_task_id = ${requestId} AND relation = 'step'`);
       return [requestId, ...steps.rows.map((row) => row.id)];

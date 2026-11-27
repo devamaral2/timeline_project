@@ -1,4 +1,5 @@
 import type { AgentTraceDto, AgentTraceEntryDto, AgentTraceField, AgentTraceSection, AgentTraceStatus } from "@repo/contracts";
+import { isFinalAgentStatus, isSuccessAgentStatus } from "../../domain/agent-status";
 import { dispatchConfig, stepLabel } from "./request-config";
 import { ENTITY_AGENT } from "./request-steps";
 import type { DispatchRecord, RequestEntityRecord, RequestRecord, StepRecord } from "./request-store";
@@ -36,7 +37,6 @@ const ENTITY_LABELS: Record<RequestEntityRecord["kind"], Record<RequestEntityRec
   task: { create: "Tarefa criada", update: "Tarefa alterada", delete: "Tarefa apagada" },
   artifact: { create: "Artefato criado", update: "Artefato alterado", delete: "Artefato apagado" },
 };
-const CLOSED = new Set<RequestRecord["status"]>(["done", "failed", "cancel"]);
 
 function clip(text: string, max = MAX_TEXT): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
@@ -245,8 +245,8 @@ function answerEntry(
   entities: readonly RequestEntityRecord[],
   message: string | undefined,
 ): AgentTraceEntryDto | undefined {
-  if (!CLOSED.has(request.status)) return undefined;
-  const failed = request.status !== "done";
+  if (!isFinalAgentStatus(request.status)) return undefined;
+  const failed = !isSuccessAgentStatus(request.status);
   const links = new Set(entities.flatMap((entity) => entity.links.map((link) => `${link.from.id}>${link.to.id}`))).size;
   const fields: AgentTraceField[] = [{ label: "Registros", value: String(entities.length) }];
   if (links > 0) fields.push({ label: "Vínculos", value: String(links) });
@@ -301,7 +301,7 @@ export function toRequestTrace(
   )));
   return {
     route: "steps",
-    status: request.status === "done" ? "done" : CLOSED.has(request.status) ? "failed" : "running",
+    status: isSuccessAgentStatus(request.status) ? "done" : isFinalAgentStatus(request.status) ? "failed" : "running",
     startedAt: request.createdAt.toISOString(),
     ...(durationMs !== undefined ? { durationMs } : {}),
     fields,

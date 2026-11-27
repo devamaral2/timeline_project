@@ -1,4 +1,5 @@
 import { failureExplanationOutput } from "./request-agent-schemas";
+import { isInProgressAgentStatus } from "../../domain/agent-status";
 import type { RequestAgentRunner } from "./request-agent-runner";
 import { stepLabel } from "./request-config";
 import type { StepPayload } from "./request-step-common";
@@ -21,7 +22,7 @@ export class RequestFinalizer {
   async run(payload: StepPayload, signal?: AbortSignal): Promise<void> {
     const { store } = this.deps;
     const request = await store.find(payload.requestId);
-    if (!request || (request.status !== "running" && request.status !== "queued")) return;
+    if (!request || !isInProgressAgentStatus(request.status)) return;
 
     const entities = await store.entities(request.id);
     for (const entity of entities.filter((candidate) => candidate.stepId === payload.stepId && !candidate.finalized)) {
@@ -34,7 +35,7 @@ export class RequestFinalizer {
   private async closeIfDone(request: RequestRecord): Promise<void> {
     const { store } = this.deps;
     const [steps, entities] = await Promise.all([store.steps(request.id), store.entities(request.id)]);
-    const open = steps.some((step) => step.status === "queued" || step.status === "running");
+    const open = steps.some((step) => isInProgressAgentStatus(step.status));
     if (open || entities.some((entity) => !entity.finalized)) return;
     const failed = steps.filter((step) => step.status === "failed");
     const failedSteps = failed.map((step) => ({ agent: step.agent, errorCode: step.errorCode ?? "internal" }));

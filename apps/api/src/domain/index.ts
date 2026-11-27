@@ -1,4 +1,5 @@
 export * from "./sets";
+export * from "./agent-status";
 
 export * from "./tasks/entities/task.entity";
 export * from "./tasks/value-objects/task-id";
