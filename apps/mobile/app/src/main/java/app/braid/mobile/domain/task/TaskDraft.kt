@@ -45,7 +45,7 @@ data class TaskDraft(
     val artifacts: List<DraftArtifact>,
     /**
      * O projeto da tarefa, com a marca e o nome que o campo mostra. `null` na criação, enquanto ninguém escolheu: a
-     * tarefa nasce em `personal`, e o campo mostra esse.
+     * tarefa nasce em `diario`, e o campo mostra esse.
      */
     val project: Project?,
 )
@@ -166,7 +166,7 @@ data class CreateTask(
     val location: String? = null,
     val notifyOffsetsMinutes: List<Int>? = null,
     val tags: List<String>? = null,
-    /** O projeto escolhido; ausente (o `personal` também não vai) a API resolve para `personal`. */
+    /** O projeto escolhido; ausente (o `diario` também não vai) a API resolve para `diario`. */
     val projectId: String? = null,
 )
 
@@ -218,7 +218,7 @@ data class TaskPatch(
     val subtaskIds: List<String>? = null,
     /** A lista completa de artefatos, na ordem da tela; cópias novas de alimento levam `copyOf` e a quantidade. */
     val artifacts: List<ArtifactLink>? = null,
-    /** `Clearable(null)` devolve a tarefa ao `personal`; um id a muda de projeto. */
+    /** `Clearable(null)` devolve a tarefa ao `diario`; um id a muda de projeto. */
     val projectId: Clearable<String>? = null,
 ) {
     /** Nada além da revisão: não há o que enviar. */
@@ -280,7 +280,7 @@ fun buildTaskPatch(
             parentTaskId = if (draft.parentTaskId != base.parentTaskId) Clearable(draft.parentTaskId) else null,
             subtaskIds = draft.subtaskIds.takeIf { it != base.subtaskIds },
             artifacts = if (sameArtifactLinks(draft.artifacts, base.artifacts)) null else artifactLinkInputs(draft.artifacts),
-            // Voltar ao `personal` manda `null`; outro projeto manda o id. Rascunho sem projeto não mexe.
+            // Voltar ao `diario` manda `null`; outro projeto manda o id. Rascunho sem projeto não mexe.
             projectId =
                 draft.project
                     ?.takeIf { it.id != base.project?.id }

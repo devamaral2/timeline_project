@@ -8,11 +8,11 @@ import app.braid.mobile.support.Fixtures
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** O projeto que o cartão, a tarefa e o pedido trazem (spec 51): o app o lê do contrato, sem inventar `personal`. */
+/** O projeto que o cartão, a tarefa e o pedido trazem (spec 51): o app o lê do contrato, sem inventar `diario`. */
 class TaskProjectDtoTest {
     private val timeline = Project(id = "project-timeline", name = "timeline_project", personal = false)
     private val skills = Project(id = "project-skills", name = "agent-skills", personal = false)
-    private val personal = Project(id = "project-personal", name = "personal", personal = true)
+    private val personal = Project(id = "project-personal", name = "diario", personal = true)
 
     @Test
     fun `a card of the agenda page carries its project`() {

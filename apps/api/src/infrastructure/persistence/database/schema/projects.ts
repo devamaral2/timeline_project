@@ -3,11 +3,11 @@ import { sql } from "drizzle-orm";
 import { MAX_PROJECT_NAME_LENGTH } from "../../../../domain/projects/types/project-name";
 
 /** O nome do projeto padrao: toda tarefa sem escolha fica nele. */
-export const PERSONAL_PROJECT_NAME = "personal";
+export const PERSONAL_PROJECT_NAME = "diario";
 
 /**
  * Onde uma tarefa de pessoa ou de agente fica guardada (ADR 0022). O nome e unico por usuario sem distinguir
- * maiusculas, e cada usuario tem no maximo um `personal`, o projeto padrao.
+ * maiusculas, e cada usuario tem no maximo um `diario`, o projeto padrao.
  */
 export const projects = pgTable(
   "projects",

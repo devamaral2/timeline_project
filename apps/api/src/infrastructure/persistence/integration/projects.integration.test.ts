@@ -102,7 +102,7 @@ describe("projetos", () => {
       );
 
       expect(new Set(resolved).size).toBe(1);
-      expect(await projectsOf(USER)).toEqual([{ id: resolved[0], user_id: USER, name: "personal", personal: true }]);
+      expect(await projectsOf(USER)).toEqual([{ id: resolved[0], user_id: USER, name: "diario", personal: true }]);
     });
 
     test("duas tarefas criadas ao mesmo tempo por um usuario novo ficam no mesmo personal", async () => {
@@ -129,7 +129,7 @@ describe("projetos", () => {
       const task = trackedTask(USER, "Ler");
       await tasks.save(task);
 
-      expect(await projectOfTask(task.id)).toMatchObject({ user_id: USER, name: "personal", personal: true });
+      expect(await projectOfTask(task.id)).toMatchObject({ user_id: USER, name: "diario", personal: true });
     });
 
     test("nascimento de pedido, passos e tarefa de agente", async () => {
@@ -231,7 +231,7 @@ describe("projetos", () => {
       const first = await query.list(USER);
       const again = await query.list(USER);
 
-      expect(first).toEqual([{ id: (await personalOf(USER)).id, name: "personal", personal: true }]);
+      expect(first).toEqual([{ id: (await personalOf(USER)).id, name: "diario", personal: true }]);
       expect(again).toEqual(first);
       expect(await projectsOf(USER)).toHaveLength(1);
     });
@@ -243,7 +243,7 @@ describe("projetos", () => {
       await otherProject(USER, "beta");
       await otherProject(OTHER_USER, "dele");
 
-      expect((await query.list(USER)).map((project) => project.name)).toEqual(["personal", "Alfa", "beta", "zeta"]);
+      expect((await query.list(USER)).map((project) => project.name)).toEqual(["diario", "Alfa", "beta", "zeta"]);
     });
   });
 
@@ -260,11 +260,11 @@ describe("projetos", () => {
       const found = await cards.cardsOf([task.id, other.id]);
 
       expect(found.map((card) => card.project)).toEqual([
-        { id: personal.id, name: "personal", personal: true },
+        { id: personal.id, name: "diario", personal: true },
         { id: braid, name: "braid", personal: false },
       ]);
       expect(Object.fromEntries(await query.ofTasks([task.id, other.id]))).toEqual({
-        [task.id]: { id: personal.id, name: "personal", personal: true },
+        [task.id]: { id: personal.id, name: "diario", personal: true },
         [other.id]: { id: braid, name: "braid", personal: false },
       });
     });
@@ -274,7 +274,7 @@ describe("projetos", () => {
 
       expect((await store.find(requestId))?.project).toEqual({
         id: (await personalOf(USER)).id,
-        name: "personal",
+        name: "diario",
         personal: true,
       });
       expect((await store.list(USER, 10)).map((request) => request.project.personal)).toEqual([true]);
@@ -286,7 +286,7 @@ describe("projetos", () => {
 
       expect(created).toEqual({ id: expect.any(String), name: "timeline_project", personal: false });
       expect(await query.list(USER)).toEqual([
-        { id: (await personalOf(USER)).id, name: "personal", personal: true },
+        { id: (await personalOf(USER)).id, name: "diario", personal: true },
         created,
       ]);
     });
@@ -303,11 +303,11 @@ describe("projetos", () => {
     test("o personal ja ocupa o nome, mesmo antes de a linha dele existir: ninguem cria um segundo", async () => {
       expect(await projectsOf(USER)).toEqual([]);
 
-      await expect(projects.create(USER, "Personal")).rejects.toBeInstanceOf(ProjectNameTakenError);
+      await expect(projects.create(USER, "Diario")).rejects.toBeInstanceOf(ProjectNameTakenError);
 
       // A recusa desfaz tudo; o personal de verdade nasce na primeira necessidade, sem esbarrar num "Personal" criado antes.
       expect(await projectsOf(USER)).toEqual([]);
-      expect(await query.list(USER)).toEqual([{ id: expect.any(String), name: "personal", personal: true }]);
+      expect(await query.list(USER)).toEqual([{ id: expect.any(String), name: "diario", personal: true }]);
     });
 
     test("duas criacoes do mesmo nome ao mesmo tempo: uma vale e a outra e recusada", async () => {

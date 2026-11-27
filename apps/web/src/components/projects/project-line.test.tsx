@@ -3,7 +3,7 @@ import { hueForTag } from "@repo/theme";
 import { expect, test } from "vitest";
 import { ProjectLine, ProjectMark } from "./project-line";
 
-const personal = { id: "p1", name: "personal", personal: true };
+const personal = { id: "p1", name: "diario", personal: true };
 const named = { id: "p2", name: "timeline_project", personal: false };
 
 test("the project line shows the mark with the initials and the name of the project", () => {
@@ -13,11 +13,11 @@ test("the project line shows the mark with the initials and the name of the proj
   expect(screen.getByText("TP")).toBeInTheDocument();
 });
 
-test("the line also shows the personal project, with its own two letters", () => {
+test("the line also shows the personal project, with its initial", () => {
   render(<ProjectLine project={personal} />);
 
-  expect(screen.getByText("personal")).toBeInTheDocument();
-  expect(screen.getByText("PE")).toBeInTheDocument();
+  expect(screen.getByText("diario")).toBeInTheDocument();
+  expect(screen.getByText("D")).toBeInTheDocument();
 });
 
 test("the color of a project comes from its name through the tag hue function, and the same name gets the same color", () => {
@@ -31,11 +31,12 @@ test("the color of a project comes from its name through the tag hue function, a
   );
 });
 
-test("the personal mark has no color of its own", () => {
+test("the default project is neutral: it has no hue of its own", () => {
   const { container } = render(<ProjectMark project={personal} />);
   const mark = container.querySelector<HTMLElement>("[data-project-mark]");
 
   expect(mark).toHaveAttribute("data-personal", "true");
+  expect(mark).toHaveTextContent("D");
   expect(mark?.style.getPropertyValue("--project-hue")).toBe("");
 });
 

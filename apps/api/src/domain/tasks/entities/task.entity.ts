@@ -65,7 +65,7 @@ export interface TaskCreateProps {
   occurrence?: OccurrenceLink;
   /**
    * O projeto escolhido (id). Ausente, quem grava resolve: a ocorrencia fica no projeto da serie e as demais, em
-   * `personal`; `null` pede o `personal` de proposito. Quem le uma tarefa gravada sempre recebe o id.
+   * `diario`; `null` pede o `diario` de proposito. Quem le uma tarefa gravada sempre recebe o id.
    */
   projectId?: string | null;
   /** Ausente, e o agora. */
@@ -100,7 +100,7 @@ export interface TaskReviseChanges {
   tags?: string[];
   longRunning?: boolean;
   artifactLinks?: ArtifactLink[];
-  /** Ausente nao muda; `null` devolve a tarefa a `personal`. */
+  /** Ausente nao muda; `null` devolve a tarefa a `diario`. */
   projectId?: string | null;
 }
 
@@ -183,7 +183,7 @@ export class Task {
   readonly occurrence: OccurrenceLink | undefined;
   /**
    * O projeto, pelo id. Ausente numa tarefa que ainda nao foi gravada e que ninguem pos num projeto (quem grava
-   * resolve); `null` numa tarefa revisada para voltar a `personal`.
+   * resolve); `null` numa tarefa revisada para voltar a `diario`.
    */
   readonly projectId: string | null | undefined;
   readonly revision: number;

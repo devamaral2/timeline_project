@@ -1,7 +1,7 @@
-/** O projeto de todo cartão e pedido dos fixtures: o `personal`, o padrão de quem não escolheu nenhum. */
-export const PERSONAL_PROJECT = { id: "project-personal", name: "personal", personal: true } as const;
+/** O projeto de todo cartão e pedido dos fixtures: o `diario`, o padrão de quem não escolheu nenhum. */
+export const PERSONAL_PROJECT = { id: "project-personal", name: "diario", personal: true } as const;
 
-/** Um projeto que não é o `personal`: a marca dele tem cor, e o cartão, o detalhe e o pedido o trazem pelo nome. */
+/** Um projeto que não é o `diario`: a marca dele tem cor, e o cartão, o detalhe e o pedido o trazem pelo nome. */
 export const TIMELINE_PROJECT = { id: "project-timeline", name: "timeline_project", personal: false } as const;
 
 /** Outro projeto, de uma palavra só: as iniciais saem dos dois primeiros caracteres. */

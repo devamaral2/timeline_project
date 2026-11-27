@@ -33,7 +33,7 @@ export interface StoredTemplate {
   artifactIds: string[];
   /** A tarefa principal de que cada ocorrencia nasce subtarefa. */
   parentTaskId?: string;
-  /** O projeto da serie, onde cada ocorrencia nasce. Ausente, a serie fica em `personal`. */
+  /** O projeto da serie, onde cada ocorrencia nasce. Ausente, a serie fica em `diario`. */
   projectId?: string;
 }
 

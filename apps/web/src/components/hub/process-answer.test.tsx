@@ -6,7 +6,7 @@ import { ProcessAnswer } from "./process-answer";
 
 const base: RequestDto = {
   id: "01HZY0000000000000000000AA", kind: "request", route: "steps", status: "running", title: "Criar duas tarefas",
-  project: { id: "project-1", name: "personal", personal: true },
+  project: { id: "project-1", name: "diario", personal: true },
   createdAt: "2026-11-14T12:00:00.000Z", updatedAt: "2026-11-14T12:00:01.000Z",
   steps: [
     { id: "1", agent: "task-create", label: "Criando tarefas", status: "completed" },

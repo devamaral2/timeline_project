@@ -4,11 +4,11 @@ import type { TaskActor, TaskArtifactRelation, TaskKind, TaskPriority, TaskSitua
 import type { ModelSelection } from "../agent/model.dto";
 import type { NotificationOffsetMinutes } from "./notification-offset-minutes";
 
-/** O projeto a que uma tarefa pertence. Sem escolha, e o `personal`, o projeto padrao do usuario. */
+/** O projeto a que uma tarefa pertence. Sem escolha, e o `diario`, o projeto padrao do usuario. */
 export interface ProjectDto {
   id: string;
   name: string;
-  /** O projeto padrao: cada usuario tem um so, e o nome dele e `personal`. */
+  /** O projeto padrao: cada usuario tem um so, e o nome dele e `diario`. */
   personal: boolean;
 }
 

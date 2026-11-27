@@ -19,7 +19,7 @@ function card(overrides: Partial<TaskCardDto> = {}): TaskCardDto {
     priority: "medium",
     name: "Revisar proposta",
     description: "",
-    project: { id: "project-1", name: "personal", personal: true },
+    project: { id: "project-1", name: "diario", personal: true },
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],

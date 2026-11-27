@@ -13,7 +13,7 @@ function cardOf(overrides: Partial<TaskCardDto>): TaskCardDto {
     priority: "medium",
     name: "Revisar proposta",
     description: "",
-    project: { id: "project-1", name: "personal", personal: true },
+    project: { id: "project-1", name: "diario", personal: true },
     longRunning: false,
     notifyOffsetsMinutes: [],
     tags: [],
@@ -68,7 +68,7 @@ describe("TaskRow", () => {
   it("mostra a marca do projeto também quando ele é o personal", () => {
     const { container } = render(<TaskRow card={cardOf({ status: "todo" })} userId="user-1" now={NOW} />);
 
-    expect(within(container.querySelector("[data-row-side]") as HTMLElement).getByRole("img", { name: "personal" })).toHaveTextContent("PE");
+    expect(within(container.querySelector("[data-row-side]") as HTMLElement).getByRole("img", { name: "diario" })).toHaveTextContent("D");
   });
 
   it("a linha de pessoa leva a duração no alto da ponta direita e, embaixo, a prioridade à esquerda da marca do projeto", () => {
@@ -86,7 +86,7 @@ describe("TaskRow", () => {
     expect(top).toHaveTextContent("1h30");
     expect(top.compareDocumentPosition(marks) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const priority = within(marks).getByRole("img", { name: "Prioridade: Alta" });
-    const project = within(marks).getByRole("img", { name: "personal" });
+    const project = within(marks).getByRole("img", { name: "diario" });
     expect(priority.compareDocumentPosition(project) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // A duração não se repete na linha do tipo.
     expect(screen.getAllByText("1h30")).toHaveLength(1);
@@ -108,7 +108,7 @@ describe("TaskRow", () => {
     expect(screen.queryByRole("img", { name: /Prioridade/ })).not.toBeInTheDocument();
     expect(container.querySelector("[data-row-duration]")).not.toBeInTheDocument();
     const provider = within(marks).getByRole("img", { name: "Anthropic" });
-    const project = within(marks).getByRole("img", { name: "personal" });
+    const project = within(marks).getByRole("img", { name: "diario" });
     expect(provider.compareDocumentPosition(project) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -228,14 +228,14 @@ describe("TaskRow", () => {
     const { container } = render(<TaskRow card={card} userId="user-1" now={NOW} />);
 
     const side = container.querySelector("[data-row-side]") as HTMLElement;
-    expect(within(side).getAllByRole("img").map((img) => img.getAttribute("aria-label"))).toEqual(["Agente, concluído", "personal"]);
+    expect(within(side).getAllByRole("img").map((img) => img.getAttribute("aria-label"))).toEqual(["Agente, concluído", "diario"]);
   });
 
   it("a linha de pessoa não leva status de agente nem símbolo de provedor", () => {
     const { container } = render(<TaskRow card={cardOf({ status: "done" })} userId="user-1" now={NOW} />);
 
     const side = container.querySelector("[data-row-side]") as HTMLElement;
-    expect(within(side).getAllByRole("img").map((img) => img.getAttribute("aria-label"))).toEqual(["Prioridade: Média", "personal"]);
+    expect(within(side).getAllByRole("img").map((img) => img.getAttribute("aria-label"))).toEqual(["Prioridade: Média", "diario"]);
     expect(container.querySelector("[data-row-lead]")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Feito. Mudar status de “Revisar proposta”" })).toBeInTheDocument();
   });

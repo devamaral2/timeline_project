@@ -48,7 +48,7 @@ const FIELD_NAME = (project: string) => `Projeto: ${project}. Trocar`;
 const projectField = (project: string) => screen.getByRole("button", { name: FIELD_NAME(project) });
 const dialog = () => screen.getByRole("dialog", { name: "Projeto" });
 
-function openChoice(current = "personal") {
+function openChoice(current = "diario") {
   fireEvent.click(projectField(current));
   return dialog();
 }
@@ -86,15 +86,15 @@ describe("criação", () => {
   it("o formulário começa em personal, com a marca e o nome, e sem buscar nada", async () => {
     render(<TaskCreateRoute userId="user-1" />);
 
-    const button = await screen.findByRole("button", { name: FIELD_NAME("personal") });
-    expect(button).toHaveTextContent("personal");
-    expect(button.querySelector("[data-project-mark]")).toHaveAttribute("data-personal", "true");
+    const button = await screen.findByRole("button", { name: FIELD_NAME("diario") });
+    expect(button).toHaveTextContent("diario");
+    expect(button.querySelector("[data-project-mark]")).toHaveTextContent("D");
     expect(api.calls).toEqual([]);
   });
 
   it("salvar sem escolher deixa a tarefa em personal, sem projectId no corpo", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
 
     setField("Título", "Dentista");
     save();
@@ -106,16 +106,16 @@ describe("criação", () => {
 
   it("a escolha abre com personal primeiro e os outros por nome", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
 
     openChoice();
 
-    await waitFor(() => expect(listed()).toEqual(["personal", "Alfa", "braid", "zeta"]));
+    await waitFor(() => expect(listed()).toEqual(["diario", "Alfa", "braid", "zeta"]));
   });
 
   it("escolher outro projeto o mostra no campo, e salvar manda o projectId e deixa a tarefa nele", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
 
     openChoice();
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “braid”" }));
@@ -124,8 +124,7 @@ describe("criação", () => {
     expect(screen.queryByRole("dialog", { name: "Projeto" })).not.toBeInTheDocument();
     const button = projectField("braid");
     expect(button).toHaveTextContent("braid");
-    expect(button.querySelector("[data-project-mark]")).toHaveAttribute("data-personal", "false");
-    expect(button.querySelector("[data-project-mark]")).toHaveTextContent("BR");
+    expect(button.querySelector("[data-project-mark]")).toHaveTextContent("B");
 
     setField("Título", "Dentista");
     save();
@@ -137,7 +136,7 @@ describe("criação", () => {
 
   it("depois de salvar, a linha da tarefa mostra o projeto escolhido", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
     openChoice();
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “Alfa”" }));
     setField("Título", "Dentista");
@@ -149,12 +148,12 @@ describe("criação", () => {
 
     const mark = document.querySelector("[data-row-side] [data-project-mark]");
     expect(mark).toHaveAccessibleName("Alfa");
-    expect(mark).toHaveTextContent("AL");
+    expect(mark).toHaveTextContent("A");
   });
 
   it("a busca filtra pelo nome, sem distinguir maiúsculas nem acentos, e avisa quando nada serve", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
     openChoice();
     await waitFor(() => expect(listed()).toHaveLength(4));
 
@@ -167,7 +166,7 @@ describe("criação", () => {
 
   it("criar um projeto com o texto da busca o escolhe, e salvar manda o id dele", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
     openChoice();
 
     fireEvent.change(within(dialog()).getByRole("searchbox", { name: "Buscar projeto" }), { target: { value: "  timeline_project " } });
@@ -187,7 +186,7 @@ describe("criação", () => {
 
   it("sem texto na busca, criar fica desligado e a dica pede o nome", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
 
     openChoice();
 
@@ -197,7 +196,7 @@ describe("criação", () => {
 
   it("um nome repetido mostra a mensagem e não fecha a escolha", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
     openChoice();
 
     fireEvent.change(within(dialog()).getByRole("searchbox", { name: "Buscar projeto" }), { target: { value: "BRAID" } });
@@ -205,13 +204,13 @@ describe("criação", () => {
 
     expect(await within(dialog()).findByRole("alert")).toHaveTextContent("Já existe um projeto com esse nome");
     expect(dialog()).toBeInTheDocument();
-    expect(projectField("personal")).toBeInTheDocument();
+    expect(projectField("diario")).toBeInTheDocument();
     expect(api.store.table("projects").size).toBe(3);
   });
 
   it("o nome grande demais mostra o limite e não fecha a escolha", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
     openChoice();
 
     fireEvent.change(within(dialog()).getByRole("searchbox", { name: "Buscar projeto" }), { target: { value: "a".repeat(61) } });
@@ -223,18 +222,18 @@ describe("criação", () => {
 
   it("Esc e o toque no X fecham a escolha sem mudar o projeto", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
     openChoice();
 
     fireEvent.click(within(dialog()).getByRole("button", { name: "Fechar" }));
 
     expect(screen.queryByRole("dialog", { name: "Projeto" })).not.toBeInTheDocument();
-    expect(projectField("personal")).toBeInTheDocument();
+    expect(projectField("diario")).toBeInTheDocument();
   });
 
   it("uma série criada pelo formulário leva o projeto no modelo, para as ocorrências nascerem nele", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
     openChoice();
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “braid”" }));
 
@@ -282,7 +281,7 @@ describe("edição", () => {
     await screen.findByRole("button", { name: FIELD_NAME("braid") });
 
     openChoice("braid");
-    fireEvent.click(await screen.findByRole("button", { name: "Escolher “personal”" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “diario”" }));
     save();
 
     await waitFor(() => expect(writes()).toHaveLength(1));
@@ -304,7 +303,7 @@ describe("edição", () => {
     await screen.findByRole("button", { name: FIELD_NAME("braid") });
 
     openChoice("braid");
-    fireEvent.click(await screen.findByRole("button", { name: "Escolher “personal”" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “diario”" }));
     save();
 
     await waitFor(() => expect(writes().map((call) => `${call.method} ${call.pathname}`)).toEqual(["PATCH /api/tasks/ev-1"]));
@@ -335,11 +334,11 @@ describe("edição", () => {
 
   it("uma série em que a pessoa voltou ao personal leva o id do personal no modelo", async () => {
     render(<TaskCreateRoute userId="user-1" />);
-    await screen.findByRole("button", { name: FIELD_NAME("personal") });
+    await screen.findByRole("button", { name: FIELD_NAME("diario") });
     openChoice();
     fireEvent.click(await screen.findByRole("button", { name: "Escolher “braid”" }));
     openChoice("braid");
-    fireEvent.click(await screen.findByRole("button", { name: "Escolher “personal”" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Escolher “diario”" }));
 
     setField("Título", "Corrida");
     setField("Data de início", "2026-11-16");

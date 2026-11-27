@@ -14,6 +14,6 @@ test("the same name always gets the same hue, and different names can differ", (
   expect(hueOf(projectMarkStyle({ name: "agent-skills", personal: false }))).not.toBe(hueOf(projectMarkStyle({ name: "t3code", personal: false })));
 });
 
-test("the personal mark has no hue: the neutral colors of the CSS apply", () => {
-  expect(projectMarkStyle({ name: "personal", personal: true })).toEqual({});
+test("the default project has no hue: the neutral color of the CSS applies", () => {
+  expect(projectMarkStyle({ name: "diario", personal: true })).toEqual({});
 });

@@ -177,7 +177,7 @@ export class CreateTaskUseCase {
       tags: input.tags ?? [],
       longRunning: input.longRunning,
       artifactLinks: links,
-      // Quem grava confere que o projeto e do usuario; ausente, a tarefa fica em `personal`.
+      // Quem grava confere que o projeto e do usuario; ausente, a tarefa fica em `diario`.
       projectId: input.projectId,
     });
 

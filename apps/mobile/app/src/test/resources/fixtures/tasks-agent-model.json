@@ -10,7 +10,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-14T14:48:00.000Z",
@@ -37,7 +37,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-14T14:00:00.000Z",
@@ -64,7 +64,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-14T14:57:00.000Z",
@@ -91,7 +91,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-14T13:00:00.000Z",

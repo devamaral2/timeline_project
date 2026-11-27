@@ -7,7 +7,7 @@ export const projectsRoutes = {
   createProject: "POST /api/projects",
 } as const;
 
-/** Os projetos do usuario: `personal` primeiro e os outros por nome. */
+/** Os projetos do usuario: `diario` primeiro e os outros por nome. */
 export function listProjects(): Promise<ProjectDto[]> {
   return apiRequest<ProjectDto[]>("GET", "/api/projects");
 }

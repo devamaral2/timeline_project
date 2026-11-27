@@ -6,7 +6,7 @@ import type { RecurrenceRule } from "./recurrence-rule";
  * de pessoa se repetem, e uma tarefa longa nao se repete. `artifactIds` sao os
  * mesmos artefatos em todas as ocorrencias; `parentTaskId`, a tarefa
  * principal de que cada ocorrencia nasce subtarefa; `projectId`, o projeto da
- * serie, onde cada ocorrencia nasce (ausente, `personal`).
+ * serie, onde cada ocorrencia nasce (ausente, `diario`).
  */
 export type RecurrenceTemplate = Omit<
   CreateTaskInput,

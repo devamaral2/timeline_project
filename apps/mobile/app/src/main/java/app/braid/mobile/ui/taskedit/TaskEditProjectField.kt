@@ -35,7 +35,7 @@ import app.braid.mobile.ui.picker.EntityPickerSheet
 
 /**
  * A linha "Projeto" de Informações, na criação e na edição: a marca e o nome do projeto num campo que abre a escolha.
- * Sem escolha mostra `personal`, o padrão. A troca só mexe no rascunho; a gravação fica para o Salvar.
+ * Sem escolha mostra `diario`, o padrão. A troca só mexe no rascunho; a gravação fica para o Salvar.
  */
 @Composable
 internal fun ProjectRow(

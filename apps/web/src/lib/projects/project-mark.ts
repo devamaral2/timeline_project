@@ -5,7 +5,7 @@ import { hueForTag } from "@repo/theme";
 /**
  * O estilo da marca de um projeto: só o matiz, que vem do nome pela mesma função das tags (`hueForTag`, em
  * `@repo/theme`), para web e Android pintarem o mesmo nome da mesma cor. A luminosidade, o croma e a cor do texto
- * ficam no CSS, por token. O `personal` não tem cor: sem matiz, a marca neutra do CSS vale.
+ * ficam no CSS, por token. O `diario` não tem matiz: vale a cor neutra do CSS.
  */
 export function projectMarkStyle(project: Pick<ProjectDto, "name" | "personal">): CSSProperties {
   if (project.personal) return {};

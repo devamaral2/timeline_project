@@ -11,7 +11,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-14T13:30:00.000Z",
@@ -33,7 +33,7 @@
       "description": "",
       "project": {
         "id": "project-personal",
-        "name": "personal",
+        "name": "diario",
         "personal": true
       },
       "startedAt": "2026-09-14T14:10:00.000Z",

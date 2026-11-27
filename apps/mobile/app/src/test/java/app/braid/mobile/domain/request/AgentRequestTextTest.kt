@@ -44,7 +44,7 @@ class AgentRequestTextTest {
                             JsonObject(
                                 mapOf(
                                     "id" to JsonPrimitive("project-personal"),
-                                    "name" to JsonPrimitive("personal"),
+                                    "name" to JsonPrimitive("diario"),
                                     "personal" to JsonPrimitive(true),
                                 ),
                             ),

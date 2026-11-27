@@ -5,7 +5,7 @@ import styles from "./project-line.module.css";
 
 /**
  * A marca do projeto: as iniciais sobre a cor dele. A cor vem do nome, pela regra de `@repo/theme` (a mesma das tags,
- * compartilhada com o Android); o `personal` é neutro. `labelled` serve para a marca sozinha, sem o nome ao lado:
+ * compartilhada com o Android); o `diario` é neutro. `labelled` serve para a marca sozinha, sem o nome ao lado:
  * ela passa a ter o nome do projeto como nome acessível.
  */
 export function ProjectMark({ project, labelled = false }: { project: ProjectDto; labelled?: boolean }) {

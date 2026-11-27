@@ -11,15 +11,13 @@ function wordsOf(name: string): string[] {
 
 /**
  * As iniciais da marca, sempre em maiusculas: a inicial das duas primeiras
- * palavras ou, com uma so, os dois primeiros caracteres. `timeline_project` da
- * "TP", `agent-skills` da "AS", `t3code` da "T3" e `personal` da "PE". Um nome de
- * uma letra so tem uma inicial.
+ * palavras ou, com uma so, a inicial dela. `timeline_project` da "TP",
+ * `agent-skills` da "AS" e `diario` da "D".
  */
 export function projectInitials(name: string): string {
-  const words = wordsOf(name);
-  const letters =
-    words.length >= 2
-      ? words.slice(0, 2).map((word) => Array.from(word)[0] ?? "")
-      : Array.from(words[0] ?? "").slice(0, 2);
-  return letters.join("").toUpperCase();
+  return wordsOf(name)
+    .slice(0, 2)
+    .map((word) => Array.from(word)[0] ?? "")
+    .join("")
+    .toUpperCase();
 }

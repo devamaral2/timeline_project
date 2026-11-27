@@ -6,7 +6,7 @@
   "title": "Editar a tarefa",
   "project": {
     "id": "project-personal",
-    "name": "personal",
+    "name": "diario",
     "personal": true
   },
   "createdAt": "2026-09-14T14:48:00.000Z",

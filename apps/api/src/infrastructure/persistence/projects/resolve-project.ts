@@ -5,7 +5,7 @@ import * as schema from "../database/schema";
 import { lockUser, type Tx } from "../shared/tx";
 
 /**
- * O projeto `personal` do usuario, criado na primeira necessidade. A leitura sem trava resolve quase sempre; so
+ * O projeto `diario` do usuario, criado na primeira necessidade. A leitura sem trava resolve quase sempre; so
  * quem nao achou o projeto pega a trava por usuario e confere de novo, para que duas gravacoes ao mesmo tempo
  * criem um so.
  */
@@ -32,13 +32,13 @@ export async function ensurePersonalProject(tx: Tx, userId: string): Promise<str
 
 /**
  * O que decide o projeto de uma tarefa que nasce. Cada campo e uma regra da resolucao, na ordem em que valem:
- * `projectId`, `requestId`, `sessionId`, `targetTaskId`, `recurrenceId` e, por fim, `personal`.
+ * `projectId`, `requestId`, `sessionId`, `targetTaskId`, `recurrenceId` e, por fim, `diario`.
  */
 export interface ProjectResolutionInput {
   userId: string;
   /**
-   * 1. O projeto que veio na entrada: precisa ser do usuario, senao `ProjectNotFoundError`. `null` pede o `personal`
-   * de proposito e vale ate para a ocorrencia de uma serie de outro projeto (a edicao que devolve a tarefa a `personal`).
+   * 1. O projeto que veio na entrada: precisa ser do usuario, senao `ProjectNotFoundError`. `null` pede o `diario`
+   * de proposito e vale ate para a ocorrencia de uma serie de outro projeto (a edicao que devolve a tarefa a `diario`).
    */
   projectId?: string | null;
   /** 2 e 3. O pedido de que a tarefa e passo, ou que a cria pela rota por passos: ela fica no projeto dele. */
@@ -67,7 +67,7 @@ async function projectOfTask(tx: Tx, userId: string, taskId: string): Promise<st
  * O projeto de uma tarefa (ou serie) que esta sendo criada. E por aqui que passa toda gravacao que cria tarefa:
  * criacao pela pessoa, pedido, passo, calculo de alimento, tarefa por voz, ocorrencia e lote do agente. A primeira
  * regra que se aplica vale; as que nao acham o que procuram (o pedido sumiu, a tarefa alvo foi apagada) passam
- * adiante, e o que sobra cai em `personal`.
+ * adiante, e o que sobra cai em `diario`.
  */
 export async function resolveProjectId(tx: Tx, input: ProjectResolutionInput): Promise<string> {
   if (input.projectId === null) return ensurePersonalProject(tx, input.userId);

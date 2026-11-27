@@ -155,7 +155,7 @@ Registro acrescentado a uma tarefa e nunca alterado: mensagem, pensamento, trace
 _Avoid_: log, histórico, trace (como termo geral)
 
 **Projeto**:
-Onde uma tarefa, de pessoa ou de agente, fica guardada. Toda tarefa pertence a um projeto; sem escolha, ela fica no projeto `personal`, que cada usuário tem desde a primeira necessidade e que não se renomeia nem se apaga. O nome tem de 1 a 60 caracteres, sem os espaços das pontas, e é único por usuário sem distinguir maiúsculas. Na tela o projeto é uma marca de iniciais sobre uma cor que vem do nome (a do `personal` é neutra), seguida do nome. A ocorrência de uma tarefa recorrente fica no projeto da série. Trocar o projeto de uma ocorrência muda só ela (destaca-se da série); a série leva o projeto da tarefa com que nasceu.
+Onde uma tarefa, de pessoa ou de agente, fica guardada. Toda tarefa pertence a um projeto; sem escolha, ela fica no projeto `diario`, que cada usuário tem desde a primeira necessidade e que não se renomeia nem se apaga. O nome tem de 1 a 60 caracteres, sem os espaços das pontas, e é único por usuário sem distinguir maiúsculas. Na tela o projeto é uma marca de iniciais sobre uma cor que vem do nome (uma ou duas letras; "D" no `diario`, a única neutra), seguida do nome. A ocorrência de uma tarefa recorrente fica no projeto da série. Trocar o projeto de uma ocorrência muda só ela (destaca-se da série); a série leva o projeto da tarefa com que nasceu.
 _Avoid_: pasta, espaço, workspace, repositório, tarefa longa (como sinônimo)
 
 **Situação**:
