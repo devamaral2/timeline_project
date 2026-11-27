@@ -242,8 +242,8 @@ test("relê a cada 3 s enquanto há execução; parada, relê ao voltar ao foco,
   await act(async () => { window.dispatchEvent(new Event("focus")); });
   await waitFor(() => expect(reads()).toBe(idle + 2));
 
-  const { REQUEST_STARTED_EVENT } = await import("@/lib/api/requests");
-  await act(async () => { window.dispatchEvent(new Event(REQUEST_STARTED_EVENT)); });
+  const { REQUEST_STARTED_SIGNAL } = await import("@/lib/api/requests");
+  await act(async () => { window.dispatchEvent(new Event(REQUEST_STARTED_SIGNAL)); });
   await waitFor(() => expect(reads()).toBe(idle + 3));
 });
 

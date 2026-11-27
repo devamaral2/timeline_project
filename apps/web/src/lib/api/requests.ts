@@ -27,10 +27,10 @@ export const requestsRoutes = {
  * Aviso da mesma aba de que o cliente acabou de abrir um pedido: a gaveta de execução se relê na hora, em vez de
  * esperar a batida de 30 s. Quem abre um pedido (chat, edição, voz, Hermes, modo modelo) passa por uma destas funções.
  */
-export const REQUEST_STARTED_EVENT = "braid:request-started";
+export const REQUEST_STARTED_SIGNAL = "braid:request-started";
 
 function announceRequestStarted(): void {
-  if (typeof window !== "undefined") window.dispatchEvent(new Event(REQUEST_STARTED_EVENT));
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(REQUEST_STARTED_SIGNAL));
 }
 
 /** O Hermes está desligado nesta API (`AI_AUTOMATION`): a rota dele responde não encontrado. */

@@ -2,7 +2,7 @@
 
 import type { TaskCardDto } from "@repo/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { REQUEST_STARTED_EVENT } from "@/lib/api/requests";
+import { REQUEST_STARTED_SIGNAL } from "@/lib/api/requests";
 import { listTrackedTasks } from "@/lib/api/tasks";
 import { executionRunsOf, EXECUTION_STATUS_FILTER } from "@/lib/tasks/execution-runs";
 import { useOpenAgentRefresh } from "@/lib/tasks/use-open-agent-refresh";
@@ -46,10 +46,10 @@ export function useExecutionRuns(enabled: boolean): TaskCardDto[] {
     if (!enabled) return;
     const onFocus = () => void refresh();
     window.addEventListener("focus", onFocus);
-    window.addEventListener(REQUEST_STARTED_EVENT, onFocus);
+    window.addEventListener(REQUEST_STARTED_SIGNAL, onFocus);
     return () => {
       window.removeEventListener("focus", onFocus);
-      window.removeEventListener(REQUEST_STARTED_EVENT, onFocus);
+      window.removeEventListener(REQUEST_STARTED_SIGNAL, onFocus);
     };
   }, [enabled, refresh]);
 

@@ -8,7 +8,7 @@ import { DEFAULT_EXECUTION_MODE, drawerGrows, type ExecutionDrawerMode, isExecut
  * escolha, ou com o armazenamento bloqueado, vale o padrão (três linhas).
  */
 export const EXECUTION_MODE_STORAGE_KEY = "braid-execution-drawer";
-const CHANGE_EVENT = "braid-execution-drawer-change";
+const CHANGE_SIGNAL = "braid-execution-drawer-change";
 
 export function readExecutionMode(): ExecutionDrawerMode {
   try {
@@ -23,14 +23,14 @@ function writeExecutionMode(mode: ExecutionDrawerMode): void {
   try {
     window.localStorage.setItem(EXECUTION_MODE_STORAGE_KEY, mode);
   } catch {}
-  window.dispatchEvent(new Event(CHANGE_EVENT));
+  window.dispatchEvent(new Event(CHANGE_SIGNAL));
 }
 
 function subscribe(onChange: () => void): () => void {
-  window.addEventListener(CHANGE_EVENT, onChange);
+  window.addEventListener(CHANGE_SIGNAL, onChange);
   window.addEventListener("storage", onChange);
   return () => {
-    window.removeEventListener(CHANGE_EVENT, onChange);
+    window.removeEventListener(CHANGE_SIGNAL, onChange);
     window.removeEventListener("storage", onChange);
   };
 }

@@ -169,7 +169,7 @@ que algo rodava, e a execução em andamento não pertence a nenhuma gaveta da l
    calculada em CSS a partir do número de linhas à mostra (`--exec-rows`) e do modo.
 6. **Leitura:** `GET /api/tasks/tracked` com `actor=agent` e os status em andamento, a cada 3 s (o intervalo das listas,
    `useOpenAgentRefresh`) enquanto houver alguma. Parada, relê quando a janela volta ao foco, logo depois de o próprio
-   cliente abrir um pedido (`REQUEST_STARTED_EVENT`, avisado pelas funções de `lib/api/requests.ts`) e a cada 30 s. Não há
+   cliente abrir um pedido (`REQUEST_STARTED_SIGNAL`, avisado pelas funções de `lib/api/requests.ts`) e a cada 30 s. Não há
    canal de empurrão: a releitura é o único meio. A Lista de tarefas e a Agenda continuam relendo enquanto têm tarefa de
    agente aberta, e por isso a execução que termina sai da gaveta e entra na gaveta certa da lista no mesmo ciclo.
 

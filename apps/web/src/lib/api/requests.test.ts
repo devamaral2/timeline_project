@@ -8,7 +8,7 @@ import {
   getRequest,
   HermesOffError,
   listRequests,
-  REQUEST_STARTED_EVENT,
+  REQUEST_STARTED_SIGNAL,
   sendHermesMessage,
   startEditRequest,
   startRequest,
@@ -212,7 +212,7 @@ describe("acompanhar, listar e cancelar", () => {
 describe("aviso de pedido aberto", () => {
   test("abrir um pedido avisa a janela, para a gaveta de execução se reler logo; pedido que falha não avisa", async () => {
     const heard = vi.fn();
-    window.addEventListener(REQUEST_STARTED_EVENT, heard);
+    window.addEventListener(REQUEST_STARTED_SIGNAL, heard);
     try {
       await startRequest(ana);
       expect(heard).toHaveBeenCalledTimes(1);
@@ -223,7 +223,7 @@ describe("aviso de pedido aberto", () => {
       await expect(startRequest({ userId: "ana", text: "   " })).rejects.toThrow();
       expect(heard.mock.calls.length).toBe(afterFailure);
     } finally {
-      window.removeEventListener(REQUEST_STARTED_EVENT, heard);
+      window.removeEventListener(REQUEST_STARTED_SIGNAL, heard);
     }
   });
 });
