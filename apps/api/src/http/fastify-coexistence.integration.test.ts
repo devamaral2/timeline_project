@@ -122,7 +122,8 @@ describe("coexistencia", () => {
   });
 });
 
-describe("idempotencia da criacao de tarefa", () => {  const body = { name: "idempotente" };
+describe("idempotencia da criacao de tarefa", () => {
+  const body = { name: "idempotente" };
 
   test("claim, replay, divergencia e concorrencia", async () => {
     const user = newUser();
