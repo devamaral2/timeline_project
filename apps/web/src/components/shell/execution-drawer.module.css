@@ -1,4 +1,4 @@
-/* A gaveta de execução: presa acima da barra de navegação inferior (no desktop, ao pé da coluna de conteúdo), em três
+/* A gaveta de execução: presa acima da barra de navegação inferior em três
    alturas: uma linha (`one`), três linhas (`three`) e todas (`all`). Medidas e curvas vêm do canvas "Tarefas, Agenda e
    Documentos": linha de 40 px, linha recolhida e cabeçalho de 44 px; abrir leva 420 ms em `--grow`, fechar 300 ms em
    `--shrink`; as linhas que entram sobem 8 px e ganham opacidade, uma depois da outra. Cores só por token. */
@@ -37,6 +37,8 @@
   left: 0;
   right: 0;
   bottom: calc(74px + env(safe-area-inset-bottom));
+  max-width: var(--app-width);
+  margin-inline: auto;
   padding: 0 16px 8px;
   background: var(--background);
 }
@@ -266,24 +268,6 @@
 /* O chat cobre a tela; o menu de opções da barra abre por cima: a gaveta sai de vista. */
 :global(body):has(:global(nav[data-menu-open])) .dock { opacity: 0; pointer-events: none; }
 .dock { transition: opacity 200ms linear; }
-
-/* Desktop: a barra inferior não existe; a gaveta fica ao pé da coluna de conteúdo, com a largura dela. */
-@media (min-width: 721px) {
-  .host { --seam: 24px; }
-  .dock {
-    bottom: 0;
-    padding: 0 0 16px;
-    background: transparent;
-    pointer-events: none;
-  }
-  .dock::before { display: none; }
-  .bar {
-    width: min(1040px, calc(100% - 2 * clamp(16px, 4vw, 56px)));
-    margin: 0 auto;
-    box-shadow: var(--shadow-float);
-    pointer-events: auto;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .spacer, .dock, .bar, .headerWrap, .list, .row, .up, .count, .chevron { transition: none !important; }

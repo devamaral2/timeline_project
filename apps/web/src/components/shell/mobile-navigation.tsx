@@ -3,7 +3,7 @@
 import { ArrowLeft, CalendarDays, Check, ChevronDown, FileText, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { type CSSProperties, type KeyboardEvent as KeyDownArgs, type MouseEvent as ClickArgs, type ReactNode, type RefObject, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { type CSSProperties, type KeyboardEvent as KeyDownArgs, type MouseEvent as ClickArgs, type ReactNode, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { creatableItemTypes, ICON_STROKE_WIDTH, visualForItemType } from "@/components/tasks/task-visuals";
 import { AgentChatPanel, agentEntityHref, useAgendaChat } from "@/components/hub/agent-chat-panel";
 import { EXAMPLE_TODAY, exampleTasksOn, type ExampleStatus } from "@/components/agenda/agenda-examples";
@@ -73,14 +73,9 @@ function DraftPriorityIcon({ priority }: { priority: DraftPriority }) {
  */
 type Flight = { kind: "out" } | { kind: "back"; mark: Box } | { kind: "dock"; dock: HTMLElement; late: boolean } | { kind: "undock"; mark: Box };
 
-/** O que o cabeçalho do desktop precisa do painel: abri-lo. */
-export interface HubHandle { open: () => void }
-
 /**
- * A barra inferior do celular (a dock das três telas e, separado, o círculo do
- * chat) e o painel "Buscar e criar". O painel é o mesmo
- * nos dois tamanhos: no celular abre pela barra, como folha; no desktop, pelo
- * campo do cabeçalho (`hubRef`) ou por Ctrl/⌘ K, como diálogo centrado.
+ * A barra inferior (a dock das três telas e, separado, o círculo do chat) e o
+ * painel "Buscar e criar", que abre pela barra ou por Ctrl/⌘ K.
  */
 /** A tela "Notificações" do painel: a mesma lista do sino, sem entregar avisos (quem entrega é o sino montado). */
 function NotificationsView({ userId }: { userId: string }) {
@@ -88,7 +83,7 @@ function NotificationsView({ userId }: { userId: string }) {
   return <section className={styles.notificationPanel} data-inline="true" aria-label="Notificações"><NotificationFeed userId={userId} state={state} /></section>;
 }
 
-export function MobileNavigation({ userId, hubRef, onHubOpenChange, onMenuOpenChange, darkMode = false, onThemeToggle = () => {} }: { userId?: string; hubRef?: RefObject<HubHandle | null>; onHubOpenChange?: (open: boolean) => void; onMenuOpenChange?: (open: boolean) => void; darkMode?: boolean; onThemeToggle?: () => void }) {
+export function MobileNavigation({ userId, onHubOpenChange, onMenuOpenChange, darkMode = false, onThemeToggle = () => {} }: { userId?: string; onHubOpenChange?: (open: boolean) => void; onMenuOpenChange?: (open: boolean) => void; darkMode?: boolean; onThemeToggle?: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -214,11 +209,10 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, onMenuOpenCh
     setNotice("");
     if (next === "hub") { setHubView("chat"); setExpanded(false); setChatJustOpened(true); }
     if (next !== "hub") setKind(next);
-    // No celular o chat nao e modal: a barra inferior fica viva por baixo, e
-    // tocar num destino navega e fecha o chat (ali ele nao tem botao de fechar).
-    const desktop = typeof window.matchMedia === "function" && window.matchMedia("(min-width: 721px)").matches;
+    // O chat nao e modal: a barra inferior fica viva por baixo, e tocar num
+    // destino navega e fecha o chat (ali ele nao tem botao de fechar).
     const dialog = dialogRef.current;
-    if (next === "hub" && !desktop && typeof dialog?.show === "function") dialog.show();
+    if (next === "hub" && typeof dialog?.show === "function") dialog.show();
     else dialog?.showModal();
     // O botão sai da barra e pousa como o status do campo; o X fica no lugar dele.
     if (next === "hub" && canFly()) setFlight({ kind: "out" });
@@ -276,16 +270,10 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, onMenuOpenCh
     router.push(`/${userId}/${route}${name ? `?nome=${encodeURIComponent(name)}` : ""}`);
   }
 
-  // O cabeçalho e o atalho de teclado abrem o painel sem conhecer o estado dele:
-  // a referência guarda sempre a versão atual de `openPanel`.
+  // O atalho de teclado e o pedido de uma tela abrem o painel sem conhecer o
+  // estado dele: a referência guarda sempre a versão atual de `openPanel`.
   const openHubRef = useRef(() => {});
   openHubRef.current = () => openPanel("hub");
-
-  useEffect(() => {
-    if (!hubRef) return;
-    hubRef.current = { open: () => openHubRef.current() };
-    return () => { hubRef.current = null; };
-  }, [hubRef]);
 
   useEffect(() => { onHubOpenChange?.(panel === "hub"); }, [panel, onHubOpenChange]);
   // O menu da seção sobe da barra por cima dela: quem fica acima da barra (a gaveta de execução) precisa saber.
@@ -361,13 +349,12 @@ export function MobileNavigation({ userId, hubRef, onHubOpenChange, onMenuOpenCh
     navShownRef.current = box !== null;
   }, [pathname, landBack]);
 
-  // O chat abre pronto para digitar (e já ouvindo), no desktop e no celular. Ao
-  // voltar de um comando para o chat, só o desktop refoca: no celular o teclado
-  // subiria sem a pessoa ter pedido. Com a sessão chegando depois do painel, o
+  // O chat abre pronto para digitar (e já ouvindo). Ao voltar de um comando
+  // para o chat não refoca: o teclado subiria sem a pessoa ter pedido. Com a sessão chegando depois do painel, o
   // campo só pode receber o foco quando deixa de estar desabilitado.
   useEffect(() => {
     if (!agendaChat.chat.ready) return;
-    if (panel !== "hub" || hubView !== "chat" || !(chatJustOpened || window.matchMedia("(min-width: 721px)").matches)) return;
+    if (panel !== "hub" || hubView !== "chat" || !chatJustOpened) return;
     dialogRef.current?.querySelector<HTMLElement>('[aria-label="Mensagem para a IA"]')?.focus({ preventScroll: true });
   }, [panel, hubView, chatJustOpened, agendaChat.chat.ready]);
 

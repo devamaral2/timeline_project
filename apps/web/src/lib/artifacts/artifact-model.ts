@@ -56,18 +56,6 @@ export function artifactActor(type: ArtifactType): "human" | "agent" {
   return AGENT_TYPES.has(type) ? "agent" : "human";
 }
 
-/** Os tipos que aparecem nos artefatos, na ordem de ARTIFACT_TYPE_ORDER. */
-export function artifactTypesIn(artifacts: readonly { type: ArtifactType }[]): ArtifactType[] {
-  return ARTIFACT_TYPE_ORDER.filter((type) => artifacts.some((artifact) => artifact.type === type));
-}
-
-/** As tags de todos os artefatos, das mais usadas para as menos usadas. */
-export function artifactTagsByUse(artifacts: readonly { tags: readonly string[] }[]): string[] {
-  const uses = new Map<string, number>();
-  for (const tag of artifacts.flatMap((artifact) => artifact.tags)) uses.set(tag, (uses.get(tag) ?? 0) + 1);
-  return [...uses.keys()].sort((a, b) => (uses.get(b) ?? 0) - (uses.get(a) ?? 0) || a.localeCompare(b, "pt-BR"));
-}
-
 /**
  * Uma nota de sono vive na noite da tarefa a que pertence: o título é o dia (ou os dois dias) dele e, com fim
  * planejado, quanto durou na agenda. Sem tarefa com início, a nota é só a nota.

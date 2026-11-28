@@ -2,7 +2,7 @@
  * Fixtures das tarefas da agenda: as respostas de `GET /api/tasks` validadas
  * pelo schema do contrato e as saídas das funções do web que a agenda usa
  * (`isAgendaCard`, `agendaTasksByDay`, `cardWhenLabel`, `cardDurationLabel`,
- * `cardIsOverdue`, `elapsedLabel`). O resumo do dia (`daySummary`) fica de fora: no celular o web esconde a barra que o mostra.
+ * `cardIsOverdue`, `elapsedLabel`).
  */
 import { agendaPageSchema, taskCardSchema } from "../../../packages/contracts/src/schemas";
 import { dayKeyOf, zonedDayEnd, zonedDayStart, weekOf } from "../../../packages/timeline/src/index";

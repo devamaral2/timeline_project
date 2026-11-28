@@ -13,6 +13,18 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 }));
 
 const { NotesScreen } = await import("./NotesScreen");
+const { SectionMenu } = await import("@/components/shell/section-menu");
+
+/** A lista com o menu da barra inferior aberto: a busca mora nele. */
+function renderWithMenu() {
+  render(
+    <>
+      <NotesScreen userId="user-1" />
+      <SectionMenu id="menu-artefatos" section="notes" title="Artefatos" open onClose={() => {}} />
+    </>,
+  );
+}
+const searchbox = () => within(screen.getByRole("region", { name: "Opções de artefatos" })).getByRole("searchbox", { name: "Buscar nos artefatos" });
 
 type Seed = Parameters<typeof createFakeApi>[0]["seed"];
 
@@ -114,61 +126,28 @@ describe("lista", () => {
   });
 });
 
-describe("filtros", () => {
-  test("o tipo escolhido vai como parâmetro da consulta e filtra a lista", async () => {
-    render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
-
-    fireEvent.click(screen.getByRole("button", { name: "Sono" }));
-
-    await waitFor(() => expect(lastQuery()).toEqual({ type: "sleep" }));
-    expect(listedIds()).toEqual(["art-sono"]);
-    expect(screen.getByRole("button", { name: "Sono" })).toHaveAttribute("aria-pressed", "true");
-  });
-
-  test("a tag escolhida vai à consulta, e as opções de tag continuam as de todos os artefatos", async () => {
-    render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
-
-    fireEvent.click(screen.getByRole("button", { name: "#leitura" }));
-
-    await waitFor(() => expect(lastQuery()).toEqual({ tag: "leitura" }));
-    expect(listedIds()).toEqual(["art-antiga"]);
-    expect(screen.getByRole("button", { name: "#casa" })).toBeInTheDocument();
-  });
-
+describe("busca", () => {
   test("o texto vai como q e busca no nome e no corpo", async () => {
-    render(<NotesScreen userId="user-1" />);
+    renderWithMenu();
     await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar artefatos" }), { target: { value: "leite" } });
+    fireEvent.change(searchbox(), { target: { value: "leite" } });
 
     await waitFor(() => expect(lastQuery()).toEqual({ q: "leite" }));
     expect(listedIds()).toEqual(["art-texto"]);
   });
 
-  test("tipo e tag somam-se na consulta, e Limpar filtros volta a lista inteira", async () => {
-    render(<NotesScreen userId="user-1" />);
+  test("nenhum artefato combina com a busca: avisa, e Limpar filtros volta à lista inteira", async () => {
+    renderWithMenu();
     await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Nota" }));
-    fireEvent.click(screen.getByRole("button", { name: "#casa" }));
-    await waitFor(() => expect(lastQuery()).toEqual({ type: "text", tag: "casa" }));
-    expect(listedIds()).toEqual(["art-texto"]);
-
-    fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
-    await waitFor(() => expect(lastQuery()).toEqual({}));
-    expect(listedIds()).toEqual(["art-nova", "art-texto", "art-antiga", "art-sono"]);
-  });
-
-  test("nenhum artefato combina com a busca: avisa e oferece limpar", async () => {
-    render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
-
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar artefatos" }), { target: { value: "zzz" } });
+    fireEvent.change(searchbox(), { target: { value: "zzz" } });
 
     expect(await screen.findByRole("heading", { name: "Nenhum artefato encontrado" })).toBeInTheDocument();
-    expect(within(screen.getByRole("region", { name: "Lista de artefatos" })).getByRole("button", { name: "Limpar filtros" })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("region", { name: "Lista de artefatos" })).getByRole("button", { name: "Limpar filtros" }));
+    await waitFor(() => expect(lastQuery()).toEqual({}));
+    expect(listedIds()).toEqual(["art-nova", "art-texto", "art-antiga", "art-sono"]);
+    expect(searchbox()).toHaveValue("");
   });
 });
 
@@ -242,31 +221,12 @@ describe("notícias, resumo de e-mail e transcrição", () => {
     expect(row(/Lista de compras/).querySelector('[data-glyph="letter"]')).not.toBeNull();
   });
 
-  test("entram nos filtros de tipo logo depois da nota, e cada um filtra a consulta", async () => {
-    install(seededWithFreeText());
-    render(<NotesScreen userId="user-1" />);
-    await screen.findByRole("heading", { level: 1, name: "5 artefatos" });
-
-    const filters = ["Nota", "Notícias", "Resumo de e-mail", "Transcrição", "Sono"].map((name) => screen.getByRole("button", { name }));
-    for (let index = 1; index < filters.length; index += 1) {
-      expect(filters[index - 1].compareDocumentPosition(filters[index]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    }
-
-    for (const [name, type, id] of [["Notícias", "news", "art-noticias"], ["Resumo de e-mail", "email_summary", "art-email"], ["Transcrição", "youtube_transcript", "art-video"]] as const) {
-      fireEvent.click(screen.getByRole("button", { name }));
-      await waitFor(() => expect(lastQuery()).toEqual({ type }));
-      await waitFor(() => expect(listedIds()).toEqual([id]));
-      fireEvent.click(screen.getByRole("button", { name }));
-      await waitFor(() => expect(lastQuery()).toEqual({}));
-    }
-  });
-
   test("a busca encontra o texto dentro deles", async () => {
     install(seededWithFreeText());
-    render(<NotesScreen userId="user-1" />);
+    renderWithMenu();
     await screen.findByRole("heading", { level: 1, name: "5 artefatos" });
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Buscar artefatos" }), { target: { value: "roseiras" } });
+    fireEvent.change(searchbox(), { target: { value: "roseiras" } });
 
     await waitFor(() => expect(lastQuery()).toEqual({ q: "roseiras" }));
     await waitFor(() => expect(listedIds()).toEqual(["art-video"]));
@@ -275,9 +235,9 @@ describe("notícias, resumo de e-mail e transcrição", () => {
 
 describe("puxar para recarregar", () => {
   test("relê a lista com os filtros atuais, sem voltar ao esqueleto", async () => {
-    render(<><PullToRefresh /><NotesScreen userId="user-1" /></>);
+    render(<><PullToRefresh /><NotesScreen userId="user-1" /><SectionMenu id="menu-artefatos" section="notes" title="Artefatos" open onClose={() => {}} /></>);
     await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
-    fireEvent.click(screen.getByRole("button", { name: /^#leitura/ }));
+    fireEvent.change(searchbox(), { target: { value: "torto" } });
     await waitFor(() => expect(listedIds()).toEqual(["art-antiga"]));
     const reads = api.calls.length;
 
@@ -287,7 +247,7 @@ describe("puxar para recarregar", () => {
 
     expect(await screen.findByRole("link", { name: /Livros lidos/ })).toBeInTheDocument();
     expect(api.calls).toHaveLength(reads + 1);
-    expect(lastQuery()).toMatchObject({ tag: "leitura" });
+    expect(lastQuery()).toMatchObject({ q: "torto" });
     expect(screen.queryByText("Carregando artefatos…")).not.toBeInTheDocument();
   });
 

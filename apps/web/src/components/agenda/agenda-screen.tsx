@@ -26,7 +26,6 @@ import { usePullRefresh } from "@/lib/navigation/pull-refresh";
 import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { useSessionState } from "@/lib/session/use-session";
 import { AgendaDay } from "./agenda-day";
-import { AgendaOptions, type AgendaViewMode } from "./agenda-options";
 import { agendaTasksByDay } from "./agenda-data";
 import { EXAMPLE_NOW, EXAMPLE_TODAY, type ExampleTask, type ExampleTrackedTask, exampleTasksOn } from "./agenda-examples";
 import { agendaRefreshEvent } from "./agenda-refresh";
@@ -34,7 +33,7 @@ import { type AgendaScrollBoundary, agendaScrollBoundaryFromAttempt } from "./ag
 import { TrackedTaskDialog, type SelectedTask } from "./task-controls";
 import styles from "./agenda.module.css";
 
-type ViewMode = AgendaViewMode;
+type ViewMode = "list" | "day";
 
 /** Onde a escolha "mostrar o tempo livre" fica guardada, por navegador. */
 const FREE_TIME_STORAGE_KEY = "braid-agenda-free-time";
@@ -54,19 +53,6 @@ const INFINITE_MAX_DAYS = 364;
 /** "Setembro" no ano corrente; "Setembro de 2027" quando se navega para outro ano. */
 function monthName(dayKey: string, todayKey: string) {
   return dayKey.slice(0, 4) === todayKey.slice(0, 4) ? monthLabel(dayKey).replace(/ de \d{4}$/, "") : monthLabel(dayKey);
-}
-
-/** "5 tarefas · 3 h 50 planejadas": quanto do dia já tem dono. */
-export function daySummary(tasks: readonly ExampleTask[]) {
-  if (tasks.length === 0) return "Nenhuma tarefa";
-  const count = `${tasks.length} ${tasks.length === 1 ? "tarefa" : "tarefas"}`;
-  const minutes = tasks.reduce((total, task) => total + task.minutes, 0);
-  if (minutes === 0) return count;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  if (hours === 0) return `${count} · ${rest} min planejados`;
-  if (rest === 0) return `${count} · ${hours} h ${hours === 1 ? "planejada" : "planejadas"}`;
-  return `${count} · ${hours} h ${String(rest).padStart(2, "0")} planejadas`;
 }
 
 export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: string; todayKey?: string }) {
@@ -345,11 +331,8 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     function syncVisibleDay() {
       cancelAnimationFrame(scrollFrame.current);
       scrollFrame.current = requestAnimationFrame(() => {
-        // Com duas colunas o calendário fica ao lado da lista, não por cima dela.
-        const controls = controlsRef.current?.getBoundingClientRect();
-        const list = daysRef.current?.getBoundingClientRect();
-        const stacked = controls && list ? controls.right > list.left : false;
-        const top = (stacked ? controls?.bottom ?? 0 : 0) + 12;
+        // O calendário fica por cima da lista: o dia lido é o primeiro abaixo dele.
+        const top = (controlsRef.current?.getBoundingClientRect().bottom ?? 0) + 12;
         const sections = daysRef.current?.querySelectorAll<HTMLElement>("[data-agenda-day]");
         const current = Array.from(sections ?? []).find((section) => section.getBoundingClientRect().bottom > top);
         if (current?.dataset.agendaDay) setSelectedDay(current.dataset.agendaDay);
@@ -396,8 +379,6 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
     return <main id="conteudo" className={page.frame}><p className={styles.status}>Entre na sua conta para ver sua agenda.</p></main>;
   }
 
-  const dayTasks = userId ? tasksByDay[selectedDay] ?? [] : exampleTasksOn(selectedDay);
-  const options = { mode, onModeChange: changeMode, showFreeTime, onShowFreeTimeChange: changeShowFreeTime };
 
   return (
     <main id="conteudo" className={page.frame}>
@@ -446,15 +427,6 @@ export function AgendaScreen({ userId, todayKey = EXAMPLE_TODAY }: { userId?: st
       </section>
 
       <section className={page.body} aria-label={`Tarefas de ${mode === "day" ? weekday(selectedDay).toLowerCase() : "todos os dias"}`}>
-        <div className={styles.toolbar}>
-          <div className={styles.viewControls}>
-            <button type="button" className={styles.modePill} aria-pressed={mode === "day"} onClick={() => changeMode("day")}>Por dia</button>
-            <button type="button" className={styles.modePill} aria-pressed={mode === "list"} onClick={() => changeMode("list")}>Em sequência</button>
-            <AgendaOptions {...options} />
-          </div>
-          {mode === "day" && loadState !== "loading" ? <p className={styles.summary}>{daySummary(dayTasks)}</p> : null}
-        </div>
-
         <section
           ref={daysRef} className={mode === "list" ? styles.verticalDays : styles.horizontalDays}
           aria-label={mode === "list" ? "Agenda em lista contínua" : "Agenda com dias na horizontal"}

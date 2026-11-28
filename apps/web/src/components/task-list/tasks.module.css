@@ -4,44 +4,8 @@
  * aqui só entram as medidas da lista (mockup "Tarefas e Notas") e do detalhe.
  * Os diálogos moram num portal, fora do shell, e por isso leem os tokens globais.
  */
-/* A lista do redesenho: a coluna esquerda situa (quantas abertas, os grupos, o
-   filtro por tag) e a direita e o livro-razao — o quadrado de status que
-   conclui, o nome, quando e as etiquetas, e o dia na serifa. */
-@media (min-width: 1100px) {
-  .lead { position: sticky; top: 24px; }
-}
 .headRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.phoneOptions { display: none; position: relative; flex: none; }
-.optionsButton { composes: menuButton from "../ui/controls.module.css"; position: relative; }
-.optionsBadge { composes: badge from "../ui/controls.module.css"; }
-.optionsPanel { composes: menuPanel from "../ui/controls.module.css"; --menu-origin: top right; left: auto; right: 0; display: flex; flex-direction: column; gap: 20px; max-height: min(70vh, 560px); overflow-y: auto; padding: 16px 18px; }
-.optionsLabel { composes: menuLabel from "../ui/controls.module.css"; }
-.optionsSort { composes: menuOption from "../ui/controls.module.css"; }
-.optionsText { composes: menuText from "../ui/controls.module.css"; }
 
-.groupNav ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-.groupNav a { display: flex; align-items: center; gap: 12px; min-height: 48px; border-bottom: 1px solid var(--hairline); color: var(--ink); }
-.groupNav a[data-closed="true"] { color: var(--muted); }
-.groupNav a > span { flex: 1; font-size: 15px; font-weight: 500; line-height: 22px; }
-.groupNav a > strong { font-family: var(--font-display); font-size: 22px; font-weight: 400; line-height: 24px; font-variant-numeric: tabular-nums; }
-.groupNav svg { width: 18px; height: 18px; }
-.groupNav .statusIcon { color: inherit; }
-@media (hover: hover) {
-  .groupNav a:hover > span { text-decoration: underline; text-underline-offset: 4px; }
-}
-.leadFilters { display: flex; flex-direction: column; gap: 36px; }
-.search { width: 100%; min-height: var(--control-md); padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); font: inherit; font-size: var(--font-size-sm); }
-.tagFilter { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-.tagLabel { composes: eyebrow from "../ui/page.module.css"; }
-.tagChips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
-.tagChip { composes: pill from "../ui/controls.module.css"; padding: 0 16px 0 14px; font-size: 13px; }
-.tagChip > i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.clear { composes: textButton from "../ui/controls.module.css"; }
-
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
-.sortGroup { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; border: 0; }
-.sortGroup > span { margin-right: 4px; font-size: 13px; line-height: 20px; color: var(--muted); }
-.sortPill { composes: pill from "../ui/controls.module.css"; }
 .summary { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 20px; color: var(--muted); }
 .summaryLate { color: var(--destructive); }
 
@@ -126,7 +90,6 @@
 .statusIcon { width: 18px; height: 18px; flex-shrink: 0; }
 .priority { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .priority[data-priority="urgent"] { color: var(--priority-urgent); font-weight: 600; }
-.priorityText { white-space: nowrap; }
 .priorityBars { width: 16px; height: 16px; color: var(--ink); }
 .priority[data-priority="urgent"] .priorityBars { color: var(--priority-urgent); }
 
@@ -151,19 +114,12 @@ textarea.line { height: auto; min-height: 64px; padding: 10px 0; line-height: 1.
 .formError { margin: 0; font-size: 13px; color: var(--destructive); }
 .submitRow { display: flex; justify-content: flex-end; gap: 12px; }
 
-@media (max-width: 720px) {
-  /* No celular a faixa do topo leva a contagem e o botao de opcoes; a ordem e o
-     filtro moram no painel dele. */
-  .headRow { margin: -4px -20px 0; padding: 0 14px 10px 20px; }
-  .phoneOptions { display: block; }
-  .groupNav, .tagFilter, .toolbar, .leadFilters { display: none; }
-  .phoneOptions .tagFilter { display: flex; }
-  .body { margin-top: -20px; }
-  .groups { border-top: 0; }
-  .row { gap: 14px; }
-  .row + .row::before { left: 58px; }
-  .meta { column-gap: 12px; }
-  .meta li + li::before { content: none; }
-  .date { font-size: 22px; line-height: 22px; }
-  .side .priorityText { display: none; }
-}
+/* A faixa do topo leva so a contagem; os filtros moram no menu da barra inferior. */
+.headRow { margin: -4px -20px 0; padding: 0 14px 10px 20px; }
+.body { margin-top: -20px; }
+.groups { border-top: 0; }
+.row { gap: 14px; }
+.row + .row::before { left: 58px; }
+.meta { column-gap: 12px; }
+.meta li + li::before { content: none; }
+.date { font-size: 22px; line-height: 22px; }

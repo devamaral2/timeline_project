@@ -173,12 +173,10 @@ button.control[aria-expanded="true"] { border-color: var(--color-ring); }
 .footerButton:disabled { opacity: .6; cursor: not-allowed; }
 .footerButton .footerIcon { width: 20px; height: 20px; stroke-width: 2; }
 
-@media (max-width: 720px) {
-  /* No celular o topo e o rodapé vão de borda a borda (a coluna tem 20 px de margem). */
-  .bar { margin: -6px -20px 0; }
-  .footer { margin-inline: -20px; padding: 14px 16px calc(20px + env(safe-area-inset-bottom)); }
-  .footerButton { flex: 1; min-width: 0; padding: 0 12px; }
-}
+/* No celular o topo e o rodapé vão de borda a borda (a coluna tem 20 px de margem). */
+.bar { margin: -6px -20px 0; }
+.footer { margin-inline: -20px; padding: 14px 16px calc(20px + env(safe-area-inset-bottom)); }
+.footerButton { flex: 1; min-width: 0; padding: 0 12px; }
 
 @media (prefers-reduced-motion: reduce) {
   .add, .footerButton, .select, .select .caret, button.control { transition: none; }

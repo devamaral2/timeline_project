@@ -34,14 +34,11 @@ test("an element that is not on screen has no box", () => {
   expect(boxOf(null)).toBeNull();
 });
 
-test("the flight is only for the phone bar and for people who did not ask for less motion", () => {
+test("the flight is only for people who did not ask for less motion", () => {
   const media = (matching: string[]) => vi.fn((query: string) => ({ matches: matching.includes(query) }));
 
   vi.stubGlobal("matchMedia", media([]));
   expect(canFly()).toBe(true);
-
-  vi.stubGlobal("matchMedia", media(["(min-width: 721px)"]));
-  expect(canFly()).toBe(false);
 
   vi.stubGlobal("matchMedia", media(["(prefers-reduced-motion: reduce)"]));
   expect(canFly()).toBe(false);

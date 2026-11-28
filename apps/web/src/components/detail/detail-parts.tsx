@@ -12,10 +12,10 @@ import styles from "./detail.module.css";
 export const detailIcon = { "aria-hidden": true, strokeWidth: ICON_STROKE_WIDTH } as const;
 
 /**
- * O molde de duas colunas do registro aberto: `lead` é o resumo (voltar, data,
- * título, situação, fatos, ações) e `children`, o conteúdo, que fecha com o
- * campo do Hermes. `type` pinta o tipo da tarefa. No celular vira uma coluna e
- * o shell esconde o cabeçalho e a barra inferior (`data-detail`). `edit` é o
+ * O molde do registro aberto, numa coluna: `lead` é o resumo (voltar, data,
+ * título, situação, fatos) e `children`, o conteúdo, que fecha com o campo do
+ * Hermes. `type` pinta o tipo da tarefa. O shell esconde a barra inferior
+ * (`data-detail`). `edit` é o
  * modo de edição: o pé da tela é o rodapé de Descartar e Salvar, não o campo do Hermes.
  */
 export function DetailFrame({ type, edit = false, leadLabel, bodyLabel, lead, children }: { type?: string; edit?: boolean; leadLabel: string; bodyLabel: string; lead: ReactNode; children: ReactNode }) {
@@ -27,7 +27,7 @@ export function DetailFrame({ type, edit = false, leadLabel, bodyLabel, lead, ch
   );
 }
 
-/** O topo do resumo: voltar e, só no celular, o menu "mais ações" (no desktop as ações são pílulas). */
+/** O topo do registro: voltar, o título no centro (quando há) e o menu "Mais ações". */
 export function DetailNav({ label, back, title, children }: { label: string; back: ReactNode; title?: string; children?: ReactNode }) {
   return (
     <nav className={styles.nav} data-titled={title ? true : undefined} aria-label={label}>
@@ -59,18 +59,6 @@ export function DetailFacts({ label, children }: { label: string; children: Reac
 export function DetailFact({ label, children }: { label: string; children: ReactNode }) {
   const valueRef = useChangeFlash<HTMLElement>();
   return <div className={styles.fact}><dt>{label}</dt><dd ref={valueRef}>{children}</dd></div>;
-}
-
-/** As ações do registro como pílulas (desktop); no celular elas moram no menu do topo. */
-export function DetailActions({ children }: { children: ReactNode }) {
-  return <div className={styles.actions}>{children}</div>;
-}
-
-/** `pressed` faz da pílula uma chave liga/desliga (o "Não realizado" da tarefa). */
-export function ActionPill({ icon, danger = false, disabled = false, pressed, title, onClick, children }: {
-  icon: ReactNode; danger?: boolean; disabled?: boolean; pressed?: boolean; title?: string; onClick: () => void; children: ReactNode;
-}) {
-  return <button type="button" className={styles.actionPill} data-danger={danger || undefined} aria-pressed={pressed} disabled={disabled} title={title} onClick={onClick}>{icon}{children}</button>;
 }
 
 /** O horário na serifa: "09:00 — 10:30" e, na ponta, quanto dura. Sem `start`, só a observação. */

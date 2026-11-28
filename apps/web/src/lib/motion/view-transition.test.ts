@@ -9,16 +9,16 @@ test("opening a record goes in, leaving it goes back", () => {
   expect(navKind("/ana/tarefas/01EVT", "/ana")).toBe("close");
 });
 
-test("sections move sideways in the order they are drawn", () => {
-  expect(navKind("/ana", "/ana/tarefas")).toBe("next");
+test("sections move sideways in the order of the bottom bar, with the agenda in the middle", () => {
+  expect(navKind("/ana", "/ana/tarefas")).toBe("prev");
+  expect(navKind("/ana", "/ana/notas")).toBe("next");
   expect(navKind("/ana/notas", "/ana/tarefas")).toBe("prev");
-  // Na barra inferior do celular a agenda fica no meio.
-  expect(navKind("/ana", "/ana/tarefas", true)).toBe("prev");
-  expect(navKind("/ana", "/ana/notas", true)).toBe("next");
+  expect(navKind("/ana/tarefas", "/ana/notas")).toBe("next");
 });
 
 test("the logged-out preview follows the same rules", () => {
   expect(navKind("/mockups/tarefas", "/mockups/tarefas/notas")).toBe("next");
+  expect(navKind("/mockups/tarefas", "/mockups/tarefas/tarefas")).toBe("prev");
   expect(navKind("/mockups/tarefas/tarefas", "/mockups/tarefas/tarefas/1")).toBe("open");
   expect(navKind("/mockups/tarefas", "/mockups/tarefas/almoco")).toBe("open");
   expect(navKind("/mockups/tarefas/almoco", "/mockups/tarefas")).toBe("close");

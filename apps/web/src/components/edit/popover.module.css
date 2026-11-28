@@ -1,6 +1,5 @@
 /*
- * O painel flutuante dos campos de edição (lista de escolha, calendário, hora): abre junto do botão no desktop e vira
- * uma folha do pé no celular. É montado no <body>, fora do shell, então traz os próprios apelidos de token e o
+ * O painel flutuante dos campos de edição (lista de escolha, calendário, hora): uma folha que sobe do pé. É montado no <body>, fora do shell, então traz os próprios apelidos de token e o
  * próprio anel de foco. Cor só por token, para o tema trocar junto.
  */
 
@@ -41,15 +40,13 @@
 @keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
 @keyframes sheet { from { transform: translateY(100%); } }
 
-@media (max-width: 720px) {
-  .layer[data-sheet] .panel {
-    inset: auto 0 0 0; max-width: none; max-height: 78dvh; padding-bottom: env(safe-area-inset-bottom);
-    border-width: 1px 0 0; border-radius: 28px 28px 0 0; transform-origin: bottom center;
-  }
-  .layer[data-sheet] .panel[data-ready] { animation: sheet var(--duration-slow) var(--ease-out); }
-  .handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; margin: 8px 0 2px; border-radius: 2px; background: var(--line); }
-  .option { min-height: 52px; }
+.layer[data-sheet] .panel {
+  inset: auto 0 0 0; max-width: var(--app-width); margin-inline: auto; max-height: 78dvh; padding-bottom: env(safe-area-inset-bottom);
+  border-width: 1px 0 0; border-radius: 28px 28px 0 0; transform-origin: bottom center;
 }
+.layer[data-sheet] .panel[data-ready] { animation: sheet var(--duration-slow) var(--ease-out); }
+.handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; margin: 8px 0 2px; border-radius: 2px; background: var(--line); }
+.option { min-height: 52px; }
 
 @media (prefers-reduced-motion: reduce) {
   .scrim, .panel[data-ready], .layer[data-sheet] .panel[data-ready] { animation: none; }

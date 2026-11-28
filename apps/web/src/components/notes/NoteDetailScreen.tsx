@@ -5,7 +5,7 @@ import { isFreeTextArtifact } from "@repo/contracts/artifact-types";
 import { Pencil, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import {
-  ActionPill, BackLink, DetailActions, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMenu, DetailMessage, DetailNav, DetailSection, LinkList, LinkRow, MenuItem, TagPills, detailIcon,
+  BackLink, DetailFact, DetailFacts, DetailFrame, DetailHeading, DetailMenu, DetailMessage, DetailNav, DetailSection, LinkList, LinkRow, MenuItem, TagPills, detailIcon,
 } from "@/components/detail/detail-parts";
 import { EntityAiEditBar } from "@/components/detail/EntityAiEditBar";
 import { visualForItemType } from "@/components/tasks/task-visuals";
@@ -27,12 +27,12 @@ type LoadState = "loading" | "ready" | "missing" | "error";
 const REFRESH_FAILURE_MESSAGE = "Não foi possível atualizar o artefato. Tente novamente.";
 
 /**
- * O artefato aberto, em duas colunas. À esquerda: voltar, o tipo (em mono), o nome na serifa, os fatos
- * (tags e, num artefato global, "Catálogo global") e as ações. À direita: o conteúdo conforme o tipo, as tarefas
- * em que o artefato aparece com a relação de cada um, e o Registro (criação e última alteração).
+ * O artefato aberto. No topo: voltar, o tipo (em mono), o nome na serifa e os fatos (tags e, num artefato
+ * global, "Catálogo global"). Depois: o conteúdo conforme o tipo, as tarefas em que o artefato aparece com a
+ * relação de cada um, e o Registro (criação e última alteração).
  *
- * Editar e excluir valem só para a nota de texto própria: pílulas na coluna da esquerda (desktop) e o menu
- * "Mais ações" do topo (celular). Alimento, sono, treino e o catálogo global não têm essas ações.
+ * Editar e excluir valem só para a nota de texto própria, no menu "Mais ações" do topo. Alimento, sono, treino
+ * e o catálogo global não têm essas ações.
  */
 export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: string }) {
   const now = useNow();
@@ -103,13 +103,6 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
   // Skill e agente têm o próprio campo, o pedido de edição do arquivo (`AgentFileEditBar`, dentro do conteúdo).
   const editType = artifact.type === "skill" || artifact.type === "agent" ? null : editEntityTypeOfArtifact(artifact);
 
-  const actions = ownsText ? (
-    <DetailActions>
-      <ActionPill icon={<Pencil {...detailIcon} />} onClick={() => router.push(editHref)}>Editar</ActionPill>
-      <ActionPill icon={<Trash2 {...detailIcon} />} danger onClick={() => setConfirmingDelete(true)}>Excluir</ActionPill>
-    </DetailActions>
-  ) : null;
-
   const menu = ownsText ? (
     <DetailMenu label="Mais ações">
       {(close) => (
@@ -152,8 +145,6 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
               {artifact.global ? <DetailFact label="Origem">Catálogo global</DetailFact> : null}
             </DetailFacts>
           ) : null}
-
-          {actions}
         </>
       }
     >

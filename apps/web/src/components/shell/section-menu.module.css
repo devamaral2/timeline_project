@@ -395,10 +395,8 @@
   color: var(--muted);
 }
 
-@media (max-width: 720px) {
-  .menu[data-structured-settings] .settingsPane .label {
-    letter-spacing: .08em;
-  }
+.menu[data-structured-settings] .settingsPane .label {
+  letter-spacing: .08em;
 }
 
 .menu[data-structured-settings] .settingsPane .label::after {

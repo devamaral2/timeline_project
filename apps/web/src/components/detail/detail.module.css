@@ -1,21 +1,17 @@
 /*
- * As telas de detalhe de tarefa e de nota, no redesenho: duas colunas (o
- * resumo à esquerda, o conteúdo e o campo do Hermes à direita), rótulos em
+ * As telas de detalhe de tarefa e de nota, no redesenho: numa coluna, o
+ * resumo em cima e, embaixo, o conteúdo e o campo do Hermes; rótulos em
  * mono com um fio, linhas com fio embaixo no lugar de cartões. Os tokens
  * (--ink, --muted, --line, --card, --soft) vêm do shell e trocam sozinhos
  * entre Névoa e Noite.
  */
-/* O molde de duas colunas do registro aberto (tarefa e nota): a esquerda
-   resume (voltar, data em mono, titulo serifado, situacao, fatos e acoes) e a
-   direita leva o conteudo em secoes, fechando com o campo do Hermes. */
+/* O molde do registro aberto (tarefa e nota): o resumo (voltar, data em mono,
+   titulo serifado, situacao e fatos) e o conteudo em secoes, fechando com o
+   campo do Hermes. */
 .frame { overflow-wrap: anywhere; }
 .lead { gap: 28px; }
 .body { gap: 36px; }
-@media (min-width: 1100px) {
-  .lead { position: sticky; top: 24px; }
-}
 .nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.navMenu { display: none; }
 /* Com o título no centro (o detalhe da nota), a mesma barra do detalhe de tarefa. */
 .nav[data-titled] { display: grid; grid-template-columns: 1fr auto 1fr; min-height: 44px; }
 .nav[data-titled] .back { justify-self: start; }
@@ -39,10 +35,6 @@
 .fact { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; padding: 6px 0; border-bottom: 1px solid var(--hairline); }
 .fact dt { flex: none; font-size: 13px; line-height: 20px; color: var(--muted); }
 .fact dd { margin: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 8px; font-size: var(--font-size-sm); font-weight: 500; line-height: 20px; text-align: right; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.actionPill { composes: pill from "../ui/controls.module.css"; padding: 0 16px 0 14px; }
-.actionPill[data-danger="true"] { color: var(--destructive); }
-.actionPill:disabled { opacity: .55; cursor: not-allowed; }
 /* O horario na serifa: inicio — fim e, na ponta, a duracao. */
 .timeRow { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
 .timeRow > p { margin: 0; display: flex; align-items: baseline; gap: 9px; font-family: var(--font-display); font-size: 28px; line-height: 28px; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -172,7 +164,6 @@
 .relationIcon svg { width: 20px; height: 20px; }
 .relationText { display: flex; flex: 1; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 14px; min-width: 0; }
 .relationName { font-size: 15px; font-weight: 500; line-height: 22px; }
-.relationMeta { color: var(--muted); font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .relation > svg:last-child { flex: none; width: 16px; height: 16px; stroke-width: 2; color: var(--faint); }
 
 /* Status e prioridade da tarefa */
@@ -214,23 +205,17 @@
   .originChevron { transition: none; }
 }
 
-@media (max-width: 720px) {
-  .screen { gap: 28px; padding-block: 0 24px; }
-  .title { font-size: 30px; }
-  /* Duas colunas viram uma: o topo ganha o menu "mais acoes" no lugar das
-     pilulas, e o conteudo deixa a folga do campo do Hermes preso ao pe. */
-  .frame { row-gap: 22px; padding-top: 6px; padding-bottom: calc(260px + env(safe-area-inset-bottom)); }
-  /* Na edição não há o campo do Hermes: o rodapé de Descartar e Salvar fecha a tela. */
-  .frame[data-edit] { min-height: 100dvh; padding-bottom: 0; }
-  .frame[data-edit] .body { flex: 1; }
-  .lead { gap: 22px; }
-  .body { gap: 22px; }
-  .nav { margin-right: -12px; }
-  .navMenu { display: block; }
-  .actions { display: none; }
-  .heading { gap: 10px; }
-  .timeRow > p { font-size: var(--font-size-xl); line-height: 24px; gap: 8px; }
-  .prose { font-size: 15px; line-height: 25px; }
-  .relationMeta { display: none; }
-  .originLink { border-top: 1px solid var(--line); border-bottom: 1px solid var(--hairline); }
-}
+.screen { gap: 28px; padding-block: 0 24px; }
+.title { font-size: 30px; }
+/* O conteudo deixa a folga do campo do Hermes preso ao pe. */
+.frame { row-gap: 22px; padding-top: 6px; padding-bottom: calc(260px + env(safe-area-inset-bottom)); }
+/* Na edição não há o campo do Hermes: o rodapé de Descartar e Salvar fecha a tela. */
+.frame[data-edit] { min-height: 100dvh; padding-bottom: 0; }
+.frame[data-edit] .body { flex: 1; }
+.lead { gap: 22px; }
+.body { gap: 22px; }
+.nav { margin-right: -12px; }
+.heading { gap: 10px; }
+.timeRow > p { font-size: var(--font-size-xl); line-height: 24px; gap: 8px; }
+.prose { font-size: 15px; line-height: 25px; }
+.originLink { border-top: 1px solid var(--line); border-bottom: 1px solid var(--hairline); }

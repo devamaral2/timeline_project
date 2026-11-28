@@ -4,68 +4,27 @@ import { type KeyboardEvent, type ReactNode, type RefObject, useCallback, useEff
 import { createPortal } from "react-dom";
 import styles from "./popover.module.css";
 
-const GAP = 6;
-const MARGIN = 8;
-
 interface PopoverProps {
-  /** O botão que abriu o painel: o painel nasce embaixo dele, e o toque nele não fecha por fora. */
+  /** O botão que abriu o painel: o foco volta para ele, e o toque nele não fecha por fora. */
   anchor: RefObject<HTMLElement | null>;
   /** O nome do painel para o leitor de tela; a lista de escolha já se nomeia sozinha e passa só `label`. */
   label: string;
   /** Um painel com mais que uma lista (o calendário, a hora) é um diálogo. */
   dialog?: boolean;
-  /** Largura mínima do painel: a do botão, para a lista não ficar mais estreita que o campo. */
-  matchWidth?: boolean;
   onClose: () => void;
   children: ReactNode;
 }
 
-type Placement = { left: number; top: number; minWidth: number; maxHeight: number } | null;
-
 /**
- * Um painel que flutua junto de um botão: abre embaixo (ou em cima, se embaixo não cabe), fecha com Esc, com o toque
- * fora e ao sair do foco para fora, e devolve o foco ao botão. No celular vira uma folha que sobe do pé, com um
- * fundo que escurece a tela. É montado no <body>, fora do shell, então traz os próprios apelidos de token.
+ * O painel de um campo de edição: uma folha que sobe do pé, com um fundo que escurece a tela. Fecha com Esc, com o
+ * toque fora e ao sair do foco para fora, e devolve o foco ao botão. É montado no <body>, fora do shell, então traz os próprios apelidos de token.
  */
-export function Popover({ anchor, label, dialog = false, matchWidth = false, onClose, children }: PopoverProps) {
+export function Popover({ anchor, label, dialog = false, onClose, children }: PopoverProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [placement, setPlacement] = useState<Placement>(null);
-  const [sheet, setSheet] = useState(false);
-
   const close = useCallback(() => {
     onClose();
     anchor.current?.focus();
   }, [onClose, anchor]);
-
-  const place = useCallback(() => {
-    const button = anchor.current;
-    const panel = panelRef.current;
-    if (!button || !panel) return;
-    const phone = typeof window.matchMedia === "function" && window.matchMedia("(max-width: 720px)").matches;
-    setSheet(phone);
-    if (phone) {
-      setPlacement(null);
-      return;
-    }
-    const box = button.getBoundingClientRect();
-    const height = panel.offsetHeight;
-    const width = panel.offsetWidth;
-    const below = window.innerHeight - box.bottom - GAP - MARGIN;
-    const above = box.top - GAP - MARGIN;
-    const up = height > below && above > below;
-    const room = up ? above : below;
-    const left = Math.max(MARGIN, Math.min(box.left, window.innerWidth - Math.max(width, box.width) - MARGIN));
-    setPlacement({
-      left,
-      top: up ? Math.max(MARGIN, box.top - GAP - Math.min(height, room)) : box.bottom + GAP,
-      minWidth: matchWidth ? box.width : 0,
-      maxHeight: Math.max(160, room),
-    });
-  }, [anchor, matchWidth]);
-
-  useLayoutEffect(() => {
-    place();
-  }, [place]);
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
@@ -75,24 +34,17 @@ export function Popover({ anchor, label, dialog = false, matchWidth = false, onC
       onClose();
     }
     window.addEventListener("pointerdown", onPointerDown, true);
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
-    return () => {
-      window.removeEventListener("pointerdown", onPointerDown, true);
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
-    };
-  }, [anchor, onClose, place]);
+    return () => window.removeEventListener("pointerdown", onPointerDown, true);
+  }, [anchor, onClose]);
 
   // A página de trás não rola enquanto a folha do celular está aberta.
   useEffect(() => {
-    if (!sheet) return;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = overflow;
     };
-  }, [sheet]);
+  }, []);
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Escape") {
@@ -105,18 +57,17 @@ export function Popover({ anchor, label, dialog = false, matchWidth = false, onC
   }
 
   return createPortal(
-    <div className={styles.layer} data-sheet={sheet || undefined}>
-      {sheet ? <div className={styles.scrim} aria-hidden /> : null}
+    <div className={styles.layer} data-sheet>
+      <div className={styles.scrim} aria-hidden />
       <div
         ref={panelRef}
         className={styles.panel}
         role={dialog ? "dialog" : undefined}
         aria-label={dialog ? label : undefined}
-        data-ready={placement !== null || sheet || undefined}
-        style={placement ? { left: placement.left, top: placement.top, minWidth: placement.minWidth, maxHeight: placement.maxHeight } : undefined}
+        data-ready
         onKeyDown={onKeyDown}
       >
-        {sheet ? <div className={styles.handle} aria-hidden /> : null}
+        <div className={styles.handle} aria-hidden />
         {children}
       </div>
     </div>,
