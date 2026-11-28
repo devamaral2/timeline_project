@@ -1,7 +1,7 @@
 import { Artifact, ArtifactValidationError } from "../../../../domain";
-import type * as schema from "../../database/schema";
+import type { ArtifactRow } from "../../database/tables";
 
-export type ArtifactRow = typeof schema.artifacts.$inferSelect;
+export type { ArtifactRow };
 
 export function mapArtifactRow(row: ArtifactRow, tags: string[] = []): Artifact {
   try {

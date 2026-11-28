@@ -1,14 +1,15 @@
 import { Recurrence, type RecurrenceRule } from "../../../../domain";
-import type * as schema from "../../database/schema";
+import type { InsertOf } from "../../sqlite/columns";
+import type { recurrences, RecurrenceRow } from "../../database/tables";
 
-export type RecurrenceRow = typeof schema.recurrences.$inferSelect;
-export type RecurrenceInsert = typeof schema.recurrences.$inferInsert;
+export type { RecurrenceRow };
+export type RecurrenceInsert = InsertOf<typeof recurrences.columns>;
 
 export function mapRecurrenceRow(row: RecurrenceRow): Recurrence {
   const rule: RecurrenceRule = {
     frequency: row.freq,
     interval: row.intervalCount,
-    // O Postgres devolve `time` como `HH:MM:SS`; a regra fala em minutos.
+    // A regra fala em minutos; o Postgres de antes gravava `HH:MM:SS`.
     timeOfDay: row.timeOfDay.slice(0, 5),
     timeZone: row.timeZone,
     startsOn: row.startsOn,
