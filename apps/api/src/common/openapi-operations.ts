@@ -32,11 +32,13 @@ import { z } from "zod";
 import { ACTORS, AGENDA_KINDS, ARTIFACT_TYPES, TASK_STATUSES, PRIORITIES } from "../domain";
 import { editRequestBody } from "../features/request-agent-file-edit/request-agent-file-edit.controller";
 import { restoreBody } from "../features/restore-agent-file/restore-agent-file.controller";
-import { startEditRequestBody } from "../features/start-edit-request/start-edit-request.controller";
-import { startHermesRequestBody } from "../features/start-hermes-request/start-hermes-request.controller";
-import { startModelRequestBody } from "../features/start-model-request/start-model-request.controller";
-import { startRequestBody } from "../features/start-request/start-request.controller";
-import { startVoiceRequestBody } from "../features/start-voice-request/start-voice-request.controller";
+import {
+  startEditRequestBody,
+  startHermesRequestBody,
+  startModelRequestBody,
+  startRequestBody,
+  startVoiceRequestBody,
+} from "../api-core/requests/request-input.schemas";
 
 /**
  * O que o Swagger nao consegue ler dos controllers: eles recebem o corpo como

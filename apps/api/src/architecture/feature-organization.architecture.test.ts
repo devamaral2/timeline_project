@@ -34,6 +34,15 @@ const MIGRATED = [
   "update-recurrence",
   "delete-recurrence",
   "list-recurrences",
+  "start-request",
+  "start-edit-request",
+  "start-hermes-request",
+  "start-model-request",
+  "get-model-options",
+  "start-voice-request",
+  "list-requests",
+  "get-request",
+  "cancel-request",
 ];
 
 /** Operacoes que ainda respondem pelo Nest durante a coexistencia. */

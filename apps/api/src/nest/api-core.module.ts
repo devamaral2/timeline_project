@@ -14,24 +14,26 @@ import type {
   RecurrenceRepository,
   WorkoutCatalog,
 } from "../domain/ports";
-import { JobsModule } from "./jobs.module";
 import { ArtifactBuilder } from "../api-core/artifacts/services/artifact-builder.service";
 import { CreateTaskUseCase } from "../api-core/tasks/create-task.usecase";
 import { requestClock } from "../api-core/tasks/request-clock";
 import { MaterializeRecurrencesUseCase } from "../api-core/recurrences/materialize-recurrences.usecase";
-import { REQUEST_EXPORTS, REQUEST_PROVIDERS } from "./request-providers";
 
-/** A espera na fila e as novas tentativas nao podem mudar o que "hoje" ou "agora" queriam dizer no envio. */
+/**
+ * O que as rotas que ainda vivem no Nest precisam do nucleo. O worker dos
+ * pedidos, o registro de handlers e o servico de arquivos vem do composition
+ * root pelo `ApiRuntimeModule`; aqui so ficam os colaboradores sem lifecycle da
+ * Leitura diaria e dos artefatos.
+ */
 @Module({ imports: [PersistenceModule] })
 export class ApiCoreModule {
-  // Os modulos de funcionalidade compartilham um runtime e um registro de handlers, nao um worker por import.
   private static root?: DynamicModule;
 
   static forRoot(): DynamicModule {
     if (ApiCoreModule.root) return ApiCoreModule.root;
     ApiCoreModule.root = {
       module: ApiCoreModule,
-      imports: [PersistenceModule, JobsModule],
+      imports: [PersistenceModule],
       providers: [
         {
           provide: MaterializeRecurrencesUseCase,
@@ -50,16 +52,8 @@ export class ApiCoreModule {
           useFactory: (tasks: TaskRepository, artifacts: ArtifactRepository, builder: ArtifactBuilder, writer: EntityBatchWriter) =>
             new CreateTaskUseCase(tasks, artifacts, builder, writer, requestClock),
         },
-        ...REQUEST_PROVIDERS,
       ],
-      exports: [
-        PersistenceModule,
-        JobsModule,
-        MaterializeRecurrencesUseCase,
-        ArtifactBuilder,
-        CreateTaskUseCase,
-        ...REQUEST_EXPORTS,
-      ],
+      exports: [PersistenceModule, MaterializeRecurrencesUseCase, ArtifactBuilder, CreateTaskUseCase],
     };
     return ApiCoreModule.root;
   }
