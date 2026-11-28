@@ -2,27 +2,27 @@ import type { AgentTraceDto } from "@repo/contracts";
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
 import { Artifact, Task } from "../../../domain";
 import { toRequestDto } from "../../../api-core/requests/request-view";
-import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
-import { PostgresDatabase } from "../database/postgres-database";
-import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
-import { PostgresTaskRequestLinkQuery } from "../tasks/queries/postgres-task-request-link.query";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
-import { PostgresCandidateQuery } from "./postgres-candidate.query";
-import { PostgresRequestStore } from "./postgres-request.store";
+import { SqliteEntityBatchWriter } from "../agent-batch/sqlite-entity-batch-writer";
+import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
+import { SqliteTaskRequestLinkQuery } from "../tasks/queries/sqlite-task-request-link.query";
+import { selectRows } from "../testing/fixtures";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
+import { SqliteCandidateQuery } from "./sqlite-candidate.query";
+import { SqliteRequestStore } from "./sqlite-request.store";
 import { newOrderedId } from "./request-rows";
 
 const USER = "user-1";
 
-describe("PostgresRequestStore", () => {
-  let ctx: PostgresTestContext;
-  let store: PostgresRequestStore;
-  let writer: PostgresEntityBatchWriter;
+describe("SqliteRequestStore", () => {
+  let ctx: SqliteTestContext;
+  let store: SqliteRequestStore;
+  let writer: SqliteEntityBatchWriter;
 
   beforeEach(async () => {
     if (!ctx) {
-      ctx = await createPostgresTestContext();
-      store = new PostgresRequestStore(new PostgresDatabase(ctx.pool));
-      writer = new PostgresEntityBatchWriter(ctx.db);
+      ctx = await createSqliteTestContext();
+      store = new SqliteRequestStore(ctx.db);
+      writer = new SqliteEntityBatchWriter(ctx.db);
     } else {
       await ctx.reset();
     }
@@ -32,9 +32,14 @@ describe("PostgresRequestStore", () => {
     if (ctx) await ctx.stop();
   });
 
-  const start = (text = "almocei arroz e feijão", extra: Partial<Parameters<PostgresRequestStore["start"]>[0]> = {}) =>
+  const start = (text = "almocei arroz e feijão", extra: Partial<Parameters<SqliteRequestStore["start"]>[0]> = {}) =>
     store.start({ userId: USER, route: "steps", text, job: "request-dispatch", ...extra });
-  const rows = async <T extends Record<string, unknown>>(sql: string, params: unknown[] = []) => (await ctx.pool.query<T>(sql, params)).rows;
+  // As colunas JSON voltam como texto: o teste as compara ja decodificadas.
+  const JSON_COLUMNS = ["data", "payload", "response"];
+  const rows = async <T extends Record<string, unknown>>(sql: string, params: unknown[] = []) =>
+    (await selectRows(ctx.db, sql, params)).map((row) => Object.fromEntries(
+      Object.entries(row).map(([key, value]) => [key, JSON_COLUMNS.includes(key) && typeof value === "string" ? JSON.parse(value) : value]),
+    )) as T[];
   const jobs = () => rows<{ kind: string; task_id: string; concurrency_key: string | null; payload: unknown }>(
     "SELECT kind, task_id, concurrency_key, payload FROM jobs ORDER BY created_at, id");
 
@@ -49,7 +54,7 @@ describe("PostgresRequestStore", () => {
       data: { route: "steps", context: { screen: "agenda" }, forceFallback: true },
     });
     expect(String(task?.name).length).toBeLessThanOrEqual(80);
-    expect(task?.started_at).toBeInstanceOf(Date);
+    expect(new Date(String(task?.started_at)).toISOString()).toBe(task?.started_at);
     expect(await rows("SELECT kind, role, content FROM task_entries WHERE task_id = $1", [requestId]))
       .toEqual([{ kind: "message", role: "user", content: text }]);
     expect(await jobs()).toMatchObject([{ kind: "request-dispatch", task_id: requestId, payload: { requestId } }]);
@@ -94,7 +99,7 @@ describe("PostgresRequestStore", () => {
       },
     ], dispatch);
 
-    expect(await rows("SELECT kind, status, name, data FROM tasks WHERE id = ANY($1::char(26)[]) ORDER BY id", [[first, second]])).toEqual([
+    expect(await rows("SELECT kind, status, name, data FROM tasks WHERE id IN ($1, $2) ORDER BY id", [first, second])).toEqual([
       { kind: "step", status: "queued", name: "Criando tarefas", data: { agent: "task-create", expected: "many" } },
       { kind: "step", status: "queued", name: "Editando tarefas", data: { agent: "task-edit", expected: "one" } },
     ]);
@@ -142,7 +147,7 @@ describe("PostgresRequestStore", () => {
     expect(entries[3]).toEqual({ kind: "trace", role: null, content: null, data: { timings: { total: 850 } } });
     expect(entries[4]?.data).toEqual({ type: "query", columns: ["name"], rows: [["Almoço"]], truncated: false });
     expect(await rows("SELECT revision, status, finished_at IS NOT NULL AS finished FROM tasks WHERE id = $1", [stepId]))
-      .toEqual([{ revision: 1, status: "completed", finished: true }]);
+      .toEqual([{ revision: 1, status: "completed", finished: 1 }]);
 
     const [step] = await store.steps(requestId);
     expect(step).toMatchObject({
@@ -197,7 +202,7 @@ describe("PostgresRequestStore", () => {
     expect(await rows("SELECT to_task_id, relation FROM task_task_relation WHERE from_task_id = $1 AND relation <> 'step' ORDER BY relation", [requestId]))
       .toEqual([{ to_task_id: gone.id, relation: "deletes" }, { to_task_id: meal.id, relation: "generates" }]);
     // O detalhe da tarefa le o pedido, nunca o passo.
-    expect(await new PostgresTaskRequestLinkQuery(ctx.db).linksOf(meal.id))
+    expect(await new SqliteTaskRequestLinkQuery(ctx.db).linksOf(meal.id))
       .toMatchObject([{ requestId, relation: "generates", name: "almocei arroz e feijão" }]);
     expect(await rows("SELECT task_id, artifact_id, relation, position FROM task_artifact_relation ORDER BY relation, artifact_id")).toEqual([
       { task_id: createStep, artifact_id: food.id, relation: "creates", position: null },
@@ -325,7 +330,7 @@ describe("PostgresRequestStore", () => {
     userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription",
   });
   const step = Task.create({ userId: USER, name: "Passo", actor: "agent", kind: "step", status: "completed" });
-  const tasks = new PostgresTaskRepository(ctx.db);
+  const tasks = new SqliteTaskRepository(ctx.db);
   for (const task of [page, video, step]) await tasks.save(task);
   const listed = await store.list(USER, 10);
 
@@ -337,7 +342,7 @@ test("cancelar o pedido de transcricao que espera o servico local o leva a cance
   const video = Task.create({
     userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "awaiting_transcription",
   });
-  await new PostgresTaskRepository(ctx.db).save(video);
+  await new SqliteTaskRepository(ctx.db).save(video);
 
   expect(await store.cancel(video.id)).toEqual([video.id]);
 
@@ -351,15 +356,14 @@ test("cancelar o video que ja esta rodando o deixa interrupted, e fechar o pedid
   const video = Task.create({
     userId: USER, name: "Video", actor: "agent", kind: "save_content_with_transcription", status: "running",
   });
-  await new PostgresTaskRepository(ctx.db).save(video);
+  await new SqliteTaskRepository(ctx.db).save(video);
 
   expect(await store.cancel(video.id)).toEqual([video.id]);
 
   const stopped = await store.find(video.id);
   expect(stopped).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
   expect(stopped?.situation).toBeUndefined();
-  const { rows } = await ctx.pool.query("SELECT situation FROM tasks WHERE id = $1", [video.id]);
-  expect(rows[0].situation).toBeNull();
+  expect(await rows("SELECT situation FROM tasks WHERE id = $1", [video.id])).toEqual([{ situation: null }]);
 });
 
 test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao", async () => {
@@ -488,9 +492,9 @@ test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao"
     const [step] = await store.steps(first.requestId);
     expect(await store.find(step?.id as string)).toBeUndefined();
 
-    const plan = await rows<{ "QUERY PLAN": string }>(
-      "EXPLAIN SELECT id FROM tasks e WHERE e.user_id = $1 AND e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL ORDER BY e.id DESC LIMIT 20", [USER]);
-    expect(plan.map((row) => row["QUERY PLAN"]).join("\n")).toContain("tasks_requests_idx");
+    const plan = await rows<{ detail: string }>(
+      "EXPLAIN QUERY PLAN SELECT id FROM tasks e WHERE e.user_id = $1 AND e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL ORDER BY e.id DESC LIMIT 20", [USER]);
+    expect(plan.map((row) => row.detail).join("\n")).toContain("tasks_requests_idx");
   });
 
   test("candidatos de edicao: so tarefas de pessoa, artefatos de conteudo do usuario e series", async () => {
@@ -506,7 +510,7 @@ test("a sessao e a relacao `follow_up` do primeiro pedido para cada continuacao"
     await writer.commit({ userId: USER, tasks: [today, tracked, done, far].map((entity) => ({ op: "create" as const, entity })), artifacts: [text, skill].map((entity) => ({ op: "create" as const, entity })) });
     await writer.commit({ userId: "user-2", tasks: [{ op: "create", entity: foreign }], artifacts: [] });
 
-    const candidates = await new PostgresCandidateQuery(new PostgresDatabase(ctx.pool)).shortlist({ userId: USER, now, kinds: ["task", "artifact", "recurrence"] });
+    const candidates = await new SqliteCandidateQuery(ctx.db).shortlist({ userId: USER, now, kinds: ["task", "artifact", "recurrence"] });
 
     expect(candidates.map((candidate) => [candidate.kind, candidate.name]).sort()).toEqual([
       ["artifact", "Ideia"], ["task", "Pagar o aluguel"], ["task", "Reunião"],
