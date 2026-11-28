@@ -6,7 +6,6 @@ import { join, resolve } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { promisify } from "node:util";
 import { execFile } from "node:child_process";
-import { PostgreSqlContainer } from "@testcontainers/postgresql";
 
 const root = resolve(__dirname, "../..");
 const exec = promisify(execFile);
@@ -61,21 +60,19 @@ async function stop(child: ChildProcess): Promise<void> {
 }
 
 export default async function globalSetup(): Promise<() => Promise<void>> {
-  const container = await new PostgreSqlContainer("postgres:17-alpine").start();
   const nextBuildId = randomUUID().replaceAll("-", "");
   const nextBuildPath = resolve(root, `apps/web/.next-e2e-${nextBuildId}`);
   const processes: ChildProcess[] = [];
-  // A API guarda tudo num arquivo SQLite (ADR 0024): um diretorio temporario por execucao.
-  const apiDataDir = await mkdtemp(join(tmpdir(), "e2e-api-"));
+  // A API e o auth guardam tudo em arquivos SQLite (ADR 0024 e 0025): um diretorio temporario por execucao.
+  const dataDir = await mkdtemp(join(tmpdir(), "e2e-data-"));
+  const authDatabasePath = join(dataDir, "auth.sqlite");
   async function cleanup(): Promise<void> {
     await Promise.all(processes.reverse().map(stop));
     await rm(nextBuildPath, { recursive: true, force: true });
-    await rm(apiDataDir, { recursive: true, force: true });
-    await container.stop();
+    await rm(dataDir, { recursive: true, force: true });
   }
 
   try {
-    const authDatabaseUrl = container.getConnectionUri();
 
     const [apiPort, authPort, webPort] = await Promise.all([freePort(), freePort(), freePort()]);
     const apiUrl = `http://127.0.0.1:${apiPort}`;
@@ -85,9 +82,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       NODE_ENV: "test",
-      API_DATABASE_PATH: join(apiDataDir, "api.sqlite"),
-      AUTH_DATABASE_URL: authDatabaseUrl,
-      AUTH_DATABASE_MIGRATION_URL: authDatabaseUrl,
+      API_DATABASE_PATH: join(dataDir, "api.sqlite"),
+      AUTH_DATABASE_PATH: authDatabasePath,
       AUTH_KEY_ENCRYPTION_KEY: randomBytes(32).toString("base64url"),
       AUTH_INTERNAL_SERVICE_KEY: sharedKey,
       AUTH_ISSUER: authUrl,
@@ -123,7 +119,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     await ready(webUrl, web);
 
     // Playwright forwards these generated values to workers. No user-supplied test DB URL is needed.
-    process.env.E2E_AUTH_DATABASE_URL = authDatabaseUrl;
+    process.env.E2E_AUTH_DATABASE_PATH = authDatabasePath;
     process.env.E2E_WEB_URL = webUrl;
     return cleanup;
   } catch (error) {
