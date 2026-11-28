@@ -7,17 +7,16 @@ import {
   Task,
   TaskRevisionConflictError,
 } from "../../../domain";
-import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
-import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
-import { PostgresDatabase } from "../database/postgres-database";
-import { PostgresProjectQuery } from "../projects/postgres-project.query";
-import { PostgresProjectRepository } from "../projects/postgres-project.repository";
+import { SqliteEntityBatchWriter } from "../agent-batch/sqlite-entity-batch-writer";
+import { SqliteArtifactRepository } from "../artifacts/repositories/sqlite-artifact.repository";
+import { SqliteProjectQuery } from "../projects/sqlite-project.query";
+import { SqliteProjectRepository } from "../projects/sqlite-project.repository";
 import { ensurePersonalProject } from "../projects/resolve-project";
-import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgres-recurrence.repository";
-import { PostgresRequestStore } from "../requests/postgres-request.store";
+import { SqliteRecurrenceRepository } from "../recurrences/repositories/sqlite-recurrence.repository";
+import { SqliteRequestStore } from "../requests/sqlite-request.store";
 import { newOrderedId } from "../requests/request-rows";
-import { PostgresTaskCardQuery } from "../tasks/queries/postgres-task-card.query";
-import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
+import { SqliteTaskCardQuery } from "../tasks/queries/sqlite-task-card.query";
+import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
 import {
   OTHER_USER,
   USER,
@@ -27,7 +26,8 @@ import {
   selectRows,
   trackedTask,
 } from "../testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import { sql } from "../sqlite/sql";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 interface ProjectRow extends Record<string, unknown> {
   id: string;
@@ -37,26 +37,27 @@ interface ProjectRow extends Record<string, unknown> {
 }
 
 describe("projetos", () => {
-  let ctx: PostgresTestContext;
-  let tasks: PostgresTaskRepository;
-  let recurrences: PostgresRecurrenceRepository;
-  let artifacts: PostgresArtifactRepository;
-  let writer: PostgresEntityBatchWriter;
-  let store: PostgresRequestStore;
-  let query: PostgresProjectQuery;
-  let projects: PostgresProjectRepository;
-  let cards: PostgresTaskCardQuery;
+  let ctx: SqliteTestContext;
+  const run = (text: string, params: unknown[] = []) => ctx.db.execute(sql.unsafe(text, params));
+  let tasks: SqliteTaskRepository;
+  let recurrences: SqliteRecurrenceRepository;
+  let artifacts: SqliteArtifactRepository;
+  let writer: SqliteEntityBatchWriter;
+  let store: SqliteRequestStore;
+  let query: SqliteProjectQuery;
+  let projects: SqliteProjectRepository;
+  let cards: SqliteTaskCardQuery;
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
-    tasks = new PostgresTaskRepository(ctx.db);
-    recurrences = new PostgresRecurrenceRepository(ctx.db);
-    artifacts = new PostgresArtifactRepository(ctx.db);
-    writer = new PostgresEntityBatchWriter(ctx.db);
-    store = new PostgresRequestStore(new PostgresDatabase(ctx.pool));
-    query = new PostgresProjectQuery(ctx.db);
-    projects = new PostgresProjectRepository(ctx.db);
-    cards = new PostgresTaskCardQuery(ctx.db);
+    ctx = await createSqliteTestContext();
+    tasks = new SqliteTaskRepository(ctx.db);
+    recurrences = new SqliteRecurrenceRepository(ctx.db);
+    artifacts = new SqliteArtifactRepository(ctx.db);
+    writer = new SqliteEntityBatchWriter(ctx.db);
+    store = new SqliteRequestStore(ctx.database);
+    query = new SqliteProjectQuery(ctx.db);
+    projects = new SqliteProjectRepository(ctx.db);
+    cards = new SqliteTaskCardQuery(ctx.db);
   }, 60000);
 
   beforeEach(async () => {
@@ -67,18 +68,29 @@ describe("projetos", () => {
     await ctx?.stop();
   });
 
-  const projectsOf = (userId: string) =>
-    selectRows<ProjectRow>(ctx.pool, "SELECT id, user_id, name, personal FROM projects WHERE user_id = $1 ORDER BY name", [userId]);
+  /** `personal` sai do banco como 0 ou 1. */
+  interface RawProjectRow extends Record<string, unknown> {
+    id: string;
+    user_id: string;
+    name: string;
+    personal: number;
+  }
+  const withBoolean = (row: RawProjectRow): ProjectRow => ({ ...row, personal: row.personal === 1 });
+
+  const projectsOf = async (userId: string) =>
+    (
+      await selectRows<RawProjectRow>(ctx.db, "SELECT id, user_id, name, personal FROM projects WHERE user_id = $1 ORDER BY name", [userId])
+    ).map(withBoolean);
 
   /** O projeto em que cada tarefa ficou. */
   async function projectOfTask(taskId: string): Promise<ProjectRow> {
-    const [row] = await selectRows<ProjectRow>(
-      ctx.pool,
+    const [row] = await selectRows<RawProjectRow>(
+      ctx.db,
       "SELECT p.id, p.user_id, p.name, p.personal FROM tasks t JOIN projects p ON p.id = t.project_id WHERE t.id = $1",
       [taskId],
     );
     if (!row) throw new Error(`Tarefa ${taskId} sem projeto`);
-    return row;
+    return withBoolean(row);
   }
 
   async function personalOf(userId: string): Promise<ProjectRow> {
@@ -89,7 +101,7 @@ describe("projetos", () => {
 
   async function otherProject(userId: string, name: string): Promise<string> {
     const id = ulid();
-    await ctx.pool.query("INSERT INTO projects (id, user_id, name) VALUES ($1, $2, $3)", [id, userId, name]);
+    await run("INSERT INTO projects (id, user_id, name) VALUES ($1, $2, $3)", [id, userId, name]);
     return id;
   }
 
@@ -146,7 +158,7 @@ describe("projetos", () => {
       const food = Artifact.create({ userId: USER, type: "food", name: "Feijoada", data: pendingFoodData("feijoada completa") });
       await artifacts.save(food);
 
-      const [request] = await selectRows<{ id: string }>(ctx.pool, "SELECT id FROM tasks WHERE kind = 'build_request'");
+      const [request] = await selectRows<{ id: string }>(ctx.db, "SELECT id FROM tasks WHERE kind = 'build_request'");
       expect(await projectOfTask(request?.id as string)).toMatchObject({ user_id: USER, personal: true });
     });
 
@@ -171,7 +183,7 @@ describe("projetos", () => {
 
       const personal = await personalOf(USER);
       expect((await projectOfTask(task.id)).id).toBe(personal.id);
-      const [row] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
+      const [row] = await selectRows<{ project_id: string }>(ctx.db, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
       expect(row?.project_id).toBe(personal.id);
     });
 
@@ -179,7 +191,7 @@ describe("projetos", () => {
       const series = dailyRecurrence(USER, "2026-11-10");
       await recurrences.save(series);
       const braid = await otherProject(USER, "braid");
-      await ctx.pool.query("UPDATE recurrences SET project_id = $1 WHERE id = $2", [braid, series.id]);
+      await run("UPDATE recurrences SET project_id = $1 WHERE id = $2", [braid, series.id]);
 
       const occurrence = occurrenceOf(series, "2026-11-10");
       await recurrences.materialize(series, [occurrence]);
@@ -199,7 +211,7 @@ describe("projetos", () => {
       await writer.commit({ userId: USER, requestId, tasks: [{ op: "create", entity: task }], artifacts: [], recurrences: [series] });
 
       expect((await projectOfTask(task.id)).id).toBe(braid);
-      const [row] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
+      const [row] = await selectRows<{ project_id: string }>(ctx.db, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
       expect(row?.project_id).toBe(braid);
     });
 
@@ -209,7 +221,7 @@ describe("projetos", () => {
       await expect(store.start({ userId: USER, route: "steps", text: "x", projectId: alheio, job: "request-dispatch" }))
         .rejects.toBeInstanceOf(ProjectNotFoundError);
 
-      expect(await selectRows(ctx.pool, "SELECT id FROM tasks")).toEqual([]);
+      expect(await selectRows(ctx.db, "SELECT id FROM tasks")).toEqual([]);
     });
 
     test("o pedido e os passos ficam no projeto escolhido, e uma tarefa de pessoa criada depois vai para o personal", async () => {
@@ -254,7 +266,7 @@ describe("projetos", () => {
       const braid = await otherProject(USER, "braid");
       const other = trackedTask(USER, "Do braid");
       await tasks.save(other);
-      await ctx.pool.query("UPDATE tasks SET project_id = $1 WHERE id = $2", [braid, other.id]);
+      await run("UPDATE tasks SET project_id = $1 WHERE id = $2", [braid, other.id]);
       const personal = await personalOf(USER);
 
       const found = await cards.cardsOf([task.id, other.id]);
@@ -344,7 +356,7 @@ describe("projetos", () => {
 
       await expect(tasks.save(task)).rejects.toBeInstanceOf(ProjectNotFoundError);
 
-      expect(await selectRows(ctx.pool, "SELECT id FROM tasks WHERE id = $1", [task.id])).toEqual([]);
+      expect(await selectRows(ctx.db, "SELECT id FROM tasks WHERE id = $1", [task.id])).toEqual([]);
     });
 
     test("um projeto que nao existe e recusado do mesmo jeito", async () => {
@@ -361,7 +373,7 @@ describe("projetos", () => {
 
       await recurrences.materialize(series, [occurrence]);
 
-      const [row] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
+      const [row] = await selectRows<{ project_id: string }>(ctx.db, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
       expect(row?.project_id).toBe(braid);
       expect((await projectOfTask(occurrence.id)).id).toBe(braid);
     });
@@ -374,9 +386,9 @@ describe("projetos", () => {
 
       await expect(recurrences.save(stolen)).rejects.toBeInstanceOf(ProjectNotFoundError);
 
-      const [row] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [plain.id]);
+      const [row] = await selectRows<{ project_id: string }>(ctx.db, "SELECT project_id FROM recurrences WHERE id = $1", [plain.id]);
       expect(row?.project_id).toBe((await personalOf(USER)).id);
-      expect(await selectRows(ctx.pool, "SELECT id FROM recurrences WHERE id = $1", [stolen.id])).toEqual([]);
+      expect(await selectRows(ctx.db, "SELECT id FROM recurrences WHERE id = $1", [stolen.id])).toEqual([]);
     });
   });
 
@@ -477,14 +489,14 @@ describe("projetos", () => {
 
       await recurrences.update(series.revise({ template: { name: "Serie", kind: "common" } }), USER, series.revision, "2026-11-11");
 
-      const [row] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
+      const [row] = await selectRows<{ project_id: string }>(ctx.db, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
       expect(row?.project_id).toBe(braid);
 
       const { requestId } = await store.start({ userId: USER, route: "steps", text: "toda manha", job: "request-dispatch" });
-      await ctx.pool.query("UPDATE tasks SET project_id = $1 WHERE id = $2", [braid, requestId]);
+      await run("UPDATE tasks SET project_id = $1 WHERE id = $2", [braid, requestId]);
       const fromRequest = dailyRecurrence(USER, "2026-11-10");
       await writer.commit({ userId: USER, tasks: [], artifacts: [], recurrences: [fromRequest], requestId });
-      const [again] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [fromRequest.id]);
+      const [again] = await selectRows<{ project_id: string }>(ctx.db, "SELECT project_id FROM recurrences WHERE id = $1", [fromRequest.id]);
       expect(again?.project_id).toBe(braid);
     });
 
@@ -496,7 +508,7 @@ describe("projetos", () => {
 
       await expect(recurrences.update(revised, USER, 9, "2026-11-11")).rejects.toThrow();
 
-      const [row] = await selectRows<{ project_id: string }>(ctx.pool, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
+      const [row] = await selectRows<{ project_id: string }>(ctx.db, "SELECT project_id FROM recurrences WHERE id = $1", [series.id]);
       expect(row?.project_id).toBe((await personalOf(USER)).id);
     });
   });

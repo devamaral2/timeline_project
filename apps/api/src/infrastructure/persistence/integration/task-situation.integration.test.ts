@@ -1,21 +1,23 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { TaskNotFoundError, TaskSituationNotAllowedError, type Task, type TaskCreateProps } from "../../../domain";
 import { SetTaskSituationUseCase } from "../../../features/set-task-situation/set-task-situation.usecase";
-import { PostgresTaskCardQuery } from "../tasks/queries/postgres-task-card.query";
-import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
+import { SqliteTaskCardQuery } from "../tasks/queries/sqlite-task-card.query";
+import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
 import { OTHER_USER, USER, agentTask, trackedTask } from "../testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import { sql } from "../sqlite/sql";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
-describe("definir a situacao de um pedido de agente, no Postgres", () => {
-  let ctx: PostgresTestContext;
-  let tasks: PostgresTaskRepository;
+describe("definir a situacao de um pedido de agente, no SQLite", () => {
+  let ctx: SqliteTestContext;
+  const run = (text: string, params: unknown[] = []) => ctx.db.execute(sql.unsafe(text, params));
+  let tasks: SqliteTaskRepository;
   let useCase: SetTaskSituationUseCase;
   const actor = { userId: USER };
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
-    tasks = new PostgresTaskRepository(ctx.db);
-    useCase = new SetTaskSituationUseCase(tasks, new PostgresTaskCardQuery(ctx.db));
+    ctx = await createSqliteTestContext();
+    tasks = new SqliteTaskRepository(ctx.db);
+    useCase = new SetTaskSituationUseCase(tasks, new SqliteTaskCardQuery(ctx.db));
   }, 60000);
 
   beforeEach(async () => {
@@ -85,9 +87,9 @@ describe("definir a situacao de um pedido de agente, no Postgres", () => {
 
   test("a gravacao confere o status de novo: o pedido que voltou a abrir depois da leitura nao ganha situacao", async () => {
     const request = await finished();
-    await ctx.pool.query("UPDATE tasks SET status = 'running' WHERE id = $1", [request.id]);
+    await run("UPDATE tasks SET status = 'running' WHERE id = $1", [request.id]);
 
     expect(await tasks.setSituation(request.id, USER, "reviewed")).toBe(false);
-    expect((await ctx.pool.query("SELECT situation FROM tasks WHERE id = $1", [request.id])).rows[0].situation).toBeNull();
+    expect((await run("SELECT situation FROM tasks WHERE id = $1", [request.id])).rows[0].situation).toBeNull();
   });
 });

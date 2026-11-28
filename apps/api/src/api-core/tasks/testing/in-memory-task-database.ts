@@ -4,7 +4,7 @@ import type { SubtaskChange } from "../../../domain/ports";
 /**
  * Estado compartilhado entre os repositorios e as consultas em memoria, para
  * que o que e gravado junto (a tarefa, os artefatos dela, as relacoes) apareca
- * nas leituras, como na transacao unica do Postgres.
+ * nas leituras, como na transacao unica do SQLite.
  */
 export class InMemoryTaskDatabase {
   tasks: Task[];
@@ -21,7 +21,7 @@ export class InMemoryTaskDatabase {
   }
 
   /**
-   * Aplica as arestas como o escritor do Postgres: as pontas existem e sao do
+   * Aplica as arestas como o escritor do SQLite: as pontas existem e sao do
    * usuario, a subtarefa sai da principal anterior e a hierarquia nao fecha ciclo.
    */
   apply(userId: string, changes: readonly SubtaskChange[]): void {

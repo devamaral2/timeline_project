@@ -7,9 +7,9 @@ import {
   type ArtifactLink,
   type Task,
 } from "../../../domain";
-import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
-import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
-import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgres-recurrence.repository";
+import { SqliteArtifactRepository } from "../artifacts/repositories/sqlite-artifact.repository";
+import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
+import { SqliteRecurrenceRepository } from "../recurrences/repositories/sqlite-recurrence.repository";
 import {
   OTHER_USER,
   USER,
@@ -22,21 +22,21 @@ import {
   textArtifact,
   trackedTask,
 } from "../testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 const DAYS = ["2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-11-14"] as const;
 
-describe("PostgresRecurrenceRepository", () => {
-  let ctx: PostgresTestContext;
-  let recurrences: PostgresRecurrenceRepository;
-  let tasks: PostgresTaskRepository;
-  let artifacts: PostgresArtifactRepository;
+describe("SqliteRecurrenceRepository", () => {
+  let ctx: SqliteTestContext;
+  let recurrences: SqliteRecurrenceRepository;
+  let tasks: SqliteTaskRepository;
+  let artifacts: SqliteArtifactRepository;
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
-    recurrences = new PostgresRecurrenceRepository(ctx.db);
-    tasks = new PostgresTaskRepository(ctx.db);
-    artifacts = new PostgresArtifactRepository(ctx.db);
+    ctx = await createSqliteTestContext();
+    recurrences = new SqliteRecurrenceRepository(ctx.db);
+    tasks = new SqliteTaskRepository(ctx.db);
+    artifacts = new SqliteArtifactRepository(ctx.db);
   }, 60000);
 
   beforeEach(async () => {
@@ -66,13 +66,15 @@ describe("PostgresRecurrenceRepository", () => {
   }
 
   /** Os dias que ainda tem uma linha em `tasks`, com o estado do vinculo. */
-  const occurrenceRows = (recurrenceId: string) =>
-    selectRows<{ day: string; detached: boolean; deleted: boolean }>(
-      ctx.pool,
-      `SELECT occurrence_on::text AS day, recurrence_detached AS detached, deleted_at IS NOT NULL AS deleted
-       FROM tasks WHERE recurrence_id = $1 ORDER BY occurrence_on`,
-      [recurrenceId],
-    );
+  const occurrenceRows = async (recurrenceId: string) =>
+    (
+      await selectRows<{ day: string; detached: number; deleted: number }>(
+        ctx.db,
+        `SELECT occurrence_on AS day, recurrence_detached AS detached, deleted_at IS NOT NULL AS deleted
+         FROM tasks WHERE recurrence_id = $1 ORDER BY occurrence_on`,
+        [recurrenceId],
+      )
+    ).map((row) => ({ day: row.day, detached: row.detached === 1, deleted: row.deleted === 1 }));
 
   describe("gravar, ler e listar", () => {
     test("a regra e o template voltam como foram gravados", async () => {
@@ -143,7 +145,7 @@ describe("PostgresRecurrenceRepository", () => {
       // A segunda leitura monta tarefas novas para os mesmos dias: o indice unico por dia os descarta.
       await materialized(recurrence, DAYS.slice(0, 3));
 
-      const rows = await selectRows(ctx.pool, "SELECT id FROM tasks ORDER BY occurrence_on");
+      const rows = await selectRows(ctx.db, "SELECT id FROM tasks ORDER BY occurrence_on");
       expect(rows.map((row) => row.id)).toEqual(first.map((task) => task.id));
       expect((await found(recurrence.id)).materializedThrough).toBe("2026-11-12");
       expect((await tasks.findById(first[0].id))?.occurrence).toEqual({
@@ -176,10 +178,10 @@ describe("PostgresRecurrenceRepository", () => {
         occurrenceOf(recurrence, DAYS[0], { artifactLinks: links, tags: ["duplicada"] }),
       ]);
 
-      expect(await selectRows(ctx.pool, "SELECT task_id, from_recurrence FROM task_artifact_relation")).toEqual([
-        { task_id: kept.id, from_recurrence: true },
+      expect(await selectRows(ctx.db, "SELECT task_id, from_recurrence FROM task_artifact_relation")).toEqual([
+        { task_id: kept.id, from_recurrence: 1 },
       ]);
-      expect(await countRows(ctx.pool, "tags")).toBe(0);
+      expect(await countRows(ctx.db, "tags")).toBe(0);
     });
 
     test("gravar pelo repositorio de tarefas uma ocorrencia de um dia ja gerado nao duplica", async () => {
@@ -188,7 +190,7 @@ describe("PostgresRecurrenceRepository", () => {
 
       await tasks.save(occurrenceOf(recurrence, DAYS[0], { name: "Duplicada" }));
 
-      expect(await selectRows(ctx.pool, "SELECT id, name FROM tasks")).toEqual([{ id: kept.id, name: "Serie" }]);
+      expect(await selectRows(ctx.db, "SELECT id, name FROM tasks")).toEqual([{ id: kept.id, name: "Serie" }]);
     });
 
     test("se a regra mudou no meio do caminho, nada e gerado e a marca d'agua nao avanca", async () => {
@@ -197,7 +199,7 @@ describe("PostgresRecurrenceRepository", () => {
 
       await expect(materialized(recurrence, DAYS.slice(0, 3))).rejects.toThrow(RecurrenceRevisionConflictError);
 
-      expect(await countRows(ctx.pool, "tasks")).toBe(0);
+      expect(await countRows(ctx.db, "tasks")).toBe(0);
       expect((await found(recurrence.id)).materializedThrough).toBeUndefined();
     });
 
@@ -220,7 +222,7 @@ describe("PostgresRecurrenceRepository", () => {
         DAYS.slice(0, 3).map((day) => occurrenceOf(recurrence, day)),
         parent.id,
       );
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(3);
+      expect(await countRows(ctx.db, "task_task_relation", "relation = 'subtask'")).toBe(3);
     });
 
     test("a principal da ocorrencia pode ser uma tarefa de agente", async () => {
@@ -244,13 +246,13 @@ describe("PostgresRecurrenceRepository", () => {
         DAYS.slice(0, 3).map((day) => occurrenceOf(recurrence, day)),
         parent.id,
       );
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(3);
+      expect(await countRows(ctx.db, "task_task_relation", "relation = 'subtask'")).toBe(3);
 
       await recurrences.update(recurrence.revise({ rule: { timeOfDay: "19:00" } }), USER, 1, DAYS[1]);
 
       // So a primeira ocorrencia (antes de fromDay) sobrevive, com a aresta dela.
-      expect(await countRows(ctx.pool, "tasks", "recurrence_id IS NOT NULL")).toBe(1);
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
+      expect(await countRows(ctx.db, "tasks", "recurrence_id IS NOT NULL")).toBe(1);
+      expect(await countRows(ctx.db, "task_task_relation", "relation = 'subtask'")).toBe(1);
       expect((await tasks.findById(parent.id))?.subtaskIds).toHaveLength(1);
     });
 
@@ -265,8 +267,8 @@ describe("PostgresRecurrenceRepository", () => {
         await recurrences.materialize(recurrence.materializedUntil(DAYS[1]), [occurrenceOf(recurrence, DAYS[0])], parentId);
       }
 
-      expect(await countRows(ctx.pool, "tasks", "recurrence_id IS NOT NULL")).toBe(0);
-      expect(await countRows(ctx.pool, "task_task_relation")).toBe(0);
+      expect(await countRows(ctx.db, "tasks", "recurrence_id IS NOT NULL")).toBe(0);
+      expect(await countRows(ctx.db, "task_task_relation")).toBe(0);
     });
   });
 
@@ -312,7 +314,7 @@ describe("PostgresRecurrenceRepository", () => {
 
       await materialized(await found(recurrence.id), DAYS.slice(2));
 
-      const rows = await selectRows(ctx.pool, "SELECT occurrence_on::text AS day, id, name FROM tasks ORDER BY occurrence_on");
+      const rows = await selectRows(ctx.db, "SELECT occurrence_on AS day, id, name FROM tasks ORDER BY occurrence_on");
       expect(rows.map((row) => row.day)).toEqual([...DAYS]);
       expect(rows[3]).toMatchObject({ id: occurrences[3].id, name: "Editada a mao" });
       expect(rows[2].id).not.toBe(occurrences[2].id);
@@ -374,9 +376,9 @@ describe("PostgresRecurrenceRepository", () => {
       await recurrences.delete(recurrence.id, USER, DAYS[2]);
 
       expect(await recurrences.findById(recurrence.id)).toBeNull();
-      expect(await countRows(ctx.pool, "recurrence_exceptions")).toBe(0);
+      expect(await countRows(ctx.db, "recurrence_exceptions")).toBe(0);
       const rows = await selectRows(
-        ctx.pool,
+        ctx.db,
         "SELECT id, recurrence_id, occurrence_on, recurrence_detached FROM tasks ORDER BY started_at",
       );
       expect(rows).toEqual(
@@ -384,12 +386,12 @@ describe("PostgresRecurrenceRepository", () => {
           id: task.id,
           recurrence_id: null,
           occurrence_on: null,
-          recurrence_detached: false,
+          recurrence_detached: 0,
         })),
       );
       // A relacao herdada da serie passa a ser da propria ocorrencia.
-      expect(await selectRows(ctx.pool, "SELECT DISTINCT from_recurrence FROM task_artifact_relation")).toEqual([
-        { from_recurrence: false },
+      expect(await selectRows(ctx.db, "SELECT DISTINCT from_recurrence FROM task_artifact_relation")).toEqual([
+        { from_recurrence: 0 },
       ]);
       const read = await tasks.findById(occurrences[0].id);
       expect(read?.occurrence).toBeUndefined();

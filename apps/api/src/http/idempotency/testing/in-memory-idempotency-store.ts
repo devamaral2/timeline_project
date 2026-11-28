@@ -6,7 +6,7 @@ interface Entry {
   done: boolean;
 }
 
-/** Mesmo contrato do store do Postgres, sem a retomada de reservas abandonadas. */
+/** Mesmo contrato do store do SQLite, sem a retomada de reservas abandonadas. */
 export class InMemoryIdempotencyStore implements IdempotencyStore {
   readonly entries = new Map<string, Entry>();
 

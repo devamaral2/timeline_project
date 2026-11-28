@@ -14,22 +14,24 @@ import type {
   TagRepository,
   WorkoutCatalog,
 } from "../../domain/ports";
-import { PostgresDatabase } from "./database/postgres-database";
-import { PostgresEntityBatchWriter } from "./agent-batch/postgres-entity-batch-writer";
-import { PostgresProjectQuery } from "./projects/postgres-project.query";
-import { PostgresProjectRepository } from "./projects/postgres-project.repository";
-import { PostgresScopedSqlQuery } from "./agent-sql/postgres-scoped-sql.query";
-import { PostgresWorkoutCatalog } from "./artifacts/postgres-workout.catalog";
-import { PostgresArtifactTaskLinkQuery } from "./artifacts/queries/postgres-artifact-task-link.query";
-import { PostgresArtifactRepository } from "./artifacts/repositories/postgres-artifact.repository";
-import { PostgresTaskCardQuery } from "./tasks/queries/postgres-task-card.query";
-import { PostgresTaskRequestLinkQuery } from "./tasks/queries/postgres-task-request-link.query";
-import { PostgresTaskRepository } from "./tasks/repositories/postgres-task.repository";
-import { PostgresTagRepository } from "./tasks/repositories/postgres-tag.repository";
-import { PostgresIdempotencyStore } from "./idempotency/postgres-idempotency.store";
-import { PostgresRecurrenceRepository } from "./recurrences/repositories/postgres-recurrence.repository";
-import { PostgresTranscriptionRequests } from "./transcription/postgres-transcription-requests";
-import { PostgresTaskRelations } from "./tasks/relations/postgres-task-relations";
+import { getDatabaseEnv } from "../../config/env";
+import { openApiDatabase } from "./database/api-database";
+import type { SqliteDatabase } from "./sqlite/database";
+import { SqliteEntityBatchWriter } from "./agent-batch/sqlite-entity-batch-writer";
+import { SqliteProjectQuery } from "./projects/sqlite-project.query";
+import { SqliteProjectRepository } from "./projects/sqlite-project.repository";
+import { SqliteScopedSqlQuery } from "./agent-sql/sqlite-scoped-sql.query";
+import { SqliteWorkoutCatalog } from "./artifacts/sqlite-workout.catalog";
+import { SqliteArtifactTaskLinkQuery } from "./artifacts/queries/sqlite-artifact-task-link.query";
+import { SqliteArtifactRepository } from "./artifacts/repositories/sqlite-artifact.repository";
+import { SqliteTaskCardQuery } from "./tasks/queries/sqlite-task-card.query";
+import { SqliteTaskRequestLinkQuery } from "./tasks/queries/sqlite-task-request-link.query";
+import { SqliteTaskRepository } from "./tasks/repositories/sqlite-task.repository";
+import { SqliteTagRepository } from "./tasks/repositories/sqlite-tag.repository";
+import { SqliteIdempotencyStore } from "./idempotency/sqlite-idempotency.store";
+import { SqliteRecurrenceRepository } from "./recurrences/repositories/sqlite-recurrence.repository";
+import { SqliteTranscriptionRequests } from "./transcription/sqlite-transcription-requests";
+import { SqliteTaskRelations } from "./tasks/relations/sqlite-task-relations";
 import type { TaskRelations } from "../../api-core/tasks/task-relations";
 import type { TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 
@@ -58,90 +60,84 @@ export const IDEMPOTENCY_STORE = "IDEMPOTENCY_STORE";
 export const TRANSCRIPTION_REQUESTS = "TRANSCRIPTION_REQUESTS";
 export const TASK_RELATIONS = "TASK_RELATIONS";
 
-function requireDatabaseUrl(): string {
-  const value = process.env.DATABASE_URL;
-  if (!value) throw new Error("DATABASE_URL is required");
-  return value;
-}
-
 @Module({
   providers: [
     {
       provide: DATABASE,
-      useFactory: (): PostgresDatabase => PostgresDatabase.connect(requireDatabaseUrl()),
+      useFactory: (): SqliteDatabase => openApiDatabase(getDatabaseEnv().API_DATABASE_PATH),
     },
     {
       provide: TASK_REPOSITORY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): TaskRepository => new PostgresTaskRepository(database.db),
+      useFactory: (database: SqliteDatabase): TaskRepository => new SqliteTaskRepository(database),
     },
     {
       provide: TASK_CARD_QUERY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): TaskCardQuery => new PostgresTaskCardQuery(database.db),
+      useFactory: (database: SqliteDatabase): TaskCardQuery => new SqliteTaskCardQuery(database),
     },
     {
       provide: TASK_REQUEST_LINK_QUERY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): TaskRequestLinkQuery => new PostgresTaskRequestLinkQuery(database.db),
+      useFactory: (database: SqliteDatabase): TaskRequestLinkQuery => new SqliteTaskRequestLinkQuery(database),
     },
     {
       provide: PROJECT_QUERY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): ProjectQuery => new PostgresProjectQuery(database.db),
+      useFactory: (database: SqliteDatabase): ProjectQuery => new SqliteProjectQuery(database),
     },
     {
       provide: PROJECT_REPOSITORY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): ProjectRepository => new PostgresProjectRepository(database.db),
+      useFactory: (database: SqliteDatabase): ProjectRepository => new SqliteProjectRepository(database),
     },
     {
       provide: TAG_REPOSITORY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): TagRepository => new PostgresTagRepository(database.db),
+      useFactory: (database: SqliteDatabase): TagRepository => new SqliteTagRepository(database),
     },
     {
       provide: ARTIFACT_REPOSITORY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): ArtifactRepository => new PostgresArtifactRepository(database.db),
+      useFactory: (database: SqliteDatabase): ArtifactRepository => new SqliteArtifactRepository(database),
     },
     {
       provide: ARTIFACT_TASK_LINK_QUERY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): ArtifactTaskLinkQuery =>
-        new PostgresArtifactTaskLinkQuery(database.db),
+      useFactory: (database: SqliteDatabase): ArtifactTaskLinkQuery =>
+        new SqliteArtifactTaskLinkQuery(database),
     },
     {
       provide: WORKOUT_CATALOG,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): WorkoutCatalog => new PostgresWorkoutCatalog(database.db),
+      useFactory: (database: SqliteDatabase): WorkoutCatalog => new SqliteWorkoutCatalog(database),
     },
     {
       provide: RECURRENCE_REPOSITORY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): RecurrenceRepository =>
-        new PostgresRecurrenceRepository(database.db),
+      useFactory: (database: SqliteDatabase): RecurrenceRepository =>
+        new SqliteRecurrenceRepository(database),
     },
     {
       provide: SCOPED_SQL_QUERY,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): ScopedSqlQuery => new PostgresScopedSqlQuery(database.pool),
+      useFactory: (database: SqliteDatabase): ScopedSqlQuery => new SqliteScopedSqlQuery(database),
     },
     {
       provide: ENTITY_BATCH_WRITER,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): EntityBatchWriter => new PostgresEntityBatchWriter(database.db),
+      useFactory: (database: SqliteDatabase): EntityBatchWriter => new SqliteEntityBatchWriter(database),
     },
     {
       provide: IDEMPOTENCY_STORE,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): IdempotencyStore => new PostgresIdempotencyStore(database.db),
+      useFactory: (database: SqliteDatabase): IdempotencyStore => new SqliteIdempotencyStore(database),
     },
-    { provide: TASK_RELATIONS, useFactory: (): TaskRelations => new PostgresTaskRelations() },
+    { provide: TASK_RELATIONS, useFactory: (): TaskRelations => new SqliteTaskRelations() },
     {
       provide: TRANSCRIPTION_REQUESTS,
       inject: [DATABASE],
-      useFactory: (database: PostgresDatabase): TranscriptionRequests => new PostgresTranscriptionRequests(database.db),
+      useFactory: (database: SqliteDatabase): TranscriptionRequests => new SqliteTranscriptionRequests(database),
     },
   ],
   exports: [
