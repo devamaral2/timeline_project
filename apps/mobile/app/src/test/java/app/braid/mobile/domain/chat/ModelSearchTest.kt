@@ -1,6 +1,7 @@
 package app.braid.mobile.domain.chat
 
 import app.braid.mobile.domain.request.ModelOption
+import app.braid.mobile.domain.request.ModelProvider
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -22,5 +23,17 @@ class ModelSearchTest {
         assertEquals(listOf("SpaceXAI: Grok 4.7"), names("x-ai"))
         assertEquals(listOf("Baidu: ERNIÊ 5.5"), names("ernie"))
         assertEquals(emptyList<String>(), names("claude grok"))
+    }
+
+    @Test
+    fun `an empty list says why, as the web does`() {
+        val provider = ModelTab.OfProvider(ModelProvider.entries.first())
+        assertEquals("Nenhum modelo com esse nome.", emptyModelListMessage(ModelTab.Favorites, "gpt"))
+        assertEquals("Nenhum modelo com esse nome.", emptyModelListMessage(provider, "gpt"))
+        assertEquals(
+            "Nenhum favorito ainda. Toque na estrela de um modelo para guardá-lo aqui.",
+            emptyModelListMessage(ModelTab.Favorites, "  "),
+        )
+        assertEquals("Nenhum modelo neste provedor.", emptyModelListMessage(provider, ""))
     }
 }

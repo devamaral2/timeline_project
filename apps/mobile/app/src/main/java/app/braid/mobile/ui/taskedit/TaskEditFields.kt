@@ -78,13 +78,13 @@ import app.braid.mobile.ui.tasks.TaskPrioritySheet
 import app.braid.mobile.ui.tasks.TaskStatusGlyph
 import app.braid.mobile.ui.tasks.taskStatusName
 
-/** Os tipos de tarefa de pessoa, na ordem do web, com o rótulo da tela (`visualForItemType`). */
+/** Os tipos de tarefa de pessoa, na ordem do web (`KINDS` do `TaskEditHeaderFields`), com o rótulo da tela (`visualForItemType`). */
 private val KIND_LABELS =
     listOf(
         TaskKind.Common to "Padrão",
         TaskKind.Meal to "Refeição",
-        TaskKind.Training to "Treino",
         TaskKind.Sleep to "Sono",
+        TaskKind.Training to "Treino",
     )
 
 /**

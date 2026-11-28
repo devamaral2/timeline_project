@@ -19,22 +19,28 @@ interface ArtifactRepository {
     /** O artefato com todas as tarefas em que aparece. Inexistente ou de outro dono sobe como [ArtifactNotFoundException]. */
     suspend fun get(id: String): Artifact
 
-    /** Cria o artefato e devolve o id. [idempotencyKey] é a chave do formulário: repetir a mesma não cria outro. */
+    /**
+     * Cria o artefato e devolve o id. [idempotencyKey] é a chave do formulário: repetir a mesma não cria outro. [taskIds]
+     * liga o artefato a essas tarefas; nulo não manda o campo.
+     */
     suspend fun create(
         draft: ArtifactDraft,
         idempotencyKey: String,
+        taskIds: List<String>? = null,
     ): String
 
     /**
      * Grava o conteúdo inteiro do artefato de texto livre com a [revision] que a tela leu, no [type] que ele já tem:
      * corrigir o texto de um resumo de e-mail não o transforma em nota. Revisão velha (409) sobe como
-     * [app.braid.mobile.domain.task.StaleRevisionException]; qualquer outra falha sobe como exceção.
+     * [app.braid.mobile.domain.task.StaleRevisionException]; qualquer outra falha sobe como exceção. [taskIds] troca as
+     * tarefas de pessoa ligadas ao artefato por essas; nulo não manda o campo e deixa as ligações como estão.
      */
     suspend fun updateText(
         id: String,
         revision: Int,
         text: TextContent,
         type: ArtifactType = ArtifactType.Text,
+        taskIds: List<String>? = null,
     )
 
     /** Exclui o artefato. */

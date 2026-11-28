@@ -245,7 +245,7 @@ private fun LinkedRow(
 /** Uma tarefa como escolha da folha: o nome e, embaixo, o tipo (código em mono) e quando. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TaskChoice(
+internal fun TaskChoice(
     card: TaskCard,
     now: Instant,
 ) {
