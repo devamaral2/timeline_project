@@ -32,7 +32,7 @@ async function bootstrap(): Promise<void> {
   const runtime = await createApiRuntime({ databaseUrl, authInternalServiceKey: AUTH_INTERNAL_SERVICE_KEY });
   await runtime.start();
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule.forRoot(runtime));
   // Clientes nativos nao aplicam a politica de origem. Quem precisa e o alvo
   // web, util para depurar telas no navegador — e ele so existe quando a API
   // ja esta aberta na rede. O CORS roda antes da delegacao e da autenticacao.

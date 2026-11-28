@@ -4,6 +4,7 @@ import type { OpenAPIObject } from "@nestjs/swagger";
 import { expect, test } from "vitest";
 import { z } from "zod";
 import { AppModule } from "../app.module";
+import type { ApiRuntime } from "../server/composition-root";
 import { describeOperations } from "./openapi";
 import { documentedOperations, documentedSchemas, documentedTags } from "../common/openapi-operations";
 import { DECLARED_API_OPERATIONS, declaredOperationKey } from "../server/declared-operations";
@@ -45,7 +46,8 @@ function routesOf(root: ModuleLike): string[] {
 
 test("toda rota da API está no catálogo, e o catálogo não descreve rota que não existe", () => {
   const declared = DECLARED_API_OPERATIONS.map(declaredOperationKey);
-  expect(Object.keys(documentedOperations).sort()).toEqual([...routesOf(AppModule as unknown as ModuleLike), ...declared].sort());
+  const module = AppModule.forRoot({} as ApiRuntime);
+  expect(Object.keys(documentedOperations).sort()).toEqual([...routesOf(module as unknown as ModuleLike), ...declared].sort());
 });
 
 test("cada entrada aponta para um grupo e para formatos que existem", () => {

@@ -58,7 +58,7 @@ export async function createApiTestApp(env: ApiTestEnv): Promise<ApiTestApp> {
     });
     await runtime.start();
 
-    const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const module = await Test.createTestingModule({ imports: [AppModule.forRoot(runtime)] }).compile();
     const app = module.createNestApplication<NestExpressApplication>({ bodyParser: false, logger: false });
     if (!isLoopbackHost(env.API_HOST ?? "127.0.0.1")) app.enableCors();
     delegateToFastify(app.getHttpAdapter().getInstance(), runtime.fastify, runtime.routes);
