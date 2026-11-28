@@ -43,6 +43,7 @@ function isAllowedNestConsumer(file: string): boolean {
   if (path.startsWith("src/http/")) return true;
   if (path.startsWith("src/testing/")) return true;
   if (path === "src/app.module.ts" || path === "src/main.ts") return true;
+  if (path === "src/composition-root.ts") return true;
   if (path.endsWith(".module.ts")) return true;
   return /^src\/features\/.*\/http\/.*\.controller\.ts$/.test(path);
 }
@@ -75,13 +76,27 @@ describe("auth core without Nest", () => {
       "src/nest/current-actor.decorator.ts",
       "src/nest/auth-exception.filter.ts",
       "src/nest/http-shell.ts",
-      "src/nest/api-documentation.ts",
-      "src/nest/api-gateway.lifecycle.ts",
-      "src/nest/database.module.ts",
+      "src/composition-root.ts",
+      "src/server/auth-server.ts",
     ];
 
     for (const adapter of adapters) {
       expect(existsSync(resolve(authRoot, adapter)), `missing adapter ${adapter}`).toBe(true);
+    }
+  });
+
+  it("does not keep the Nest adapters already replaced by the composition root", () => {
+    const removed = [
+      "src/nest/api-documentation.ts",
+      "src/nest/api-gateway.lifecycle.ts",
+      "src/nest/database.module.ts",
+      "src/http/health.controller.ts",
+      "src/http/jwks.controller.ts",
+      "src/http/http.module.ts",
+    ];
+
+    for (const file of removed) {
+      expect(existsSync(resolve(authRoot, file)), `stale adapter ${file}`).toBe(false);
     }
   });
 

@@ -101,8 +101,7 @@ function portOf(url: string): number {
  * contagem do `server.close()` e deixariam o teardown pendurado.
  */
 async function closeApp(target: TestApp): Promise<void> {
-  const server = target.app.getHttpServer() as Server;
-  server.closeAllConnections();
+  target.server.closeAllConnections();
   await target.close();
 }
 
