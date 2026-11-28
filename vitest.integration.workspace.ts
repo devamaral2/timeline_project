@@ -7,10 +7,10 @@ export default defineWorkspace([
       root: "./apps/api",
       environment: "node",
       include: ["src/**/*.integration.test.ts"],
-      globalSetup: ["../../test/integration/api.global-setup.ts"],
+      // Cada arquivo de teste abre o proprio SQLite num diretorio temporario (ADR 0024): sem container.
       setupFiles: ["../../test/integration/network-guard.ts"],
-      hookTimeout: 120_000,
-      testTimeout: 120_000,
+      hookTimeout: 30_000,
+      testTimeout: 30_000,
     },
   },
   {
