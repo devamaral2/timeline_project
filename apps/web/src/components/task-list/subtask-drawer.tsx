@@ -1,8 +1,9 @@
-import { Bot, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { countsAsDone, isClosedStatus } from "@repo/contracts";
 import type { AgentTaskStatus, HumanTaskStatus, TaskCardDto } from "@repo/contracts";
+import { AgentStatusIcon } from "@/components/tasks/agent-status-icon";
 import { TaskStatusGlyph, taskStatusName } from "@/components/tasks/task-status-glyph";
 import { cardIsOverdue, cardWhenLabel } from "@/lib/tasks/card-text";
 import type { SubtaskTree } from "@/lib/tasks/task-groups";
@@ -32,8 +33,9 @@ interface DrawerProps {
 /**
  * A gaveta (canvas “Lista de tarefas · prioridade e projeto à direita”, quadro C): presa ao glifo da principal por um
  * fio. No topo do fio, a pizza das feitas, “1 de 4 feitas” e a seta, que abre e fecha; embaixo, as subtarefas diretas.
- * Cada uma tem o glifo (o de pessoa abre a mesma escolha de status da lista), o nome que leva ao detalhe, o quando e,
- * se tiver as suas, a própria gaveta logo abaixo.
+ * Cada uma tem à esquerda o glifo (o de pessoa abre a mesma escolha de status da lista; na de agente, um ponto inerte),
+ * o nome que leva ao detalhe, o quando, na de agente o ícone quadrado do status na extrema direita e, se tiver as
+ * suas, a própria gaveta logo abaixo.
  */
 export function SubtaskDrawer({ parent, tree, userId, now, closedIds, onToggle, onStatusClick }: DrawerProps) {
   const subtasks = tree.subtasksOf(parent.id);
@@ -69,8 +71,8 @@ export function SubtaskDrawer({ parent, tree, userId, now, closedIds, onToggle, 
                 <div className={styles.line}>
                   <span className={styles.elbow} aria-hidden="true" />
                   {isAgent ? (
-                    <span className={styles.glyphSlot}>
-                      <TaskStatusGlyph actor="agent" status={card.status as AgentTaskStatus} size={18} />
+                    <span className={styles.glyphSlot} data-row-lead aria-hidden="true">
+                      <span className={styles.idleDot} />
                     </span>
                   ) : (
                     <button
@@ -92,8 +94,7 @@ export function SubtaskDrawer({ parent, tree, userId, now, closedIds, onToggle, 
                   <span className={styles.when} data-overdue={cardIsOverdue(card, now) ? "true" : "false"}>
                     {when === NO_DATE ? null : when}
                   </span>
-                  {/* Decorativo: o nome do glifo já diz "Agente". */}
-                  {isAgent ? <Bot className={styles.agentMark} aria-hidden="true" /> : null}
+                  {isAgent ? <AgentStatusIcon status={card.status as AgentTaskStatus} size={16} className={styles.agentStatus} /> : null}
                 </div>
                 {tree.subtasksOf(card.id).length > 0 ? (
                   <SubtaskDrawer

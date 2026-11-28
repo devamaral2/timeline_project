@@ -3,6 +3,7 @@ package app.braid.mobile.ui.tasks
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -29,7 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.SvgIcon
+import app.braid.mobile.domain.task.TASK_SITUATIONS
 import app.braid.mobile.domain.task.TaskActor
+import app.braid.mobile.domain.task.TaskSituation
 import app.braid.mobile.domain.task.TaskStatus
 import app.braid.mobile.domain.task.humanStatusOptions
 
@@ -38,7 +41,6 @@ import app.braid.mobile.domain.task.humanStatusOptions
  * cada status, o atual marcado. Quem abre decide o que gravar com a escolha, inclusive quando é a opção que já está.
  * É a folha que as outras telas reaproveitam: a lista de tarefas e o detalhe.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskStatusSheet(
     taskName: String,
@@ -47,10 +49,48 @@ fun TaskStatusSheet(
     onPick: (TaskStatus) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    ChoiceSheet(description = "Status de “$taskName”", onDismiss = onDismiss) {
+        humanStatusOptions(longRunning).forEach { status ->
+            ChoiceOption(name = taskStatusName(TaskActor.Human, status), selected = status == current, onClick = { onPick(status) }) {
+                TaskStatusGlyph(actor = TaskActor.Human, status = status, size = 18.dp)
+            }
+        }
+    }
+}
+
+/**
+ * A escolha das três situações de um pedido de agente que terminou, na mesma folha do status de pessoa: o glifo e o
+ * nome de cada uma, a atual marcada. Escolher qualquer uma, inclusive a atual, avisa quem usa, e qualquer situação
+ * vale a partir de qualquer outra.
+ */
+@Composable
+fun TaskSituationSheet(
+    taskName: String,
+    current: TaskSituation,
+    onPick: (TaskSituation) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ChoiceSheet(description = "Situação de “$taskName”", onDismiss = onDismiss) {
+        TASK_SITUATIONS.forEach { situation ->
+            ChoiceOption(name = situationName(situation), selected = situation == current, onClick = { onPick(situation) }) {
+                TaskSituationGlyph(situation, size = 18.dp)
+            }
+        }
+    }
+}
+
+/** A folha inferior das escolhas de uma tarefa: as opções em coluna, com rolagem. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChoiceSheet(
+    description: String,
+    onDismiss: () -> Unit,
+    options: @Composable ColumnScope.() -> Unit,
+) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.background,
-        modifier = Modifier.semantics { contentDescription = "Status de “$taskName”" },
+        modifier = Modifier.semantics { contentDescription = description },
     ) {
         Column(
             Modifier
@@ -59,21 +99,18 @@ fun TaskStatusSheet(
                     rememberScrollState(),
                 ).navigationBarsPadding()
                 .padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
-        ) {
-            humanStatusOptions(longRunning).forEach { status ->
-                StatusOption(status = status, selected = status == current, onClick = { onPick(status) })
-            }
-        }
+            content = options,
+        )
     }
 }
 
 @Composable
-private fun StatusOption(
-    status: TaskStatus,
+private fun ChoiceOption(
+    name: String,
     selected: Boolean,
     onClick: () -> Unit,
+    glyph: @Composable () -> Unit,
 ) {
-    val name = taskStatusName(TaskActor.Human, status)
     Row(
         modifier =
             Modifier
@@ -85,7 +122,7 @@ private fun StatusOption(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(24.dp).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
-            TaskStatusGlyph(actor = TaskActor.Human, status = status, size = 18.dp)
+            glyph()
         }
         Spacer(Modifier.width(10.dp))
         Text(

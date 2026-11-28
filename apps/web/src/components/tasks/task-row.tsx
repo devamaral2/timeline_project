@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
-import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus, TaskSituation } from "@repo/contracts";
+import type { ReactNode } from "react";
+import type { AgentTaskStatus, TaskCardDto, HumanTaskStatus } from "@repo/contracts";
 import { cardDurationLabel, cardIsOverdue, cardWhenLabel } from "@/lib/tasks/card-text";
 import { ProviderMark, providerNames } from "@/components/hub/provider-marks";
 import { ProjectMark } from "@/components/projects/project-line";
 import { TaskKindMark } from "./task-kind-mark";
 import { TaskPriorityMark } from "./task-priority-mark";
-import { SituationMenu } from "./situation-menu";
 import { TaskSituationGlyph, situationNames } from "./task-situation";
 import { AgentStatusIcon } from "./agent-status-icon";
 import { agentStatusNames } from "./agent-status-names";
@@ -25,24 +24,24 @@ export interface TaskRowProps {
   /** Toque no glifo de uma tarefa de pessoa (a tela abre a escolha de status). */
   onStatusClick?: (card: TaskCardDto, anchor: HTMLElement) => void;
   /**
-   * A lista trata a situação do pedido de agente: o glifo da esquerda mostra a situação e abre as três opções na
-   * própria linha. Sem isto (a agenda), o lugar fica com o ponto inerte.
+   * A lista trata a situação do pedido de agente: o glifo da esquerda mostra a situação e o toque nele avisa a tela,
+   * que abre a escolha das três. Sem isto (a agenda), o lugar fica com o ponto inerte.
    */
-  onSituationPick?: (card: TaskCardDto, situation: TaskSituation) => void;
+  onSituationClick?: (card: TaskCardDto, anchor: HTMLElement) => void;
   /** O que vem embaixo da linha, na largura dela (a gaveta das subtarefas na lista). */
   children?: ReactNode;
 }
 
 /**
- * A linha única das listas. À esquerda, o glifo; no resto, três linhas: a do título, que leva sempre na ponta direita a
- * marca do projeto, com a prioridade à esquerda dela na tarefa de pessoa e o símbolo do provedor na de agente (quando o
- * pedido levou a escolha); a do tipo, com o "quando", a duração (quando a tarefa tem) e, na de agente, o ícone quadrado
- * e o nome do status, que não se edita; e, quando há, a das tags.
- * O glifo de pessoa é um botão; à esquerda da tarefa de agente fica o glifo da situação, que abre as três
- * opções na própria linha, ou um ponto inerte (esperando você, execução agendada e a linha sem quem trate a situação).
+ * A linha única das listas. À esquerda, o glifo; no resto, três linhas. A ponta direita das duas primeiras forma uma
+ * coluna: na do título, o nome do status e, na ponta, o ícone quadrado dele na tarefa de agente (que não se edita) e, na de pessoa, a
+ * duração, ou nada quando ela não tem; na do tipo, embaixo, a marca do projeto, com a prioridade à esquerda dela na
+ * tarefa de pessoa e o símbolo do provedor na de agente (quando o pedido levou a escolha). A linha do tipo leva ainda
+ * o "quando" e, na de agente, a duração. A terceira linha, quando há, é a das tags.
+ * O glifo de pessoa é um botão; à esquerda da tarefa de agente fica o glifo da situação, também um botão que abre a
+ * escolha das três, ou um ponto inerte (esperando você, execução agendada e a linha sem quem trate a situação).
  */
-export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, onSituationPick, children }: TaskRowProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
+export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, onSituationClick, children }: TaskRowProps) {
   const isAgent = card.actor === "agent";
   const overdue = !isAgent && cardIsOverdue(card, now);
   const when = cardWhenLabel(card, now, { ruleInPlaceOfTime });
@@ -51,7 +50,7 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
   const agentStatus = card.status as AgentTaskStatus;
   const humanStatus = (card.status ?? null) as HumanTaskStatus | null;
   // O contrato só traz a situação quando a tarefa a aceita (pedido de agente que terminou).
-  const situation = isAgent && onSituationPick ? card.situation : undefined;
+  const situation = isAgent && onSituationClick ? card.situation : undefined;
 
   return (
     <li className={styles.row} data-actor={card.actor} data-status={card.status ?? "reference"}>
@@ -60,8 +59,8 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
           type="button"
           className={styles.glyphButton}
           aria-label={`${situationNames[situation]}. Mudar situação de “${card.name}”`}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((current) => !current)}
+          aria-haspopup="dialog"
+          onClick={(event) => onSituationClick?.(card, event.currentTarget)}
         >
           <TaskSituationGlyph situation={situation} />
         </button>
@@ -80,6 +79,26 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
       <Link href={`/${userId}/tarefas/${card.id}`} className={styles.body}>
         <span className={styles.head} data-row-head>
           <span className={styles.title}>{card.name}</span>
+          {isAgent ? (
+            <span className={styles.status} data-status={agentStatus} data-row-aside>
+              {/* O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */}
+              <span aria-hidden="true">{agentStatusNames[agentStatus]}</span>
+              <AgentStatusIcon status={agentStatus} size={16} />
+            </span>
+          ) : duration ? (
+            <span className={styles.duration} data-row-aside>
+              {duration}
+            </span>
+          ) : null}
+        </span>
+        <span className={styles.meta} data-row-meta>
+          <span className={styles.info}>
+            <TaskKindMark kind={card.kind} />
+            <span className={styles.when} data-overdue={overdue ? "true" : "false"}>
+              {when}
+            </span>
+            {isAgent && duration ? <span className={styles.duration}>{duration}</span> : null}
+          </span>
           <span className={styles.marks} data-row-marks>
             {isAgent && card.model ? (
               <span className={styles.provider} role="img" aria-label={providerNames[card.model.provider]}>
@@ -89,20 +108,6 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
             {isAgent ? null : <TaskPriorityMark priority={card.priority} />}
             <ProjectMark project={card.project} labelled />
           </span>
-        </span>
-        <span className={styles.meta} data-row-meta>
-          <TaskKindMark kind={card.kind} />
-          <span className={styles.when} data-overdue={overdue ? "true" : "false"}>
-            {when}
-          </span>
-          {duration ? <span className={styles.duration}>{duration}</span> : null}
-          {isAgent ? (
-            <span className={styles.status} data-status={agentStatus}>
-              <AgentStatusIcon status={agentStatus} size={16} />
-              {/* O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */}
-              <span aria-hidden="true">{agentStatusNames[agentStatus]}</span>
-            </span>
-          ) : null}
         </span>
         {card.tags.length > 0 ? (
           <span className={styles.tags} data-row-tags>
@@ -114,15 +119,6 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
           </span>
         ) : null}
       </Link>
-      {menuOpen && situation ? (
-        <SituationMenu
-          value={situation}
-          onPick={(next) => {
-            setMenuOpen(false);
-            onSituationPick?.(card, next);
-          }}
-        />
-      ) : null}
       {children}
     </li>
   );

@@ -78,7 +78,9 @@
 .glyphButton:active { transform: scale(.88); }
 .glyphButton:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 0; }
 .glyphSlot { flex: none; display: grid; place-items: center; width: 18px; height: 18px; }
-.line .glyphButton svg, .line .glyphSlot svg { width: 18px; height: 18px; }
+.line .glyphButton svg { width: 18px; height: 18px; }
+/* À esquerda da subtarefa de agente, o mesmo ponto inerte da linha principal. */
+.idleDot { width: 4px; height: 4px; border-radius: 999px; background: var(--muted-foreground); opacity: 0.4; }
 
 .name {
   flex: 0 1 auto;
@@ -108,7 +110,8 @@
   white-space: nowrap;
 }
 .when[data-overdue="true"] { color: var(--destructive); }
-.line .agentMark { flex: none; width: 16px; height: 16px; stroke-width: 1.9; color: var(--brand-accent); }
+/* O ícone do status na extrema direita da subtarefa de agente; a cor sai do `data-status` dele. */
+.line .agentStatus { width: 16px; height: 16px; }
 
 @keyframes subIn { from { opacity: 0; transform: translateY(-8px); } }
 @media (prefers-reduced-motion: reduce) {

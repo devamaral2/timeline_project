@@ -23,8 +23,11 @@ vinculada à principal e nunca solta na lista. Ele escolheu o modelo A ("Gaveta"
    da gaveta também). Os grupos e "N tarefas abertas" contam só as linhas. Até 2026-11-28 era a fração "1/4" na ponta
    direita da linha da principal; ela empurrava a prioridade e o projeto para a esquerda, e o dono do produto pediu que
    os dois fiquem sempre na linha do título (quadro C do canvas "Lista de tarefas · prioridade e projeto à direita").
+   No mesmo dia ele mudou a ponta direita da linha para duas alturas: em cima o status do agente ou a duração da
+   tarefa de pessoa; embaixo a prioridade (ou o provedor) e o projeto.
 3. **Cada subtarefa na gaveta** tem o glifo (o de pessoa abre a mesma escolha de status da lista e grava com a revisão
-   dela), o nome que leva ao detalhe e o quando ("Sem data" não aparece). A subtarefa que tem as suas ganha a mesma
+   dela), o nome que leva ao detalhe e o quando ("Sem data" não aparece). Na de agente, o ícone quadrado do status fica
+   na extrema direita (no lugar do robô que havia ali) e a esquerda leva um ponto inerte (2026-11-28). A subtarefa que tem as suas ganha a mesma
    linha das feitas abaixo dela e abre uma gaveta dentro da gaveta.
 4. **Sem a principal na lista, a subtarefa continua linha**: filtro, modo de visualização ou principal sem status
    não fazem a tarefa sumir. Um ciclo vindo da rede também não esconde ninguém.

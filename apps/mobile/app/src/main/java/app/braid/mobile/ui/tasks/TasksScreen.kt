@@ -273,27 +273,28 @@ private fun DrawerSection(
             // O glifo de uma tarefa de pessoa, com qualquer status, abre a folha; o de agente é só leitura.
             val opensPicker = card.actor == TaskActor.Human
             val subtasks = tree.subtasksOf(card.id)
-            // O glifo da tarefa de agente que terminou abre as três opções de situação logo abaixo da linha.
-            var situationMenuOpen by remember(card.id) { mutableStateOf(false) }
+            // O glifo da tarefa de agente que terminou abre a folha das três situações.
+            var situationSheetOpen by remember(card.id) { mutableStateOf(false) }
             TaskRow(
                 card = card,
                 now = now,
                 onClick = { onOpenTask(card.id) },
                 onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null,
-                onSituationClick = { situationMenuOpen = !situationMenuOpen },
+                onSituationClick = { situationSheetOpen = true },
                 ruleInPlaceOfTime = showsSeriesRule(card),
                 // Com subtarefas, a gaveta vem logo abaixo da linha do tipo.
                 bottomPadding = if (subtasks.isEmpty()) 16.dp else 0.dp,
             )
             val situation = card.situation
-            if (situationMenuOpen && situation != null) {
-                SituationMenu(
-                    value = situation,
+            if (situationSheetOpen && situation != null) {
+                TaskSituationSheet(
+                    taskName = card.name,
+                    current = situation,
                     onPick = {
-                        situationMenuOpen = false
+                        situationSheetOpen = false
                         onSituationPick(card, it)
                     },
-                    modifier = Modifier.padding(start = 36.dp, top = 2.dp, bottom = 10.dp),
+                    onDismiss = { situationSheetOpen = false },
                 )
             }
             if (subtasks.isNotEmpty()) {

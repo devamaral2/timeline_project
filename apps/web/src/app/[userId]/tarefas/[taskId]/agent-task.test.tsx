@@ -139,10 +139,10 @@ test("o detalhe do pedido muda a situação: grava na API e continua assim ao re
   await loaded();
 
   fireEvent.click(await situationControl());
-  fireEvent.click(within(screen.getByRole("group", { name: "Situação da tarefa" })).getByRole("button", { name: "Guardada" }));
+  fireEvent.click(within(screen.getByRole("listbox", { name: "Situação da tarefa" })).getByRole("option", { name: "Guardada" }));
 
   expect(await situationControl()).toHaveAccessibleName("Guardada. Mudar situação");
-  expect(screen.queryByRole("group", { name: "Situação da tarefa" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("listbox", { name: "Situação da tarefa" })).not.toBeInTheDocument();
   await waitFor(() => expect(api.calls.some((call) => call.method === "PUT")).toBe(true));
   expect(api.calls.find((call) => call.method === "PUT")).toMatchObject({ pathname: `/api/tasks/${ID}/situation`, body: { situation: "bookmarked" } });
 
@@ -159,7 +159,7 @@ test("com a API falhando, a situação volta ao que era e o detalhe avisa", asyn
   api.failNext("PUT", `/api/tasks/${ID}/situation`, 500);
 
   fireEvent.click(await situationControl());
-  fireEvent.click(within(screen.getByRole("group", { name: "Situação da tarefa" })).getByRole("button", { name: "Revisada" }));
+  fireEvent.click(within(screen.getByRole("listbox", { name: "Situação da tarefa" })).getByRole("option", { name: "Revisada" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível mudar a situação");
   expect(await situationControl()).toHaveAccessibleName("Para revisar. Mudar situação");
@@ -210,8 +210,10 @@ test("no cabeçalho do pedido terminado a situação vem antes do status, que fi
   const situation = await situationControl();
   const status = within(screen.getByRole("region", { name: "Resumo da tarefa" })).getByText("Concluído");
   expect(situation.compareDocumentPosition(status)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-  expect(situation.parentElement?.firstElementChild).toBe(situation);
-  expect(situation.parentElement?.lastElementChild).toContainElement(status);
+  // O seletor (o botão e a lista dele) é o primeiro da linha; o status é o último.
+  const line = situation.parentElement?.parentElement as HTMLElement;
+  expect(line.firstElementChild).toContainElement(situation);
+  expect(line.lastElementChild).toContainElement(status);
 });
 
 test("a tarefa de agente mostra a tarefa principal e as subtarefas, somente leitura, com pontas de pessoa e de agente", async () => {

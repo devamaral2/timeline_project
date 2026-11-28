@@ -1,6 +1,7 @@
 package app.braid.mobile.ui.tasks
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -179,8 +181,9 @@ private val TOGGLE_HEIGHT = 44.dp
 
 /**
  * A gaveta: presa ao glifo da principal por um fio, com a linha das feitas no topo ([SubtaskToggle]) e, quando aberta,
- * as subtarefas diretas de [parent]. Cada uma tem o glifo (o de pessoa abre a mesma escolha de status da lista), o nome
- * que leva ao detalhe, o quando e, se tiver as suas, a própria gaveta logo abaixo. [closedIds] são as tarefas com a
+ * as subtarefas diretas de [parent]. Cada uma tem à esquerda o glifo (o de pessoa abre a mesma escolha de status da
+ * lista; na de agente, um ponto inerte), o nome que leva ao detalhe, o quando, na de agente o ícone quadrado do status
+ * na extrema direita e, se tiver as suas, a própria gaveta logo abaixo. [closedIds] são as tarefas com a
  * gaveta fechada.
  */
 @Composable
@@ -269,8 +272,9 @@ private fun SubtaskLine(
         // O glifo de 18 dp tem o centro a 33 dp do fio; a área de toque de 36 dp passa por cima da margem.
         Spacer(Modifier.width(LINE_START - 9.dp))
         if (isAgent) {
-            Box(Modifier.size(GLYPH_TOUCH), contentAlignment = Alignment.Center) {
-                TaskStatusGlyph(actor = card.actor, status = card.status, size = 18.dp)
+            // O mesmo ponto inerte da linha principal.
+            Box(Modifier.size(GLYPH_TOUCH).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(4.dp).background(muted.copy(alpha = 0.4f), CircleShape))
             }
         } else {
             Box(
@@ -310,14 +314,7 @@ private fun SubtaskLine(
             )
         }
         if (isAgent) {
-            // Decorativo: o nome do glifo já diz "Agente".
-            SvgIcon(
-                BraidIcons.bot,
-                size = 16.dp,
-                color = braidTokens().brandAccent,
-                strokeWidth = 1.9f,
-                modifier = Modifier.padding(start = 10.dp).clearAndSetSemantics {},
-            )
+            AgentStatusIcon(status = card.status, modifier = Modifier.padding(start = 10.dp), size = 16.dp)
         }
     }
 }

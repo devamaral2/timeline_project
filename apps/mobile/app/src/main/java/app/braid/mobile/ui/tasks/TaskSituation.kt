@@ -1,36 +1,18 @@
 package app.braid.mobile.ui.tasks
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.core.designsystem.svgCircle
-import app.braid.mobile.domain.task.TASK_SITUATIONS
 import app.braid.mobile.domain.task.TaskSituation
 
 /** O nome da situação, na tela e para o leitor de tela: o `situationNames` do web. Uma situação que o app não conhece só diz "Situação". */
@@ -85,40 +67,4 @@ fun TaskSituationGlyph(
         strokeWidth = SITUATION_STROKE,
         modifier = modifier.clearAndSetSemantics { contentDescription = description },
     )
-}
-
-/**
- * As três opções de situação, em pílulas: sob a linha da tarefa (a lista) ou sob o cabeçalho (o detalhe). A atual vem
- * marcada; escolher qualquer uma, inclusive a atual, avisa quem usa, e qualquer situação vale a partir de qualquer outra.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun SituationMenu(
-    value: TaskSituation,
-    onPick: (TaskSituation) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    FlowRow(
-        modifier.semantics { contentDescription = "Situação da tarefa" },
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        TASK_SITUATIONS.forEach { situation ->
-            val selected = situation == value
-            val scheme = MaterialTheme.colorScheme
-            Row(
-                modifier =
-                    Modifier
-                        .defaultMinSize(minHeight = 44.dp)
-                        .background(if (selected) scheme.surfaceVariant else Color.Transparent, CircleShape)
-                        .border(BorderStroke(1.dp, if (selected) scheme.onSurfaceVariant else scheme.outline), CircleShape)
-                        .semantics { this.selected = selected }
-                        .clickable(role = Role.Button) { onPick(situation) }
-                        .padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(situationName(situation), color = scheme.onBackground, fontSize = 13.sp, lineHeight = 18.sp)
-            }
-        }
-    }
 }
