@@ -6,18 +6,18 @@ import { Artifact, ProjectNotFoundError, type FoodData } from "../../domain";
 import { ModelRequestError, type ModelChatInput } from "../../infrastructure/model-agent/model-agent";
 import { HermesRequestError, HermesRunInterruptedError, type HermesChatInput } from "../../infrastructure/hermes/hermes.client";
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
-import { PostgresEntityBatchWriter } from "../../infrastructure/persistence/agent-batch/postgres-entity-batch-writer";
-import { PostgresScopedSqlQuery } from "../../infrastructure/persistence/agent-sql/postgres-scoped-sql.query";
-import { PostgresWorkoutCatalog } from "../../infrastructure/persistence/artifacts/postgres-workout.catalog";
-import { PostgresArtifactRepository } from "../../infrastructure/persistence/artifacts/repositories/postgres-artifact.repository";
-import { PostgresDatabase } from "../../infrastructure/persistence/database/postgres-database";
-import { PostgresTaskRepository } from "../../infrastructure/persistence/tasks/repositories/postgres-task.repository";
-import { PostgresJobStore } from "../../infrastructure/persistence/jobs/postgres-job.store";
-import { PostgresRecurrenceRepository } from "../../infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository";
-import { PostgresCandidateQuery } from "../../infrastructure/persistence/requests/postgres-candidate.query";
-import { PostgresRequestStore } from "../../infrastructure/persistence/requests/postgres-request.store";
+import { SqliteEntityBatchWriter } from "../../infrastructure/persistence/agent-batch/sqlite-entity-batch-writer";
+import { SqliteScopedSqlQuery } from "../../infrastructure/persistence/agent-sql/sqlite-scoped-sql.query";
+import { SqliteWorkoutCatalog } from "../../infrastructure/persistence/artifacts/sqlite-workout.catalog";
+import { SqliteArtifactRepository } from "../../infrastructure/persistence/artifacts/repositories/sqlite-artifact.repository";
+import { SqliteTaskRepository } from "../../infrastructure/persistence/tasks/repositories/sqlite-task.repository";
+import { SqliteJobStore } from "../../infrastructure/persistence/jobs/sqlite-job.store";
+import { SqliteRecurrenceRepository } from "../../infrastructure/persistence/recurrences/repositories/sqlite-recurrence.repository";
+import { SqliteCandidateQuery } from "../../infrastructure/persistence/requests/sqlite-candidate.query";
+import { SqliteRequestStore } from "../../infrastructure/persistence/requests/sqlite-request.store";
+import { sql } from "@repo/sqlite";
 import { trackedTask } from "../../infrastructure/persistence/testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../../infrastructure/persistence/testing/postgres-test-context";
+import { createSqliteTestContext, type SqliteTestContext } from "../../infrastructure/persistence/testing/sqlite-test-context";
 import { FastStageError } from "../agent/errors/agent.errors";
 import { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
 import { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
@@ -42,16 +42,28 @@ import {
 import { VoiceTaskWorker } from "./voice-task-worker";
 
 /**
- * O pedido de ponta a ponta no Postgres de verdade: a rota grava o pedido e o job, a fila unica entrega os jobs
+ * O pedido de ponta a ponta no SQLite de verdade: a rota grava o pedido e o job, a fila unica entrega os jobs
  * aos handlers e o que sobra e lido como o cliente le. So os modelos (JEV, agentes, Hermes) sao combinados.
  */
 
-let ctx: PostgresTestContext;
+let ctx: SqliteTestContext;
+
+/** As colunas JSON voltam como texto: os testes as leem ja decodificadas. */
+const JSON_COLUMNS = new Set(["data", "payload", "response"]);
+/** SQL de conferencia com `$1`, `$2`..., pelo escritor (enxerga o que acabou de ser gravado). */
+async function query<T extends Record<string, unknown> = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<{ rows: T[] }> {
+  const { rows } = await ctx.db.execute<Record<string, unknown>>(sql.unsafe(text, params));
+  return {
+    rows: rows.map((row) => Object.fromEntries(
+      Object.entries(row).map(([key, value]) => [key, JSON_COLUMNS.has(key) && typeof value === "string" ? JSON.parse(value) : value]),
+    )) as T[],
+  };
+}
 let jobs: JobsService;
 let operations: RequestOperations;
-let store: PostgresRequestStore;
-let tasks: PostgresTaskRepository;
-let artifacts: PostgresArtifactRepository;
+let store: SqliteRequestStore;
+let tasks: SqliteTaskRepository;
+let artifacts: SqliteArtifactRepository;
 /** A pergunta a que o JEV de entrada responde `yes` no proximo pedido; sem nenhuma, o pedido e uma tarefa de agente. */
 let route: DispatchRoute | undefined = "write";
 /** O modelo que atende um pedido de configuracao; sem ele, o modo modelo nao vale para o usuario. */
@@ -76,18 +88,18 @@ const noTask = {
 };
 
 beforeAll(async () => {
-  ctx = await createPostgresTestContext();
-  const database = new PostgresDatabase(ctx.pool);
+  ctx = await createSqliteTestContext();
+  const database = ctx.database;
   const env = getJobsEnv({ AI_JOBS_LEASE_MS: "60000", AI_JOBS_MAX_ATTEMPTS: "1", AI_JOBS_CONCURRENCY: "4" });
-  jobs = new JobsService(new PostgresJobStore(database, env.AI_JOBS_LEASE_MS, env.AI_JOBS_MAX_ATTEMPTS), env);
-  tasks = new PostgresTaskRepository(ctx.db);
-  artifacts = new PostgresArtifactRepository(ctx.db);
-  const repositories = { tasks, artifacts, recurrences: new PostgresRecurrenceRepository(ctx.db) };
-  const artifactBuilder = new ArtifactBuilder(new PostgresWorkoutCatalog(ctx.db));
-  const batchWriter = new PostgresEntityBatchWriter(ctx.db);
+  jobs = new JobsService(new SqliteJobStore(database, env.AI_JOBS_LEASE_MS, env.AI_JOBS_MAX_ATTEMPTS), env);
+  tasks = new SqliteTaskRepository(ctx.db);
+  artifacts = new SqliteArtifactRepository(ctx.db);
+  const repositories = { tasks, artifacts, recurrences: new SqliteRecurrenceRepository(ctx.db) };
+  const artifactBuilder = new ArtifactBuilder(new SqliteWorkoutCatalog(ctx.db));
+  const batchWriter = new SqliteEntityBatchWriter(ctx.db);
   const createTask = new CreateTaskUseCase(tasks, artifacts, artifactBuilder, batchWriter);
-  store = new PostgresRequestStore(database);
-  const sql = new PostgresScopedSqlQuery(ctx.pool);
+  store = new SqliteRequestStore(database);
+  const sql = new SqliteScopedSqlQuery(ctx.db);
   const runner = new RequestAgentRunner(gateway, { thoughts: store, reasoning: "low" });
 
   // O JEV so responde as tres perguntas do destino; o resto e do agente de escrita.
@@ -96,7 +108,7 @@ beforeAll(async () => {
   const deps = { store, runner, batchWriter, repositories, createTask };
   operations = new RequestOperations(jobs, store, {
     dispatcher: new RequestDispatcher(store, jev.client, {
-      candidates: new PostgresCandidateQuery(database), model: async () => configModel,
+      candidates: new SqliteCandidateQuery(database), model: async () => configModel,
     }),
     entity: new RequestEntityWorker({ ...deps, sql }),
     edit: new RequestEditWorker(deps),
@@ -116,21 +128,21 @@ beforeAll(async () => {
   operations.startHandlers();
   // Cada mudanca de status de uma tarefa de agente fica registrada, na ordem: e o que prova o ciclo de vida inteiro,
   // inclusive os status que duram um instante (`starting`).
-  await ctx.pool.query(`
-    CREATE TABLE status_log (n bigserial PRIMARY KEY, task_id char(26) NOT NULL, status text NOT NULL, finished boolean NOT NULL);
-    CREATE FUNCTION log_status() RETURNS trigger AS $$
+  ctx.database.handle.exec(`
+    CREATE TABLE status_log (n INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, status TEXT NOT NULL, finished INTEGER NOT NULL);
+    CREATE TRIGGER tasks_log_insert AFTER INSERT ON tasks WHEN NEW.actor = 'agent'
     BEGIN
-      IF NEW.actor = 'agent' AND (TG_OP = 'INSERT' OR NEW.status IS DISTINCT FROM OLD.status) THEN
-        INSERT INTO status_log (task_id, status, finished) VALUES (NEW.id, NEW.status, NEW.finished_at IS NOT NULL);
-      END IF;
-      RETURN NEW;
-    END $$ LANGUAGE plpgsql;
-    CREATE TRIGGER tasks_log_status AFTER INSERT OR UPDATE ON tasks FOR EACH ROW EXECUTE FUNCTION log_status();`);
+      INSERT INTO status_log (task_id, status, finished) VALUES (NEW.id, NEW.status, NEW.finished_at IS NOT NULL);
+    END;
+    CREATE TRIGGER tasks_log_update AFTER UPDATE ON tasks WHEN NEW.actor = 'agent' AND NEW.status IS NOT OLD.status
+    BEGIN
+      INSERT INTO status_log (task_id, status, finished) VALUES (NEW.id, NEW.status, NEW.finished_at IS NOT NULL);
+    END;`);
 }, 120000);
 
 beforeEach(async () => {
   await ctx.reset();
-  await ctx.pool.query("TRUNCATE status_log");
+  await query("DELETE FROM status_log");
   gateway.outputs.clear();
   gateway.reasonings.clear();
   gateway.calls.length = 0;
@@ -157,27 +169,27 @@ async function drain(): Promise<string[]> {
   for (let round = 0; round < 50; round += 1) {
     await jobs.tick();
     await jobs.idle();
-    const { rows } = await ctx.pool.query("SELECT 1 FROM jobs WHERE status IN ('queued', 'running') AND available_at <= now() LIMIT 1");
+    const { rows } = await query("SELECT 1 FROM jobs WHERE status IN ('queued', 'running') AND available_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') LIMIT 1");
     if (rows.length === 0) break;
   }
-  const { rows } = await ctx.pool.query<{ kind: string }>("SELECT kind FROM jobs ORDER BY created_at, id");
+  const { rows } = await query<{ kind: string }>("SELECT kind FROM jobs ORDER BY created_at, id");
   return rows.map((row) => row.kind);
 }
 
 /** Os status por que a tarefa de agente passou, na ordem. */
 const historyOf = async (taskId: string) =>
-  (await ctx.pool.query<{ status: string }>("SELECT status FROM status_log WHERE task_id = $1 ORDER BY n", [taskId]))
+  (await query<{ status: string }>("SELECT status FROM status_log WHERE task_id = $1 ORDER BY n", [taskId]))
     .rows.map((row) => row.status);
 
 const statusOf = async (taskId: string) =>
-  (await ctx.pool.query<{ status: string }>("SELECT status FROM tasks WHERE id = $1", [taskId])).rows[0]?.status;
+  (await query<{ status: string }>("SELECT status FROM tasks WHERE id = $1", [taskId])).rows[0]?.status;
 
 const jobStatuses = async () =>
-  (await ctx.pool.query<{ kind: string; status: string }>("SELECT kind, status FROM jobs ORDER BY created_at, id")).rows;
+  (await query<{ kind: string; status: string }>("SELECT kind, status FROM jobs ORDER BY created_at, id")).rows;
 
 /** O pedido fecha para revisar, e nenhum passo ganha situacao: so o pedido tem. */
 async function situations(requestId: string): Promise<{ request: string | null; steps: Array<string | null> }> {
-  const { rows } = await ctx.pool.query<{ id: string; kind: string; situation: string | null }>(
+  const { rows } = await query<{ id: string; kind: string; situation: string | null }>(
     "SELECT id, kind, situation FROM tasks WHERE actor = 'agent' ORDER BY id",
   );
   return {
@@ -275,7 +287,7 @@ test("o exemplo-guia: um passo so grava tudo, a refeicao nasce com o alimento li
   expect(build?.trace).toBeUndefined();
 
   // Os pedidos e os passos nao aparecem na consulta do agente nem como tarefa de pessoa.
-  const humans = await ctx.pool.query("SELECT name FROM tasks WHERE actor = 'human' ORDER BY name");
+  const humans = await query("SELECT name FROM tasks WHERE actor = 'human' ORDER BY name");
   expect(humans.rows.map((row) => row.name)).toEqual(["Nadar na praia", "Refeição"]);
 });
 
@@ -342,7 +354,7 @@ test("consulta: as linhas ficam no passo e so enxergam as tarefas de pessoa do u
   expect(gateway.calls.at(-1)?.user).toContain("Esquema:");
 });
 
-test("o modelo recebe a escolha e as trocas anteriores da sessao, lidas do Postgres, e a resposta fica no pedido", async () => {
+test("o modelo recebe a escolha e as trocas anteriores da sessao, lidas do SQLite, e a resposta fica no pedido", async () => {
   const trace: AgentTraceDto = { route: "model", status: "done", fields: [], entries: [] };
   const model = { provider: "openrouter", model: "x-ai/grok-4.7", effort: "low" } as const;
   const selections: ModelChatInput["selection"][] = [];
@@ -430,7 +442,7 @@ test("o passo de escrita que falha fecha o pedido com a explicacao, sem gravar n
   const view = await operations.view(requestId, actor);
   expect(view).toMatchObject({ status: "failed", message: "Não consegui registrar o almoço.", entities: [] });
   expect(view.steps.map((step) => [step.agent, step.status, step.errorCode])).toEqual([["entity", "failed", "internal"]]);
-  expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(0);
+  expect((await query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(0);
 });
 
 test("o job de um passo que morre nunca deixa o pedido aberto", async () => {
@@ -438,7 +450,7 @@ test("o job de um passo que morre nunca deixa o pedido aberto", async () => {
   await jobs.tick();
   await jobs.idle();
   // O worker morreu no meio: sem tentativa sobrando, a fila projeta a falha no passo.
-  await ctx.pool.query("UPDATE jobs SET attempts = 5 WHERE kind = 'request-step'");
+  await query("UPDATE jobs SET attempts = 5 WHERE kind = 'request-step'");
   await drain();
 
   const view = await operations.view(requestId, actor);
@@ -483,7 +495,7 @@ test("voz: o pedido gera a tarefa de pessoa; reenviar a mesma fala nao cria outr
   expect(view.trace).toBeUndefined();
   const created = await tasks.findById(view.entities[0]?.id as string);
   expect(created).toMatchObject({ actor: "human", description: "comecei a estudar" });
-  expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(1);
+  expect((await query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(1);
 });
 
 test("voz: o modelo falha de vez e o pedido termina como falha, sem tarefa", async () => {
@@ -523,7 +535,7 @@ test("Hermes: o rastro vem do progresso enquanto roda e das entradas depois que 
 
   expect(session).toBe(`braid-user-1-${accepted.id}`);
   // O job terminou e um dia sera apagado: o que o cliente le sai do pedido.
-  await ctx.pool.query("DELETE FROM jobs");
+  await query("DELETE FROM jobs");
   const view = await operations.view(accepted.id, actor);
   expect(view).toMatchObject({
     status: "completed", message: "Você tem uma reunião.", trace: final,
@@ -545,7 +557,7 @@ test("cancelar: os jobs vivos param, o pedido que rodava fica interrompido, o pa
   await drain();
 
   expect((await jobStatuses()).filter((job) => job.kind === "request-step").map((job) => job.status)).toEqual(["cancelled"]);
-  expect((await ctx.pool.query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(0);
+  expect((await query("SELECT 1 FROM tasks WHERE actor = 'human'")).rows).toHaveLength(0);
   expect(gateway.calls).toHaveLength(0);
   expect(await operations.view(requestId, actor)).toMatchObject({ status: "interrupted", entities: [] });
 });
@@ -557,29 +569,31 @@ test("o modelo fora do ar vira passo vermelho com codigo, e o texto do usuario s
   await drain();
 
   expect((await operations.view(requestId, actor)).steps).toMatchObject([{ status: "failed", errorCode: "agent_timeout" }]);
-  const leaked = await ctx.pool.query(
-    "SELECT kind FROM task_entries WHERE kind IN ('trace', 'result') AND (content LIKE '%Zuleide%' OR data::text LIKE '%Zuleide%')");
+  const leaked = await query(
+    "SELECT kind FROM task_entries WHERE kind IN ('trace', 'result') AND (content LIKE '%Zuleide%' OR data LIKE '%Zuleide%')");
   expect(leaked.rows).toEqual([]);
-  const traces = await ctx.pool.query("SELECT content FROM task_entries WHERE kind = 'trace'");
+  const traces = await query("SELECT content FROM task_entries WHERE kind = 'trace'");
   expect(traces.rows.length).toBeGreaterThan(0);
   expect(traces.rows.every((row) => row.content === null)).toBe(true);
 });
 
 // Projetos (ADR 0022): o trabalho de um pedido fica no projeto dele.
 
-const projectOf = async (taskId: string) =>
-  (await ctx.pool.query<{ name: string; personal: boolean }>(
+const projectOf = async (taskId: string) => {
+  const [row] = (await query<{ name: string; personal: number }>(
     "SELECT p.name, p.personal FROM tasks t JOIN projects p ON p.id = t.project_id WHERE t.id = $1", [taskId],
-  )).rows[0];
+  )).rows;
+  return row ? { name: row.name, personal: row.personal === 1 } : undefined;
+};
 
 async function newProject(name: string, userId = "user-1"): Promise<string> {
   const id = ulid();
-  await ctx.pool.query("INSERT INTO projects (id, user_id, name) VALUES ($1, $2, $3)", [id, userId, name]);
+  await query("INSERT INTO projects (id, user_id, name) VALUES ($1, $2, $3)", [id, userId, name]);
   return id;
 }
 
 const stepIdsOf = async (requestId: string) =>
-  (await ctx.pool.query<{ id: string }>(
+  (await query<{ id: string }>(
     "SELECT to_task_id AS id FROM task_task_relation WHERE from_task_id = $1 AND relation = 'step'", [requestId],
   )).rows.map((row) => row.id);
 
@@ -651,7 +665,7 @@ test("projeto: o pedido de edicao sobre uma tarefa fica no projeto dela, e a sub
   const braid = await newProject("braid");
   const parent = trackedTask("user-1", "Lançar a versão");
   await tasks.save(parent);
-  await ctx.pool.query("UPDATE tasks SET project_id = $1 WHERE id = $2", [braid, parent.id]);
+  await query("UPDATE tasks SET project_id = $1 WHERE id = $2", [braid, parent.id]);
   gateway.outputs.set("task_edit", entityEdit(parent.id, ["Escrever as notas"]));
 
   const requestId = await operations.startEdit({ userId: "user-1", text: "divida em partes", entityType: "task", entityId: parent.id }, actor);
@@ -685,11 +699,11 @@ test("projeto: o projectId das tres rotas vale sobre a sessao, e o projeto de ou
   expect(hermes.project.id).toBe(other);
   expect(modelTurn.project.id).toBe(other);
 
-  const before = (await ctx.pool.query("SELECT 1 FROM tasks")).rows.length;
+  const before = (await query("SELECT 1 FROM tasks")).rows.length;
   await expect(operations.start({ userId: "user-1", text: "x", projectId: alheio }, actor)).rejects.toBeInstanceOf(ProjectNotFoundError);
   await expect(operations.startHermes({ userId: "user-1", text: "x", clientMessageId: "h9", projectId: alheio }, actor)).rejects.toBeInstanceOf(ProjectNotFoundError);
   await expect(operations.startModel({ userId: "user-1", text: "x", clientMessageId: "m9", projectId: alheio, model }, actor)).rejects.toBeInstanceOf(ProjectNotFoundError);
-  expect((await ctx.pool.query("SELECT 1 FROM tasks")).rows).toHaveLength(before);
+  expect((await query("SELECT 1 FROM tasks")).rows).toHaveLength(before);
 });
 
 test("projeto: o pedido de voz e o calculo de alimento ficam em personal, mesmo com outros projetos", async () => {
@@ -787,12 +801,12 @@ test("ciclo de vida: o pedido que ja nasce com destino nasce queued e passa por 
 
 test.each([["preparing"], ["queued"], ["starting"], ["waiting"]])("cancelar em %s deixa cancelled, com o codigo cancelled", async (status) => {
   const accepted = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: `c-${status}` }, actor);
-  await ctx.pool.query("UPDATE tasks SET status = $1 WHERE id = $2", [status, accepted.id]);
+  await query("UPDATE tasks SET status = $1 WHERE id = $2", [status, accepted.id]);
 
   const view = await operations.cancel(accepted.id, actor);
   expect(view).toMatchObject({ status: "cancelled", errorCode: "cancelled" });
   expect(await historyOf(accepted.id)).toEqual([...new Set(["queued", status, "cancelled"])]);
-  expect((await ctx.pool.query("SELECT finished_at FROM tasks WHERE id = $1", [accepted.id])).rows[0]?.finished_at).not.toBeNull();
+  expect((await query("SELECT finished_at FROM tasks WHERE id = $1", [accepted.id])).rows[0]?.finished_at).not.toBeNull();
   // O fim passa pelo mesmo fechamento: o pedido fica para revisar.
   expect(await situations(accepted.id)).toEqual({ request: "to_review", steps: [] });
 });
@@ -804,13 +818,13 @@ test("cancelar em running deixa interrupted, e os passos seguem: o queued vira c
   await store.beginSteps(requestId, [
     { id: queuedStep, agent: "entity", expected: "many" }, { id: runningStep, agent: "query", expected: "one" },
   ]);
-  await ctx.pool.query("UPDATE tasks SET status = 'running' WHERE id = $1", [runningStep]);
+  await query("UPDATE tasks SET status = 'running' WHERE id = $1", [runningStep]);
 
   const view = await operations.cancel(requestId, actor);
   expect(view).toMatchObject({ status: "interrupted", errorCode: "cancelled" });
   expect(await statusOf(queuedStep)).toBe("cancelled");
   expect(await statusOf(runningStep)).toBe("interrupted");
-  expect((await ctx.pool.query("SELECT finished_at FROM tasks WHERE id IN ($1, $2)", [queuedStep, runningStep])).rows.every((row) => row.finished_at)).toBe(true);
+  expect((await query("SELECT finished_at FROM tasks WHERE id IN ($1, $2)", [queuedStep, runningStep])).rows.every((row) => row.finished_at)).toBe(true);
   expect(await historyOf(requestId)).toEqual(["preparing", "running", "interrupted"]);
   // O pedido interrompido fica para revisar; os passos, cancelado e interrompido, nao tem situacao.
   expect(await situations(requestId)).toEqual({ request: "to_review", steps: [null, null] });
@@ -835,8 +849,8 @@ test("o job abandonado por tentativas esgotadas deixa o pedido que rodava interr
   const running = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "a1" }, actor);
   const waiting = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: "a2" }, actor);
   // O worker morreu com o pedido de a1 rodando, e nenhum dos dois job tem tentativa sobrando.
-  await ctx.pool.query("UPDATE tasks SET status = 'running' WHERE id = $1", [running.id]);
-  await ctx.pool.query("UPDATE jobs SET attempts = 5 WHERE kind = 'hermes-turn'");
+  await query("UPDATE tasks SET status = 'running' WHERE id = $1", [running.id]);
+  await query("UPDATE jobs SET attempts = 5 WHERE kind = 'hermes-turn'");
   await drain();
 
   expect(await operations.view(running.id, actor)).toMatchObject({ status: "interrupted" });
@@ -850,7 +864,7 @@ test("uma nova tentativa do worker sobre um pedido em starting ou running contin
   hermesReply = async () => ({ text: "ok", trace });
   for (const status of ["starting", "running"]) {
     const accepted = await operations.startHermes({ userId: "user-1", text: "oi", clientMessageId: `r-${status}` }, actor);
-    await ctx.pool.query("UPDATE tasks SET status = $1 WHERE id = $2", [status, accepted.id]);
+    await query("UPDATE tasks SET status = $1 WHERE id = $2", [status, accepted.id]);
     await drain();
     expect(await operations.view(accepted.id, actor)).toMatchObject({ status: "completed", message: "ok" });
   }

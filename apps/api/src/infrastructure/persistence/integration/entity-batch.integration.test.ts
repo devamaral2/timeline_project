@@ -1,16 +1,13 @@
-import { sql } from "drizzle-orm";
 import { ulid } from "ulid";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { EntityBatchConflictError, TaskValidationError, type ArtifactLink, type Task } from "../../../domain";
 import type { EntityBatch } from "../../../domain/ports";
 import { jobContext, type CurrentJob } from "../../jobs/job-context";
-import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
-import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
-import { PostgresDatabase } from "../database/postgres-database";
-import * as schema from "../database/schema";
-import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
-import { PostgresJobStore } from "../jobs/postgres-job.store";
-import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgres-recurrence.repository";
+import { SqliteEntityBatchWriter } from "../agent-batch/sqlite-entity-batch-writer";
+import { SqliteArtifactRepository } from "../artifacts/repositories/sqlite-artifact.repository";
+import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
+import { SqliteJobStore } from "../jobs/sqlite-job.store";
+import { SqliteRecurrenceRepository } from "../recurrences/repositories/sqlite-recurrence.repository";
 import { insertAgentTask } from "../requests/request-rows";
 import type { Tx } from "../shared/tx";
 import {
@@ -25,7 +22,8 @@ import {
   textArtifact,
   trackedTask,
 } from "../testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import { sql } from "@repo/sqlite";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 const link = (artifactId: string, relation: ArtifactLink["relation"] = "uses"): ArtifactLink => ({
   artifactId,
@@ -35,19 +33,19 @@ const link = (artifactId: string, relation: ArtifactLink["relation"] = "uses"): 
 
 const batchOf = (overrides: Partial<EntityBatch>): EntityBatch => ({ userId: USER, tasks: [], artifacts: [], ...overrides });
 
-describe("PostgresEntityBatchWriter", () => {
-  let ctx: PostgresTestContext;
-  let writer: PostgresEntityBatchWriter;
-  let tasks: PostgresTaskRepository;
-  let artifacts: PostgresArtifactRepository;
-  let recurrences: PostgresRecurrenceRepository;
+describe("SqliteEntityBatchWriter", () => {
+  let ctx: SqliteTestContext;
+  let writer: SqliteEntityBatchWriter;
+  let tasks: SqliteTaskRepository;
+  let artifacts: SqliteArtifactRepository;
+  let recurrences: SqliteRecurrenceRepository;
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
-    writer = new PostgresEntityBatchWriter(ctx.db);
-    tasks = new PostgresTaskRepository(ctx.db);
-    artifacts = new PostgresArtifactRepository(ctx.db);
-    recurrences = new PostgresRecurrenceRepository(ctx.db);
+    ctx = await createSqliteTestContext();
+    writer = new SqliteEntityBatchWriter(ctx.db);
+    tasks = new SqliteTaskRepository(ctx.db);
+    artifacts = new SqliteArtifactRepository(ctx.db);
+    recurrences = new SqliteRecurrenceRepository(ctx.db);
   }, 60000);
 
   beforeEach(async () => {
@@ -57,6 +55,9 @@ describe("PostgresEntityBatchWriter", () => {
   afterAll(async () => {
     await ctx?.stop();
   });
+
+  /** SQL de escrita dos testes, com `$1`, `$2`... no lugar dos valores. */
+  const exec = (text: string, params: unknown[] = []) => ctx.db.execute(sql.unsafe(text, params));
 
   async function saved(task: Task): Promise<Task> {
     await tasks.save(task);
@@ -107,8 +108,8 @@ describe("PostgresEntityBatchWriter", () => {
 
       expect(await tasks.findById(task.id)).toBeNull();
       expect(await artifacts.findById(note.id)).toBeNull();
-      expect(await countRows(ctx.pool, "tasks", "deleted_at IS NOT NULL")).toBe(1);
-      expect(await countRows(ctx.pool, "artifacts", "deleted_at IS NOT NULL")).toBe(1);
+      expect(await countRows(ctx.db, "tasks", "deleted_at IS NOT NULL")).toBe(1);
+      expect(await countRows(ctx.db, "artifacts", "deleted_at IS NOT NULL")).toBe(1);
     });
 
     test("alvo com revisao desatualizada, de outro usuario ou apagado recusa o lote inteiro", async () => {
@@ -190,7 +191,7 @@ describe("PostgresEntityBatchWriter", () => {
         }),
       );
 
-      expect(await selectRows(ctx.pool, "SELECT from_artifact_id, to_artifact_id, relation FROM artifact_artifact_relation")).toEqual([
+      expect(await selectRows(ctx.db, "SELECT from_artifact_id, to_artifact_id, relation FROM artifact_artifact_relation")).toEqual([
         { from_artifact_id: original.id, to_artifact_id: copy.id, relation: "derives" },
       ]);
       expect((await artifacts.findById(original.id))?.revision).toBe(1);
@@ -204,7 +205,7 @@ describe("PostgresEntityBatchWriter", () => {
     const subtasks = (...pairs: Array<[string, string]>): EntityBatch["subtasks"] =>
       pairs.map(([parentId, subtaskId]) => ({ op: "add" as const, parentId, subtaskId }));
     const edges = () =>
-      selectRows(ctx.pool, "SELECT from_task_id, to_task_id, relation FROM task_task_relation ORDER BY relation, from_task_id, to_task_id");
+      selectRows(ctx.db, "SELECT from_task_id, to_task_id, relation FROM task_task_relation ORDER BY relation, from_task_id, to_task_id");
 
     test("add grava a aresta subtask, lida nos dois lados, sem revisar nenhuma das tarefas", async () => {
       const a = await saved(trackedTask(USER, "Pintar a casa"));
@@ -224,7 +225,7 @@ describe("PostgresEntityBatchWriter", () => {
       await writer.commit(batchOf({ subtasks: subtasks([a.id, b.id], [a.id, b.id]) }));
       await writer.commit(batchOf({ subtasks: subtasks([a.id, b.id]) }));
 
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
+      expect(await countRows(ctx.db, "task_task_relation", "relation = 'subtask'")).toBe(1);
       expect((await tasks.findById(b.id))?.parentId).toBe(a.id);
     });
 
@@ -245,8 +246,8 @@ describe("PostgresEntityBatchWriter", () => {
       await writer.commit(batchOf({ subtasks: subtasks([a.id, c.id]) }));
 
       await expect(
-        ctx.pool.query("INSERT INTO task_task_relation (from_task_id, to_task_id, relation) VALUES ($1, $2, 'subtask')", [b.id, c.id]),
-      ).rejects.toThrow(/task_task_subtask_unique/);
+        exec("INSERT INTO task_task_relation (from_task_id, to_task_id, relation) VALUES ($1, $2, 'subtask')", [b.id, c.id]),
+      ).rejects.toThrow(/UNIQUE constraint failed/);
     });
 
     test("remove tira so a aresta pedida, e remover o que nao existe nao e erro", async () => {
@@ -274,7 +275,7 @@ describe("PostgresEntityBatchWriter", () => {
 
       await writer.commit(batchOf({ subtasks: [{ op: "remove", parentId: a.id, subtaskId: b.id }, { op: "add", parentId: a.id, subtaskId: b.id }] }));
 
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
+      expect(await countRows(ctx.db, "task_task_relation", "relation = 'subtask'")).toBe(1);
     });
 
     test("uma ponta pode ser tarefa nova do mesmo lote, mesmo listada depois da aresta", async () => {
@@ -335,7 +336,7 @@ describe("PostgresEntityBatchWriter", () => {
       }
       await expect(writer.commit(batchOf({ subtasks: subtasks([a.id, a.id]) }))).rejects.toThrow();
 
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(2);
+      expect(await countRows(ctx.db, "task_task_relation", "relation = 'subtask'")).toBe(2);
     });
 
     test("tarefas novas que fecham ciclo entre si recusam o lote inteiro", async () => {
@@ -350,7 +351,7 @@ describe("PostgresEntityBatchWriter", () => {
         ),
       ).rejects.toThrow(TaskValidationError);
 
-      expect(await countRows(ctx.pool, "tasks")).toBe(0);
+      expect(await countRows(ctx.db, "tasks")).toBe(0);
     });
 
     test("ponta de outro usuario, apagada ou inexistente recusa o lote como conflito", async () => {
@@ -384,7 +385,7 @@ describe("PostgresEntityBatchWriter", () => {
         expect(await artifacts.findById(note.id), what).toBeNull();
         expect(await tasks.findById(created.id), what).toBeNull();
       }
-      expect(await countRows(ctx.pool, "task_task_relation")).toBe(0);
+      expect(await countRows(ctx.db, "task_task_relation")).toBe(0);
     });
 
     test("a tarefa apagada no lote some das leituras, mas a aresta continua no banco", async () => {
@@ -395,7 +396,7 @@ describe("PostgresEntityBatchWriter", () => {
       await writer.commit(batchOf({ tasks: [{ op: "delete", id: a.id, expectedRevision: 1 }] }));
 
       expect((await tasks.findById(b.id))?.parentId).toBeUndefined();
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
+      expect(await countRows(ctx.db, "task_task_relation", "relation = 'subtask'")).toBe(1);
     });
   });
 
@@ -412,16 +413,18 @@ describe("PostgresEntityBatchWriter", () => {
           afterWrite: async (transaction) => {
             const tx = transaction as Tx;
             seenInsideTransaction = (await tx.execute(sql`SELECT 1 FROM tasks WHERE id = ${created.id}`)).rows.length;
-            seenOutsideTransaction = await countRows(ctx.pool, "tasks");
+            seenOutsideTransaction = await countRows(ctx.db, "tasks");
             await insertAgentTask(tx, { id: stepId, userId: USER, kind: "step", status: "completed", name: "Passo", data: {} });
-            await tx.insert(schema.taskTaskRelation).values({ fromTaskId: stepId, toTaskId: created.id, relation: "generates" });
+            await tx.execute(
+              sql`INSERT INTO task_task_relation (from_task_id, to_task_id, relation) VALUES (${stepId}, ${created.id}, 'generates')`,
+            );
           },
         }),
       );
 
       expect(seenInsideTransaction).toBe(1);
       expect(seenOutsideTransaction).toBe(0);
-      expect(await selectRows(ctx.pool, "SELECT from_task_id, to_task_id, relation FROM task_task_relation")).toEqual([
+      expect(await selectRows(ctx.db, "SELECT from_task_id, to_task_id, relation FROM task_task_relation")).toEqual([
         { from_task_id: stepId, to_task_id: created.id, relation: "generates" },
       ]);
     });
@@ -446,7 +449,7 @@ describe("PostgresEntityBatchWriter", () => {
       ).rejects.toThrow("o passo nao pode ser gravado");
 
       expect(await artifacts.findById(note.id)).toBeNull();
-      expect(await countRows(ctx.pool, "tasks")).toBe(1);
+      expect(await countRows(ctx.db, "tasks")).toBe(1);
       expect(await tasks.findById(origin.id)).not.toBeNull();
     });
   });
@@ -463,7 +466,7 @@ describe("PostgresEntityBatchWriter", () => {
     }
 
     const occurrenceIds = async () =>
-      (await selectRows(ctx.pool, "SELECT id FROM tasks ORDER BY started_at")).map((row) => row.id);
+      (await selectRows(ctx.db, "SELECT id FROM tasks ORDER BY started_at")).map((row) => row.id);
 
     test("a serie nova entra antes da primeira ocorrencia que o lote traz", async () => {
       const recurrence = dailyRecurrence(USER, DAYS[0]);
@@ -495,7 +498,7 @@ describe("PostgresEntityBatchWriter", () => {
       ).rejects.toThrow(EntityBatchConflictError);
 
       expect(await recurrences.findById(recurrence.id)).toBeNull();
-      expect(await countRows(ctx.pool, "tasks")).toBe(0);
+      expect(await countRows(ctx.db, "tasks")).toBe(0);
     });
 
     test("a serie editada libera os dias de fromDay em diante para a primeira ocorrencia nova", async () => {
@@ -564,8 +567,8 @@ describe("PostgresEntityBatchWriter", () => {
   });
 
   describe("dentro de um job", () => {
-    async function runningJob(): Promise<{ store: PostgresJobStore; current: CurrentJob }> {
-      const store = new PostgresJobStore(new PostgresDatabase(ctx.pool), 3000, 3);
+    async function runningJob(): Promise<{ store: SqliteJobStore; current: CurrentJob }> {
+      const store = new SqliteJobStore(ctx.database, 3000, 3);
       await store.enqueue({ kind: "agent-batch", userId: USER, actorId: USER, payload: {} });
       const [job] = await store.claim(["agent-batch"], 1);
       return { store, current: { id: job.id, token: job.leaseToken as string } };
@@ -584,7 +587,7 @@ describe("PostgresEntityBatchWriter", () => {
 
     test("com o lease vencido ou o job cancelado, o lote volta inteiro", async () => {
       const losses = [
-        "UPDATE jobs SET lease_until = clock_timestamp() - interval '1 second'",
+        "UPDATE jobs SET lease_until = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 second')",
         "UPDATE jobs SET lease_token = 'outro-worker'",
         "UPDATE jobs SET status = 'cancelled'",
       ];
@@ -593,7 +596,7 @@ describe("PostgresEntityBatchWriter", () => {
         const { current } = await runningJob();
         const origin = await saved(trackedTask(USER, "Origem"));
         const note = textArtifact(USER, "nasceria com o lote");
-        await ctx.pool.query(loss);
+        await exec(loss);
 
         await expect(
           jobContext.run(current, () =>

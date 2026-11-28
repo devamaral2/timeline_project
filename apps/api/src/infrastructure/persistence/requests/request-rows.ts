@@ -1,7 +1,7 @@
-import { sql } from "drizzle-orm";
 import { monotonicFactory } from "ulid";
 import type { AgentTaskKind, AgentTaskStatus, EntryKind, EntryRole } from "../../../domain";
-import * as schema from "../database/schema";
+import { taskEntries, tasks } from "../database/tables";
+import { NOW } from "@repo/sqlite";
 import { resolveProjectId, type ProjectScope } from "../projects/resolve-project";
 import type { Tx } from "../shared/tx";
 
@@ -28,17 +28,20 @@ export interface NewAgentTask {
 
 /** Um pedido ou um passo: tarefa de agente. Comeca agora; a conclusao vem quando ele termina. */
 export async function insertAgentTask(tx: Tx, task: NewAgentTask): Promise<void> {
-  await tx.insert(schema.tasks).values({
-    id: task.id,
-    userId: task.userId,
-    projectId: await resolveProjectId(tx, { ...task.project, userId: task.userId }),
-    actor: "agent",
-    kind: task.kind,
-    status: task.status,
-    name: task.name,
-    data: task.data,
-    startedAt: sql`now()`,
-  });
+  const projectId = await resolveProjectId(tx, { ...task.project, userId: task.userId });
+  await tx.execute(
+    tasks.insert({
+      id: task.id,
+      userId: task.userId,
+      projectId,
+      actor: "agent",
+      kind: task.kind,
+      status: task.status,
+      name: task.name,
+      data: task.data,
+      startedAt: NOW,
+    }),
+  );
 }
 
 export interface NewEntry {
@@ -53,16 +56,18 @@ export interface NewEntry {
 }
 
 /** Acrescenta uma entrada à tarefa. Entradas nunca mudam, e nao contam como revisao da tarefa. */
-export async function appendEntry(tx: Pick<Tx, "insert">, entry: NewEntry): Promise<string> {
+export async function appendEntry(tx: Pick<Tx, "execute">, entry: NewEntry): Promise<string> {
   const id = newOrderedId();
-  await tx.insert(schema.taskEntries).values({
-    id,
-    taskId: entry.taskId,
-    userId: entry.userId,
-    kind: entry.kind,
-    role: entry.role ?? null,
-    content: entry.content ?? null,
-    data: entry.data ?? {},
-  });
+  await tx.execute(
+    taskEntries.insert({
+      id,
+      taskId: entry.taskId,
+      userId: entry.userId,
+      kind: entry.kind,
+      role: entry.role ?? null,
+      content: entry.content ?? null,
+      data: entry.data ?? {},
+    }),
+  );
   return id;
 }

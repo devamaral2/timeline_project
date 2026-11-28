@@ -1,10 +1,10 @@
 import { Logger } from "../../common/logger";
 import { setTimeout as delay } from "node:timers/promises";
 import { getJobsEnv, type JobsEnv } from "../../config/env";
-import { PostgresJobStore, retryDelay, type Job } from "../persistence/jobs/postgres-job.store";
+import { SqliteJobStore, retryDelay, type Job } from "../persistence/jobs/sqlite-job.store";
 import { completeCurrentJob, jobContext, type EnqueueJobInput } from "./job-context";
 
-export type { Job } from "../persistence/jobs/postgres-job.store";
+export type { Job } from "../persistence/jobs/sqlite-job.store";
 
 export class RetryableJobError extends Error {}
 
@@ -69,7 +69,7 @@ export function isRetryableJobError(error: unknown, seen = new Set<unknown>()): 
 
 /**
  * O worker da fila unica (ADR 0013). Nao ha broker: a cada intervalo ele pega
- * do Postgres os jobs prontos dos tipos que tem handler, ate encher as vagas.
+ * do SQLite os jobs prontos dos tipos que tem handler, ate encher as vagas.
  */
 export class JobsService {
   private readonly logger = new Logger(JobsService.name);
@@ -80,7 +80,7 @@ export class JobsService {
   private readonly running = new Set<Promise<void>>();
   private loop?: Promise<void>;
 
-  constructor(readonly store: PostgresJobStore, readonly env: JobsEnv = getJobsEnv()) {}
+  constructor(readonly store: SqliteJobStore, readonly env: JobsEnv = getJobsEnv()) {}
 
   register(kind: string, handler: JobHandler, options?: { onFailure?: JobFailureHandler }): void {
     if (this.handlers.has(kind)) throw new Error(`Job handler already registered: ${kind}`);
@@ -117,7 +117,7 @@ export class JobsService {
         await delay(this.env.AI_JOBS_POLL_MS, undefined, { signal: this.stop.signal });
       } catch {
         if (this.stop.signal.aborted) break;
-        this.logger.warn("Job queue unavailable; jobs remain queued in PostgreSQL");
+        this.logger.warn("Job queue unavailable; jobs remain queued in SQLite");
         await delay(retryDelay(++failures), undefined, { signal: this.stop.signal }).catch(() => {});
       }
     }

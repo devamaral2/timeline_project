@@ -1,4 +1,7 @@
+import { mkdtempSync } from "node:fs";
 import type { Server } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { startAuth, type AuthCore } from "../composition-root";
 import { AccessDeniedError, AuthenticationFailedError, ConflictError, NotFoundError, RateLimitedError, RequiredDependencyUnavailableError, SemanticInputError } from "../common/errors";
@@ -83,7 +86,8 @@ export interface TestAppOptions {
 function testEnv(overrides: EnvSource = {}) {
   return getRuntimeEnv({
     NODE_ENV: "test",
-    AUTH_DATABASE_URL: "postgres://runtime",
+    // Um arquivo SQLite proprio por app de teste: o padrao (`.data/auth.sqlite`) e o banco de desenvolvimento.
+    AUTH_DATABASE_PATH: join(mkdtempSync(join(tmpdir(), "auth-app-")), "auth.sqlite"),
     AUTH_ISSUER: "https://auth.example.test",
     AUTH_PUBLIC_URL: "https://auth.example.test",
     AUTH_WEB_APP_URL: "https://web.example.test",

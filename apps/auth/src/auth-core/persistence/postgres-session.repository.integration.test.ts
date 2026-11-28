@@ -1,11 +1,11 @@
 import { afterEach, expect, it } from "vitest";
 import { ulid } from "ulid";
-import { createAuthDatabase, type AuthDatabase } from "../../db/client";
+import type { AuthDatabase } from "../../db/client";
 import {
-  createPostgresTestDatabase,
-  describeWithPostgres,
-  type PostgresTestDatabase,
-} from "../../testing/postgres-test-database";
+  createAuthTestDatabase,
+  describeWithDatabase,
+  type AuthTestDatabase,
+} from "../../testing/sqlite-test-database";
 import { PostgresSessionRepository } from "./postgres-session.repository";
 import { PostgresSigningKeyRepository } from "../security/postgres-signing-key.repository";
 import { generateSigningKey } from "../../domain/crypto/signing-key";
@@ -16,7 +16,7 @@ import { SECURITY_POLICY } from "../../config/security-policy";
 import type { SignAccessToken } from "../security/jwt";
 import type { AuthenticatedActor } from "../../domain/users/user";
 
-let fixture: PostgresTestDatabase | undefined;
+let fixture: AuthTestDatabase | undefined;
 let db: AuthDatabase | undefined;
 afterEach(async () => {
   await db?.close();
@@ -52,7 +52,7 @@ async function seedUser(database: AuthDatabase, status: "active" | "suspended" |
   const id = ulid();
   await database.query(
     `INSERT INTO users (id, email, name, password_hash, status, created_at, updated_at)
-     VALUES ($1, $2, 'Test User', 'hash', $3, now(), now())`,
+     VALUES ($1, $2, 'Test User', 'hash', $3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
     [id, `${id.toLowerCase()}@example.test`, status],
   );
   return id;
@@ -67,7 +67,7 @@ async function seedSession(
   const sessionId = ulid();
   await database.query(
     `INSERT INTO sessions (id, user_id, amr, auth_time, last_used_at, revoked_at, ended_at, created_at)
-     VALUES ($1, $2, ARRAY['pwd'], $3, $3, $4, $4, $3)`,
+     VALUES ($1, $2, '["pwd"]', $3, $3, $4, $4, $3)`,
     [sessionId, userId, now, overrides.revokedAt ?? null],
   );
   const tokenHash = hashSecretToken(ulid());
@@ -84,7 +84,7 @@ async function seedSession(
 
 async function auditActionsFor(_database: AuthDatabase, targetId: string): Promise<string[]> {
   if (!fixture) throw new Error("Postgres fixture is not initialized");
-  const admin = createAuthDatabase({ connectionString: fixture.adminUrl });
+  const admin = fixture.open();
   try {
     const result = await admin.query<{ action: string }>(
       "SELECT action FROM audit_log WHERE target_id = $1 ORDER BY created_at",
@@ -105,10 +105,10 @@ function successorFor(now: Date) {
   };
 }
 
-describeWithPostgres("PostgresSessionRepository", () => {
+describeWithDatabase("PostgresSessionRepository", () => {
   it("rotates a live refresh token, signs an access token, and audits session.refreshed", async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const now = new Date("2026-09-04T00:00:00Z");
     await activateSigningKey(db, now);
     const userId = await seedUser(db);
@@ -131,8 +131,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
   });
 
   it("detects reuse of an already-consumed token, revokes the whole session, and audits it", async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const now = new Date("2026-09-04T00:00:00Z");
     await activateSigningKey(db, now);
     const userId = await seedUser(db);
@@ -158,8 +158,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
   });
 
   it("revokes an otherwise-live session when the presented refresh token has expired", async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const now = new Date("2026-09-04T00:00:00Z");
     await activateSigningKey(db, now);
     const userId = await seedUser(db);
@@ -179,8 +179,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
   });
 
   it("returns invalid for an unknown token hash without touching any session", async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const now = new Date();
     await activateSigningKey(db, now);
     const repository = new PostgresSessionRepository(db, "https://auth.timeline.local", "timeline-api");
@@ -194,8 +194,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
   });
 
   it("revokeByRefreshToken revokes the matching session, audits it, and is a silent no-op otherwise", async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const now = new Date();
     const userId = await seedUser(db);
     const { sessionId, tokenHash } = await seedSession(db, userId, now);
@@ -214,8 +214,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
   });
 
   it("revokeAllOfUser revokes every live session of the user and audits once with the count", async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const now = new Date();
     const userId = await seedUser(db);
     const { sessionId: firstSessionId } = await seedSession(db, userId, now);
@@ -240,8 +240,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
   });
 
   it("revokeAllOfUser rejects when the actor's own session is no longer active", async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const now = new Date();
     const userId = await seedUser(db);
     const { sessionId } = await seedSession(db, userId, now, { revokedAt: now });
@@ -262,8 +262,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
   });
 
   it("revokeAllOfUser rejects when the user is no longer active", async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const now = new Date();
     const userId = await seedUser(db, "suspended");
     const { sessionId } = await seedSession(db, userId, now);
@@ -284,8 +284,8 @@ describeWithPostgres("PostgresSessionRepository", () => {
   });
 
   it("findActiveSession returns the session when live and null once revoked", async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const now = new Date();
     const userId = await seedUser(db);
     const { sessionId } = await seedSession(db, userId, now);

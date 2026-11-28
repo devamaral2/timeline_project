@@ -8,11 +8,11 @@ import {
   TaskValidationError,
   type ArtifactLink,
 } from "../../../domain";
-import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
-import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
-import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
-import { PostgresTagRepository } from "../tasks/repositories/postgres-tag.repository";
-import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgres-recurrence.repository";
+import { SqliteEntityBatchWriter } from "../agent-batch/sqlite-entity-batch-writer";
+import { SqliteArtifactRepository } from "../artifacts/repositories/sqlite-artifact.repository";
+import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
+import { SqliteTagRepository } from "../tasks/repositories/sqlite-tag.repository";
+import { SqliteRecurrenceRepository } from "../recurrences/repositories/sqlite-recurrence.repository";
 import {
   GLOBAL_WORKOUT_ID,
   OTHER_USER,
@@ -28,23 +28,25 @@ import {
   textArtifact,
   trackedTask,
 } from "../testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import { sql } from "@repo/sqlite";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 const uses = (artifactId: string, fromRecurrence = false): ArtifactLink => ({ artifactId, relation: "uses", fromRecurrence });
 
-describe("PostgresTaskRepository", () => {
-  let ctx: PostgresTestContext;
-  let tasks: PostgresTaskRepository;
-  let artifacts: PostgresArtifactRepository;
-  let recurrences: PostgresRecurrenceRepository;
-  let writer: PostgresEntityBatchWriter;
+describe("SqliteTaskRepository", () => {
+  let ctx: SqliteTestContext;
+  const run = (text: string, params: unknown[] = []) => ctx.db.execute(sql.unsafe(text, params));
+  let tasks: SqliteTaskRepository;
+  let artifacts: SqliteArtifactRepository;
+  let recurrences: SqliteRecurrenceRepository;
+  let writer: SqliteEntityBatchWriter;
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
-    tasks = new PostgresTaskRepository(ctx.db);
-    artifacts = new PostgresArtifactRepository(ctx.db);
-    recurrences = new PostgresRecurrenceRepository(ctx.db);
-    writer = new PostgresEntityBatchWriter(ctx.db);
+    ctx = await createSqliteTestContext();
+    tasks = new SqliteTaskRepository(ctx.db);
+    artifacts = new SqliteArtifactRepository(ctx.db);
+    recurrences = new SqliteRecurrenceRepository(ctx.db);
+    writer = new SqliteEntityBatchWriter(ctx.db);
   }, 60000);
 
   beforeEach(async () => {
@@ -185,8 +187,8 @@ describe("PostgresTaskRepository", () => {
       expect((await found(first.id)).tags).toEqual(["casa", "saude"]);
       expect((await found(second.id)).tags).toEqual(["saude"]);
       // A mesma tag dos duas tarefas e uma linha so; a do outro usuario e outra.
-      expect(await countRows(ctx.pool, "tags", "user_id = $1", [USER])).toBe(2);
-      expect(await countRows(ctx.pool, "tags", "name = 'saude'")).toBe(2);
+      expect(await countRows(ctx.db, "tags", "user_id = $1", [USER])).toBe(2);
+      expect(await countRows(ctx.db, "tags", "name = 'saude'")).toBe(2);
     });
 
     test("editar troca as tags da tarefa sem apagar a tag de outros", async () => {
@@ -202,7 +204,7 @@ describe("PostgresTaskRepository", () => {
     test("sugere por prefixo so as tags do usuario, sem tratar % como curinga", async () => {
       await saved(trackedTask(USER, "A", { tags: ["saude", "sabado", "casa", "100%"] }));
       await saved(trackedTask(OTHER_USER, "B", { tags: ["samba"] }));
-      const tags = new PostgresTagRepository(ctx.db);
+      const tags = new SqliteTagRepository(ctx.db);
 
       const suggestions = await tags.suggest({ userId: USER, query: " SA", limit: 10 });
 
@@ -226,7 +228,7 @@ describe("PostgresTaskRepository", () => {
 
       expect((await found(task.id)).artifactLinks).toEqual(links);
       const rows = await selectRows(
-        ctx.pool,
+        ctx.db,
         "SELECT artifact_id, position FROM task_artifact_relation WHERE task_id = $1 ORDER BY position",
         [task.id],
       );
@@ -246,7 +248,7 @@ describe("PostgresTaskRepository", () => {
       await tasks.update(task.revise({ artifactLinks: [uses(c.id), uses(a.id), uses(d.id)] }), USER, 1);
 
       expect((await found(task.id)).artifactLinks.map((link) => link.artifactId)).toEqual([c.id, a.id, d.id]);
-      expect(await countRows(ctx.pool, "task_artifact_relation", "task_id = $1", [task.id])).toBe(3);
+      expect(await countRows(ctx.db, "task_artifact_relation", "task_id = $1", [task.id])).toBe(3);
     });
 
     test("um artefato global pode ser ligado à tarefa", async () => {
@@ -283,8 +285,8 @@ describe("PostgresTaskRepository", () => {
       expect(await tasks.findById(task.id)).toBeNull();
       expect(await artifacts.findById(food.id)).toBeNull();
       // Nem o pedido de construcao do alimento, nem o job dele.
-      expect(await countRows(ctx.pool, "tasks")).toBe(0);
-      expect(await countRows(ctx.pool, "jobs")).toBe(0);
+      expect(await countRows(ctx.db, "tasks")).toBe(0);
+      expect(await countRows(ctx.db, "jobs")).toBe(0);
     });
 
     test("o artefato apagado some da lista da tarefa, e a relacao fica", async () => {
@@ -295,7 +297,7 @@ describe("PostgresTaskRepository", () => {
       await artifacts.delete(removed.id, USER);
 
       expect((await found(task.id)).artifactLinks.map((link) => link.artifactId)).toEqual([kept.id]);
-      expect(await countRows(ctx.pool, "task_artifact_relation", "task_id = $1", [task.id])).toBe(2);
+      expect(await countRows(ctx.db, "task_artifact_relation", "task_id = $1", [task.id])).toBe(2);
     });
   });
 
@@ -309,7 +311,7 @@ describe("PostgresTaskRepository", () => {
       expect(await found(first.id)).toMatchObject({ parentId: undefined, subtaskIds: [second.id], revision: 1 });
       expect(await found(second.id)).toMatchObject({ parentId: first.id, subtaskIds: [third.id], revision: 1 });
       expect(await found(third.id)).toMatchObject({ parentId: second.id, subtaskIds: [], revision: 1 });
-      expect(await selectRows(ctx.pool, "SELECT relation FROM task_task_relation")).toEqual([
+      expect(await selectRows(ctx.db, "SELECT relation FROM task_task_relation")).toEqual([
         { relation: "subtask" },
         { relation: "subtask" },
       ]);
@@ -351,7 +353,7 @@ describe("PostgresTaskRepository", () => {
 
       expect(await found(first.id)).toMatchObject({ name: "Primeiro, editado", subtaskIds: [second.id], revision: 2 });
       expect(await found(second.id)).toMatchObject({ name: "Segundo, editado", parentId: first.id, revision: 2 });
-      expect(await countRows(ctx.pool, "task_task_relation", "relation = 'subtask'")).toBe(1);
+      expect(await countRows(ctx.db, "task_task_relation", "relation = 'subtask'")).toBe(1);
     });
 
     test("a tarefa apagada some das listas de quem aponta para ela e de quem ela aponta", async () => {
@@ -490,8 +492,8 @@ describe("PostgresTaskRepository", () => {
       await tasks.delete(task.id, USER);
 
       expect(await tasks.findById(task.id)).toBeNull();
-      const [row] = await selectRows(ctx.pool, "SELECT deleted_at FROM tasks WHERE id = $1", [task.id]);
-      expect(row.deleted_at).toBeInstanceOf(Date);
+      const [row] = await selectRows(ctx.db, "SELECT deleted_at FROM tasks WHERE id = $1", [task.id]);
+      expect(new Date(row.deleted_at as string).getTime()).not.toBeNaN();
       await expect(tasks.delete(task.id, USER)).rejects.toThrow(TaskNotFoundError);
     });
 

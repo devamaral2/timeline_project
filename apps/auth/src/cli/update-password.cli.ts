@@ -1,6 +1,6 @@
 import { getRuntimeEnv } from "../config/env";
 import { findMonorepoRoot, loadRootEnv } from "../config/load-env";
-import { createAuthDatabase } from "../db/client";
+import { openAuthDatabase } from "../db/client";
 import { HttpPwnedPasswordsGateway } from "../auth-core/password/http-pwned-passwords.gateway";
 import { PreparePassword } from "../auth-core/password/prepare-password";
 import { ScryptPasswordHasher } from "../auth-core/password/scrypt-password-hasher";
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   const email = normalizeEmail(rawEmail);
   const source = loadRootEnv(findMonorepoRoot(__dirname), process.env);
   const env = getRuntimeEnv(source);
-  const database = createAuthDatabase({ connectionString: env.databaseUrl });
+  const database = openAuthDatabase(env.databasePath);
   try {
     const user = (await database.query<{ name: string; status: string }>(
       "SELECT name, status FROM users WHERE email = $1",

@@ -1,15 +1,15 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { randomBytes } from "node:crypto";
 import { afterEach, describe, expect, it } from "vitest";
-import { getMigrationEnv, getRuntimeEnv, loadRootEnv, type EnvSource } from "./env";
+import { getDatabaseEnv, getPostgresCopyEnv, getRuntimeEnv, loadRootEnv, type EnvSource } from "./env";
 import { findMonorepoRoot } from "./load-env";
 
 const kek = randomBytes(32).toString("base64url");
 const base = (overrides: EnvSource = {}): EnvSource => ({
   NODE_ENV: "test",
-  AUTH_DATABASE_URL: "postgres://runtime",
+  AUTH_DATABASE_PATH: "/tmp/auth-env-test.sqlite",
   AUTH_ISSUER: "https://auth.example.test",
   AUTH_PUBLIC_URL: "https://auth.example.test",
   AUTH_WEB_APP_URL: "https://web.example.test",
@@ -66,11 +66,17 @@ describe("auth environment", () => {
     expect(getRuntimeEnv(base()).keyEncryptionKey).toEqual(Buffer.from(kek, "base64url"));
   });
 
-  it("keeps migration and test credentials out of runtime configuration", () => {
-    const source = base({ AUTH_DATABASE_MIGRATION_URL: "postgres://migration" });
-    const runtime = getRuntimeEnv(source);
-    expect(runtime).not.toHaveProperty("databaseMigrationUrl");
-    expect(getMigrationEnv(source)).toEqual({ databaseMigrationUrl: "postgres://migration" });
-    expect(() => getMigrationEnv(base())).toThrow();
+  it("puts the SQLite file under the monorepo root unless told otherwise", () => {
+    const root = resolve(__dirname, "../../../..");
+    expect(getRuntimeEnv(base({ AUTH_DATABASE_PATH: "" })).databasePath).toBe(resolve(root, ".data/auth.sqlite"));
+    expect(getRuntimeEnv(base({ AUTH_DATABASE_PATH: "/data/auth.sqlite" })).databasePath).toBe("/data/auth.sqlite");
+    expect(getDatabaseEnv({ AUTH_DATABASE_PATH: "tmp/a.sqlite" })).toEqual({ databasePath: resolve(root, "tmp/a.sqlite") });
+  });
+
+  it("keeps the old PostgreSQL URL out of runtime configuration, for the one-off copy only", () => {
+    const source = base({ AUTH_DATABASE_URL: "postgres://old" });
+    expect(getRuntimeEnv(source)).not.toHaveProperty("databaseUrl");
+    expect(getPostgresCopyEnv(source)).toEqual({ postgresUrl: "postgres://old" });
+    expect(() => getPostgresCopyEnv(base())).toThrow();
   });
 });

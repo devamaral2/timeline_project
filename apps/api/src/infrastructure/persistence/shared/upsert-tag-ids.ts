@@ -1,21 +1,17 @@
-import { sql } from "drizzle-orm";
 import { ulid } from "ulid";
-import * as schema from "../database/schema";
+import { sql } from "@repo/sqlite";
+import { tags } from "../database/tables";
 import type { Tx } from "./tx";
 
 /** Tag e uma so por usuario e nome, seja de tarefa ou de artefato. */
 export async function upsertTagIds(tx: Tx, userId: string, names: readonly string[]): Promise<string[]> {
   const tagIds: string[] = [];
   for (const name of names) {
-    const [row] = await tx
-      .insert(schema.tags)
-      .values({ id: ulid(), userId, name })
-      .onConflictDoUpdate({
-        target: [schema.tags.userId, schema.tags.name],
-        set: { name: sql`excluded.name` },
-      })
-      .returning({ id: schema.tags.id });
-    tagIds.push(row.id);
+    const row = await tx.get<{ id: string }>(sql`
+      ${tags.insert({ id: ulid(), userId, name })}
+      ON CONFLICT (user_id, name) DO UPDATE SET name = excluded.name
+      RETURNING id`);
+    tagIds.push(row!.id);
   }
   return tagIds;
 }

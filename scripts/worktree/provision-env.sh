@@ -5,14 +5,15 @@
 #   1. .env.local com portas livres e nomes proprios (bases, dominio)
 #   2. alias <slug>.braid.local: /etc/hosts + Caddy (HTTPS na 8443, CA local do Caddy)
 #   3. node_modules integros (pnpm install reaplicado + binarios conferidos)
-#   4. bases <slug> e <slug>_auth DENTRO do Postgres compartilhado (porta 54391)
+#   4. bancos SQLite da propria worktree: .data/api.sqlite e .data/auth.sqlite
+#      (ADR 0024 e 0025); nenhum Postgres
 #   5. migrations da API e do Auth
 #   6. usuario admin (senha de ADMIN_PASSWORD)
 #   7. build, sonda de saude (bases, tabela de jobs, admin) e servidores de dev
 #   8. API respondendo, login de teste e link para abrir no navegador
 #
-# A fila de jobs de IA e a tabela `jobs` da base da API (ADR 0013): nasce com as
-# migrations e some com a base, entao nao ha broker para subir nem fila a declarar.
+# A fila de jobs de IA e a tabela `jobs` do banco da API (ADR 0013): nasce com as
+# migrations e some com o arquivo, entao nao ha broker para subir nem fila a declarar.
 #
 # Uso: bash scripts/worktree/provision-env.sh   (de dentro da worktree;
 #      via `pnpm worktree:provision`, que injeta o ambiente do 1Password)
@@ -37,7 +38,7 @@ if [ "$(worktree_root)" = "$MAIN_ROOT" ] && [ "${FORCE_MAIN:-}" != "1" ]; then
   exit 1
 fi
 
-for var in POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB ADMIN_PASSWORD; do
+for var in ADMIN_PASSWORD; do
   if [ -z "${!var:-}" ]; then
     echo "$var precisa estar disponível pelo 1Password (rode via 'pnpm worktree:provision')." >&2
     exit 1
@@ -92,7 +93,7 @@ fi
 WEB_PORT="$(read_env_var "$ENV_FILE" WEB_PORT)"
 API_PORT="$(read_env_var "$ENV_FILE" API_PORT)"
 AUTH_PORT="$(read_env_var "$ENV_FILE" AUTH_PORT)"
-echo "web=$WEB_PORT api=$API_PORT auth=$AUTH_PORT postgres=$SHARED_PG_PORT (compartilhado)"
+echo "web=$WEB_PORT api=$API_PORT auth=$AUTH_PORT"
 
 # O carregador do 1Password le o .env.local ANTES deste script rodar; na
 # primeira vez ele ainda nao existia e o ambiente herdado aponta para as bases
@@ -102,9 +103,9 @@ if [ "${BRAID_ENV_RELOADED:-}" != "1" ]; then
   BRAID_ENV_RELOADED=1 exec node scripts/onepassword/exec.mjs bash scripts/worktree/provision-env.sh
 fi
 # Trava: nunca migrar/criar admin se as URLs nao apontam para as bases desta worktree.
-case "${DATABASE_URL:-}" in */"${DB_NAME}") ;; *) echo "DATABASE_URL nao aponta para '${DB_NAME}'; abortando." >&2; exit 1 ;; esac
-case "${AUTH_DATABASE_URL:-}" in */"${AUTH_DB_NAME}") ;; *) echo "AUTH_DATABASE_URL nao aponta para '${AUTH_DB_NAME}'; abortando." >&2; exit 1 ;; esac
-case "${AUTH_DATABASE_MIGRATION_URL:-}" in */"${AUTH_DB_NAME}") ;; *) echo "AUTH_DATABASE_MIGRATION_URL nao aponta para '${AUTH_DB_NAME}'; abortando." >&2; exit 1 ;; esac
+# O SQLite da API fica dentro da worktree; um API_DATABASE_PATH herdado apontaria para o de outra.
+if [ -n "${API_DATABASE_PATH:-}" ]; then echo "API_DATABASE_PATH definido ('${API_DATABASE_PATH}'); a worktree usa o padrao .data/api.sqlite. Abortando." >&2; exit 1; fi
+if [ -n "${AUTH_DATABASE_PATH:-}" ]; then echo "AUTH_DATABASE_PATH definido ('${AUTH_DATABASE_PATH}'); a worktree usa o padrao .data/auth.sqlite. Abortando." >&2; exit 1; fi
 
 # --- 2. alias no Caddy + /etc/hosts -------------------------------------------
 step 2 "Alias ${HOST} (Caddy + /etc/hosts)"
@@ -116,31 +117,16 @@ bash "$SCRIPT_DIR/hosts.sh" check "$SLUG"
 step 3 "node_modules"
 pnpm install --frozen-lockfile --prefer-offline
 missing=0
-for bin in apps/web/node_modules/.bin/next apps/auth/node_modules/.bin/tsx apps/api/node_modules/.bin/drizzle-kit node_modules/.bin/turbo; do
+for bin in apps/web/node_modules/.bin/next apps/auth/node_modules/.bin/tsx apps/api/node_modules/.bin/tsx node_modules/.bin/turbo; do
   if [ ! -e "$bin" ]; then echo "Binario ausente apos o install: $bin" >&2; missing=1; fi
 done
 [ "$missing" -eq 0 ] || { echo "node_modules incompleto; investigue o pnpm install acima." >&2; exit 1; }
 echo "node_modules integros."
 
-# --- 4. bases no Postgres compartilhado ----------------------------------------
-step 4 "Bases '${DB_NAME}' e '${AUTH_DB_NAME}' no Postgres compartilhado"
-PG_CONTAINER="$(shared_pg_container)"
-if [ -z "$PG_CONTAINER" ]; then
-  echo "Postgres compartilhado (porta ${SHARED_PG_PORT}) parado; subindo o da worktree principal..."
-  docker compose --project-name infra -f "$MAIN_ROOT/infra/docker-compose.local.yml" up -d postgres
-  for _ in $(seq 1 30); do PG_CONTAINER="$(shared_pg_container)"; [ -n "$PG_CONTAINER" ] && break; sleep 1; done
-  [ -n "$PG_CONTAINER" ] || { echo "Nao consegui subir o Postgres compartilhado." >&2; exit 1; }
-fi
-psql_admin() { docker exec -i "$PG_CONTAINER" psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" "$@"; }
-for _ in $(seq 1 30); do psql_admin -d postgres -tAc 'SELECT 1' >/dev/null 2>&1 && break; sleep 1; done
-for db in "$DB_NAME" "$AUTH_DB_NAME"; do
-  if [ "$(psql_admin -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${db}'")" = "1" ]; then
-    echo "Base '$db' ja existe em $PG_CONTAINER."
-  else
-    psql_admin -d postgres -c "CREATE DATABASE \"${db}\""
-    echo "Base '$db' criada em $PG_CONTAINER."
-  fi
-done
+# --- 4. bancos SQLite da worktree ------------------------------------------------
+step 4 "Bancos SQLite em .data/ (API e Auth)"
+mkdir -p .data
+echo "API em .data/api.sqlite e Auth em .data/auth.sqlite; as migrations do passo 5 criam os arquivos."
 
 # --- 5. migrations -------------------------------------------------------------
 step 5 "Migrations (API e Auth)"
@@ -156,12 +142,18 @@ step 7 "Build, sonda de saude e servidores de dev"
 # web (next build de producao) e mobile (Android SDK) nao sao necessarios para o pnpm dev.
 pnpm turbo run build --filter='!@repo/mobile' --filter='!@repo/web'
 
-count_tables() { psql_admin -d "$1" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'"; }
-API_TABLES="$(count_tables "$DB_NAME")"
-AUTH_TABLES="$(count_tables "$AUTH_DB_NAME")"
-ADMIN_ROWS="$(psql_admin -d "$AUTH_DB_NAME" -tAc "SELECT count(*) FROM users WHERE email='${ADMIN_EMAIL}'")"
-# A fila de jobs de IA e uma tabela da base da API; sem ela os workers nao tem o que ler.
-JOBS_TABLE="$(psql_admin -d "$DB_NAME" -tAc "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='jobs'")"
+# Os bancos SQLite, lidos pelo `node:sqlite` (o CLI `sqlite3` nao e pre-requisito).
+sqlite_value() {
+  node -e 'const { DatabaseSync } = process.getBuiltinModule("node:sqlite");
+    const db = new DatabaseSync(process.argv[1], { readOnly: true });
+    const row = db.prepare(process.argv[2]).get(...process.argv.slice(3));
+    console.log(Object.values(row)[0]);' "$@"
+}
+API_TABLES="$(sqlite_value .data/api.sqlite "SELECT count(*) FROM sqlite_schema WHERE type = 'table'")"
+AUTH_TABLES="$(sqlite_value .data/auth.sqlite "SELECT count(*) FROM sqlite_schema WHERE type = 'table'")"
+ADMIN_ROWS="$(sqlite_value .data/auth.sqlite "SELECT count(*) FROM users WHERE email = ?" "$ADMIN_EMAIL")"
+# A fila de jobs de IA e uma tabela do banco da API; sem ela os workers nao tem o que ler.
+JOBS_TABLE="$(sqlite_value .data/api.sqlite "SELECT count(*) FROM sqlite_schema WHERE type = 'table' AND name = 'jobs'")"
 if [ "$API_TABLES" -lt 1 ] || [ "$AUTH_TABLES" -lt 1 ] || [ "$ADMIN_ROWS" -ne 1 ] || [ "$JOBS_TABLE" -ne 1 ]; then
   echo "Sonda falhou: tabelas api=$API_TABLES auth=$AUTH_TABLES admin=$ADMIN_ROWS jobs=$JOBS_TABLE." >&2
   exit 1
@@ -197,6 +189,6 @@ Worktree '$SLUG' pronta e rodando.
              (aviso de certificado no navegador? rode uma vez: pnpm caddy:trust)
   login:     ${ADMIN_EMAIL} (senha: ADMIN_PASSWORD do 1Password)
   web/api/auth: ${WEB_PORT} / ${API_PORT} / ${AUTH_PORT}
-  bases:     ${DB_NAME}, ${AUTH_DB_NAME} (${PG_CONTAINER}, porta ${SHARED_PG_PORT})
+  bancos:    .data/api.sqlite e .data/auth.sqlite (SQLite)
   logs:      $(pwd)/.agents/runtime/dev.log
 SUMMARY

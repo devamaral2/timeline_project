@@ -14,12 +14,9 @@
 # 1. findMonorepoRoot() sobe os diretorios ate achar pnpm-workspace.yaml e
 #    LANCA se nao achar. O arquivo vem junto do out/json e precisa continuar
 #    na raiz da imagem, senao o processo morre no bootstrap.
-# 2. bootstrap() chama SigningKeyService.ensureActive() ANTES do listen, o que
-#    toca o banco. O container so sobe com AUTH_DATABASE_URL valido e o
-#    Postgres ja de pe — use depends_on com condition: service_healthy.
-#
-# As migrations nao rodam daqui: `db:migrate` usa tsx, que e devDependency, e
-# AUTH_DATABASE_MIGRATION_URL e credencial separada de proposito.
+# 2. O banco e um arquivo SQLite (AUTH_DATABASE_PATH, num volume em /data; ADR
+#    0025). bootstrap() abre o arquivo, aplica as migrations pendentes (com uma
+#    copia antes) e chama SigningKeyService.ensureActive() ANTES do listen.
 
 FROM node:24-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm"
@@ -62,7 +59,10 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
 COPY --from=builder /app/packages/contracts/dist ./packages/contracts/dist
+COPY --from=builder /app/packages/sqlite/dist ./packages/sqlite/dist
 COPY --from=builder /app/apps/auth/dist ./apps/auth/dist
+# As migrations rodam na subida (ADR 0025): o migrador as le de apps/auth/migrations.
+COPY --from=pruner /app/apps/auth/migrations ./apps/auth/migrations
 COPY --from=pruner /app/scripts/onepassword ./scripts/onepassword
 COPY --from=pruner /app/.env.example ./.env.example
 
@@ -77,5 +77,8 @@ EXPOSE 3002
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.AUTH_PORT||3002)+'/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+# O arquivo SQLite mora num volume montado em /data; sem volume, a pasta da imagem serve.
+RUN mkdir -p /data && chown node:node /data
+ENV AUTH_DATABASE_PATH=/data/auth.sqlite
 USER node
 CMD ["node", "scripts/onepassword/exec.mjs", "node", "apps/auth/dist/main.js"]

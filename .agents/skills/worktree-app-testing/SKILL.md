@@ -1,27 +1,25 @@
 ---
 name: worktree-app-testing
 description: >
-  Sobe web/api/auth de verdade, com portas e banco Postgres isolados da
+  Sobe web/api/auth de verdade, com portas e bancos SQLite isolados da
   worktree atual, para validar uma mudanca manualmente (curl, Browser pane,
   screenshots) em vez de so rodar a suite de testes unitarios. Use sempre que
   for testar uma mudanca rodando a aplicacao de fato neste monorepo,
   especialmente quando varias worktrees/agentes podem estar rodando a app em
   paralelo. Nao use para os testes unitarios do dia a dia (`test:ai`) nem para
-  o teste de integracao Postgres do @repo/persistence, que ja isola porta
-  sozinho via Testcontainers.
+  os testes de integracao, que ja abrem um SQLite temporario por arquivo.
 ---
 
 ## Por que isto existe
 
 Este monorepo tem um unico `.env`/`.env.local` na raiz e, por padrao, portas
-fixas (web 3000, api 3001, auth 3002, Postgres 54391). Se varias worktrees
+fixas (web 3000, api 3001, auth 3002). Se varias worktrees
 rodarem a app ao mesmo tempo sem isolamento, uma pisa na porta e no banco da
 outra. `scripts/worktree/` resolve isso: cada worktree ganha seu proprio
-`.env.local` com portas livres calculadas na hora, bases proprias para a API
-(`<worktree>`) e para o Auth (`<worktree>_auth`) dentro do Postgres
-compartilhado (porta 54391) e o dominio `<worktree>.braid.local` (Caddy,
-HTTPS na porta 8443). A fila de jobs de IA e a tabela `jobs` da base da API, entao ja
-nasce isolada por worktree.
+`.env.local` com portas livres calculadas na hora, os bancos SQLite da API e do
+Auth em `.data/` da propria worktree (ADR 0024 e 0025) e o dominio
+`<worktree>.braid.local` (Caddy, HTTPS na porta 8443). A fila de jobs de IA e a
+tabela `jobs` do banco da API, entao ja nasce isolada por worktree.
 
 ## Passo a passo
 

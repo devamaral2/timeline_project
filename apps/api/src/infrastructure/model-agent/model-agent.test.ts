@@ -217,7 +217,7 @@ describe("a Anthropic", () => {
       response([{ type: "text", text: "Pronto." }]),
     ]);
     expect((await chat()).text).toBe("Pronto.");
-    expect((requests[1]?.messages as unknown[]).at(-1)).toMatchObject({ role: "assistant" });
+    expect(((requests[1]?.messages ?? []) as unknown[]).at(-1)).toMatchObject({ role: "assistant" });
   });
 });
 

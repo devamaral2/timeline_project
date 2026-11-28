@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { z } from "zod";
 
 const serverSchema = z.object({
@@ -86,25 +87,27 @@ export function isLoopbackHost(host: string): boolean {
   return host === "127.0.0.1" || host === "localhost" || host === "::1";
 }
 
+/** A raiz do monorepo, a partir de `src/config` ou de `dist/config`. */
+const MONOREPO_ROOT = resolve(__dirname, "../../../..");
+
 const databaseSchema = z.object({
-  DATABASE_URL: z.string().min(1),
+  // O arquivo SQLite da API (ADR 0024). Sem valor, `.data/api.sqlite` na raiz do monorepo: cada worktree tem o seu.
+  API_DATABASE_PATH: z.string().min(1).default(resolve(MONOREPO_ROOT, ".data/api.sqlite")),
 });
 
 export type DatabaseEnv = z.infer<typeof databaseSchema>;
 
 export function getDatabaseEnv(source?: Record<string, string | undefined>): DatabaseEnv {
   const read = (key: keyof DatabaseEnv) => orUndefined(source?.[key] ?? process.env[key]);
-
-  return databaseSchema.parse({
-    DATABASE_URL: read("DATABASE_URL"),
-  });
+  const env = databaseSchema.parse({ API_DATABASE_PATH: read("API_DATABASE_PATH") });
+  return { API_DATABASE_PATH: resolve(MONOREPO_ROOT, env.API_DATABASE_PATH) };
 }
 
 const jobsSchema = z.object({
   AI_JOBS_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(4),
   AI_JOBS_LEASE_MS: z.coerce.number().int().min(3000).max(3600000).default(60000),
   AI_JOBS_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(4),
-  // De quanto em quanto tempo o worker olha a fila no Postgres.
+  // De quanto em quanto tempo o worker olha a fila no banco.
   AI_JOBS_POLL_MS: z.coerce.number().int().min(50).max(60000).default(500),
 });
 export type JobsEnv = z.infer<typeof jobsSchema>;

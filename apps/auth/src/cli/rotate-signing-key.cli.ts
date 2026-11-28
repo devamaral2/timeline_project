@@ -1,4 +1,4 @@
-import { createAuthDatabase } from '../db/client';
+import { openAuthDatabase } from '../db/client';
 import { getRuntimeEnv } from '../config/env';
 import { findMonorepoRoot, loadRootEnv } from '../config/load-env';
 import { PostgresSigningKeyRepository } from '../auth-core/security/postgres-signing-key.repository';
@@ -10,7 +10,7 @@ async function main(): Promise<void> {
   const env = getRuntimeEnv(
     loadRootEnv(findMonorepoRoot(__dirname), process.env),
   );
-  const db = createAuthDatabase({ connectionString: env.databaseUrl });
+  const db = openAuthDatabase(env.databasePath);
   try {
     const now = new Date();
     const key = await new SigningKeyService(

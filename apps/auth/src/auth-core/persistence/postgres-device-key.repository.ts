@@ -52,10 +52,10 @@ export class PostgresDeviceKeyRepository {
   /** Valida a chave a cada pedido: revogar ou desativar o dono vale na hora. */
   async authenticate(input: { keyHash: string; now: Date }): Promise<DeviceKeyIdentity | null> {
     const result = await this.db.query<{ id: string; user_id: string; permission: DevicePermission }>(
-      `UPDATE device_keys dk SET last_used_at=$2
+      `UPDATE device_keys AS dk SET last_used_at=$2
          FROM users u
         WHERE dk.key_hash=$1 AND dk.revoked_at IS NULL AND u.id=dk.user_id AND u.status='active'
-        RETURNING dk.id, dk.user_id, dk.permission`,
+        RETURNING id, user_id, permission`,
       [input.keyHash, input.now],
     );
     const row = result.rows[0];

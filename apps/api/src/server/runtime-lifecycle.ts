@@ -12,7 +12,7 @@ export interface RuntimeResources {
   agentFiles: { start(): Promise<void>; stop(): void };
   fastify: { ready(): unknown; close(): Promise<void> };
   jobs: { start(): void; shutdown(): Promise<void> };
-  database: { close(): Promise<void> };
+  database: { close(): void | Promise<void> };
 }
 
 export interface RuntimeLifecycle {

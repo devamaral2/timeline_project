@@ -3,7 +3,7 @@ import { HttpPwnedPasswordsGateway } from "./auth-core/password/http-pwned-passw
 import { PreparePassword } from "./auth-core/password/prepare-password";
 import { ScryptPasswordHasher } from "./auth-core/password/scrypt-password-hasher";
 import type { AuthDatabase } from "./db/client";
-import { createAuthDatabase } from "./db/client";
+import { openAuthDatabase } from "./db/client";
 import type { DeviceKeyRepository } from "./auth-core/persistence/postgres-device-key.repository";
 import { PostgresDeviceKeyRepository } from "./auth-core/persistence/postgres-device-key.repository";
 import { PostgresInviteRepository } from "./auth-core/persistence/postgres-invite.repository";
@@ -73,7 +73,7 @@ export interface AuthCoreOverrides {
 }
 
 export function composeAuthCore(env: RuntimeEnv, overrides: AuthCoreOverrides = {}): Promise<AuthCore> {
-  const database = createAuthDatabase({ connectionString: env.databaseUrl });
+  const database = openAuthDatabase(env.databasePath);
   const clock = new SystemClock();
   const secrets = new CryptoSecretGenerator();
   const passwordHasher = new ScryptPasswordHasher();

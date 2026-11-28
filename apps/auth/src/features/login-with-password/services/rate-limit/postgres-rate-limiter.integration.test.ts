@@ -1,12 +1,10 @@
-import { Pool } from "pg";
 import { afterEach, expect, it } from "vitest";
 import { rateLimitSubjectHash } from "./rate-limit-key";
 import { PostgresRateLimiter } from "./postgres-rate-limiter";
-import { createPostgresTestDatabase, type PostgresTestDatabase } from "../../../../testing/postgres-test-database";
+import { createAuthTestDatabase, type AuthTestDatabase } from "../../../../testing/sqlite-test-database";
 
-let fixture: PostgresTestDatabase | undefined;
-let pool: Pool | undefined;
-afterEach(async () => { await pool?.end(); await fixture?.close(); pool = undefined; fixture = undefined; });
+let fixture: AuthTestDatabase | undefined;
+afterEach(async () => { await fixture?.close(); fixture = undefined; });
 
 it("derives a scoped non-reversible rate limit subject hash", () => {
   const key = Buffer.alloc(32, 7);
@@ -15,8 +13,8 @@ it("derives a scoped non-reversible rate limit subject hash", () => {
 });
 
 it("counts concurrent hits atomically and resets exactly at the window boundary", async () => {
-  fixture = await createPostgresTestDatabase(); pool = new Pool({ connectionString: fixture.runtimeUrl, max: 2 });
-  const limiter = new PostgresRateLimiter(pool, Buffer.alloc(32, 3)); const start = new Date("2026-09-01T00:00:00.000Z");
+  fixture = await createAuthTestDatabase();
+  const limiter = new PostgresRateLimiter(fixture.open(), Buffer.alloc(32, 3)); const start = new Date("2026-09-01T00:00:00.000Z");
   const hits = await Promise.all(Array.from({ length: 3 }, () => limiter.hit({ scope: "password_email", subject: "user@example.test", limit: 2, windowSeconds: 60, now: start })));
   expect(hits.filter(({ allowed }) => allowed)).toHaveLength(2);
   expect(hits.find(({ allowed }) => !allowed)?.retryAfterSeconds).toBe(60);

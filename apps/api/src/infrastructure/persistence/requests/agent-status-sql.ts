@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   agentStatusesBefore,
   IN_PROGRESS_AGENT_STATUSES,
@@ -11,6 +10,7 @@ import {
 } from "../../../domain/agent-status";
 import type { AgentTaskStatus } from "../../../domain/sets";
 import { sqlList } from "../database/schema/sets";
+import { sql } from "@repo/sqlite";
 
 /**
  * O SQL dos grupos e das politicas de status de agente, montado num lugar so. O store de pedidos e o pedido de

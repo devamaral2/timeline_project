@@ -16,8 +16,6 @@ fi
 /opt/braid/bin/backup.sh
 bash ops/production/check-auth-schema.sh "$ROOT"
 
-docker build --target builder -f apps/api/Dockerfile -t "braid-api-migrate:$SHA" .
-docker build --target builder -f apps/auth/Dockerfile -t "braid-auth-migrate:$SHA" .
 docker build -f apps/api/Dockerfile -t "braid-api:$SHA" .
 docker build -f apps/auth/Dockerfile -t "braid-auth:$SHA" .
 docker build -f apps/mcp/Dockerfile -t "braid-mcp:$SHA" .
@@ -26,24 +24,8 @@ docker build --no-cache \
   --secret id=onepassword-token,src=/opt/braid/private/onepassword-token \
   -f apps/web/Dockerfile -t "braid-web:$SHA" .
 
-PGHOST=$(kubectl -n braid get svc postgres -o jsonpath='{.spec.clusterIP}')
-get_secret() {
-  kubectl -n braid get secret postgres-env -o "jsonpath={.data.$1}" | base64 -d
-}
-APP_PW=$(get_secret PG_APP_PASSWORD)
-OWNER_PW=$(get_secret AUTH_OWNER_PASSWORD)
-
-export DATABASE_URL="postgres://braid:${APP_PW}@${PGHOST}:5432/braid"
-docker run --rm --network host -e DATABASE_URL \
-  "braid-api-migrate:$SHA" pnpm db:migrate
-
-export AUTH_DATABASE_MIGRATION_URL="postgres://auth_owner:${OWNER_PW}@${PGHOST}:5432/braid_auth"
-docker run --rm --network host -e AUTH_DATABASE_MIGRATION_URL \
-  "braid-auth-migrate:$SHA" pnpm --filter @repo/auth run db:migrate
-
-kubectl -n braid exec -i postgres-0 -- \
-  psql -v ON_ERROR_STOP=1 --single-transaction -U auth_owner -d braid_auth \
-  < apps/auth/ops/grant-runtime.sql
+# A API e o auth migram o proprio arquivo SQLite na subida do pod (ADR 0024 e 0025), com uma copia antes de cada
+# mudanca de schema.
 
 docker save "braid-api:$SHA" "braid-auth:$SHA" "braid-web:$SHA" "braid-mcp:$SHA" -o /opt/braid/images.tar
 k3s ctr images import /opt/braid/images.tar
@@ -73,6 +55,27 @@ for app in api auth web; do
     exit 1
   fi
 done
+
+# Virada do auth para SQLite (ADR 0025): o primeiro pod sobe com o arquivo sem usuarios. Enquanto o Postgres antigo
+# existir, os dados de acesso vem dele uma vez (usuarios, papeis, chaves de dispositivo e de assinatura, auditoria) e o
+# auth reinicia. Com usuarios no arquivo, o passo nao faz nada. A senha do Postgres vai pela entrada padrao.
+auth_users() {
+  kubectl -n braid exec deploy/auth -- node -e '
+    const db = new (process.getBuiltinModule("node:sqlite").DatabaseSync)(process.env.AUTH_DATABASE_PATH, { readOnly: true });
+    console.log(db.prepare("SELECT count(*) AS n FROM users").get().n);'
+}
+if kubectl -n braid get svc postgres >/dev/null 2>&1 && [[ "$(auth_users)" == "0" ]]; then
+  OWNER_PW=$(kubectl -n braid get secret postgres-env -o "jsonpath={.data.AUTH_OWNER_PASSWORD}" | base64 -d)
+  printf 'postgres://auth_owner:%s@postgres.braid.svc.cluster.local:5432/braid_auth' "$OWNER_PW" \
+    | kubectl -n braid exec -i deploy/auth -- node apps/auth/dist/db/copy-from-postgres.cli.js --url-from-stdin
+  unset OWNER_PW
+  kubectl -n braid rollout restart deployment/auth
+  if ! kubectl -n braid rollout status deployment/auth --timeout=300s; then
+    rollout_diagnostics auth
+    exit 1
+  fi
+  echo "Auth: dados copiados do Postgres para o SQLite ($(auth_users) usuario(s))."
+fi
 
 # O MCP so atende o Hermes (ADR 004); web, auth e API nao dependem dele. Se nao
 # subir, avisa e segue: nao trava a release das aplicacoes. Causa comum: faltam

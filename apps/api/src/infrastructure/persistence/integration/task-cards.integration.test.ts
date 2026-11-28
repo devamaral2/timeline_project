@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { Artifact, Task, type ArtifactLink, type TaskCreateProps } from "../../../domain";
 import type { AgendaQueryParams, TaskCard, TrackedQueryParams } from "../../../domain/ports";
-import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
-import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
-import { PostgresTaskCardQuery } from "../tasks/queries/postgres-task-card.query";
-import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
-import { PostgresRecurrenceRepository } from "../recurrences/repositories/postgres-recurrence.repository";
+import { SqliteEntityBatchWriter } from "../agent-batch/sqlite-entity-batch-writer";
+import { SqliteArtifactRepository } from "../artifacts/repositories/sqlite-artifact.repository";
+import { SqliteTaskCardQuery } from "../tasks/queries/sqlite-task-card.query";
+import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
+import { SqliteRecurrenceRepository } from "../recurrences/repositories/sqlite-recurrence.repository";
 import {
   OTHER_USER,
   USER,
@@ -18,24 +18,26 @@ import {
   textArtifact,
   trackedTask,
 } from "../testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import { sql } from "@repo/sqlite";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 const uses = (artifactId: string): ArtifactLink => ({ artifactId, relation: "uses", fromRecurrence: false });
 const idsOf = (cards: readonly TaskCard[]) => cards.map((card) => card.task.id);
 
-describe("PostgresTaskCardQuery", () => {
-  let ctx: PostgresTestContext;
-  let cards: PostgresTaskCardQuery;
-  let tasks: PostgresTaskRepository;
-  let artifacts: PostgresArtifactRepository;
-  let recurrences: PostgresRecurrenceRepository;
+describe("SqliteTaskCardQuery", () => {
+  let ctx: SqliteTestContext;
+  const run = (text: string, params: unknown[] = []) => ctx.db.execute(sql.unsafe(text, params));
+  let cards: SqliteTaskCardQuery;
+  let tasks: SqliteTaskRepository;
+  let artifacts: SqliteArtifactRepository;
+  let recurrences: SqliteRecurrenceRepository;
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
-    cards = new PostgresTaskCardQuery(ctx.db);
-    tasks = new PostgresTaskRepository(ctx.db);
-    artifacts = new PostgresArtifactRepository(ctx.db);
-    recurrences = new PostgresRecurrenceRepository(ctx.db);
+    ctx = await createSqliteTestContext();
+    cards = new SqliteTaskCardQuery(ctx.db);
+    tasks = new SqliteTaskRepository(ctx.db);
+    artifacts = new SqliteArtifactRepository(ctx.db);
+    recurrences = new SqliteRecurrenceRepository(ctx.db);
   }, 60000);
 
   beforeEach(async () => {
@@ -317,7 +319,7 @@ describe("PostgresTaskCardQuery", () => {
         await tracked("Apagado antes"),
         await tracked("Apagado depois"),
       ];
-      await new PostgresEntityBatchWriter(ctx.db).commit({
+      await new SqliteEntityBatchWriter(ctx.db).commit({
         userId: USER,
         tasks: [],
         artifacts: [],

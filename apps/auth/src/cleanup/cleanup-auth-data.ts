@@ -41,12 +41,8 @@ async function count(tx: AuthTransaction, sql: string, values: unknown[]): Promi
  */
 export async function cleanupAuthData(input: { database: AuthDatabase; now: Date; context: RequestContext }): Promise<CleanupResult> {
   return input.database.transaction(async (tx) => {
-    const locked = await tx.query<{ acquired: boolean }>(
-      "SELECT pg_try_advisory_xact_lock(hashtextextended($1, 0)) AS acquired",
-      ['timeline-auth:cleanup'],
-    );
-    if (!locked.rows[0]?.acquired) return emptyResult();
-
+    // A transacao abre com BEGIN IMMEDIATE: uma segunda limpeza (outro processo, outro horario do cron) espera esta
+    // terminar e depois acha so o que sobrou, em vez de correr junto. O lock e sempre obtido.
     const now = input.now;
     const attemptCutoff = new Date(now.getTime() - hours(24));
     const inviteCutoff = new Date(now.getTime() - days(30));
@@ -55,7 +51,7 @@ export async function cleanupAuthData(input: { database: AuthDatabase; now: Date
 
     // A session with no usable refresh token cannot be refreshed again.  Keep
     // consumed tokens while it remains live so reuse detection still works.
-    result.sessionsEnded = await count(tx, `UPDATE sessions s SET ended_at=$1
+    result.sessionsEnded = await count(tx, `UPDATE sessions AS s SET ended_at=$1
       WHERE s.revoked_at IS NULL AND s.ended_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM refresh_tokens r WHERE r.session_id=s.id AND r.consumed_at IS NULL AND r.expires_at>$1)`, [now]);
     result.rateLimitBucketsDeleted = await count(tx, 'DELETE FROM rate_limit_buckets WHERE window_expires_at <= $1', [attemptCutoff]);

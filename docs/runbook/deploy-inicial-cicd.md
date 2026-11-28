@@ -63,8 +63,8 @@ Cadastre as variáveis abaixo usando os valores atuais de produção:
 
 | Escopo no código | Variáveis obrigatórias no Environment                                                                                                                                             |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `api-runtime`    | `DATABASE_URL`, `AUTH_SERVICE_URL`, `AUTH_INTERNAL_SERVICE_KEY`                                                                                                                   |
-| `auth-runtime`   | `NODE_ENV`, `AUTH_DATABASE_URL`, `AUTH_ISSUER`, `AUTH_AUDIENCE`, `AUTH_PUBLIC_URL`, `AUTH_WEB_APP_URL`, `AUTH_KEY_ENCRYPTION_KEY`, `AUTH_INTERNAL_SERVICE_KEY`, `API_SERVICE_URL` |
+| `api-runtime`    | `AUTH_SERVICE_URL`, `AUTH_INTERNAL_SERVICE_KEY` (banco em SQLite no volume do pod, ADR 0024)                                                                                      |
+| `auth-runtime`   | `NODE_ENV`, `AUTH_ISSUER`, `AUTH_AUDIENCE`, `AUTH_PUBLIC_URL`, `AUTH_WEB_APP_URL`, `AUTH_KEY_ENCRYPTION_KEY`, `AUTH_INTERNAL_SERVICE_KEY`, `API_SERVICE_URL` |
 | `web-build`      | `BACKEND_URL`, `AUTH_SERVICE_URL`                                                                                                                                                 |
 
 
@@ -287,7 +287,7 @@ force push bloqueado e check `CI / validate` exigido depois de confirmar
 o nome exato no primeiro PR. O workflow
 [ci.yml](../../.github/workflows/ci.yml) executa lint
 (atualmente informativo), typecheck, testes unitários, build e Playwright
-E2E; usa PostgreSQL temporário do Testcontainers e não precisa do 1Password.
+E2E; usa arquivos SQLite temporários para a API e o auth e não precisa do 1Password.
 O [deploy-production.yml](../../.github/workflows/deploy-production.yml)
 repete a validação, espera o Environment `production` e só então acessa
 a VPS. O job de deploy não recebe token do 1Password.

@@ -1,5 +1,9 @@
 # Deploy na VPS: k3s, Traefik e Cloudflare, desde a preparação inicial
 
+> **Atualização (ADR 0024 e 0025):** a API e o auth não usam mais PostgreSQL; cada um guarda tudo num arquivo SQLite
+> no volume do próprio pod. As seções que criam o PostgreSQL, os papéis `auth_owner`/`auth_runtime` e os Secrets com
+> URLs de banco só valem para uma instalação anterior, até o PostgreSQL ser desligado.
+
 Este roteiro parte **somente** do que você informou ter feito: inspeção da VPS,
 usuário com sudo e SSH por chave exclusivo, UFW, swap, fail2ban, atualizações
 automáticas conforme o roteiro colado e timezone. Não exige VPN nem usa
@@ -710,8 +714,9 @@ isso pode apagar o banco.
 
 ## 11. Fila de jobs de IA: nada a subir
 
-Os jobs de IA da API ficam na tabela `jobs` do banco `braid`, criada pelas
-migrations do passo 12. O worker roda dentro do próprio pod da API e lê essa
+Os jobs de IA da API ficam na tabela `jobs` do banco da API, um arquivo SQLite
+no volume `api-data` do pod ([ADR 0024](../adr/0024-api-em-sqlite-sem-orm.md)),
+criada pelas migrations que a API aplica ao subir. O worker roda dentro do próprio pod da API e lê essa
 tabela; não há broker, Service, Secret nem variável obrigatória para a fila. Os
 ajustes opcionais (`AI_JOBS_CONCURRENCY`, `AI_JOBS_LEASE_MS`,
 `AI_JOBS_MAX_ATTEMPTS`, `AI_JOBS_POLL_MS`) e as consultas de diagnóstico estão
@@ -741,8 +746,6 @@ cd /opt/braid/src
 export SHA=$(git rev-parse HEAD)
 printf 'export SHA=%q\n' "$SHA" > /opt/braid/release.env
 
-docker build --target builder -f apps/api/Dockerfile -t "braid-api-migrate:$SHA" .
-docker build --target builder -f apps/auth/Dockerfile -t "braid-auth-migrate:$SHA" .
 docker build -f apps/api/Dockerfile -t "braid-api:$SHA" .
 docker build -f apps/auth/Dockerfile -t "braid-auth:$SHA" .
 docker build --no-cache \
@@ -756,61 +759,13 @@ que o contexto é a raiz do monorepo. Não execute de dentro de `apps/*`.
 O web usa `--no-cache` para que alterações do arquivo montado como secret não
 reutilizem um build com configuração antiga. Isso aumenta o tempo de build.
 
-Agora crie um único comando repetível para migrations:
-
-```bash
-cat > /opt/braid/bin/migrate.sh <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-source /opt/braid/env.sh
-source /opt/braid/release.env
-cd /opt/braid/src
-/opt/braid/bin/check-auth-schema.sh
-PGHOST=$(kubectl -n braid get svc postgres -o jsonpath='{.spec.clusterIP}')
-get_secret() {
-  kubectl -n braid get secret postgres-env -o "jsonpath={.data.$1}" | base64 -d
-}
-APP_PW=$(get_secret PG_APP_PASSWORD)
-OWNER_PW=$(get_secret AUTH_OWNER_PASSWORD)
-
-export DATABASE_URL="postgres://braid:${APP_PW}@${PGHOST}:5432/braid"
-docker run --rm --network host -e DATABASE_URL \
-  "braid-api-migrate:$SHA" pnpm db:migrate
-
-export AUTH_DATABASE_MIGRATION_URL="postgres://auth_owner:${OWNER_PW}@${PGHOST}:5432/braid_auth"
-docker run --rm --network host -e AUTH_DATABASE_MIGRATION_URL \
-  "braid-auth-migrate:$SHA" pnpm --filter @repo/auth run db:migrate
-
-kubectl -n braid exec -i postgres-0 -- \
-  psql -v ON_ERROR_STOP=1 --single-transaction -U auth_owner -d braid_auth \
-  < apps/auth/ops/grant-runtime.sql
-EOF
-chmod 700 /opt/braid/bin/migrate.sh
-/opt/braid/bin/migrate.sh
-```
-
-Por quê: os containers temporários usam a rede do host Linux para alcançar o
-ClusterIP do banco; não publicam portas. A API usa Drizzle Kit. O auth usa seu
-executor TypeScript, que aplica os arquivos de `apps/auth/drizzle/` e registra
-os já aplicados. Ambos usam o driver `pg`, sem cliente `psql` no host.
-
-O último comando aplica permissões, como `auth_owner`, usando o `psql` do próprio
-Postgres via socket local. O arquivo vem pelo stdin (`-i`). É uma etapa separada
-das tabelas: libera leitura/escrita ao runtime, mas mantém `audit_log` restrita
-a inserção. Não retire essa etapa. Seria possível automatizar permissões no
-executor Node em outra mudança; este roteiro preserva o mecanismo existente.
-
-Confira a estrutura:
-
-```bash
-kubectl -n braid exec postgres-0 -- psql -U braid -d braid -c '\dt'
-kubectl -n braid exec postgres-0 -- psql -U auth_owner -d braid_auth -c '\dt'
-kubectl -n braid exec postgres-0 -- psql -U auth_owner -d braid_auth \
-  -c "SELECT has_table_privilege('auth_runtime','audit_log','INSERT') AS pode_inserir, has_table_privilege('auth_runtime','audit_log','UPDATE') AS pode_alterar;"
-```
-
-Esperado: tabelas nas duas bases e `pode_inserir=t`, `pode_alterar=f`.
-O sucesso do deploy não depende de rodar migrations no computador pessoal.
+Não há passo de migração aqui: a API e o auth guardam tudo em arquivos SQLite
+nos volumes dos próprios pods e aplicam as migrations pendentes ao subir, depois
+de copiar o arquivo ([ADR 0024](../adr/0024-api-em-sqlite-sem-orm.md) e
+[ADR 0025](../adr/0025-auth-em-sqlite.md)). Os bancos `braid` e `braid_auth` do
+PostgreSQL, se existirem de uma instalação anterior, não são mais lidos; o
+primeiro deploy copia os dados de acesso do `braid_auth` uma vez
+([runbook do banco do auth](./auth-database.md)).
 
 Importe as imagens finais no runtime do k3s:
 
@@ -1327,15 +1282,14 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
   -out "$RESTORE_DIR/bundle.tar.gz"
 tar -xzf "$RESTORE_DIR/bundle.tar.gz" -C "$RESTORE_DIR"
 
-kubectl -n braid exec postgres-0 -- createdb -U postgres restore_check_api
-kubectl -n braid exec -i postgres-0 -- pg_restore -U postgres \
-  --exit-on-error --no-owner --no-privileges -d restore_check_api \
-  < "$RESTORE_DIR/backups/$BACKUP_STAMP/braid.dump"
+# A API e um arquivo SQLite: confira a copia com o `node:sqlite` da imagem da API.
+docker run --rm -v "$RESTORE_DIR/backups/$BACKUP_STAMP:/restore:ro" "braid-api:$SHA" node -e '
+  const db = new (process.getBuiltinModule("node:sqlite").DatabaseSync)("/restore/api.sqlite", { readOnly: true });
+  console.log(db.prepare("PRAGMA integrity_check").get(), db.prepare("SELECT count(*) AS tabelas FROM sqlite_schema WHERE type = '"'"'table'"'"'").get());'
 kubectl -n braid exec postgres-0 -- createdb -U postgres restore_check_auth
 kubectl -n braid exec -i postgres-0 -- pg_restore -U postgres \
   --exit-on-error --no-owner --no-privileges -d restore_check_auth \
   < "$RESTORE_DIR/backups/$BACKUP_STAMP/braid_auth.dump"
-kubectl -n braid exec postgres-0 -- psql -U postgres -d restore_check_api -c '\dt'
 kubectl -n braid exec postgres-0 -- psql -U postgres -d restore_check_auth -c '\dt'
 ```
 
@@ -1344,7 +1298,6 @@ substituídos. Se os nomes `restore_check_*` já existirem, inspecione o ensaio
 anterior; não sobreponha. Depois do sucesso, remova **somente os bancos de ensaio**:
 
 ```bash
-kubectl -n braid exec postgres-0 -- dropdb -U postgres restore_check_api
 kubectl -n braid exec postgres-0 -- dropdb -U postgres restore_check_auth
 ```
 

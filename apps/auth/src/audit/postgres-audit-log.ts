@@ -4,7 +4,7 @@ import type { AuditEventInput } from "./audit-event";
 import { assertSafeAuditEvent } from "./audit-redaction";
 import type { AuditLog } from "./ports/audit-log";
 
-type AuditQueryable = { query: (...args: unknown[]) => Promise<unknown> };
+type AuditQueryable = Pick<AuthTransaction, "query">;
 export async function insertAuditEvents(tx: AuthTransaction, events: readonly AuditEventInput[]): Promise<void> {
   if (events.length === 0) throw new Error("auditEvents must not be empty");
   for (const event of events) {

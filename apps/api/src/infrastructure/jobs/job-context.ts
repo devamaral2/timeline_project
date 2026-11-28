@@ -1,11 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { sql, type SQL } from "drizzle-orm";
-import { ulid } from "ulid";
+import { monotonicFactory } from "ulid";
+import { NOW, sql, type Tx } from "@repo/sqlite";
 
 /** O que a fila precisa de uma transacao: executar SQL nela. */
-export interface JobTransaction {
-  execute(query: SQL): Promise<{ rows: Record<string, unknown>[] }>;
-}
+export type JobTransaction = Pick<Tx, "execute">;
 
 export interface EnqueueJobInput {
   kind: string;
@@ -30,6 +28,9 @@ export interface CurrentJob {
   completed?: boolean;
 }
 
+/** Monotonico: os jobs criados no mesmo milissegundo (o `created_at` tem essa precisao) ordenam por id na ordem de criacao. */
+const newJobId = monotonicFactory();
+
 export const jobContext = new AsyncLocalStorage<CurrentJob>();
 
 export function getCurrentJob(): CurrentJob | undefined {
@@ -46,9 +47,9 @@ export async function completeCurrentJob(tx: JobTransaction): Promise<void> {
   const context = jobContext.getStore();
   if (!context) return;
   const result = await tx.execute(sql`
-    UPDATE jobs SET status = 'succeeded', error = NULL, progress = NULL, lease_until = NULL, updated_at = now()
+    UPDATE jobs SET status = 'succeeded', error = NULL, progress = NULL, lease_until = NULL, updated_at = ${NOW}
     WHERE id = ${context.id} AND status = 'running' AND lease_token = ${context.token}
-      AND lease_until > clock_timestamp()
+      AND lease_until > ${new Date()}
     RETURNING id`);
   if (result.rows.length !== 1) throw new Error("Job lease lost or cancelled");
   context.completed = true;
@@ -59,8 +60,8 @@ export async function enqueueJobInTransaction(tx: JobTransaction, input: Enqueue
   if (!input.userId || !input.actorId) throw new Error("Jobs require authenticated ownership");
   const result = await tx.execute(sql`
     INSERT INTO jobs (id, kind, user_id, actor_id, task_id, payload, dedupe_key, concurrency_key)
-    VALUES (${ulid()}, ${input.kind}, ${input.userId}, ${input.actorId}, ${input.taskId ?? null},
-      ${JSON.stringify(input.payload)}::jsonb, ${input.dedupeKey ?? null}, ${input.concurrencyKey ?? null})
+    VALUES (${newJobId()}, ${input.kind}, ${input.userId}, ${input.actorId}, ${input.taskId ?? null},
+      ${sql.json(input.payload)}, ${input.dedupeKey ?? null}, ${input.concurrencyKey ?? null})
     ON CONFLICT (user_id, kind, dedupe_key) DO UPDATE SET dedupe_key = excluded.dedupe_key
     RETURNING id`);
   return String(result.rows[0]?.id);

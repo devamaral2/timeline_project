@@ -70,7 +70,7 @@ describe("a OpenAI pela Responses API", () => {
     const second = await conversation.next(signal);
     expect(second).toMatchObject({ stop: "done", text: "Marquei.", calls: [] });
     // O raciocinio cifrado e o pedido voltam inteiros, seguidos do resultado.
-    expect((bodies[1]?.input as unknown[]).slice(-3)).toEqual([
+    expect(((bodies[1]?.input ?? []) as unknown[]).slice(-3)).toEqual([
       expect.objectContaining({ type: "reasoning", encrypted_content: "enc" }),
       expect.objectContaining({ type: "function_call", call_id: "call_1" }),
       { type: "function_call_output", call_id: "call_1", output: "Erro: nome curto demais" },

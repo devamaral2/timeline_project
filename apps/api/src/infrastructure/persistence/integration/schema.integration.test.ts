@@ -1,14 +1,24 @@
 import { ulid } from "ulid";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import { Task, TaskValidationError } from "../../../domain";
+import { SqliteJobStore } from "../jobs/sqlite-job.store";
+import { sql } from "@repo/sqlite";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 type Row = Record<string, unknown>;
 
-describe("banco novo: checks, restricoes e indices", () => {
-  let ctx: PostgresTestContext;
+/** O que o SQLite guarda: JSON em texto e booleano em 0 ou 1 (o `sql.unsafe` recusa objeto e lista soltos). */
+function stored(value: unknown): unknown {
+  return typeof value === "object" && value !== null ? JSON.stringify(value) : value;
+}
+
+describe("banco novo (SQLite): checks, restricoes e indices", () => {
+  let ctx: SqliteTestContext;
+  const run = (text: string, params: unknown[] = []) => ctx.db.execute(sql.unsafe(text, params.map(stored)));
+  const rowsOf = (text: string, params: unknown[] = []) => ctx.db.all<Row>(sql.unsafe(text, params.map(stored)));
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
+    ctx = await createSqliteTestContext();
   }, 60000);
 
   beforeEach(async () => {
@@ -22,7 +32,7 @@ describe("banco novo: checks, restricoes e indices", () => {
   async function insert(table: string, row: Row): Promise<void> {
     const columns = Object.keys(row);
     const placeholders = columns.map((_, index) => `$${index + 1}`).join(", ");
-    await ctx.pool.query(
+    await run(
       `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${placeholders})`,
       columns.map((column) => row[column]),
     );
@@ -30,8 +40,8 @@ describe("banco novo: checks, restricoes e indices", () => {
 
   /** O `diario` do usuario, criado na primeira necessidade: toda tarefa e serie precisa de um projeto. */
   async function personalProject(userId: string): Promise<string> {
-    const found = await ctx.pool.query("SELECT id FROM projects WHERE user_id = $1 AND personal", [userId]);
-    if (found.rows[0]) return found.rows[0].id as string;
+    const [found] = await rowsOf("SELECT id FROM projects WHERE user_id = $1 AND personal", [userId]);
+    if (found) return found.id as string;
     const id = ulid();
     await insert("projects", { id, user_id: userId, name: "diario", personal: true });
     return id;
@@ -69,15 +79,14 @@ describe("banco novo: checks, restricoes e indices", () => {
     return id;
   }
 
-  const count = async (table: string) =>
-    (await ctx.pool.query(`SELECT count(*)::int AS n FROM ${table}`)).rows[0].n as number;
+  const count = async (table: string) => (await rowsOf(`SELECT count(*) AS n FROM ${table}`))[0]?.n as number;
 
   test("a migration cria exatamente as 14 tabelas", async () => {
-    const { rows } = await ctx.pool.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+    const rows = await rowsOf(
+      "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name <> 'schema_migrations' ORDER BY name",
     );
 
-    expect(rows.map((row) => row.table_name)).toEqual([
+    expect(rows.map((row) => row.name)).toEqual([
       "artifact_artifact_relation",
       "artifact_tags",
       "artifacts",
@@ -111,14 +120,15 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("o nome e unico por usuario sem distinguir maiusculas", async () => {
       await project({ name: "Braid" });
 
-      await expect(project({ name: "braid" })).rejects.toThrow(/projects_user_name_unique/);
+      await expect(project({ name: "braid" })).rejects.toThrow(/UNIQUE constraint failed/);
       await project({ name: "braid", user_id: "user-2" });
     });
 
     test("cada usuario tem no maximo um personal, e o nome dele e diario", async () => {
       await project({ name: "diario", personal: true });
 
-      await expect(project({ name: "diario", personal: true })).rejects.toThrow(/projects_user_name_unique|projects_user_personal_unique/);
+      // O SQLite nomeia so o CHECK; o indice unico aparece pelas colunas.
+      await expect(project({ name: "diario", personal: true })).rejects.toThrow(/UNIQUE constraint failed/);
       await expect(project({ name: "outro", personal: true, user_id: "user-2" })).rejects.toThrow(/projects_personal_name/);
       await project({ name: "diario", personal: true, user_id: "user-2" });
     });
@@ -126,17 +136,17 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("a tarefa e a serie exigem projeto, e um projeto com tarefa nao se apaga", async () => {
       await expect(
         insert("tasks", { id: ulid(), user_id: "user-1", actor: "human", kind: "common", name: "Sem projeto" }),
-      ).rejects.toThrow(/project_id/);
+      ).rejects.toThrow(/NOT NULL constraint failed: tasks.project_id/);
       await expect(
         insert("recurrences", { id: ulid(), user_id: "user-1", freq: "daily", time_of_day: "18:00", starts_on: "2026-11-01", template: "{}" }),
-      ).rejects.toThrow(/project_id/);
+      ).rejects.toThrow(/NOT NULL constraint failed: recurrences.project_id/);
       await expect(
         insert("tasks", { id: ulid(), user_id: "user-1", project_id: ulid(), actor: "human", kind: "common", name: "Projeto que nao existe" }),
-      ).rejects.toThrow(/tasks_project_id_projects_id_fk/);
+      ).rejects.toThrow(/FOREIGN KEY constraint failed/);
 
       await task();
       await recurrence();
-      await expect(ctx.pool.query("DELETE FROM projects")).rejects.toThrow(/foreign key/);
+      await expect(run("DELETE FROM projects")).rejects.toThrow(/FOREIGN KEY constraint failed/);
     });
   });
 
@@ -170,7 +180,7 @@ describe("banco novo: checks, restricoes e indices", () => {
     test("tarefa de pessoa pode nao ter status: e a tarefa de referencia", async () => {
       const id = await task({ status: null });
 
-      const { rows } = await ctx.pool.query("SELECT status, priority, revision FROM tasks WHERE id = $1", [id]);
+      const rows = await rowsOf("SELECT status, priority, revision FROM tasks WHERE id = $1", [id]);
       expect(rows[0]).toEqual({ status: null, priority: "medium", revision: 1 });
     });
 
@@ -250,11 +260,16 @@ describe("banco novo: checks, restricoes e indices", () => {
       await task({ status: "todo", estimated_finish_at: "2026-11-20T23:00:00Z" });
     });
 
-    test("os avisos ficam entre 1 minuto e 30 dias", async () => {
+    // Um CHECK do SQLite nao aceita subconsulta, entao o intervalo de cada aviso saiu do banco e fica no dominio.
+    // O banco so confere que a coluna e uma lista JSON.
+    test("os avisos ficam entre 1 minuto e 30 dias: o dominio recusa, o banco so exige uma lista", async () => {
       await task({ started_at: "2026-11-14T10:00:00Z", notify_offsets_minutes: [10, 43200] });
+      const reference = { name: "Tarefa", startedAt: new Date("2026-11-14T10:00:00Z") };
 
-      await expect(task({ notify_offsets_minutes: [0] })).rejects.toThrow(/tasks_notify_offsets_valid/);
-      await expect(task({ notify_offsets_minutes: [43201] })).rejects.toThrow(/tasks_notify_offsets_valid/);
+      expect(() => Task.create({ userId: "user-1", ...reference, notifyOffsetsMinutes: [0] as never })).toThrow(TaskValidationError);
+      expect(() => Task.create({ userId: "user-1", ...reference, notifyOffsetsMinutes: [43201] as never })).toThrow(TaskValidationError);
+      await expect(task({ notify_offsets_minutes: "{}" })).rejects.toThrow(/tasks_notify_offsets_array/);
+      await expect(task({ notify_offsets_minutes: "nao e json" })).rejects.toThrow(/tasks_notify_offsets_array/);
     });
   });
 
@@ -298,7 +313,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       await task({ recurrence_id: series, occurrence_on: "2026-11-15" });
 
       await expect(task({ recurrence_id: series, occurrence_on: "2026-11-14" })).rejects.toThrow(
-        /tasks_recurrence_occurrence_unique/,
+        /UNIQUE constraint failed: tasks.recurrence_id, tasks.occurrence_on/,
       );
     });
 
@@ -306,9 +321,9 @@ describe("banco novo: checks, restricoes e indices", () => {
       const series = await recurrence();
       const id = await task({ recurrence_id: series, occurrence_on: "2026-11-14" });
 
-      await ctx.pool.query("DELETE FROM recurrences WHERE id = $1", [series]);
+      await run("DELETE FROM recurrences WHERE id = $1", [series]);
 
-      const { rows } = await ctx.pool.query("SELECT recurrence_id, occurrence_on::text FROM tasks WHERE id = $1", [id]);
+      const rows = await rowsOf("SELECT recurrence_id, occurrence_on FROM tasks WHERE id = $1", [id]);
       expect(rows[0]).toEqual({ recurrence_id: null, occurrence_on: "2026-11-14" });
     });
   });
@@ -355,7 +370,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       const request = await agentTask();
       await entry(request, { kind: "message", role: "user", content: "oi" });
 
-      await ctx.pool.query("DELETE FROM tasks WHERE id = $1", [request]);
+      await run("DELETE FROM tasks WHERE id = $1", [request]);
 
       expect(await count("task_entries")).toBe(0);
     });
@@ -375,7 +390,7 @@ describe("banco novo: checks, restricoes e indices", () => {
 
       await expect(
         artifact({ user_id: null, type: "workout", name: "Agachamento livre", data: { code: "squat" } }),
-      ).rejects.toThrow(/artifacts_workout_code_unique/);
+      ).rejects.toThrow(/UNIQUE constraint failed: index 'artifacts_workout_code_unique'/);
     });
 
     test("um artefato vivo por arquivo de skill ou agente", async () => {
@@ -383,9 +398,9 @@ describe("banco novo: checks, restricoes e indices", () => {
 
       await expect(
         artifact({ type: "skill", name: "Agenda", data: { path: "hermes/skills/agenda/SKILL.md" } }),
-      ).rejects.toThrow(/artifacts_agent_file_unique/);
+      ).rejects.toThrow(/UNIQUE constraint failed: index 'artifacts_agent_file_unique'/);
 
-      await ctx.pool.query("UPDATE artifacts SET deleted_at = now() WHERE id = $1", [first]);
+      await run("UPDATE artifacts SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = $1", [first]);
       await artifact({ type: "skill", name: "Agenda", data: { path: "hermes/skills/agenda/SKILL.md" } });
     });
 
@@ -404,7 +419,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       await relate(first, shared, "subtask");
       await relate(shared, after, "subtask");
       await relate(shared, other, "subtask");
-      await expect(relate(second, shared, "subtask")).rejects.toThrow(/task_task_subtask_unique/);
+      await expect(relate(second, shared, "subtask")).rejects.toThrow(/UNIQUE constraint failed: task_task_relation.to_task_id/);
 
       expect(await count("task_task_relation")).toBe(3);
     });
@@ -413,8 +428,9 @@ describe("banco novo: checks, restricoes e indices", () => {
       const [a, b] = [await task(), await task()];
       await relate(a, b, "subtask");
       await relate(a, b, "follow_up");
+      await relate(a, b, "generates");
 
-      await expect(relate(a, b, "subtask")).rejects.toThrow(/task_task_relation_.*_pk/);
+      await expect(relate(a, b, "generates")).rejects.toThrow(/UNIQUE constraint failed: task_task_relation\.(from_task_id|to_task_id), task_task_relation\.relation/);
     });
 
     test("uma tarefa nao se relaciona consigo mesmo, e o tipo e do conjunto", async () => {
@@ -439,14 +455,14 @@ describe("banco novo: checks, restricoes e indices", () => {
       const [first, other, followUp] = [await agentTask(), await agentTask(), await agentTask()];
       await relate(first, followUp, "follow_up");
 
-      await expect(relate(other, followUp, "follow_up")).rejects.toThrow(/task_task_follow_up_unique/);
+      await expect(relate(other, followUp, "follow_up")).rejects.toThrow(/UNIQUE constraint failed: task_task_relation.to_task_id/);
     });
 
     test("apagar fisicamente uma ponta leva a relacao, e nao a outra ponta", async () => {
       const [project, session] = [await task(), await task()];
       await relate(project, session, "subtask");
 
-      await ctx.pool.query("DELETE FROM tasks WHERE id = $1", [project]);
+      await run("DELETE FROM tasks WHERE id = $1", [project]);
 
       expect(await count("task_task_relation")).toBe(0);
       expect(await count("tasks")).toBe(1);
@@ -462,7 +478,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       await link(meal, food, { relation: "creates", position: 0 });
 
       await expect(link(meal, food, { relation: "uses", position: 1 })).rejects.toThrow(
-        /task_artifact_relation_.*_pk/,
+        /UNIQUE constraint failed: task_artifact_relation.task_id, task_artifact_relation.artifact_id/,
       );
     });
 
@@ -473,19 +489,25 @@ describe("banco novo: checks, restricoes e indices", () => {
       await link(step, a, { relation: "updates" });
       await link(step, b, { relation: "creates" });
 
-      await expect(link(meal, c, { position: 0 })).rejects.toThrow(/task_artifact_task_position_unique/);
+      await expect(link(meal, c, { position: 0 })).rejects.toThrow(/UNIQUE constraint failed: task_artifact_relation.task_id, task_artifact_relation.position/);
       await expect(link(meal, c, { position: -1 })).rejects.toThrow(/task_artifact_position_nonneg/);
     });
 
-    test("reordenar com position + 1 nao colide no meio do UPDATE", async () => {
+    // O SQLite nao adia o UNIQUE: `position + 1` colide no meio do UPDATE. A aplicacao nunca reordena assim (apaga e
+    // regrava as relacoes da tarefa), e a reordenacao segura e em duas fases.
+    test("reordenar em duas fases (posicoes deslocadas primeiro) nao colide", async () => {
       const meal = await task({ kind: "meal" });
       const [a, b] = [await artifact(), await artifact()];
       await link(meal, a, { position: 0 });
       await link(meal, b, { position: 1 });
 
-      await ctx.pool.query("UPDATE task_artifact_relation SET position = position + 1 WHERE task_id = $1", [meal]);
+      await expect(run("UPDATE task_artifact_relation SET position = position + 1 WHERE task_id = $1", [meal])).rejects.toThrow(
+        /UNIQUE constraint failed/,
+      );
+      await run("UPDATE task_artifact_relation SET position = position + 1000 WHERE task_id = $1", [meal]);
+      await run("UPDATE task_artifact_relation SET position = position - 999 WHERE task_id = $1", [meal]);
 
-      const { rows } = await ctx.pool.query(
+      const rows = await rowsOf(
         "SELECT artifact_id, position FROM task_artifact_relation WHERE task_id = $1 ORDER BY position",
         [meal],
       );
@@ -515,7 +537,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       await derive(rice, eatenMonday);
       await derive(rice, eatenTuesday);
 
-      await expect(derive(beans, eatenMonday)).rejects.toThrow(/artifact_derives_copy_unique/);
+      await expect(derive(beans, eatenMonday)).rejects.toThrow(/UNIQUE constraint failed: artifact_artifact_relation.to_artifact_id/);
       await expect(derive(rice, rice)).rejects.toThrow(/artifact_artifact_not_self/);
     });
   });
@@ -526,7 +548,7 @@ describe("banco novo: checks, restricoes e indices", () => {
       await insert("tags", { id: ulid(), user_id: "user-2", name: "saúde" });
 
       await expect(insert("tags", { id: ulid(), user_id: "user-1", name: "saúde" })).rejects.toThrow(
-        /tags_user_name_unique/,
+        /UNIQUE constraint failed: tags.user_id, tags.name/,
       );
       await expect(insert("tags", { id: ulid(), user_id: "user-1", name: " Saúde" })).rejects.toThrow(
         /tag_name_normalized/,
@@ -544,13 +566,13 @@ describe("banco novo: checks, restricoes e indices", () => {
       await job();
       await job();
 
-      await expect(job({ dedupe_key: "m1" })).rejects.toThrow(/jobs_dedupe_unique/);
+      await expect(job({ dedupe_key: "m1" })).rejects.toThrow(/UNIQUE constraint failed: jobs.user_id, jobs.kind, jobs.dedupe_key/);
     });
 
     test("o status e do conjunto e nasce na fila", async () => {
       await job();
 
-      expect((await ctx.pool.query("SELECT status, attempts FROM jobs")).rows[0]).toEqual({
+      expect((await rowsOf("SELECT status, attempts FROM jobs"))[0]).toEqual({
         status: "queued",
         attempts: 0,
       });
@@ -561,158 +583,216 @@ describe("banco novo: checks, restricoes e indices", () => {
       const step = await agentTask({ kind: "step" });
       await job({ task_id: step });
 
-      await ctx.pool.query("DELETE FROM tasks WHERE id = $1", [step]);
+      await run("DELETE FROM tasks WHERE id = $1", [step]);
 
       expect(await count("jobs")).toBe(0);
     });
 
+    // No Postgres isto era `FOR UPDATE SKIP LOCKED` em duas conexoes. No SQLite o escritor e um so e a escolha com
+    // a marca do lease e uma instrucao so: duas chamadas ao mesmo tempo esperam na fila e nao pegam o mesmo job.
     test("dois workers nao pegam o mesmo job", async () => {
       await job();
       await job();
-      const claim = `SELECT id FROM jobs WHERE status = 'queued' AND available_at <= now()
-        ORDER BY available_at LIMIT 1 FOR UPDATE SKIP LOCKED`;
-      const [first, second] = [await ctx.pool.connect(), await ctx.pool.connect()];
+      const store = new SqliteJobStore(ctx.database, 3000, 3);
 
-      try {
-        await first.query("BEGIN");
-        await second.query("BEGIN");
-        const a = (await first.query(claim)).rows[0].id;
-        const b = (await second.query(claim)).rows[0].id;
+      const [first, second] = await Promise.all([store.claim(["step"], 1), store.claim(["step"], 1)]);
 
-        expect(a).not.toBe(b);
-      } finally {
-        await first.query("ROLLBACK");
-        await second.query("ROLLBACK");
-        first.release();
-        second.release();
-      }
+      expect(first).toHaveLength(1);
+      expect(second).toHaveLength(1);
+      expect(first[0]?.id).not.toBe(second[0]?.id);
+      expect(await store.claim(["step"], 1)).toEqual([]);
     });
   });
 
-  // O planejador so usa um indice parcial quando o filtro da consulta implica o
-  // filtro do indice. Sem varredura sequencial, o plano mostra se a consulta de
-  // cada tela (docs/tdd/novo-banco-de-dados.md) casa com o indice feito para ela.
+  // O SQLite so usa um indice parcial quando o filtro da consulta implica o do indice, e com `?` no lugar de uma
+  // lista de tipos nao prova isso. `EXPLAIN QUERY PLAN` mostra se a consulta de cada tela casa com o indice feito
+  // para ela. O SQL abaixo e o dos repositorios portados (a agenda e a lista de tarefas, de `SqliteTaskCardQuery`;
+  // os artefatos, de `SqliteArtifactRepository`; a fila, de `SqliteJobStore`), com os mesmos literais.
   describe("a consulta de cada tela usa o indice feito para ela", () => {
-    async function planOf(query: string): Promise<string> {
-      const client = await ctx.pool.connect();
-      try {
-        await client.query("BEGIN");
-        await client.query("SET LOCAL enable_seqscan = off");
-        const { rows } = await client.query(`EXPLAIN ${query}`);
-        return rows.map((row) => row["QUERY PLAN"]).join("\n");
-      } finally {
-        await client.query("ROLLBACK");
-        client.release();
-      }
+    async function planOf(query: string, params: unknown[] = []): Promise<string> {
+      const rows = await rowsOf(`EXPLAIN QUERY PLAN ${query}`, params);
+      return rows.map((row) => String(row.detail)).join("\n");
     }
 
-    test("janela da agenda", async () => {
-      const plan = await planOf(`
-        SELECT id FROM tasks
-        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind NOT IN ('step', 'save_content', 'save_content_with_transcription')
-          AND started_at <= '2026-11-21T03:00:00Z'
-          AND started_at >= timestamptz '2026-11-14T03:00:00Z' - interval '31 days'
-          AND coalesce(estimated_finish_at, finished_at, started_at) >= '2026-11-14T03:00:00Z'
-        ORDER BY started_at, id`);
+    const OFF_AGENDA = "'step', 'save_content', 'save_content_with_transcription'";
+    const DAY = "2026-11-14T03:00:00.000Z";
 
-      expect(plan).toContain("tasks_agenda_idx");
+    test("janela da agenda", async () => {
+      const plan = await planOf(
+        `SELECT e.id, e.started_at FROM tasks e
+         WHERE e.user_id = $1 AND e.started_at IS NOT NULL AND NOT e.long_running AND e.kind NOT IN (${OFF_AGENDA})
+           AND e.deleted_at IS NULL AND e.started_at <= $2 AND e.started_at >= $3
+           AND coalesce(e.estimated_finish_at, e.finished_at, e.started_at) >= $4
+         ORDER BY e.started_at DESC, e.id DESC LIMIT 51`,
+        ["user-1", "2026-11-21T03:00:00.000Z", "2026-10-14T03:00:00.000Z", DAY],
+      );
+
+      expect(plan).toContain("USING INDEX tasks_agenda_idx");
+      expect(plan).not.toContain("TEMP B-TREE");
+    });
+
+    test("pagina seguinte da agenda, pelo cursor", async () => {
+      const plan = await planOf(
+        `SELECT e.id, e.started_at FROM tasks e
+         WHERE e.user_id = $1 AND e.started_at IS NOT NULL AND NOT e.long_running AND e.kind NOT IN (${OFF_AGENDA})
+           AND e.deleted_at IS NULL AND (e.started_at, e.id) < ($2, $3)
+         ORDER BY e.started_at DESC, e.id DESC LIMIT 51`,
+        ["user-1", DAY, "01JCZ0000000000000000000AA"],
+      );
+
+      expect(plan).toContain("USING INDEX tasks_agenda_idx");
     });
 
     test("sem o filtro de passos a consulta nao casa com o indice da agenda", async () => {
-      const plan = await planOf(`
-        SELECT id FROM tasks
-        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running
-          AND started_at BETWEEN '2026-11-14T03:00:00Z' AND '2026-11-21T03:00:00Z'
-        ORDER BY started_at, id`);
+      const plan = await planOf(
+        `SELECT id FROM tasks
+         WHERE user_id = $1 AND deleted_at IS NULL AND NOT long_running AND started_at BETWEEN $2 AND $3
+         ORDER BY started_at, id`,
+        ["user-1", DAY, "2026-11-21T03:00:00.000Z"],
+      );
+
+      expect(plan).not.toContain("tasks_agenda_idx");
+    });
+
+    test("com os tipos em parametros o SQLite nao prova o indice: por isso a consulta escreve os literais", async () => {
+      const plan = await planOf(
+        `SELECT id FROM tasks
+         WHERE user_id = $1 AND started_at IS NOT NULL AND NOT long_running AND kind NOT IN ($2, $3, $4) AND deleted_at IS NULL
+         ORDER BY started_at DESC, id DESC`,
+        ["user-1", "step", "save_content", "save_content_with_transcription"],
+      );
 
       expect(plan).not.toContain("tasks_agenda_idx");
     });
 
     test("agenda so de pessoa", async () => {
-      const plan = await planOf(`
-        SELECT id FROM tasks
-        WHERE user_id = 'user-1' AND deleted_at IS NULL AND NOT long_running AND kind NOT IN ('step', 'save_content', 'save_content_with_transcription')
-          AND actor = 'human' AND started_at BETWEEN '2026-11-14T03:00:00Z' AND '2026-11-21T03:00:00Z'
-        ORDER BY started_at, id`);
+      const plan = await planOf(
+        `SELECT e.id, e.started_at FROM tasks e
+         WHERE e.user_id = $1 AND e.started_at IS NOT NULL AND NOT e.long_running AND e.kind NOT IN (${OFF_AGENDA})
+           AND e.deleted_at IS NULL AND e.actor = $2
+         ORDER BY e.started_at DESC, e.id DESC LIMIT 51`,
+        ["user-1", "human"],
+      );
 
-      expect(plan).toContain("tasks_agenda_idx");
+      expect(plan).toContain("USING INDEX tasks_agenda_idx");
     });
 
-    test("lista de tarefas por status e data", async () => {
-      const plan = await planOf(`
-        SELECT id FROM tasks
-        WHERE user_id = 'user-1' AND deleted_at IS NULL AND kind <> 'step' AND status = 'todo'
-        ORDER BY coalesce(started_at, estimated_finish_at), id LIMIT 50`);
+    test("lista de tarefas por status", async () => {
+      const plan = await planOf(
+        `SELECT e.id FROM tasks e
+         WHERE e.user_id = $1 AND e.status IS NOT NULL AND e.kind <> 'step' AND e.deleted_at IS NULL AND e.status IN ($2, $3)
+         ORDER BY coalesce(e.started_at, e.estimated_finish_at) NULLS LAST, e.id LIMIT 50`,
+        ["user-1", "todo", "doing"],
+      );
 
-      expect(plan).toContain("tasks_tracked_idx");
+      expect(plan).toContain("USING INDEX tasks_tracked_idx");
+    });
+
+    test("lista de tarefas sem filtro de status", async () => {
+      const plan = await planOf(
+        `SELECT e.id FROM tasks e
+         WHERE e.user_id = $1 AND e.status IS NOT NULL AND e.kind <> 'step' AND e.deleted_at IS NULL
+         ORDER BY coalesce(e.started_at, e.estimated_finish_at) NULLS LAST, e.id`,
+        ["user-1"],
+      );
+
+      expect(plan).toContain("USING INDEX tasks_tracked_idx");
     });
 
     test("lista de pedidos", async () => {
-      const plan = await planOf(`
-        SELECT id FROM tasks
-        WHERE user_id = 'user-1' AND deleted_at IS NULL AND actor = 'agent' AND kind <> 'step'
-        ORDER BY id DESC LIMIT 50`);
-
-      expect(plan).toContain("tasks_requests_idx");
-    });
-
-    test("todos as tarefas vivas de pessoa", async () => {
       const plan = await planOf(
-        "SELECT id FROM tasks WHERE user_id = 'user-1' AND deleted_at IS NULL AND actor = 'human'",
+        `SELECT e.id FROM tasks e
+         WHERE e.user_id = $1 AND e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL
+         ORDER BY e.id DESC LIMIT 50`,
+        ["user-1"],
       );
 
-      expect(plan).toContain("tasks_user_live_idx");
+      expect(plan).toContain("USING INDEX tasks_requests_idx");
+    });
+
+    test("todas as tarefas vivas de pessoa", async () => {
+      const plan = await planOf("SELECT id FROM tasks WHERE user_id = $1 AND deleted_at IS NULL AND actor = 'human'", ["user-1"]);
+
+      expect(plan).toContain("USING INDEX tasks_user_live_idx");
     });
 
     test("entradas de uma tarefa, em ordem e a partir da ultima lida", async () => {
-      const plan = await planOf(`
-        SELECT id FROM task_entries
-        WHERE task_id = '01JCZ0000000000000000000AA' AND id > '01JCZ0000000000000000000AB' ORDER BY id`);
+      const plan = await planOf("SELECT id FROM task_entries WHERE task_id = $1 AND id > $2 ORDER BY id", [
+        "01JCZ0000000000000000000AA",
+        "01JCZ0000000000000000000AB",
+      ]);
 
       expect(plan).toContain("task_entries_task_idx");
     });
 
     test("relacoes para uma tarefa, por tipo", async () => {
-      const plan = await planOf(`
-        SELECT from_task_id FROM task_task_relation
-        WHERE to_task_id = '01JCZ0000000000000000000AA' AND relation = 'step'`);
+      const plan = await planOf("SELECT from_task_id FROM task_task_relation WHERE to_task_id = $1 AND relation = 'step'", [
+        "01JCZ0000000000000000000AA",
+      ]);
 
       expect(plan).toContain("task_task_reverse_idx");
     });
 
     test("em quais tarefas um artefato aparece", async () => {
       const plan = await planOf(
-        "SELECT task_id FROM task_artifact_relation WHERE artifact_id = '01JCZ0000000000000000000AA'",
+        `SELECT r.artifact_id, e.id FROM task_artifact_relation r JOIN tasks e ON e.id = r.task_id
+         WHERE r.artifact_id IN ($1, $2) AND e.deleted_at IS NULL AND e.kind <> 'step'`,
+        ["01JCZ0000000000000000000AA", "01JCZ0000000000000000000AB"],
       );
 
       expect(plan).toContain("task_artifact_reverse_idx");
     });
 
     test("lista de artefatos por tipo, sem copias", async () => {
-      const plan = await planOf(`
-        SELECT id FROM artifacts
-        WHERE user_id = 'user-1' AND type = 'food' AND deleted_at IS NULL AND NOT derived
-        ORDER BY updated_at DESC, id DESC LIMIT 50`);
+      const plan = await planOf(
+        `SELECT id FROM artifacts
+         WHERE user_id = $1 AND deleted_at IS NULL AND NOT derived AND type IN ($2)
+         ORDER BY updated_at DESC, id DESC`,
+        ["user-1", "food"],
+      );
 
-      expect(plan).toContain("artifacts_user_type_recent_idx");
+      expect(plan).toContain("USING INDEX artifacts_user_type_recent_idx");
+    });
+
+    test("lista de artefatos de todos os tipos usa o indice do usuario", async () => {
+      const plan = await planOf(
+        `SELECT id FROM artifacts WHERE user_id = $1 AND deleted_at IS NULL AND NOT derived ORDER BY updated_at DESC, id DESC`,
+        ["user-1"],
+      );
+
+      expect(plan).toContain("USING INDEX artifacts_user_type_recent_idx");
     });
 
     test("catalogo global por nome", async () => {
-      const plan = await planOf(`
-        SELECT id FROM artifacts
-        WHERE user_id IS NULL AND deleted_at IS NULL AND type = 'food' AND name >= 'arr' ORDER BY name LIMIT 20`);
+      const plan = await planOf(
+        "SELECT id FROM artifacts WHERE user_id IS NULL AND deleted_at IS NULL AND type = $1 ORDER BY name",
+        ["food"],
+      );
 
-      expect(plan).toContain("artifacts_global_idx");
+      expect(plan).toContain("USING INDEX artifacts_global_idx");
+      expect(plan).not.toContain("TEMP B-TREE");
+    });
+
+    test("series do usuario ainda por gerar", async () => {
+      const plan = await planOf(
+        `SELECT id FROM recurrences WHERE user_id = $1 AND (materialized_through IS NULL OR materialized_through < $2)`,
+        ["user-1", "2026-12-01"],
+      );
+
+      expect(plan).toMatch(/USING INDEX recurrences_(user|pending)_idx/);
     });
 
     test("fila: proximo job e lease vencido", async () => {
-      const next = await planOf(`
-        SELECT id FROM jobs WHERE status = 'queued' AND available_at <= now()
-        ORDER BY available_at LIMIT 1 FOR UPDATE SKIP LOCKED`);
-      const expired = await planOf("SELECT id FROM jobs WHERE status = 'running' AND lease_until <= now()");
+      const next = await planOf(
+        `SELECT j.id FROM jobs j
+         WHERE j.status = 'queued' AND j.available_at <= $1 AND j.kind IN ($2)
+         ORDER BY j.available_at, j.id LIMIT 1`,
+        [DAY, "step"],
+      );
+      const expired = await planOf("SELECT id FROM jobs WHERE status = 'running' AND lease_until <= $1", [DAY]);
 
-      expect(next).toContain("jobs_queue_idx");
-      expect(expired).toContain("jobs_lease_idx");
+      expect(next).toContain("USING INDEX jobs_queue_idx");
+      expect(expired).toContain("USING INDEX jobs_lease_idx");
     });
   });
 });

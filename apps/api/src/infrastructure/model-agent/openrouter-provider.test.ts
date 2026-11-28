@@ -63,7 +63,7 @@ describe("o OpenRouter", () => {
 
     conversation.answer([{ call: first.calls[0] as never, outcome: { content: "[]", isError: false } }]);
     expect(await conversation.next(signal)).toMatchObject({ stop: "done", text: "Dentista às 9h." });
-    expect((bodies[1]?.messages as unknown[]).slice(-2)).toEqual([
+    expect(((bodies[1]?.messages ?? []) as unknown[]).slice(-2)).toEqual([
       expect.objectContaining({ role: "assistant", reasoning_details: details, tool_calls: [expect.objectContaining({ id: "call_1" })] }),
       { role: "tool", tool_call_id: "call_1", content: "[]" },
     ]);

@@ -1,18 +1,19 @@
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
-import { PostgresIdempotencyStore } from "../idempotency/postgres-idempotency.store";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import { sql } from "@repo/sqlite";
+import { SqliteIdempotencyStore } from "../idempotency/sqlite-idempotency.store";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 const ref = { userId: "owner", scope: "/api/artifacts", key: "resumo:2026-11-03" };
 const hash = (seed: string) => seed.repeat(64).slice(0, 64);
 
-describe("PostgresIdempotencyStore", () => {
-  let ctx: PostgresTestContext;
-  let store: PostgresIdempotencyStore;
+describe("SqliteIdempotencyStore", () => {
+  let ctx: SqliteTestContext;
+  let store: SqliteIdempotencyStore;
 
   beforeEach(async () => {
     if (!ctx) {
-      ctx = await createPostgresTestContext();
-      store = new PostgresIdempotencyStore(ctx.db);
+      ctx = await createSqliteTestContext();
+      store = new SqliteIdempotencyStore(ctx.db);
     } else {
       await ctx.reset();
     }
@@ -59,7 +60,7 @@ describe("PostgresIdempotencyStore", () => {
 
   test("an abandoned claim is taken over after two minutes", async () => {
     await store.claim({ ...ref, requestHash: hash("a") });
-    await ctx.pool.query("UPDATE idempotency_keys SET created_at = now() - interval '3 minutes'");
+    await ctx.db.execute(sql`UPDATE idempotency_keys SET created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-3 minutes')`);
 
     expect((await store.claim({ ...ref, requestHash: hash("a") })).kind).toBe("claimed");
   });
@@ -67,7 +68,7 @@ describe("PostgresIdempotencyStore", () => {
   test("keys older than the retention window are purged on the next claim", async () => {
     await store.claim({ ...ref, requestHash: hash("a") });
     await store.complete({ ...ref, response: { artifactId: "artifact-1" } });
-    await ctx.pool.query("UPDATE idempotency_keys SET created_at = now() - interval '31 days'");
+    await ctx.db.execute(sql`UPDATE idempotency_keys SET created_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-31 days')`);
 
     expect((await store.claim({ ...ref, requestHash: hash("a") })).kind).toBe("claimed");
   });

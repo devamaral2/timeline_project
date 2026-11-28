@@ -11,13 +11,12 @@ import {
 } from "../../../domain";
 import type { FoodGenerationPayload } from "../../../domain/ports";
 import { jobContext } from "../../jobs/job-context";
-import { PostgresWorkoutCatalog } from "../artifacts/postgres-workout.catalog";
-import { PostgresArtifactTaskLinkQuery } from "../artifacts/queries/postgres-artifact-task-link.query";
+import { SqliteWorkoutCatalog } from "../artifacts/sqlite-workout.catalog";
+import { SqliteArtifactTaskLinkQuery } from "../artifacts/queries/sqlite-artifact-task-link.query";
 import { FOOD_GENERATION_JOB } from "../artifacts/repositories/food-generation";
-import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
-import { PostgresDatabase } from "../database/postgres-database";
-import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
-import { PostgresJobStore } from "../jobs/postgres-job.store";
+import { SqliteArtifactRepository } from "../artifacts/repositories/sqlite-artifact.repository";
+import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
+import { SqliteJobStore } from "../jobs/sqlite-job.store";
 import {
   GLOBAL_WORKOUT_ID,
   OTHER_USER,
@@ -33,7 +32,8 @@ import {
   textArtifact,
   trackedTask,
 } from "../testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
+import { sql } from "@repo/sqlite";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 const link = (artifactId: string, relation: ArtifactLink["relation"] = "uses"): ArtifactLink => ({
   artifactId,
@@ -51,15 +51,15 @@ function generatedFood(description: string, status: "completed" | "failed" = "co
   });
 }
 
-describe("PostgresArtifactRepository", () => {
-  let ctx: PostgresTestContext;
-  let artifacts: PostgresArtifactRepository;
-  let tasks: PostgresTaskRepository;
+describe("SqliteArtifactRepository (SQLite)", () => {
+  let ctx: SqliteTestContext;
+  let artifacts: SqliteArtifactRepository;
+  let tasks: SqliteTaskRepository;
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
-    artifacts = new PostgresArtifactRepository(ctx.db);
-    tasks = new PostgresTaskRepository(ctx.db);
+    ctx = await createSqliteTestContext();
+    artifacts = new SqliteArtifactRepository(ctx.db);
+    tasks = new SqliteTaskRepository(ctx.db);
   }, 60000);
 
   beforeEach(async () => {
@@ -150,7 +150,7 @@ describe("PostgresArtifactRepository", () => {
 
       const read = await found(note.id);
       expect(read).toMatchObject({ name: "Versao final", data: { body: "pronto" }, tags: ["trabalho"], revision: 2 });
-      expect(await countRows(ctx.pool, "artifact_tags", "artifact_id = $1", [note.id])).toBe(1);
+      expect(await countRows(ctx.db, "artifact_tags", "artifact_id = $1", [note.id])).toBe(1);
     });
 
     test("trocar o tipo grava a data do tipo novo", async () => {
@@ -188,8 +188,8 @@ describe("PostgresArtifactRepository", () => {
       await artifacts.delete(note.id, USER);
 
       expect(await artifacts.findById(note.id)).toBeNull();
-      const [row] = await selectRows(ctx.pool, "SELECT deleted_at FROM artifacts WHERE id = $1", [note.id]);
-      expect(row.deleted_at).toBeInstanceOf(Date);
+      const [row] = await selectRows<{ deleted_at: string }>(ctx.db, "SELECT deleted_at FROM artifacts WHERE id = $1", [note.id]);
+      expect(new Date(row.deleted_at).getTime()).not.toBeNaN();
       await expect(artifacts.update(note.revise({ data: { body: "tarde demais" } }), USER, 1)).rejects.toThrow(
         ArtifactNotFoundError,
       );
@@ -233,7 +233,7 @@ describe("PostgresArtifactRepository", () => {
         [newest.id, "2026-11-03T10:00:00Z"],
         [copy.id, "2026-11-04T10:00:00Z"],
       ]) {
-        await ctx.pool.query("UPDATE artifacts SET updated_at = $2 WHERE id = $1", [id, updatedAt]);
+        await ctx.db.execute(sql`UPDATE artifacts SET updated_at = ${at(updatedAt)} WHERE id = ${id}`);
       }
 
       const listed = await artifacts.listByUserId(USER);
@@ -276,28 +276,38 @@ describe("PostgresArtifactRepository", () => {
   describe("alimento a espera dos nutrientes", () => {
     async function pendingFood(): Promise<{ food: Artifact; payload: FoodGenerationPayload; requestId: string }> {
       const food = await saved(Artifact.create({ userId: USER, type: "food", name: "Feijoada", data: pendingFoodData("feijoada completa") }));
-      const [job] = await selectRows<{ payload: FoodGenerationPayload; task_id: string }>(
-        ctx.pool,
+      const [job] = await selectRows<{ payload: string; task_id: string }>(
+        ctx.db,
         "SELECT payload, task_id FROM jobs WHERE kind = $1",
         [FOOD_GENERATION_JOB],
       );
-      return { food, payload: job.payload, requestId: job.task_id };
+      return { food, payload: JSON.parse(job.payload) as FoodGenerationPayload, requestId: job.task_id };
     }
 
     /** O job pegou o pedido e o handler o marcou `running`: so de la ele conclui (ticket 56). */
-    const running = (requestId: string) => ctx.pool.query("UPDATE tasks SET status = 'running' WHERE id = $1", [requestId]);
+    const running = (requestId: string) => ctx.db.execute(sql`UPDATE tasks SET status = 'running' WHERE id = ${requestId}`);
     const requestOf = async (requestId: string) =>
-      (await selectRows(ctx.pool, "SELECT status, situation, finished_at FROM tasks WHERE id = $1", [requestId]))[0];
-    const resultsOf = (requestId: string) =>
-      selectRows(ctx.pool, "SELECT kind, role, content, data FROM task_entries WHERE task_id = $1 AND kind = 'result'", [requestId]);
+      (await selectRows<{ status: string; situation: string | null; finished_at: string | null }>(
+        ctx.db,
+        "SELECT status, situation, finished_at FROM tasks WHERE id = $1",
+        [requestId],
+      ))[0];
+    const resultsOf = async (requestId: string) =>
+      (
+        await selectRows<{ kind: string; role: string | null; content: string | null; data: string }>(
+          ctx.db,
+          "SELECT kind, role, content, data FROM task_entries WHERE task_id = $1 AND kind = 'result'",
+          [requestId],
+        )
+      ).map((row) => ({ ...row, data: JSON.parse(row.data) as unknown }));
 
     test("inserir abre o pedido de construcao, a relacao, a mensagem e o job", async () => {
       const { food } = await pendingFood();
 
-      const requests = await selectRows(ctx.pool, "SELECT * FROM tasks");
+      const requests = await selectRows<Record<string, unknown>>(ctx.db, "SELECT * FROM tasks");
       expect(requests).toHaveLength(1);
       const [request] = requests;
-      expect(request).toMatchObject({
+      expect({ ...request, data: JSON.parse(request.data as string) }).toMatchObject({
         user_id: USER,
         actor: "agent",
         kind: "build_request",
@@ -306,17 +316,19 @@ describe("PostgresArtifactRepository", () => {
         data: { route: "food" },
         finished_at: null,
       });
-      expect(request.started_at).toBeInstanceOf(Date);
+      expect(new Date(request.started_at as string).getTime()).not.toBeNaN();
 
-      expect(await selectRows(ctx.pool, "SELECT task_id, artifact_id, relation, position FROM task_artifact_relation")).toEqual([
+      expect(await selectRows(ctx.db, "SELECT task_id, artifact_id, relation, position FROM task_artifact_relation")).toEqual([
         { task_id: request.id, artifact_id: food.id, relation: "updates", position: null },
       ]);
-      expect(await selectRows(ctx.pool, "SELECT task_id, user_id, kind, role, content FROM task_entries")).toEqual([
+      expect(await selectRows(ctx.db, "SELECT task_id, user_id, kind, role, content FROM task_entries")).toEqual([
         { task_id: request.id, user_id: USER, kind: "message", role: "user", content: "feijoada completa" },
       ]);
-      expect(
-        await selectRows(ctx.pool, "SELECT kind, user_id, actor_id, task_id, dedupe_key, status, payload FROM jobs"),
-      ).toEqual([
+      const jobs = await selectRows<{ payload: string }>(
+        ctx.db,
+        "SELECT kind, user_id, actor_id, task_id, dedupe_key, status, payload FROM jobs",
+      );
+      expect(jobs.map((job) => ({ ...job, payload: JSON.parse(job.payload) as unknown }))).toEqual([
         {
           kind: "food-generation",
           user_id: USER,
@@ -339,8 +351,8 @@ describe("PostgresArtifactRepository", () => {
       await saved(foodArtifact(USER, "Marmita", 500));
       await saved(Artifact.create({ type: "food", name: "Global pendente", data: pendingFoodData("sem dono") }));
 
-      expect(await countRows(ctx.pool, "tasks")).toBe(0);
-      expect(await countRows(ctx.pool, "jobs")).toBe(0);
+      expect(await countRows(ctx.db, "tasks")).toBe(0);
+      expect(await countRows(ctx.db, "jobs")).toBe(0);
     });
 
     test("o alimento pendente que nasce com uma tarefa abre o pedido na mesma transacao", async () => {
@@ -349,8 +361,8 @@ describe("PostgresArtifactRepository", () => {
 
       await tasks.save(meal, { created: [food] });
 
-      expect(await countRows(ctx.pool, "tasks", "actor = 'agent' AND kind = 'build_request'")).toBe(1);
-      expect(await countRows(ctx.pool, "jobs", "kind = $1", [FOOD_GENERATION_JOB])).toBe(1);
+      expect(await countRows(ctx.db, "tasks", "actor = 'agent' AND kind = 'build_request'")).toBe(1);
+      expect(await countRows(ctx.db, "jobs", "kind = $1", [FOOD_GENERATION_JOB])).toBe(1);
     });
 
     test("concluir grava os nutrientes, encerra o pedido como done e acrescenta o resultado", async () => {
@@ -370,7 +382,7 @@ describe("PostgresArtifactRepository", () => {
       const request = await requestOf(requestId);
       expect(request.status).toBe("completed");
       expect(request.situation).toBe("to_review");
-      expect(request.finished_at).toBeInstanceOf(Date);
+      expect(new Date(request.finished_at as string).getTime()).not.toBeNaN();
       expect(await resultsOf(requestId)).toEqual([
         { kind: "result", role: null, content: null, data: { outcome: "completed", artifactId: food.id } },
       ]);
@@ -434,7 +446,7 @@ describe("PostgresArtifactRepository", () => {
     test("dentro do job, a escrita encerra o job na mesma transacao", async () => {
       const { requestId, payload } = await pendingFood();
       await running(requestId);
-      const store = new PostgresJobStore(new PostgresDatabase(ctx.pool), 3000, 3);
+      const store = new SqliteJobStore(ctx.database, 3000, 3);
       const [job] = await store.claim([FOOD_GENERATION_JOB], 1);
 
       await jobContext.run({ id: job.id, token: job.leaseToken as string }, () =>
@@ -446,9 +458,9 @@ describe("PostgresArtifactRepository", () => {
 
     test("com o lease perdido, nem o alimento nem o pedido mudam", async () => {
       const { food, payload, requestId } = await pendingFood();
-      const store = new PostgresJobStore(new PostgresDatabase(ctx.pool), 3000, 3);
+      const store = new SqliteJobStore(ctx.database, 3000, 3);
       const [job] = await store.claim([FOOD_GENERATION_JOB], 1);
-      await ctx.pool.query("UPDATE jobs SET lease_token = 'outro-worker' WHERE id = $1", [job.id]);
+      await ctx.db.execute(sql`UPDATE jobs SET lease_token = 'outro-worker' WHERE id = ${job.id}`);
 
       await expect(
         jobContext.run({ id: job.id, token: job.leaseToken as string }, () =>
@@ -462,9 +474,9 @@ describe("PostgresArtifactRepository", () => {
     });
   });
 
-  describe("PostgresArtifactTaskLinkQuery", () => {
+  describe("SqliteArtifactTaskLinkQuery", () => {
     test("lista as tarefas vivas de cada artefato, do mais antigo ao mais novo e os sem inicio no fim", async () => {
-      const links = new PostgresArtifactTaskLinkQuery(ctx.db);
+      const links = new SqliteArtifactTaskLinkQuery(ctx.db);
       const note = await saved(textArtifact(USER, "nota"));
       const lonely = await saved(textArtifact(USER, "sem tarefa"));
       const other = await saved(textArtifact(USER, "outra"));
@@ -524,9 +536,9 @@ describe("PostgresArtifactRepository", () => {
     });
   });
 
-  describe("PostgresWorkoutCatalog", () => {
+  describe("SqliteWorkoutCatalog", () => {
     test("le os exercicios globais da migration pelo codigo, na ordem pedida", async () => {
-      const catalog = new PostgresWorkoutCatalog(ctx.db);
+      const catalog = new SqliteWorkoutCatalog(ctx.db);
 
       expect(await catalog.findActiveByCodes(["weightlifting", "running", "weightlifting"])).toEqual([
         { code: "weightlifting", name: "Musculação", category: "strength", active: true },
@@ -538,18 +550,18 @@ describe("PostgresArtifactRepository", () => {
     });
 
     test("recusa codigo desconhecido, exercicio inativo e exercicio que nao e global", async () => {
-      const catalog = new PostgresWorkoutCatalog(ctx.db);
+      const catalog = new SqliteWorkoutCatalog(ctx.db);
       await saved(Artifact.create({ userId: USER, type: "workout", name: "Yoga", data: { code: "yoga", category: "free" } }));
 
       await expect(catalog.findActiveByCodes(["running", "swimming" as WorkoutCode])).rejects.toThrow(ArtifactValidationError);
       await expect(catalog.findActiveByCodes(["yoga" as WorkoutCode])).rejects.toThrow(/Unknown or inactive workout code: yoga/);
 
       // Os exercicios da migration sobrevivem ao reset: o que este teste muda, ele desfaz.
-      await ctx.pool.query(`UPDATE artifacts SET data = data || '{"active": false}' WHERE data->>'code' = 'free' AND user_id IS NULL`);
+      await ctx.db.execute(sql`UPDATE artifacts SET data = json_patch(data, '{"active": false}') WHERE data ->> 'code' = 'free' AND user_id IS NULL`);
       try {
         await expect(catalog.findActiveByCodes(["free"])).rejects.toThrow(/Unknown or inactive workout code: free/);
       } finally {
-        await ctx.pool.query(`UPDATE artifacts SET data = data || '{"active": true}' WHERE data->>'code' = 'free' AND user_id IS NULL`);
+        await ctx.db.execute(sql`UPDATE artifacts SET data = json_patch(data, '{"active": true}') WHERE data ->> 'code' = 'free' AND user_id IS NULL`);
       }
     });
   });

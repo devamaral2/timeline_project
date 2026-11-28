@@ -1,10 +1,10 @@
 import { afterEach, expect, it } from 'vitest';
-import { createAuthDatabase, type AuthDatabase } from '../../db/client';
+import type { AuthDatabase } from '../../db/client';
 import {
-  createPostgresTestDatabase,
-  describeWithPostgres,
-  type PostgresTestDatabase,
-} from '../../testing/postgres-test-database';
+  createAuthTestDatabase,
+  describeWithDatabase,
+  type AuthTestDatabase,
+} from '../../testing/sqlite-test-database';
 import {
   PostgresSigningKeyRepository,
   lockActiveSigningKey,
@@ -13,7 +13,7 @@ import { generateSigningKey } from '../../domain/crypto/signing-key';
 import type { AuditEventInput } from '../../audit/audit-event';
 import { ANONYMOUS_CONTEXT } from '../../common/request-context';
 
-let fixture: PostgresTestDatabase | undefined;
+let fixture: AuthTestDatabase | undefined;
 let db: AuthDatabase | undefined;
 afterEach(async () => {
   await db?.close();
@@ -45,10 +45,10 @@ const candidate = () => {
   };
 };
 
-describeWithPostgres('PostgresSigningKeyRepository', () => {
+describeWithDatabase('PostgresSigningKeyRepository', () => {
   it('keeps exactly one active key, audits rotation, and keeps the retiring key publishable', async () => {
-    fixture = await createPostgresTestDatabase();
-    db = createAuthDatabase({ connectionString: fixture.runtimeUrl });
+    fixture = await createAuthTestDatabase();
+    db = fixture.open();
     const repository = new PostgresSigningKeyRepository(db);
     const now = new Date('2026-08-31T00:00:00Z');
     const first = await repository.ensureActive(
@@ -78,7 +78,7 @@ describeWithPostgres('PostgresSigningKeyRepository', () => {
       publishable.find((key) => key.kid === first.kid)?.retireAfter,
     ).toEqual(new Date(now.getTime() + 932000));
     const count = await db.query(
-      "SELECT count(*)::int AS count FROM signing_keys WHERE status='active'",
+      "SELECT count(*) AS count FROM signing_keys WHERE status='active'",
     );
     expect(count.rows[0]?.count).toBe(1);
   });

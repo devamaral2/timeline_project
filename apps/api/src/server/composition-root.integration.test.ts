@@ -4,7 +4,7 @@ import { REQUEST_JOBS } from "../api-core/requests/request-steps";
 import { TRANSCRIPTION_FORMAT_JOB } from "../api-core/transcription/transcription-requests";
 import { FOOD_GENERATION_JOB } from "../infrastructure/persistence/artifacts/repositories/food-generation";
 import { JobsService } from "../infrastructure/jobs/jobs.service";
-import { createPostgresTestContext, type PostgresTestContext } from "../infrastructure/persistence/testing/postgres-test-context";
+import { createSqliteTestContext, type SqliteTestContext } from "../infrastructure/persistence/testing/sqlite-test-context";
 import { createApiRuntime, type ApiRuntime } from "./composition-root";
 import { declaredOperationKey } from "./declared-operations";
 
@@ -21,11 +21,11 @@ const ALL_HANDLERS = [
   FOOD_GENERATION_JOB,
   ...Object.values(REQUEST_JOBS),
 ];
-let ctx: PostgresTestContext;
+let ctx: SqliteTestContext;
 let previousEnv: Record<string, string | undefined> = {};
 
 const statusOf = async (jobId: string): Promise<string | undefined> =>
-  (await ctx.pool.query<{ status: string }>("SELECT status FROM jobs WHERE id = $1", [jobId])).rows[0]?.status;
+  (await ctx.query<{ status: string }>("SELECT status FROM jobs WHERE id = $1", [jobId])).rows[0]?.status;
 
 async function waitForStatus(jobId: string, status: string, timeoutMs = 10_000): Promise<void> {
   const until = Date.now() + timeoutMs;
@@ -38,7 +38,7 @@ async function waitForStatus(jobId: string, status: string, timeoutMs = 10_000):
 
 function newRuntime(): Promise<ApiRuntime> {
   return createApiRuntime({
-    databaseUrl: ctx.connectionString,
+    databasePath: ctx.path,
     authInternalServiceKey: GATEWAY_KEY,
     logger: { warn() {}, error() {} },
   });
@@ -53,9 +53,9 @@ const enqueueFormat = (runtime: ApiRuntime): Promise<string> =>
   });
 
 beforeAll(async () => {
-  ctx = await createPostgresTestContext();
+  ctx = await createSqliteTestContext();
   const env = {
-    DATABASE_URL: ctx.connectionString,
+    API_DATABASE_PATH: ctx.path,
     AUTH_INTERNAL_SERVICE_KEY: GATEWAY_KEY,
     AI_JOBS_POLL_MS: "50",
     AI_JOBS_LEASE_MS: "3000",

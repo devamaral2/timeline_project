@@ -120,23 +120,21 @@ export class PostgresSessionRepository {
       if (!found) return { kind: "invalid" };
       const { session_id: sessionId, user_id: userId } = found;
 
-      // Ordem estavel de lock — a MESMA usada por revokeAllOfUser — usuario
-      // -> sessao -> refresh token. Nao e cosmetico: um refresh e um
-      // logout-all no mesmo usuario podem rodar em paralelo, e se cada
-      // operacao travasse essas linhas em ordem diferente o Postgres
-      // resolveria a corrida abortando uma delas com deadlock detected em vez
-      // de so uma esperar a outra.
+      // A transacao abre com BEGIN IMMEDIATE: ela ja tem o lock de escrita do
+      // arquivo inteiro, entao um refresh e um logout-all do mesmo usuario
+      // nunca se intercalam (o que no Postgres pedia FOR UPDATE nas tres linhas,
+      // sempre na mesma ordem). A leitura continua usuario -> sessao -> token.
       const userRow = (
-        await tx.query<{ status: string }>("SELECT status FROM users WHERE id = $1 FOR UPDATE", [userId])
+        await tx.query<{ status: string }>("SELECT status FROM users WHERE id = $1", [userId])
       ).rows[0];
 
       const sessionRow = (
-        await tx.query<SessionRow>("SELECT * FROM sessions WHERE id = $1 FOR UPDATE", [sessionId])
+        await tx.query<SessionRow>("SELECT * FROM sessions WHERE id = $1", [sessionId])
       ).rows[0];
       if (!sessionRow) return { kind: "invalid" };
 
       const refreshRow = (
-        await tx.query<RefreshTokenRow>("SELECT * FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE", [
+        await tx.query<RefreshTokenRow>("SELECT * FROM refresh_tokens WHERE token_hash = $1", [
           c.presentedTokenHash,
         ])
       ).rows[0];
@@ -200,7 +198,7 @@ export class PostgresSessionRepository {
       const rolePermissions = roleKeys.length
         ? (
             await tx.query<{ permission: Permission }>(
-              "SELECT DISTINCT permission FROM role_permissions WHERE role_key = ANY($1)",
+              "SELECT DISTINCT permission FROM role_permissions WHERE role_key IN (SELECT value FROM json_each($1))",
               [roleKeys],
             )
           ).rows.map((row) => row.permission)
@@ -212,15 +210,9 @@ export class PostgresSessionRepository {
       ).rows;
       const access = resolveUserPermissions(roleKeys, { rolePermissions, directPermissions });
 
-      // A versao anterior fazia `SELECT kid, encrypted_private_key FROM
-      // signing_keys WHERE status='active' FOR UPDATE` na mao — o mesmo texto
-      // que completeInviteEnrollment ainda tem. Troquei pelo helper que o
-      // proprio modulo de crypto ja expoe: `lockActiveSigningKey` usa
-      // `FOR KEY SHARE` (varias rotacoes simultaneas nao brigam por essa
-      // linha, so brigam com uma rotacao de chave em andamento) atras de um
-      // advisory lock, e atualiza `last_used_at` — informacao que
-      // `rotate-signing-key.cli.ts` usa para saber quando pode aposentar a
-      // chave antiga. A query manual nunca tocava esse campo.
+      // O helper do modulo de crypto le a chave ativa e atualiza `last_used_at`
+      // — informacao que `rotate-signing-key.cli.ts` usa para saber quando pode
+      // aposentar a chave antiga.
       const key = await lockActiveSigningKey(tx, c.now);
       const accessToken = sign(
         key,
@@ -253,10 +245,10 @@ export class PostgresSessionRepository {
   async revokeByRefreshToken(c: RevokeByRefreshTokenCommand): Promise<boolean> {
     return this.db.transaction(async (tx) => {
       const result = await tx.query<{ id: string; user_id: string }>(
-        `UPDATE sessions s SET revoked_at = $1, ended_at = $1
+        `UPDATE sessions AS s SET revoked_at = $1, ended_at = $1
          FROM refresh_tokens r
          WHERE r.session_id = s.id AND r.token_hash = $2 AND s.revoked_at IS NULL
-         RETURNING s.id, s.user_id`,
+         RETURNING id, user_id`,
         [c.now, c.presentedTokenHash],
       );
       const revoked = result.rows[0];
@@ -270,17 +262,17 @@ export class PostgresSessionRepository {
 
   async revokeAllOfUser(c: RevokeAllOfUserCommand): Promise<number> {
     return this.db.transaction(async (tx) => {
-      // Mesma ordem de lock do rotate: usuario -> sessao. Um bearer ainda
-      // criptograficamente valido nao pode revogar tudo se a sua propria
-      // sessao (ou o usuario) ja nao estiver ativa.
+      // A mesma leitura do rotate, usuario -> sessao, sob o lock de escrita da
+      // transacao. Um bearer ainda criptograficamente valido nao pode revogar
+      // tudo se a sua propria sessao (ou o usuario) ja nao estiver ativa.
       const userRow = (
-        await tx.query<{ status: string }>("SELECT status FROM users WHERE id = $1 FOR UPDATE", [c.actor.userId])
+        await tx.query<{ status: string }>("SELECT status FROM users WHERE id = $1", [c.actor.userId])
       ).rows[0];
       if (userRow?.status !== "active") throw new AuthenticationFailedError("user not active");
 
       const sessionRow = (
         await tx.query<{ revoked_at: Date | null }>(
-          "SELECT revoked_at FROM sessions WHERE id = $1 AND user_id = $2 FOR UPDATE",
+          "SELECT revoked_at FROM sessions WHERE id = $1 AND user_id = $2",
           [c.actor.sessionId, c.actor.userId],
         )
       ).rows[0];

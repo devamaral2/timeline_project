@@ -28,7 +28,7 @@ function trackedInstantOf(task: Task): Date | undefined {
 
 /**
  * As leituras do cartao sobre o banco em memoria, com a mesma semantica de
- * `PostgresTaskCardQuery`. `recurrences` e de onde sai a regra que o cartao de
+ * `SqliteTaskCardQuery`. `recurrences` e de onde sai a regra que o cartao de
  * uma ocorrencia mostra; sem ele, o cartao vem sem a serie.
  */
 export class InMemoryTaskCardQuery implements TaskCardQuery {

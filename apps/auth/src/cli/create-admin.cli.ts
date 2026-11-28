@@ -6,8 +6,7 @@ import { findMonorepoRoot, loadRootEnv } from "../config/load-env";
 import { HttpPwnedPasswordsGateway } from "../auth-core/password/http-pwned-passwords.gateway";
 import { PreparePassword } from "../auth-core/password/prepare-password";
 import { ScryptPasswordHasher } from "../auth-core/password/scrypt-password-hasher";
-import { createAuthDatabase } from "../db/client";
-import { acquireAdvisoryLock, ADVISORY_LOCK } from "../db/transaction-locks";
+import { openAuthDatabase } from "../db/client";
 
 const ADMIN_EMAIL = "admin@admin.com";
 const ADMIN_NAME = "admin";
@@ -27,20 +26,17 @@ async function main(): Promise<void> {
     new ScryptPasswordHasher(),
   ).execute({ password, normalizedEmail: ADMIN_EMAIL, name: ADMIN_NAME });
 
-  const database = createAuthDatabase({ connectionString: env.databaseUrl });
+  const database = openAuthDatabase(env.databasePath);
   const secrets = new CryptoSecretGenerator();
   const now = new Date();
 
   try {
     const result = await database.transaction(async (tx) => {
-      await acquireAdvisoryLock(tx, ADVISORY_LOCK.bootstrapAdmin);
-
       const existing = await tx.query<{ id: string; status: string; is_admin: boolean }>(
         `SELECT u.id, u.status,
                 EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_key = 'admin') AS is_admin
            FROM users u
-          WHERE u.email = $1
-          FOR UPDATE`,
+          WHERE u.email = $1`,
         [ADMIN_EMAIL],
       );
 

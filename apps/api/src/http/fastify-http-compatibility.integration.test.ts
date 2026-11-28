@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { idempotencyRequestHash } from "../http/idempotency/idempotency-key";
-import { createPostgresTestContext, type PostgresTestContext } from "../infrastructure/persistence/testing/postgres-test-context";
+import { createSqliteTestContext, type SqliteTestContext } from "../infrastructure/persistence/testing/sqlite-test-context";
 import { type ApiTestApp, createApiTestApp } from "../testing/create-api-test-app";
 
 /**
@@ -16,7 +16,7 @@ const GATEWAY_KEY = "compatibility-gateway-key-with-32-ch";
 const ORIGIN = "https://app.example.com";
 const OWNER = "compatibility-owner";
 
-let ctx: PostgresTestContext;
+let ctx: SqliteTestContext;
 let app: ApiTestApp;
 let agentFilesDir: string;
 
@@ -51,7 +51,7 @@ async function call(method: string, path: string, options: { headers?: Record<st
 const newUser = () => `compatibility-user-${randomUUID()}`;
 
 beforeAll(async () => {
-  ctx = await createPostgresTestContext();
+  ctx = await createSqliteTestContext();
   agentFilesDir = await mkdtemp(join(tmpdir(), "api-compatibility-"));
   await mkdir(join(agentFilesDir, "hermes/skills/foo"), { recursive: true });
   await writeFile(join(agentFilesDir, "hermes/skills/foo/SKILL.md"), "---\ndescription: foo\n---\n\n# foo\n");
@@ -62,7 +62,7 @@ beforeAll(async () => {
   );
 
   app = await createApiTestApp({
-    DATABASE_URL: ctx.connectionString,
+    API_DATABASE_PATH: ctx.path,
     AUTH_INTERNAL_SERVICE_KEY: GATEWAY_KEY,
     // Fora do loopback o CORS liga, como no main.ts.
     API_HOST: "0.0.0.0",
@@ -208,7 +208,7 @@ describe("idempotencia da criacao de tarefa", () => {
 
     const inProgressKey = `key-${randomUUID()}`;
     const inProgressBody = { name: "em andamento" };
-    await ctx.pool.query(
+    await ctx.query(
       "INSERT INTO idempotency_keys (user_id, scope, key, request_hash) VALUES ($1, $2, $3, $4)",
       [user, "/api/tasks", inProgressKey, idempotencyRequestHash(inProgressBody)],
     );
