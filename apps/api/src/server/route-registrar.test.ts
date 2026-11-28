@@ -87,6 +87,27 @@ describe("registrador declarativo", () => {
     expect(response.headers["content-type"]).toBeUndefined();
     await app.close();
   });
+
+  test("a rota que declara 204 quando o handler nao devolve nada responde 200 quando ha resultado", async () => {
+    const app = appWith([
+      route({
+        method: "POST",
+        path: "/api/queue/next",
+        statusWhenEmpty: 204,
+        handler: ({ query }) => (query.empty === "1" ? undefined : { id: "job-1" }),
+      }),
+    ]);
+
+    const empty = await app.inject({ method: "POST", url: "/api/queue/next?empty=1", headers: session });
+    expect(empty.statusCode).toBe(204);
+    expect(empty.body).toBe("");
+    expect(empty.headers["content-type"]).toBeUndefined();
+
+    const filled = await app.inject({ method: "POST", url: "/api/queue/next", headers: session });
+    expect(filled.statusCode).toBe(200);
+    expect(await json(filled)).toEqual({ id: "job-1" });
+    await app.close();
+  });
 });
 
 describe("identidade", () => {

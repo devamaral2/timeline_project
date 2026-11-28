@@ -91,12 +91,21 @@ describe("composition root", () => {
         "GET /api/requests/{requestId}",
         "POST /api/requests/{requestId}/cancel",
         "POST /api/tasks",
+        "POST /api/tasks/daily-reading",
+        "POST /api/tasks/transcription-requests",
+        "POST /api/transcription-worker/next",
+        "POST /api/transcription-worker/lease",
+        "POST /api/transcription-worker/deliver",
         "GET /api/projects",
       ]) {
         expect(keys, key).toContain(key);
       }
       // As estaticas vem antes das parametrizadas.
       expect(keys.indexOf("GET /api/requests/model/options")).toBeLessThan(keys.indexOf("GET /api/requests/{requestId}"));
+      expect(keys.indexOf("POST /api/tasks/daily-reading")).toBeLessThan(keys.indexOf("GET /api/tasks/{taskId}"));
+      expect(keys.indexOf("POST /api/tasks/transcription-requests")).toBeLessThan(
+        keys.indexOf("GET /api/tasks/{taskId}"),
+      );
 
       // Nada e reclamado antes do startup: o polling so comeca em `start`.
       const beforeStart = await enqueueFormat(runtime);

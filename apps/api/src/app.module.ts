@@ -1,10 +1,5 @@
 import { Module, type DynamicModule } from "@nestjs/common";
 import { APP_INTERCEPTOR } from "@nestjs/core";
-import { DeliverTranscriptionModule } from "./features/deliver-transcription/deliver-transcription.controller";
-import { RenewTranscriptionLeaseModule } from "./features/renew-transcription-lease/renew-transcription-lease.controller";
-import { RequestTranscriptionModule } from "./features/request-transcription/request-transcription.controller";
-import { ReserveTranscriptionModule } from "./features/reserve-transcription/reserve-transcription.controller";
-import { SaveDailyReadingModule } from "./features/save-daily-reading/save-daily-reading.controller";
 import { SearchPlacesModule } from "./features/search-places/search-places.controller";
 import { SuggestTagsModule } from "./features/suggest-tags/suggest-tags.controller";
 import { IdempotencyInterceptor } from "./http/idempotency/idempotency.interceptor";
@@ -26,12 +21,6 @@ export class AppModule {
       imports: [
         ApiRuntimeModule.forRoot(runtime),
         ApiCoreModule.forRoot(),
-        // Rotas estaticas devem ser registradas antes das rotas parametrizadas.
-        SaveDailyReadingModule,
-        RequestTranscriptionModule,
-        ReserveTranscriptionModule,
-        RenewTranscriptionLeaseModule,
-        DeliverTranscriptionModule,
         SuggestTagsModule,
         SearchPlacesModule,
       ],
