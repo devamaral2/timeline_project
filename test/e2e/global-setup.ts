@@ -1,11 +1,11 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { createServer } from "node:net";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { promisify } from "node:util";
 import { execFile } from "node:child_process";
-import { Client } from "pg";
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 
 const root = resolve(__dirname, "../..");
@@ -65,22 +65,17 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const nextBuildId = randomUUID().replaceAll("-", "");
   const nextBuildPath = resolve(root, `apps/web/.next-e2e-${nextBuildId}`);
   const processes: ChildProcess[] = [];
+  // A API guarda tudo num arquivo SQLite (ADR 0024): um diretorio temporario por execucao.
+  const apiDataDir = await mkdtemp(join(tmpdir(), "e2e-api-"));
   async function cleanup(): Promise<void> {
     await Promise.all(processes.reverse().map(stop));
     await rm(nextBuildPath, { recursive: true, force: true });
+    await rm(apiDataDir, { recursive: true, force: true });
     await container.stop();
   }
 
   try {
     const authDatabaseUrl = container.getConnectionUri();
-    const databaseName = `e2e_api_${randomUUID().replaceAll("-", "")}`;
-    const admin = new Client({ connectionString: authDatabaseUrl });
-    await admin.connect();
-    try { await admin.query(`CREATE DATABASE "${databaseName}"`); }
-    finally { await admin.end(); }
-    const apiDatabase = new URL(authDatabaseUrl);
-    apiDatabase.pathname = `/${databaseName}`;
-    const apiDatabaseUrl = apiDatabase.toString();
 
     const [apiPort, authPort, webPort] = await Promise.all([freePort(), freePort(), freePort()]);
     const apiUrl = `http://127.0.0.1:${apiPort}`;
@@ -90,7 +85,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       NODE_ENV: "test",
-      DATABASE_URL: apiDatabaseUrl,
+      API_DATABASE_PATH: join(apiDataDir, "api.sqlite"),
       AUTH_DATABASE_URL: authDatabaseUrl,
       AUTH_DATABASE_MIGRATION_URL: authDatabaseUrl,
       AUTH_KEY_ENCRYPTION_KEY: randomBytes(32).toString("base64url"),

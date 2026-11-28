@@ -31,9 +31,10 @@ const DEFAULT_SCOPE_OPTIONAL_KEYS = new Set([
 ]);
 const SCOPES = Object.freeze({
   "api-runtime": {
-    // A fila de jobs de IA e a tabela `jobs` da propria base (ADR 0013): nao
-    // ha broker nem prefixo de fila para configurar.
-    required: ["DATABASE_URL", "AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"],
+    // A fila de jobs de IA e a tabela `jobs` do proprio banco (ADR 0013): nao
+    // ha broker nem prefixo de fila para configurar. O banco e um arquivo SQLite
+    // no volume do pod (API_DATABASE_PATH, no manifesto), sem segredo (ADR 0024).
+    required: ["AUTH_SERVICE_URL", "AUTH_INTERNAL_SERVICE_KEY"],
     optional: [
       "OPENROUTER_API_KEY",
       "OPENROUTER_MODEL",

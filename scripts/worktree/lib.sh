@@ -10,7 +10,8 @@ worktree_root() {
 # `git worktree list`, que é sempre o checkout original, não um worktree
 # secundário criado com `git worktree add`).
 main_worktree_root() {
-  git worktree list --porcelain | awk '/^worktree /{print $2; exit}'
+  # Le a lista inteira: sair no primeiro casamento mata o `git` com SIGPIPE (141) quando ha muitas worktrees.
+  git worktree list --porcelain | awk '/^worktree / && !found {print $2; found = 1}'
 }
 
 # Slug minúsculo/hífen a partir do nome do diretório da worktree atual.

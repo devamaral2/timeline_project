@@ -112,5 +112,5 @@ jobs:
         run: pnpm exec turbo run build --filter=!@repo/mobile
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium
-      - name: E2E (isolated PostgreSQL and mocked external services)
+      - name: E2E (isolated SQLite and PostgreSQL, mocked external services)
         run: pnpm run --silent test:e2e:ai
