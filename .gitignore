@@ -36,3 +36,6 @@ next-env.d.ts
 
 # Gerado por scripts/worktree/caddy.sh a partir de Caddyfile.tmpl.
 /Caddyfile
+
+# Bancos SQLite locais (ADR 0024).
+.data/

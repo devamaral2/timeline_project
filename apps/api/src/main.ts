@@ -17,12 +17,11 @@ async function bootstrap(): Promise<void> {
   // chaves do OpenRouter no construtor, durante a criacao dos providers.
   loadRootEnv();
 
-  // DATABASE_URL passa a ser obrigatorio a partir daqui: falhar cedo, antes de
-  // criar o servidor, evita subir o processo so para falhar no primeiro request.
-  const databaseUrl = getDatabaseEnv().DATABASE_URL;
+  // O arquivo SQLite da API (ADR 0024): o runtime o abre e aplica as migrations antes de ouvir.
+  const databasePath = getDatabaseEnv().API_DATABASE_PATH;
 
   const { API_PORT, API_HOST, AUTH_INTERNAL_SERVICE_KEY } = getServerEnv();
-  const runtime = await createApiRuntime({ databaseUrl, authInternalServiceKey: AUTH_INTERNAL_SERVICE_KEY });
+  const runtime = await createApiRuntime({ databasePath, authInternalServiceKey: AUTH_INTERNAL_SERVICE_KEY });
 
   const shutdown = async (): Promise<void> => {
     await runtime.close();
