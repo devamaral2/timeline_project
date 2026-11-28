@@ -20,7 +20,7 @@
  * `motionMs(300)`, no Kotlin `Motion.ms(300)`. Laços (giro, pulso, piscar, os
  * pontos do pensando, o esqueleto) e o movimento reduzido ficam fora da escala.
  */
-export const MOTION_SCALE = 0.5;
+export const MOTION_SCALE = 0.25;
 
 /** Os tempos de desenho, em milissegundos, antes da escala. */
 export const motionDesign = {
