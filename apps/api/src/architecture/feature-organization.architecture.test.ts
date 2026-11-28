@@ -24,12 +24,6 @@ const MIGRATED = [
   "set-task-situation",
   "create-project",
   "list-projects",
-];
-
-/** Operacoes que ainda respondem pelo Nest durante a coexistencia. */
-const STILL_NEST = [
-  "suggest-tags",
-  "search-places",
   "create-artifact",
   "get-artifact",
   "update-artifact",
@@ -40,6 +34,12 @@ const STILL_NEST = [
   "update-recurrence",
   "delete-recurrence",
   "list-recurrences",
+];
+
+/** Operacoes que ainda respondem pelo Nest durante a coexistencia. */
+const STILL_NEST = [
+  "suggest-tags",
+  "search-places",
 ];
 
 test("does not retain the old feature aggregators or artificial HTTP areas", () => {

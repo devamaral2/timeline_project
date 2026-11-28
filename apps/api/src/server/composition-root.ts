@@ -1,30 +1,51 @@
 import type { FastifyInstance } from "fastify";
 import { ArtifactBuilder } from "../api-core/artifacts/services/artifact-builder.service";
 import { MaterializeRecurrencesUseCase } from "../api-core/recurrences/materialize-recurrences.usecase";
-import { requestClock } from "../api-core/tasks/request-clock";
 import { CreateTaskUseCase } from "../api-core/tasks/create-task.usecase";
+import { requestClock } from "../api-core/tasks/request-clock";
 import type { LogSink } from "../common/logger";
 import { getDatabaseEnv, getServerEnv } from "../config/env";
-import type { ApiRoute } from "../http/api-route";
+import { createArtifactRoute } from "../features/create-artifact/create-artifact.route";
+import { CreateArtifactUseCase } from "../features/create-artifact/create-artifact.usecase";
 import { createProjectRoute } from "../features/create-project/create-project.route";
-import { createTaskRoute } from "../features/create-task/create-task.route";
-import { deleteTaskRoute } from "../features/delete-task/delete-task.route";
-import { getTaskRoute } from "../features/get-task/get-task.route";
-import { listAgendaTasksRoute } from "../features/list-agenda-tasks/list-agenda-tasks.route";
-import { listProjectsRoute } from "../features/list-projects/list-projects.route";
-import { listTrackedTasksRoute } from "../features/list-tracked-tasks/list-tracked-tasks.route";
-import { setTaskSituationRoute } from "../features/set-task-situation/set-task-situation.route";
-import { updateTaskRoute } from "../features/update-task/update-task.route";
 import { CreateProjectUseCase } from "../features/create-project/create-project.usecase";
+import { createRecurrenceRoute } from "../features/create-recurrence/create-recurrence.route";
+import { CreateRecurrenceUseCase } from "../features/create-recurrence/create-recurrence.usecase";
+import { createTaskRoute } from "../features/create-task/create-task.route";
+import { deleteArtifactRoute } from "../features/delete-artifact/delete-artifact.route";
+import { DeleteArtifactUseCase } from "../features/delete-artifact/delete-artifact.usecase";
+import { deleteRecurrenceRoute } from "../features/delete-recurrence/delete-recurrence.route";
+import { DeleteRecurrenceUseCase } from "../features/delete-recurrence/delete-recurrence.usecase";
+import { deleteTaskRoute } from "../features/delete-task/delete-task.route";
 import { DeleteTaskUseCase } from "../features/delete-task/delete-task.usecase";
+import { getArtifactRoute } from "../features/get-artifact/get-artifact.route";
+import { GetArtifactUseCase } from "../features/get-artifact/get-artifact.usecase";
+import { getRecurrenceRoute } from "../features/get-recurrence/get-recurrence.route";
+import { GetRecurrenceUseCase } from "../features/get-recurrence/get-recurrence.usecase";
+import { getTaskRoute } from "../features/get-task/get-task.route";
 import { GetTaskUseCase } from "../features/get-task/get-task.usecase";
+import { listAgendaTasksRoute } from "../features/list-agenda-tasks/list-agenda-tasks.route";
 import { ListAgendaTasksUseCase } from "../features/list-agenda-tasks/list-agenda-tasks.usecase";
+import { listArtifactsRoute } from "../features/list-artifacts/list-artifacts.route";
+import { ListArtifactsUseCase } from "../features/list-artifacts/list-artifacts.usecase";
+import { listProjectsRoute } from "../features/list-projects/list-projects.route";
 import { ListProjectsUseCase } from "../features/list-projects/list-projects.usecase";
+import { listRecurrencesRoute } from "../features/list-recurrences/list-recurrences.route";
+import { ListRecurrencesUseCase } from "../features/list-recurrences/list-recurrences.usecase";
+import { listTrackedTasksRoute } from "../features/list-tracked-tasks/list-tracked-tasks.route";
 import { ListTrackedTasksUseCase } from "../features/list-tracked-tasks/list-tracked-tasks.usecase";
+import { setTaskSituationRoute } from "../features/set-task-situation/set-task-situation.route";
 import { SetTaskSituationUseCase } from "../features/set-task-situation/set-task-situation.usecase";
+import { updateArtifactRoute } from "../features/update-artifact/update-artifact.route";
+import { UpdateArtifactUseCase } from "../features/update-artifact/update-artifact.usecase";
+import { updateRecurrenceRoute } from "../features/update-recurrence/update-recurrence.route";
+import { UpdateRecurrenceUseCase } from "../features/update-recurrence/update-recurrence.usecase";
+import { updateTaskRoute } from "../features/update-task/update-task.route";
 import { UpdateTaskUseCase } from "../features/update-task/update-task.usecase";
+import type { ApiRoute } from "../http/api-route";
 import { PostgresEntityBatchWriter } from "../infrastructure/persistence/agent-batch/postgres-entity-batch-writer";
 import { PostgresWorkoutCatalog } from "../infrastructure/persistence/artifacts/postgres-workout.catalog";
+import { PostgresArtifactTaskLinkQuery } from "../infrastructure/persistence/artifacts/queries/postgres-artifact-task-link.query";
 import { PostgresArtifactRepository } from "../infrastructure/persistence/artifacts/repositories/postgres-artifact.repository";
 import { PostgresDatabase } from "../infrastructure/persistence/database/postgres-database";
 import { PostgresIdempotencyStore } from "../infrastructure/persistence/idempotency/postgres-idempotency.store";
@@ -74,6 +95,7 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
     const projectQuery = new PostgresProjectQuery(database.db);
     const projectRepository = new PostgresProjectRepository(database.db);
     const artifactRepository = new PostgresArtifactRepository(database.db);
+    const artifactTaskLinkQuery = new PostgresArtifactTaskLinkQuery(database.db);
     const recurrenceRepository = new PostgresRecurrenceRepository(database.db);
     const workoutCatalog = new PostgresWorkoutCatalog(database.db);
     const entityBatchWriter = new PostgresEntityBatchWriter(database.db);
@@ -92,6 +114,24 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
     const listProjects = new ListProjectsUseCase(projectQuery);
     const createProject = new CreateProjectUseCase(projectRepository);
 
+    const listArtifacts = new ListArtifactsUseCase(artifactRepository, artifactTaskLinkQuery);
+    const createArtifact = new CreateArtifactUseCase(artifactBuilder, taskRepository, entityBatchWriter);
+    const getArtifact = new GetArtifactUseCase(artifactRepository, artifactTaskLinkQuery);
+    const updateArtifact = new UpdateArtifactUseCase(
+      artifactRepository,
+      artifactTaskLinkQuery,
+      artifactBuilder,
+      taskRepository,
+      entityBatchWriter,
+    );
+    const deleteArtifact = new DeleteArtifactUseCase(artifactRepository);
+
+    const listRecurrences = new ListRecurrencesUseCase(recurrenceRepository);
+    const createRecurrence = new CreateRecurrenceUseCase(recurrenceRepository, createTask, taskRepository);
+    const getRecurrence = new GetRecurrenceUseCase(recurrenceRepository);
+    const updateRecurrence = new UpdateRecurrenceUseCase(recurrenceRepository, createTask, taskRepository);
+    const deleteRecurrence = new DeleteRecurrenceUseCase(recurrenceRepository);
+
     // Estaticas antes das parametrizadas: `/api/tasks/tracked` nao pode cair em `:taskId`.
     const routes: ApiRoute[] = [
       listTrackedTasksRoute(listTrackedTasks),
@@ -103,6 +143,16 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
       deleteTaskRoute(deleteTask),
       listProjectsRoute(listProjects),
       createProjectRoute(createProject),
+      listArtifactsRoute(listArtifacts),
+      createArtifactRoute(createArtifact),
+      getArtifactRoute(getArtifact),
+      updateArtifactRoute(updateArtifact),
+      deleteArtifactRoute(deleteArtifact),
+      listRecurrencesRoute(listRecurrences),
+      createRecurrenceRoute(createRecurrence),
+      getRecurrenceRoute(getRecurrence),
+      updateRecurrenceRoute(updateRecurrence),
+      deleteRecurrenceRoute(deleteRecurrence),
     ];
 
     const fastify = createFastifyInstance({ bodyLimit: options.bodyLimit });
