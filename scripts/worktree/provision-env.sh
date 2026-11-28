@@ -7,7 +7,7 @@
 #   3. node_modules integros (pnpm install reaplicado + binarios conferidos)
 #   4. bancos SQLite da propria worktree: .data/api.sqlite e .data/auth.sqlite
 #      (ADR 0024 e 0025); nenhum Postgres
-#   5. migrations da API e do Auth
+#   5. build das dependencias de workspace da API e do Auth e migrations das duas
 #   6. usuario admin (senha de ADMIN_PASSWORD)
 #   7. build, sonda de saude (bases, tabela de jobs, admin) e servidores de dev
 #   8. API respondendo, login de teste e link para abrir no navegador
@@ -130,6 +130,9 @@ echo "API em .data/api.sqlite e Auth em .data/auth.sqlite; as migrations do pass
 
 # --- 5. migrations -------------------------------------------------------------
 step 5 "Migrations (API e Auth)"
+# As migrations importam os pacotes de workspace pelo dist/, que nao existe numa
+# worktree nova. O `^...` compila so as dependencias, na ordem certa, sem os apps.
+pnpm turbo run build --filter='@repo/api^...' --filter='@repo/auth^...'
 pnpm db:migrate
 pnpm --filter @repo/auth run db:migrate
 
