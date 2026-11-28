@@ -1,16 +1,17 @@
 ---
 name: db-migrations
-description: Use when changing the API's SQLite schema or the Auth Drizzle schema, writing or applying database migrations, or setting up the local databases for development.
+description: Use when changing the SQLite schema of the API or the Auth, writing or applying database migrations, or setting up the local databases for development.
 ---
 
 # Database migrations
 
-This monorepo has two independent databases and migration workflows:
+This monorepo has two independent SQLite databases, on the shared client in
+`packages/sqlite` (ADR 0024 and 0025):
 
-- API database: `apps/api`, a SQLite file (`API_DATABASE_PATH`, default
-  `.data/api.sqlite` at the repository root). See ADR 0024.
-- Auth database: `apps/auth`, PostgreSQL, using the separate migration
-  credential `AUTH_DATABASE_MIGRATION_URL`.
+- API database: `apps/api`, `API_DATABASE_PATH`, default `.data/api.sqlite`
+  at the repository root; migrations in `apps/api/migrations/`.
+- Auth database: `apps/auth`, `AUTH_DATABASE_PATH`, default `.data/auth.sqlite`;
+  migrations in `apps/auth/migrations/`. Read `docs/runbook/auth-database.md`.
 
 Run commands from the repository root.
 
@@ -52,27 +53,19 @@ Writing a migration:
 - Test it with a temporary file: migrate to N-1, insert data, migrate to N
   (`migrateDatabase(db, { migrations })` accepts a prefix of the list).
 
-## Auth database (PostgreSQL)
+## Auth database (SQLite)
 
-The Auth schema is under `apps/auth/src/db/schema.ts` and migrations are stored
-in `apps/auth/drizzle/`.
+The same runner and rules as the API, with `pnpm --filter @repo/auth run db:migrate`. Two differences:
 
-```bash
-pnpm --filter @repo/auth run db:generate
-pnpm --filter @repo/auth run db:migrate
-```
-
-For a local database, start PostgreSQL first with `pnpm compose:up`.
-Worktree-specific databases and ports are provisioned by the worktree scripts;
-do not replace their generated `.env.local` values manually.
-
-Apply Auth migrations with `AUTH_DATABASE_MIGRATION_URL`, never with the
-runtime credential `AUTH_DATABASE_URL`. For permissions, readiness checks, and
-rollback, read `docs/runbook/auth-database.md`.
+- Column types are declared as `TIMESTAMP_TEXT`, `JSON_TEXT` or `BOOLEAN`: the
+  auth adapter (`apps/auth/src/db/client.ts`) reads the declared type to give
+  repositories `Date`, objects and booleans. Use them for new columns.
+- Every migration bumps `auth_schema_meta.version` with `UPDATE auth_schema_meta
+  SET version = N` and `AUTH_SCHEMA_VERSION` in `apps/auth/src/db/readiness.ts`;
+  `ops/production/check-auth-schema.sh` refuses a deploy where they differ.
 
 ## Non-negotiable rule
 
 Never edit a migration that has already been applied in a shared environment.
-Create a new migration instead. The API runner refuses a changed file by its
-checksum; the Auth tables track filenames, so rewriting an existing file there
-creates drift rather than applying the change again.
+Create a new migration instead. The runner refuses a changed file by its
+checksum.

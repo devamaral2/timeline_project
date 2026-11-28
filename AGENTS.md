@@ -14,9 +14,8 @@ Use `pnpm` from the repository root. Common commands: `pnpm install`, `pnpm dev`
 Create an isolated worktree with `pnpm worktree:new <caminho> -b <branch>`.
 Toda criação de worktree DEVE seguir esse comando e não pode pular nenhum passo
 (`scripts/worktree/provision-env.sh`): alias `<worktree>.braid.local` (Caddy +
-`/etc/hosts`), `node_modules` íntegros, base `<worktree>_auth` no Postgres
-compartilhado (porta 54391), o SQLite da API em `.data/api.sqlite` da própria
-worktree, migrations, usuário `admin@admin.com`
+`/etc/hosts`), `node_modules` íntegros, os bancos SQLite da própria worktree
+(`.data/api.sqlite` e `.data/auth.sqlite`), migrations, usuário `admin@admin.com`
 (senha `ADMIN_PASSWORD`) e servidores de dev no ar. Ao final, informe o link `https://<worktree>.braid.local:8443`.
 Remova com `pnpm worktree:teardown <caminho>`. Pré-requisitos únicos por máquina:
 `sudo bash scripts/worktree/hosts-install.sh` e `pnpm caddy:trust` (confia na CA local do
