@@ -1,4 +1,5 @@
-import type { Pool } from "pg";
+import type { Db } from "../shared/tx";
+import { sql } from "../sqlite/sql";
 import { Artifact, Task, Recurrence, type TaskCreateProps, type FoodData, type RecurrenceRule } from "../../../domain";
 
 /** Os dois usuarios dos testes de integracao: o dono dos dados e um estranho. */
@@ -82,15 +83,16 @@ export function occurrenceOf(recurrence: Recurrence, day: string, props: Partial
   });
 }
 
+/** SQL de conferencia dos testes, com `$1`, `$2`... no lugar dos valores. */
 export async function selectRows<T extends Record<string, unknown> = Record<string, unknown>>(
-  pool: Pool,
-  sql: string,
+  db: Pick<Db, "all">,
+  text: string,
   params: unknown[] = [],
 ): Promise<T[]> {
-  return (await pool.query(sql, params)).rows as T[];
+  return db.all<T>(sql.unsafe(text, params));
 }
 
-export async function countRows(pool: Pool, table: string, where = "true", params: unknown[] = []): Promise<number> {
-  const [row] = await selectRows<{ n: number }>(pool, `SELECT count(*)::int AS n FROM ${table} WHERE ${where}`, params);
+export async function countRows(db: Pick<Db, "all">, table: string, where = "1", params: unknown[] = []): Promise<number> {
+  const [row] = await selectRows<{ n: number }>(db, `SELECT count(*) AS n FROM ${table} WHERE ${where}`, params);
   return row.n;
 }
