@@ -8,8 +8,9 @@
 #   docker build -f apps/api/Dockerfile -t timeline-api .
 #
 # Nenhum segredo entra na imagem. loadRootEnv() procura .env na raiz, nao
-# encontra dentro do container e segue em frente — DATABASE_URL e o endereço
-# do serviço de autenticação chegam pelo environment do container.
+# encontra dentro do container e segue em frente — o caminho do banco SQLite
+# (API_DATABASE_PATH, no volume do pod) e o endereço do serviço de
+# autenticação chegam pelo environment do container.
 
 FROM node:24-bookworm-slim AS base
 ENV PNPM_HOME="/pnpm"
@@ -64,6 +65,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 COPY --from=builder /app/packages/contracts/dist ./packages/contracts/dist
 COPY --from=builder /app/packages/timeline/dist ./packages/timeline/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+# As migrations rodam na subida (ADR 0024): o migrador as le de apps/api/migrations.
+COPY --from=pruner /app/apps/api/migrations ./apps/api/migrations
 COPY --from=pruner /app/scripts/onepassword ./scripts/onepassword
 COPY --from=pruner /app/.env.example ./.env.example
 
@@ -73,5 +76,8 @@ COPY --from=pruner /app/.env.example ./.env.example
 ENV API_HOST=0.0.0.0
 ENV API_PORT=3001
 EXPOSE 3001
+# O arquivo SQLite mora num volume montado em /data; sem volume (docker run solto), a pasta da imagem serve.
+RUN mkdir -p /data && chown node:node /data
+ENV API_DATABASE_PATH=/data/api.sqlite
 USER node
 CMD ["node", "scripts/onepassword/exec.mjs", "node", "apps/api/dist/main.js"]

@@ -9,7 +9,34 @@ STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 DEST="/opt/braid/backups/$STAMP"
 mkdir -p "$DEST"
 
-timeout 1800 kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid -Fc > "$DEST/braid.dump"
+# A API em SQLite (ADR 0024): copia consistente com o banco no ar (`VACUUM INTO`, nunca o arquivo e o `-wal`
+# soltos), conferida com `integrity_check` antes de sair do pod. O primeiro deploy do SQLite ainda nao tem o arquivo.
+backup_api() {
+  timeout 600 kubectl -n braid exec deploy/api -- node -e '
+    const { DatabaseSync } = process.getBuiltinModule("node:sqlite");
+    const fs = process.getBuiltinModule("node:fs");
+    const source = process.env.API_DATABASE_PATH;
+    if (!source || !fs.existsSync(source)) { console.error("sem banco SQLite da API"); process.exit(3); }
+    const target = "/data/.backup.sqlite";
+    fs.rmSync(target, { force: true });
+    const db = new DatabaseSync(source, { readOnly: true });
+    db.prepare("VACUUM INTO ?").run(target);
+    db.close();
+    const copy = new DatabaseSync(target, { readOnly: true });
+    const result = copy.prepare("PRAGMA integrity_check").get().integrity_check;
+    copy.close();
+    if (result !== "ok") { console.error("integrity_check: " + result); process.exit(1); }
+  '
+}
+API_ARCHIVE=()
+if backup_api; then
+  timeout 600 kubectl -n braid exec deploy/api -- sh -c 'cat /data/.backup.sqlite && rm -f /data/.backup.sqlite' > "$DEST/api.sqlite"
+  API_ARCHIVE=("backups/$STAMP/api.sqlite")
+else
+  rc=$?
+  [[ $rc -eq 3 ]] || { echo "Backup do SQLite da API falhou ($rc)" >&2; exit 1; }
+  echo "API ainda sem banco SQLite; backup dela pulado." >&2
+fi
 timeout 1800 kubectl -n braid exec postgres-0 -- pg_dump -U postgres -d braid_auth -Fc > "$DEST/braid_auth.dump"
 timeout 600 kubectl -n braid exec postgres-0 -- pg_dumpall -U postgres --globals-only > "$DEST/globals.sql"
 kubectl -n braid get secrets -o yaml > "$DEST/timeline-secrets.yaml"
@@ -26,7 +53,6 @@ list_dump() {
     < "$1"
 }
 
-list_dump "$DEST/braid.dump" > "$DEST/braid-list.txt"
 list_dump "$DEST/braid_auth.dump" > "$DEST/auth-list.txt"
 
 ARCHIVE_PATHS=(private k8s bin env.sh k3s-version.txt monitoring-version.txt)
@@ -35,7 +61,7 @@ if [[ -f /opt/braid/release.env ]]; then
 fi
 
 tar -C /opt/braid -czf "$DEST/bundle.tar.gz" \
-  "backups/$STAMP/braid.dump" "backups/$STAMP/braid_auth.dump" \
+  "${API_ARCHIVE[@]}" "backups/$STAMP/braid_auth.dump" \
   "backups/$STAMP/globals.sql" "backups/$STAMP/timeline-secrets.yaml" \
   "backups/$STAMP/grafana-secret.yaml" "backups/$STAMP/tunnel-secret.yaml" \
   "${ARCHIVE_PATHS[@]}"
