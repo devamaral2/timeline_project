@@ -15,18 +15,13 @@ import type {
   WorkoutCatalog,
 } from "../domain/ports";
 import { JobsModule } from "./jobs.module";
-import { getCurrentJob } from "../infrastructure/jobs/job-context";
 import { ArtifactBuilder } from "../api-core/artifacts/services/artifact-builder.service";
 import { CreateTaskUseCase } from "../api-core/tasks/create-task.usecase";
+import { requestClock } from "../api-core/tasks/request-clock";
 import { MaterializeRecurrencesUseCase } from "../api-core/recurrences/materialize-recurrences.usecase";
 import { REQUEST_EXPORTS, REQUEST_PROVIDERS } from "./request-providers";
 
 /** A espera na fila e as novas tentativas nao podem mudar o que "hoje" ou "agora" queriam dizer no envio. */
-export function requestClock(): Date {
-  const submittedAt = getCurrentJob()?.createdAt;
-  return submittedAt ? new Date(submittedAt) : new Date();
-}
-
 @Module({ imports: [PersistenceModule] })
 export class ApiCoreModule {
   // Os modulos de funcionalidade compartilham um runtime e um registro de handlers, nao um worker por import.

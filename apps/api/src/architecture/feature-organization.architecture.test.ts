@@ -13,6 +13,35 @@ function filesUnder(directory: string): string[] {
   });
 }
 
+/** Operacoes que ja respondem pelo Fastify, com a rota declarativa no lugar do controller Nest. */
+const MIGRATED = [
+  "create-task",
+  "get-task",
+  "update-task",
+  "delete-task",
+  "list-agenda-tasks",
+  "list-tracked-tasks",
+  "set-task-situation",
+  "create-project",
+  "list-projects",
+];
+
+/** Operacoes que ainda respondem pelo Nest durante a coexistencia. */
+const STILL_NEST = [
+  "suggest-tags",
+  "search-places",
+  "create-artifact",
+  "get-artifact",
+  "update-artifact",
+  "delete-artifact",
+  "list-artifacts",
+  "create-recurrence",
+  "get-recurrence",
+  "update-recurrence",
+  "delete-recurrence",
+  "list-recurrences",
+];
+
 test("does not retain the old feature aggregators or artificial HTTP areas", () => {
   for (const name of ["tasks", "artifacts", "recurrences", "agent", "request-identity", "notes", "catalog"]) {
     expect(existsSync(join(features, name)), name).toBe(false);
@@ -31,28 +60,24 @@ test("has one folder per operation on tasks, artifacts and recurrences, and none
   );
   expect(retired).toEqual([]);
 
-  for (const name of [
-    "create-task",
-    "get-task",
-    "update-task",
-    "delete-task",
-    "list-agenda-tasks",
-    "list-tracked-tasks",
-    "suggest-tags",
-    "search-places",
-    "create-artifact",
-    "get-artifact",
-    "update-artifact",
-    "delete-artifact",
-    "list-artifacts",
-    "create-recurrence",
-    "get-recurrence",
-    "update-recurrence",
-    "delete-recurrence",
-    "list-recurrences",
-  ]) {
+  for (const name of MIGRATED) {
+    expect(folders, name).toContain(name);
+  }
+  for (const name of STILL_NEST) {
     expect(folders, name).toContain(name);
     expect(filesUnder(join(features, name)).some((path) => path.endsWith(".controller.ts")), name).toBe(true);
+  }
+});
+
+test("each migrated feature declares its route without Nest, and no longer keeps a controller", () => {
+  for (const name of MIGRATED) {
+    const files = filesUnder(join(features, name));
+    const routes = files.filter((path) => path.endsWith(".route.ts"));
+    expect(routes, name).toHaveLength(1);
+    expect(files.some((path) => path.endsWith(".controller.ts")), name).toBe(false);
+
+    const source = readFileSync(routes[0] as string, "utf8");
+    expect(source, routes[0]).not.toMatch(/@nestjs\/|from\s+["']fastify["']/);
   }
 });
 

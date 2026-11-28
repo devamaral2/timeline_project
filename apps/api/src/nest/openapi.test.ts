@@ -6,6 +6,7 @@ import { z } from "zod";
 import { AppModule } from "../app.module";
 import { describeOperations } from "./openapi";
 import { documentedOperations, documentedSchemas, documentedTags } from "../common/openapi-operations";
+import { DECLARED_API_OPERATIONS, declaredOperationKey } from "../server/declared-operations";
 
 const ROTA_ANTIGA = "/api/events"; // a rota antiga: o catálogo não pode tê-la
 type ModuleLike = (new (...args: never[]) => unknown) | { module: ModuleLike; imports?: ModuleLike[]; controllers?: ControllerClass[] };
@@ -43,7 +44,8 @@ function routesOf(root: ModuleLike): string[] {
 }
 
 test("toda rota da API está no catálogo, e o catálogo não descreve rota que não existe", () => {
-  expect(Object.keys(documentedOperations).sort()).toEqual(routesOf(AppModule as unknown as ModuleLike));
+  const declared = DECLARED_API_OPERATIONS.map(declaredOperationKey);
+  expect(Object.keys(documentedOperations).sort()).toEqual([...routesOf(AppModule as unknown as ModuleLike), ...declared].sort());
 });
 
 test("cada entrada aponta para um grupo e para formatos que existem", () => {
@@ -123,6 +125,34 @@ test("o documento ganha grupo, resumo, filtros opcionais, corpo e resposta", () 
   expect(Object.keys(document.paths).filter((path) => path.startsWith(ROTA_ANTIGA))).toEqual([]);
 
   expect(document.paths["/fora/do/catalogo"].get.tags).toEqual(["Outro"]);
+});
+
+test("as operações que já respondem pelo Fastify entram no documento a partir do catálogo", () => {
+  const document = describeOperations({
+    openapi: "3.0.0",
+    info: { title: "Braid API", version: "1.0.0" },
+    paths: {},
+  } as unknown as OpenAPIObject) as unknown as {
+    paths: Record<string, Record<string, {
+      tags: string[];
+      parameters: Array<{ name: string; in: string; required: boolean }>;
+      requestBody?: unknown;
+      responses: Record<string, unknown>;
+    }>>;
+  };
+
+  const update = document.paths["/api/tasks/{taskId}"].patch;
+  expect(update.tags).toEqual(["Tarefas"]);
+  expect(update.parameters).toEqual([
+    expect.objectContaining({ name: "taskId", in: "path", required: true }),
+  ]);
+  expect(update.requestBody).toBeDefined();
+  expect(update.responses).toHaveProperty("204");
+
+  const create = document.paths["/api/tasks"].post;
+  expect(create.parameters).toEqual([expect.objectContaining({ name: "Idempotency-Key", in: "header" })]);
+  expect(create.responses).toHaveProperty("201");
+  expect(document.paths["/api/projects"].post.responses).toHaveProperty("201");
 });
 
 test("os tipos de texto livre aparecem no filtro da lista de artefatos e nos formatos de artefato", () => {
