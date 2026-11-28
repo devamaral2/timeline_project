@@ -1,6 +1,7 @@
-# Compose local para desenvolvimento. Sobe o PostgreSQL usado por apps/api.
-# O bind em 127.0.0.1 mantem o banco fora da rede, igual ao comportamento
-# padrao da API (veja AGENTS.md).
+# PostgreSQL local do modelo antigo. A API e o Auth usam SQLite (ADR 0024 e 0025)
+# e nao precisam dele: serve a copia unica dos dados do Auth e ao teardown de uma
+# worktree que ainda tem COMPOSE_PROJECT_NAME. O bind em 127.0.0.1 mantem o
+# banco fora da rede.
 services:
   postgres:
     image: postgres:17-alpine

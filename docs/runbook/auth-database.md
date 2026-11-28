@@ -42,7 +42,10 @@ chave criada no passo 1: os tokens já emitidos continuam válidos) e a auditori
 contadores de tentativa ficam de fora: todo mundo faz login de novo, e um convite em aberto é reemitido. É uma
 transação só, conferida tabela a tabela; um arquivo que já tem usuários é recusado sem gravar nada.
 
-Para refazer à mão (por exemplo, numa worktree, do Postgres local para `.data/auth.sqlite`):
+Para refazer à mão (por exemplo, numa worktree, do Postgres local para `.data/auth.sqlite`), diga ao carregador qual é o
+banco antigo: com `POSTGRES_HOST_PORT=54391` e `AUTH_POSTGRES_DB=<nome do banco>` no `.env.local`, ele monta a
+`AUTH_DATABASE_URL` com `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DB` do 1Password. Sem `POSTGRES_HOST_PORT`, vale
+a `AUTH_DATABASE_URL` do 1Password. O `worktree:provision` não grava nenhuma dessas chaves.
 
 ```bash
 rm -f .data/auth.sqlite*   # só se o arquivo pode ser descartado

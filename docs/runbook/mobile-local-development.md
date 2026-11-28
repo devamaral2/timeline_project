@@ -545,7 +545,7 @@ Há dois caminhos:
 
 - **Worktree principal:** siga o passo 6.3 e crie `.env.local` manualmente.
 - **Worktree secundária:** siga o passo 6.4 e deixe o script de provisionamento
-  escolher portas e banco isolados.
+  escolher portas e bancos isolados.
 
 Não misture os dois caminhos no mesmo checkout sem entender qual `.env.local`
 está ativo.
@@ -569,9 +569,6 @@ API_PORT=3001
 API_HOST=127.0.0.1
 AUTH_PORT=3002
 AUTH_HOST=127.0.0.1
-POSTGRES_HOST_PORT=54391
-AUTH_POSTGRES_DB=lifecomposure_auth
-COMPOSE_PROJECT_NAME=braid-main
 ```
 
 Salve o arquivo e confirme que ele existe:
@@ -581,8 +578,8 @@ test -f .env.local
 ```
 
 Não adicione `POSTGRES_PASSWORD`, `DATABASE_URL`, `AUTH_KEY_ENCRYPTION_KEY` ou
-outros segredos a esse arquivo. O loader do 1Password calcula as URLs do banco
-usando as variáveis secretas e os valores locais de porta.
+outros segredos a esse arquivo: eles vêm do loader do 1Password. A API e o
+Auth não usam banco externo.
 
 Se alguma das portas estiver ocupada, escolha outras portas livres e use os
 mesmos números em todo o procedimento. Por exemplo, se API usar `3101` e Auth
@@ -599,11 +596,11 @@ pnpm worktree:provision
 
 Esse comando:
 
-1. calcula portas livres;
-2. cria `.env.local` com essas portas;
+1. calcula portas livres e cria `.env.local` com elas;
+2. publica o alias `<worktree>.braid.local` (Caddy e `/etc/hosts`);
 3. aplica as migrations da API e do Auth nos arquivos `.data/api.sqlite` e
-   `.data/auth.sqlite` da worktree;
-4. executa o build dos packages.
+   `.data/auth.sqlite` da worktree e cria o usuário admin;
+4. executa o build, sobe web, API e Auth e confere o login.
 
 O comando não provisiona a worktree principal por segurança. Não use
 `FORCE_MAIN=1` sem ter certeza de que deseja substituir o `.env.local` e o
@@ -639,8 +636,7 @@ execute novamente:
 pnpm worktree:provision
 ```
 
-O script é idempotente e reaproveita o ambiente quando encontra o projeto Docker
-já em execução.
+O script é idempotente: reaproveita o `.env.local` e os bancos que já existem.
 
 ## 8. Subir API e Auth
 
@@ -901,21 +897,8 @@ Se `pidof` não retornar um PID, abra o app novamente e repita o comando.
 Para parar API e Auth, volte aos terminais correspondentes e pressione
 `Ctrl+C`.
 
-Para remover apenas os containers, preservando os dados do PostgreSQL:
-
-```bash
-pnpm secrets:exec -- docker compose \
-  --env-file .env.local \
-  --project-name braid-main \
-  -f infra/docker-compose.local.yml down
-```
-
-Para worktrees secundárias, use o nome do projeto Docker exibido por
-`pnpm worktree:provision`.
-
-Não use `docker compose down -v` como rotina: `-v` remove o volume e apaga os
-dados locais do banco. Só faça isso quando quiser reiniciar deliberadamente o
-ambiente do zero.
+Numa worktree secundária, os servidores sobem em segundo plano; encerre-os com
+`pnpm worktree:stop-dev`. Os dados ficam nos arquivos SQLite em `.data/`.
 
 Para remover o encaminhamento de portas do dispositivo:
 

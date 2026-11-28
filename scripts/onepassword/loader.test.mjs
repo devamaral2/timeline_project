@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readEnvKeys, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys, defaultScope } from "./loader.mjs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { readEnvKeys, readLocalOverrides, resolveEnvironmentWithClient, applyLocalOverrides, scopeKeys, defaultScope } from "./loader.mjs";
 
 test("uses the env example as the complete allowlist", () => {
   const keys = readEnvKeys();
@@ -119,35 +122,57 @@ test("allows a local override for the shared API/Auth service key", async () => 
 
 test("keeps the browser backend on Auth and the API service internal", () => {
   const environment = applyLocalOverrides(
-    {
-      API_PORT: "3101",
-      AUTH_PORT: "3102",
-      POSTGRES_USER: "timeline",
-      POSTGRES_PASSWORD: "password",
-      POSTGRES_DB: "timeline",
-      WEB_PORT: "3100",
-    },
-    { POSTGRES_HOST_PORT: "55432", API_PORT: "3101", AUTH_PORT: "3102" },
+    { API_PORT: "3001", AUTH_PORT: "3002", WEB_PORT: "3000" },
+    { WORKTREE_SLUG: "minha-feature", API_PORT: "3101", AUTH_PORT: "3102", WEB_PORT: "3100" },
   );
 
   assert.equal(environment.BACKEND_URL, "http://127.0.0.1:3102");
   assert.equal(environment.API_SERVICE_URL, "http://127.0.0.1:3101");
+  assert.equal(environment.AUTH_ISSUER, "http://127.0.0.1:3102");
+  assert.equal(environment.AUTH_PUBLIC_URL, "http://127.0.0.1:3102");
+  assert.equal(environment.AUTH_SERVICE_URL, "http://127.0.0.1:3102");
+  assert.equal(environment.AUTH_WEB_APP_URL, "http://localhost:3100");
+  assert.equal(environment.AUTH_DATABASE_URL, undefined);
 });
 
-test("points API and Auth at per-worktree databases on the shared Postgres", () => {
+test("keeps the worktree's own web origin", () => {
   const environment = applyLocalOverrides(
-    { POSTGRES_USER: "timeline", POSTGRES_PASSWORD: "password", POSTGRES_DB: "timeline", AUTH_PORT: "3102", WEB_PORT: "3100" },
-    {
-      POSTGRES_HOST_PORT: "54391",
-      POSTGRES_DB: "refactory_tasks",
-      AUTH_POSTGRES_DB: "refactory_tasks_auth",
-      AUTH_WEB_APP_URL: "http://refactory-tasks.braid.local:8080",
-    },
+    { AUTH_PORT: "3102", WEB_PORT: "3100" },
+    { WORKTREE_SLUG: "minha-feature", AUTH_WEB_APP_URL: "https://minha-feature.braid.local:8443" },
   );
 
-  assert.equal(environment.DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_tasks");
-  assert.equal(environment.AUTH_DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/refactory_tasks_auth");
-  assert.equal(environment.AUTH_WEB_APP_URL, "http://refactory-tasks.braid.local:8080");
+  assert.equal(environment.AUTH_WEB_APP_URL, "https://minha-feature.braid.local:8443");
+});
+
+test("points the one-off auth data copy at the local PostgreSQL named in .env.local", () => {
+  // O .env.local da principal: sem WORKTREE_SLUG.
+  const environment = applyLocalOverrides(
+    { POSTGRES_USER: "timeline", POSTGRES_PASSWORD: "password", POSTGRES_DB: "timeline", AUTH_PORT: "3102", WEB_PORT: "3100" },
+    { POSTGRES_HOST_PORT: "54391", AUTH_POSTGRES_DB: "timeline_antigo_auth" },
+  );
+
+  assert.equal(environment.AUTH_DATABASE_URL, "postgresql://timeline:password@127.0.0.1:54391/timeline_antigo_auth");
+  assert.equal(environment.BACKEND_URL, "http://127.0.0.1:3102");
+});
+
+test("does not build a PostgreSQL URL without the PostgreSQL credentials", () => {
+  const environment = applyLocalOverrides(
+    { AUTH_DATABASE_URL: "postgres://from-1password", AUTH_PORT: "3102", WEB_PORT: "3100" },
+    { POSTGRES_HOST_PORT: "54391" },
+  );
+
+  assert.equal(environment.AUTH_DATABASE_URL, "postgres://from-1password");
+});
+
+test("reads the worktree marker from .env.local", () => {
+  const directory = mkdtempSync(join(tmpdir(), "braid-loader-"));
+  try {
+    const file = join(directory, ".env.local");
+    writeFileSync(file, "WORKTREE_SLUG=minha-feature\nWEB_PORT=3100\nSEGREDO=nao\n");
+    assert.deepEqual(readLocalOverrides(file), { WORKTREE_SLUG: "minha-feature", WEB_PORT: "3100" });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("reports Environment API failures without starting the application", async () => {
@@ -199,5 +224,9 @@ test("the default scope loads the Hermes key when present but does not require i
 
   assert.ok(scope.optional.includes("HERMES_API_KEY"));
   assert.ok(!scope.required.includes("HERMES_API_KEY"));
-  assert.ok(scope.required.includes("DATABASE_URL"));
+  assert.ok(scope.required.includes("AUTH_KEY_ENCRYPTION_KEY"));
+});
+
+test("the default scope does not require anything from PostgreSQL", () => {
+  assert.deepEqual(defaultScope().required.filter((key) => /POSTGRES|DATABASE_URL/.test(key)), []);
 });
