@@ -1,11 +1,11 @@
 import { afterEach, expect, it } from "vitest";
 import { ulid } from "ulid";
 import { cleanupAuthData } from "./cleanup-auth-data";
-import { createAuthDatabase, type AuthDatabase } from "../db/client";
-import { createPostgresTestDatabase, describeWithPostgres, type PostgresTestDatabase } from "../testing/postgres-test-database";
+import type { AuthDatabase } from "../db/client";
+import { createAuthTestDatabase, describeWithDatabase, type AuthTestDatabase } from "../testing/sqlite-test-database";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 
-let fixture: PostgresTestDatabase | undefined;
+let fixture: AuthTestDatabase | undefined;
 let database: AuthDatabase | undefined;
 let admin: AuthDatabase | undefined;
 afterEach(async () => {
@@ -26,9 +26,9 @@ const justAfter = (ms: number) => new Date(now.getTime() - ms + 1);
 const jwk = JSON.stringify({ kty: "OKP", crv: "Ed25519", x: "x", kid: "k", use: "sig", alg: "EdDSA" });
 
 async function open(): Promise<AuthDatabase> {
-  fixture = await createPostgresTestDatabase();
-  database = createAuthDatabase({ connectionString: fixture.runtimeUrl });
-  admin = createAuthDatabase({ connectionString: fixture.adminUrl });
+  fixture = await createAuthTestDatabase();
+  database = fixture.open();
+  admin = fixture.open();
   return database;
 }
 
@@ -47,14 +47,14 @@ async function seedBoundaries(db: AuthDatabase, userId: string): Promise<void> {
   for (const [suffix, when] of [["old", at(24 * HOUR)], ["new", justAfter(24 * HOUR)]] as const) {
     await db.query("INSERT INTO rate_limit_buckets(scope,subject_hash,window_started_at,window_expires_at,hit_count,updated_at) VALUES('password_ip',$1,$2,$2,1,$2)", [`bucket-${suffix}`, when]);
     await db.query("INSERT INTO invites(id,token_hash,user_id,expires_at,revoked_at,created_at) VALUES($1,$2,$3,$4,$4,$5)", [`invite-${suffix}`, `invite-hash-${suffix}`, userId, whenFor(suffix, 30 * DAY), at(60 * DAY)]);
-    await db.query("INSERT INTO sessions(id,user_id,amr,auth_time,last_used_at,revoked_at,ended_at,created_at) VALUES($1,$2,ARRAY['pwd'],$3,$3,$4,$4,$3)", [`session-${suffix}`, userId, at(120 * DAY), whenFor(suffix, 90 * DAY)]);
+    await db.query("INSERT INTO sessions(id,user_id,amr,auth_time,last_used_at,revoked_at,ended_at,created_at) VALUES($1,$2,'[\"pwd\"]',$3,$3,$4,$4,$3)", [`session-${suffix}`, userId, at(120 * DAY), whenFor(suffix, 90 * DAY)]);
     await db.query("INSERT INTO refresh_tokens(id,token_hash,session_id,expires_at,created_at) VALUES($1,$2,$3,$4,$5)", [`refresh-${suffix}`, `refresh-hash-${suffix}`, `session-${suffix}`, new Date(at(120 * DAY).getTime() + 30 * DAY), at(120 * DAY)]);
   }
 }
 
 function whenFor(suffix: "old" | "new", ms: number): Date { return suffix === "old" ? at(ms) : justAfter(ms); }
 
-describeWithPostgres("cleanupAuthData", () => {
+describeWithDatabase("cleanupAuthData", () => {
   it("deletes exactly at each retention cut and keeps the row that is one millisecond newer", async () => {
     const db = await open();
     const userId = ulid();
@@ -99,7 +99,7 @@ describeWithPostgres("cleanupAuthData", () => {
     const db = await open();
     const userId = ulid();
     await seedUser(db, userId);
-    await db.query("INSERT INTO sessions(id,user_id,amr,auth_time,last_used_at,created_at) VALUES('live',$1,ARRAY['pwd'],$2,$2,$2),('stale',$1,ARRAY['pwd'],$2,$2,$2)", [userId, at(2 * DAY)]);
+    await db.query("INSERT INTO sessions(id,user_id,amr,auth_time,last_used_at,created_at) VALUES('live',$1,'[\"pwd\"]',$2,$2,$2),('stale',$1,'[\"pwd\"]',$2,$2,$2)", [userId, at(2 * DAY)]);
     // A sessao viva tem um refresh consumido (a rotacao anterior) e um valido.
     await db.query("INSERT INTO refresh_tokens(id,token_hash,session_id,expires_at,consumed_at,created_at) VALUES('spent','spent-hash','live',$1,$2,$3)", [new Date(at(2 * DAY).getTime() + 30 * DAY), at(DAY), at(2 * DAY)]);
     await db.query("INSERT INTO refresh_tokens(id,token_hash,session_id,expires_at,created_at) VALUES('usable','usable-hash','live',$1,$2)", [new Date(at(2 * DAY).getTime() + 30 * DAY), at(2 * DAY)]);
@@ -121,33 +121,35 @@ describeWithPostgres("cleanupAuthData", () => {
     await seedUser(db, userId);
     await seedBoundaries(db, userId);
     await db.query("INSERT INTO signing_keys(kid,status,public_jwk,encrypted_private_key,created_at,retire_after) VALUES('retiring-old','retiring',$1,'ciphertext',$2,$3)", [jwk, at(120 * DAY), at(0)]);
-    await requireAdmin().query("ALTER TABLE audit_log ADD CONSTRAINT audit_log_reject CHECK (false) NOT VALID");
+    // Outra conexao faz a auditoria recusar a proxima linha: a limpeza inteira precisa voltar junto.
+    await requireAdmin().query("CREATE TRIGGER audit_log_reject BEFORE INSERT ON audit_log BEGIN SELECT RAISE(ABORT, 'rejected'); END");
 
     await expect(cleanupAuthData({ database: db, now, context })).rejects.toThrow();
 
-    expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM invites")).rows[0]).toEqual({ count: 2 });
-    expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM sessions")).rows[0]).toEqual({ count: 2 });
+    expect((await db.query<{ count: number }>("SELECT count(*) AS count FROM invites")).rows[0]).toEqual({ count: 2 });
+    expect((await db.query<{ count: number }>("SELECT count(*) AS count FROM sessions")).rows[0]).toEqual({ count: 2 });
     expect((await db.query<{ status: string; encrypted_private_key: string | null }>("SELECT status, encrypted_private_key FROM signing_keys")).rows[0]).toEqual({ status: "retiring", encrypted_private_key: "ciphertext" });
   });
 
-  it("gives up without mutating anything when another cleanup already holds the lock", async () => {
+  it("runs two simultaneous cleanups one after the other: the second finds nothing left", async () => {
     const db = await open();
     const userId = ulid();
     await seedUser(db, userId);
     await seedBoundaries(db, userId);
 
-    // O lock e por transacao: segura-lo em outra conexao reproduz, sem corrida,
-    // exatamente o que duas execucoes simultaneas veem.
-    const contended = await db.transaction(async (tx) => {
-      await tx.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", ["timeline-auth:cleanup"]);
-      return cleanupAuthData({ database: db, now, context });
-    });
+    // No Postgres a segunda desistia pelo advisory lock. No SQLite a transacao abre com BEGIN IMMEDIATE: a segunda
+    // espera a primeira terminar e so ve o que sobrou, entao nada e apagado nem auditado duas vezes.
+    const [first, second] = await Promise.all([
+      cleanupAuthData({ database: db, now, context }),
+      cleanupAuthData({ database: db, now, context }),
+    ]);
 
-    expect(contended).toEqual({
-      lockAcquired: false, sessionsEnded: 0,
+    expect(first.invitesDeleted).toBe(1);
+    expect(second).toEqual({
+      lockAcquired: true, sessionsEnded: 0,
       rateLimitBucketsDeleted: 0, invitesDeleted: 0, sessionsDeleted: 0, signingKeysRetired: 0,
     });
-    expect((await db.query<{ count: number }>("SELECT count(*)::int AS count FROM invites")).rows[0]).toEqual({ count: 2 });
-    expect((await requireAdmin().query<{ count: number }>("SELECT count(*)::int AS count FROM audit_log WHERE action='cleanup.completed'")).rows[0]).toEqual({ count: 0 });
+    expect((await db.query<{ count: number }>("SELECT count(*) AS count FROM invites")).rows[0]).toEqual({ count: 1 });
+    expect((await requireAdmin().query<{ count: number }>("SELECT count(*) AS count FROM audit_log WHERE action='cleanup.completed'")).rows[0]).toEqual({ count: 2 });
   });
 });

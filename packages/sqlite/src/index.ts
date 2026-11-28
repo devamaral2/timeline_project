@@ -5,5 +5,6 @@
 export * from "./columns";
 export * from "./database";
 export * from "./migrate";
+export * from "./open";
 export { DatabaseSync, type StatementSync } from "./node-sqlite";
 export * from "./sql";

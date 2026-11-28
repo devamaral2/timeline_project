@@ -39,7 +39,7 @@ export class PostgresLoginRepository implements AuthenticationRepository {
 
   async completeLogin(command: CompleteLoginCommand, sign: SignAccessToken): Promise<SessionCommit | "invalid"> {
     return this.db.transaction(async (tx) => {
-      const user = (await tx.query<{ status: string }>("SELECT status FROM users WHERE id=$1 AND status='active' FOR UPDATE", [command.userId])).rows[0];
+      const user = (await tx.query<{ status: string }>("SELECT status FROM users WHERE id=$1 AND status='active'", [command.userId])).rows[0];
       if (!user) return "invalid" as const;
 
       await tx.query(
@@ -52,7 +52,7 @@ export class PostgresLoginRepository implements AuthenticationRepository {
       );
 
       const access = await resolveAccessInTransaction(tx, command.userId);
-      const keyRow = (await tx.query<{ kid: string; encrypted_private_key: string | null }>("SELECT kid,encrypted_private_key FROM signing_keys WHERE status='active' FOR UPDATE")).rows[0];
+      const keyRow = (await tx.query<{ kid: string; encrypted_private_key: string | null }>("SELECT kid,encrypted_private_key FROM signing_keys WHERE status='active'")).rows[0];
       if (!keyRow || typeof keyRow.encrypted_private_key !== "string") throw new Error("no signing key");
       const key = { kid: keyRow.kid, encryptedPrivateKey: keyRow.encrypted_private_key };
       const accessToken = sign(key, buildUnsignedAccessTokenClaims({

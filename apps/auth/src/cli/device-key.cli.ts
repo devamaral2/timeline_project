@@ -4,7 +4,7 @@ import { SystemClock } from "../common/clock";
 import { CryptoSecretGenerator } from "../common/secret-generator";
 import { getRuntimeEnv } from "../config/env";
 import { findMonorepoRoot, loadRootEnv } from "../config/load-env";
-import { createAuthDatabase } from "../db/client";
+import { openAuthDatabase } from "../db/client";
 import { IssueDeviceKeyUseCase } from "../features/device-keys/usecases/issue-device-key.usecase";
 import { RevokeDeviceKeyUseCase } from "../features/device-keys/usecases/revoke-device-key.usecase";
 import { parseDeviceKeyArgs } from "./device-key";
@@ -14,7 +14,7 @@ const context = { correlationId: "device-key-cli", ipAddress: null, userAgent: n
 async function main(): Promise<void> {
   const args = parseDeviceKeyArgs(process.argv.slice(2));
   const env = getRuntimeEnv(loadRootEnv(findMonorepoRoot(__dirname), process.env));
-  const database = createAuthDatabase({ connectionString: env.databaseUrl });
+  const database = openAuthDatabase(env.databasePath);
   const keys = new PostgresDeviceKeyRepository(database);
   const clock = new SystemClock();
   try {

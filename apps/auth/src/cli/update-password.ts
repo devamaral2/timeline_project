@@ -1,7 +1,6 @@
 import { insertAuditEvents } from "../audit/postgres-audit-log";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import type { AuthDatabase } from "../db/client";
-import { acquireAdvisoryLock, ADVISORY_LOCK } from "../db/transaction-locks";
 import { normalizeEmail } from "../domain/users/user";
 
 export async function updatePassword(
@@ -13,10 +12,9 @@ export async function updatePassword(
   if (!email) throw new Error("email is required");
 
   return database.transaction(async (tx) => {
-    await acquireAdvisoryLock(tx, `${ADVISORY_LOCK.passwordUpdate}:${email}`);
     const user = (
       await tx.query<{ id: string; status: string }>(
-        "SELECT id, status FROM users WHERE email = $1 FOR UPDATE",
+        "SELECT id, status FROM users WHERE email = $1",
         [email],
       )
     ).rows[0];
