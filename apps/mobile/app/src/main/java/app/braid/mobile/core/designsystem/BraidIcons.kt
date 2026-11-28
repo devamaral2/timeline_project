@@ -39,6 +39,12 @@ object BraidIcons {
     val search = listOf(SvgPart(svgCircle(11f, 11f, 8f)), SvgPart("m21 21-4.3-4.3"))
     val arrowUp = listOf(SvgPart("m5 12 7-7 7 7"), SvgPart("M12 19V5"))
 
+    /** O `ArrowUpRight` do lucide: abre a matéria de uma ficha de notícia, fora do app. */
+    val arrowUpRight = listOf(SvgPart("M7 7h10v10"), SvgPart("M7 17 17 7"))
+
+    /** O `Clock` do lucide: o prazo de uma ficha de resumo de e-mail. */
+    val clock = listOf(SvgPart(svgCircle(12f, 12f, 10f)), SvgPart("M12 6v6l4 2"))
+
     /** O `X` do lucide: fecha, remove, e marca o pedido que falhou. */
     val close = listOf(SvgPart("M18 6 6 18"), SvgPart("m6 6 12 12"))
     val plus = listOf(SvgPart("M5 12h14"), SvgPart("M12 5v14"))

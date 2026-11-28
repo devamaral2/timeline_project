@@ -158,7 +158,7 @@ export function NoteDetailScreen({ userId, noteId }: { userId: string; noteId: s
       }
     >
       {notice ? <DetailMessage alert>{notice}</DetailMessage> : null}
-      <ArtifactContent artifact={artifact} />
+      <ArtifactContent artifact={artifact} cards />
 
       {/* Sem tarefa (ou artefato global), a seção some: só aparece quando há o que mostrar. */}
       {!artifact.global && tasks.length ? (

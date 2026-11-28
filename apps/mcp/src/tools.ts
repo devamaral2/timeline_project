@@ -20,6 +20,20 @@ const PRIORITIES = ["urgent", "high", "medium", "low"] as const;
  * Sao os que o agente cria e reescreve por aqui.
  */
 const FREE_TEXT_ARTIFACT_TYPES = ["text", "news", "email_summary", "youtube_transcript"] as const;
+
+/**
+ * Como escrever o texto para a tela montar as fichas (`docs/summary-cards.md`). A regra que lê é a do web
+ * (`apps/web/src/lib/notes/summary-cards.ts`); aqui vai só o que o agente precisa para escrever.
+ */
+const SUMMARY_BODY = [
+  "The text, in markdown.",
+  "For 'news', 'email_summary' and 'youtube_transcript' the app turns a text with headings into cards; a text without headings is shown as it is.",
+  "Start with a one-paragraph overview, then one '## Group' per group.",
+  "Inside a group, write one '### Title' per item (one card each), or a bullet list for one-line items ('- **Sender:** what it says').",
+  "In a card these lines are read as fields and leave the text: 'De: name · time' (sender), 'Prazo: text' (deadline; say 'hoje' when it is due today), 'Fontes: [name](url) · [name](url)' (sources); a paragraph made only of links, like '[Responder](url)', becomes the card's buttons.",
+  "news: '## Section' (Economia, Cidade...) with one '### Headline' per story. email_summary: groups such as '## Pedem resposta', '## Para saber', '## Sem ação'.",
+  "youtube_transcript: first line 'Fonte: [YouTube](video url) · channel'; '## Resumo' as a list of '- [topic](#t-SECONDS) (MM:SS): one line'; the speech under '## Transcrição', one paragraph per turn starting with '{#t-SECONDS} [MM:SS](https://youtu.be/ID?t=SECONDS) **Speaker:**'.",
+].join(" ");
 /** Os tipos de artefato que o dono cria e edita; os de configuracao do agente ficam de fora. */
 const ARTIFACT_TYPES = [...FREE_TEXT_ARTIFACT_TYPES, "food", "sleep", "training"] as const;
 
@@ -151,7 +165,7 @@ export function registerTools(server: McpServer, api: ApiClient): void {
           .describe(
             "What the text is. 'text': a plain note (the default when omitted). 'news': a round-up of news. 'email_summary': the summary of an e-mail inbox. 'youtube_transcript': the transcript of a YouTube video.",
           ),
-        body: z.string().min(1),
+        body: z.string().min(1).describe(SUMMARY_BODY),
         tags,
         taskIds: z.array(z.string()).optional().describe("Tasks in which the artifact appears from the start."),
         idempotencyKey,
@@ -320,7 +334,7 @@ function registerReadAndEditTools(server: McpServer, api: ApiClient): void {
         artifactId: id("artifact"),
         expectedRevision: revision,
         name: z.string().min(1).optional(),
-        body: z.string().min(1).optional(),
+        body: z.string().min(1).optional().describe(SUMMARY_BODY),
         tags,
       },
       annotations: EDIT,

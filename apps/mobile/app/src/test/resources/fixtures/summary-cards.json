@@ -1,0 +1,1453 @@
+{
+  "summaryCardsOf": [
+    {
+      "args": [
+        "email_summary",
+        "Três e-mails pedem resposta, e o da contadora vence hoje.\n\n## Pedem resposta\n\n### Documentos do imposto\nDe: Marina Costa · 09:12\nFaltam o informe do banco e o recibo do aluguel para fechar a declaração.\nPrazo: hoje, 18h\n\n[Responder](https://mail.example.com/t/1)\n\n### Proposta da reforma\nDe: **Otávio Lima** <otavio@example.com> · ontem\nO orçamento subiu 8% com a troca do piso. Ele pede o aceite para reservar a equipe.\nPrazo: sexta, 29 nov\n\n[Responder](https://mail.example.com/t/2) · [Abrir o anexo](https://mail.example.com/t/2/anexo)\n\n### Reunião de pais\nDe: Escola Aurora\nA escola pergunta qual dos dois horários serve.\n\n## Para saber\n\n- **Banco Prisma:** a fatura de novembro fechou em R$ 1.240.\n- **Condomínio** — a assembleia ficou para o dia 5.\n- [Entrega a caminho](https://loja.example.com/pedido/9): chega na segunda.\n- A academia fecha no feriado.\n\n## Sem ação\n\n- **Boletim Bit:** edição da semana.\n- **Loja Norte:** promoção de fim de ano.\n- **Rede social:** resumo de atividade.\n- **Clube de leitura:** livro de dezembro.\n- **Cinema:** estreias.\n- **Farmácia:** cupom.\n- **Streaming:** novidades do mês.\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "Três e-mails pedem resposta, e o da contadora vence hoje.",
+        "score": [
+          {
+            "value": 14,
+            "label": "e-mails"
+          },
+          {
+            "value": 3,
+            "label": "pedem resposta"
+          },
+          {
+            "value": 1,
+            "label": "vence hoje"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": "Pedem resposta",
+            "intro": "",
+            "cards": [
+              {
+                "title": "Documentos do imposto",
+                "kicker": null,
+                "from": {
+                  "name": "Marina Costa",
+                  "detail": "09:12",
+                  "initials": "MC"
+                },
+                "due": {
+                  "text": "hoje, 18h",
+                  "tone": "soon"
+                },
+                "sources": [],
+                "actions": [
+                  {
+                    "label": "Responder",
+                    "href": "https://mail.example.com/t/1"
+                  }
+                ],
+                "body": "Faltam o informe do banco e o recibo do aluguel para fechar a declaração."
+              },
+              {
+                "title": "Proposta da reforma",
+                "kicker": null,
+                "from": {
+                  "name": "Otávio Lima",
+                  "detail": "ontem",
+                  "initials": "OL"
+                },
+                "due": {
+                  "text": "sexta, 29 nov",
+                  "tone": "calm"
+                },
+                "sources": [],
+                "actions": [
+                  {
+                    "label": "Responder",
+                    "href": "https://mail.example.com/t/2"
+                  },
+                  {
+                    "label": "Abrir o anexo",
+                    "href": "https://mail.example.com/t/2/anexo"
+                  }
+                ],
+                "body": "O orçamento subiu 8% com a troca do piso. Ele pede o aceite para reservar a equipe."
+              },
+              {
+                "title": "Reunião de pais",
+                "kicker": null,
+                "from": {
+                  "name": "Escola Aurora",
+                  "detail": null,
+                  "initials": "EA"
+                },
+                "due": null,
+                "sources": [],
+                "actions": [],
+                "body": "A escola pergunta qual dos dois horários serve."
+              }
+            ]
+          },
+          {
+            "kind": "rows",
+            "title": "Para saber",
+            "rows": [
+              {
+                "title": "Banco Prisma",
+                "text": "a fatura de novembro fechou em R$ 1.240.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Condomínio",
+                "text": "a assembleia ficou para o dia 5.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Entrega a caminho",
+                "text": "chega na segunda.",
+                "time": null,
+                "href": "https://loja.example.com/pedido/9",
+                "range": null
+              },
+              {
+                "title": null,
+                "text": "A academia fecha no feriado.",
+                "time": null,
+                "href": null,
+                "range": null
+              }
+            ],
+            "peaks": false
+          },
+          {
+            "kind": "rows",
+            "title": "Sem ação",
+            "rows": [
+              {
+                "title": "Boletim Bit",
+                "text": "edição da semana.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Loja Norte",
+                "text": "promoção de fim de ano.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Rede social",
+                "text": "resumo de atividade.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Clube de leitura",
+                "text": "livro de dezembro.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Cinema",
+                "text": "estreias.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Farmácia",
+                "text": "cupom.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Streaming",
+                "text": "novidades do mês.",
+                "time": null,
+                "href": null,
+                "range": null
+              }
+            ],
+            "peaks": false
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "news",
+        "Luz mais barata em dezembro, ônibus noturno de volta e um selo novo para extensões de navegador.\n\n## Economia\n\n### Conta de luz fica mais barata em dezembro\nA bandeira tarifária passa a verde, sem cobrança extra. A chuva de novembro encheu os reservatórios do Sudeste acima do esperado para o mês.\n\nFontes: [Folha do Vale](https://folhadovale.example.com/luz) · [Portal Lume](https://lume.example.com/bandeira)\n\n## Cidade\n\n### Ônibus noturno volta a circular no dia 1º\nSeis linhas voltam a rodar da meia-noite às 5h, com intervalo de 40 minutos.\n\nFonte: [Diário do Centro](https://diariodocentro.example.com/onibus)\n\n## Tecnologia\n\n### Navegadores vão avisar quando uma extensão lê a página\nA partir de janeiro, um selo na barra de endereços mostra quando uma extensão tem acesso ao texto da página aberta.\n\n> As antigas terão 90 dias para se adaptar.\n\nFontes: Revista Trama, Portal Lume, Boletim Bit\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "Luz mais barata em dezembro, ônibus noturno de volta e um selo novo para extensões de navegador.",
+        "score": [
+          {
+            "value": 3,
+            "label": "assuntos"
+          },
+          {
+            "value": 5,
+            "label": "fontes"
+          },
+          {
+            "value": 1,
+            "label": "min de leitura"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "",
+            "cards": [
+              {
+                "title": "Conta de luz fica mais barata em dezembro",
+                "kicker": "Economia",
+                "from": null,
+                "due": null,
+                "sources": [
+                  {
+                    "label": "Folha do Vale",
+                    "href": "https://folhadovale.example.com/luz"
+                  },
+                  {
+                    "label": "Portal Lume",
+                    "href": "https://lume.example.com/bandeira"
+                  }
+                ],
+                "actions": [],
+                "body": "A bandeira tarifária passa a verde, sem cobrança extra. A chuva de novembro encheu os reservatórios do Sudeste acima do esperado para o mês."
+              },
+              {
+                "title": "Ônibus noturno volta a circular no dia 1º",
+                "kicker": "Cidade",
+                "from": null,
+                "due": null,
+                "sources": [
+                  {
+                    "label": "Diário do Centro",
+                    "href": "https://diariodocentro.example.com/onibus"
+                  }
+                ],
+                "actions": [],
+                "body": "Seis linhas voltam a rodar da meia-noite às 5h, com intervalo de 40 minutos."
+              },
+              {
+                "title": "Navegadores vão avisar quando uma extensão lê a página",
+                "kicker": "Tecnologia",
+                "from": null,
+                "due": null,
+                "sources": [
+                  {
+                    "label": "Revista Trama",
+                    "href": null
+                  },
+                  {
+                    "label": "Portal Lume",
+                    "href": null
+                  },
+                  {
+                    "label": "Boletim Bit",
+                    "href": null
+                  }
+                ],
+                "actions": [],
+                "body": "A partir de janeiro, um selo na barra de endereços mostra quando uma extensão tem acesso ao texto da página aberta.\n\n> As antigas terão 90 dias para se adaptar."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "youtube_transcript",
+        "Fonte: [YouTube](https://www.youtube.com/watch?v=dQw4w9WgXcQ) · Corpo em Pauta\n\nPara a fisiologista Paula Reis, dormir sempre no mesmo horário pesa mais no treino do que dormir muito.\n\n## Resumo\n- [Abertura](#t-0) (00:00): Helena apresenta a convidada.\n- [O sono pesa mais que o treino](#t-190) (03:10): o músculo se refaz dormindo.\n- [Horário fixo antes da duração](#t-705) (11:45)\n\n## Momentos mais assistidos\n- [12:40–13:05](#t-705): o corpo confere se você apareceu na hora de sempre.\n- [37:20–38:00](#t-2240): cochilo de vinte minutos, antes das 15h.\n\n## Comentários\nQuem comentou pede um episódio só sobre cochilo.\n\nMuita gente discorda do corte de cafeína.\n\n## Transcrição\n{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Helena:** Hoje a conversa é sobre sono.\n\n{#t-190} [03:10](https://youtu.be/dQw4w9WgXcQ?t=190) **Paula:** O músculo se refaz dormindo.\n\n{#t-705} [11:45](https://youtu.be/dQw4w9WgXcQ?t=705) **Paula:** O corpo não soma horas de sono.\n\n{#t-2240} [37:20](https://youtu.be/dQw4w9WgXcQ?t=2240) **Helena:** E o cochilo?\n\n{#t-2870} [47:50](https://youtu.be/dQw4w9WgXcQ?t=2870) **Paula:** Vinte minutos, antes das 15h.\n"
+      ],
+      "result": {
+        "source": {
+          "label": "YouTube",
+          "href": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "byline": "Corpo em Pauta"
+        },
+        "lead": "Para a fisiologista Paula Reis, dormir sempre no mesmo horário pesa mais no treino do que dormir muito.",
+        "score": [
+          {
+            "value": 48,
+            "label": "minutos"
+          },
+          {
+            "value": 2,
+            "label": "pessoas"
+          },
+          {
+            "value": 3,
+            "label": "partes"
+          }
+        ],
+        "durationSeconds": 2870,
+        "sections": [
+          {
+            "kind": "rows",
+            "title": "Resumo",
+            "rows": [
+              {
+                "title": "Abertura",
+                "text": "Helena apresenta a convidada.",
+                "time": "00:00",
+                "href": "#t-0",
+                "range": null
+              },
+              {
+                "title": "O sono pesa mais que o treino",
+                "text": "o músculo se refaz dormindo.",
+                "time": "03:10",
+                "href": "#t-190",
+                "range": null
+              },
+              {
+                "title": "Horário fixo antes da duração",
+                "text": "",
+                "time": "11:45",
+                "href": "#t-705",
+                "range": null
+              }
+            ],
+            "peaks": false
+          },
+          {
+            "kind": "rows",
+            "title": "Momentos mais assistidos",
+            "rows": [
+              {
+                "title": null,
+                "text": "o corpo confere se você apareceu na hora de sempre.",
+                "time": "12:40–13:05",
+                "href": "#t-705",
+                "range": {
+                  "start": 760,
+                  "end": 785
+                }
+              },
+              {
+                "title": null,
+                "text": "cochilo de vinte minutos, antes das 15h.",
+                "time": "37:20–38:00",
+                "href": "#t-2240",
+                "range": {
+                  "start": 2240,
+                  "end": 2280
+                }
+              }
+            ],
+            "peaks": true
+          },
+          {
+            "kind": "text",
+            "title": "Comentários",
+            "body": "Quem comentou pede um episódio só sobre cochilo.\n\nMuita gente discorda do corte de cafeína."
+          },
+          {
+            "kind": "transcript",
+            "title": "Transcrição",
+            "body": "{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Helena:** Hoje a conversa é sobre sono.\n\n{#t-190} [03:10](https://youtu.be/dQw4w9WgXcQ?t=190) **Paula:** O músculo se refaz dormindo.\n\n{#t-705} [11:45](https://youtu.be/dQw4w9WgXcQ?t=705) **Paula:** O corpo não soma horas de sono.\n\n{#t-2240} [37:20](https://youtu.be/dQw4w9WgXcQ?t=2240) **Helena:** E o cochilo?\n\n{#t-2870} [47:50](https://youtu.be/dQw4w9WgXcQ?t=2870) **Paula:** Vinte minutos, antes das 15h."
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "news",
+        "Três e-mails pedem resposta, e o da contadora vence hoje.\n\n## Pedem resposta\n\n### Documentos do imposto\nDe: Marina Costa · 09:12\nFaltam o informe do banco e o recibo do aluguel para fechar a declaração.\nPrazo: hoje, 18h\n\n[Responder](https://mail.example.com/t/1)\n\n### Proposta da reforma\nDe: **Otávio Lima** <otavio@example.com> · ontem\nO orçamento subiu 8% com a troca do piso. Ele pede o aceite para reservar a equipe.\nPrazo: sexta, 29 nov\n\n[Responder](https://mail.example.com/t/2) · [Abrir o anexo](https://mail.example.com/t/2/anexo)\n\n### Reunião de pais\nDe: Escola Aurora\nA escola pergunta qual dos dois horários serve.\n\n## Para saber\n\n- **Banco Prisma:** a fatura de novembro fechou em R$ 1.240.\n- **Condomínio** — a assembleia ficou para o dia 5.\n- [Entrega a caminho](https://loja.example.com/pedido/9): chega na segunda.\n- A academia fecha no feriado.\n\n## Sem ação\n\n- **Boletim Bit:** edição da semana.\n- **Loja Norte:** promoção de fim de ano.\n- **Rede social:** resumo de atividade.\n- **Clube de leitura:** livro de dezembro.\n- **Cinema:** estreias.\n- **Farmácia:** cupom.\n- **Streaming:** novidades do mês.\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "Três e-mails pedem resposta, e o da contadora vence hoje.",
+        "score": [
+          {
+            "value": 3,
+            "label": "assuntos"
+          },
+          {
+            "value": 1,
+            "label": "min de leitura"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "",
+            "cards": [
+              {
+                "title": "Documentos do imposto",
+                "kicker": "Pedem resposta",
+                "from": {
+                  "name": "Marina Costa",
+                  "detail": "09:12",
+                  "initials": "MC"
+                },
+                "due": {
+                  "text": "hoje, 18h",
+                  "tone": "soon"
+                },
+                "sources": [],
+                "actions": [
+                  {
+                    "label": "Responder",
+                    "href": "https://mail.example.com/t/1"
+                  }
+                ],
+                "body": "Faltam o informe do banco e o recibo do aluguel para fechar a declaração."
+              },
+              {
+                "title": "Proposta da reforma",
+                "kicker": "Pedem resposta",
+                "from": {
+                  "name": "Otávio Lima",
+                  "detail": "ontem",
+                  "initials": "OL"
+                },
+                "due": {
+                  "text": "sexta, 29 nov",
+                  "tone": "calm"
+                },
+                "sources": [],
+                "actions": [
+                  {
+                    "label": "Responder",
+                    "href": "https://mail.example.com/t/2"
+                  },
+                  {
+                    "label": "Abrir o anexo",
+                    "href": "https://mail.example.com/t/2/anexo"
+                  }
+                ],
+                "body": "O orçamento subiu 8% com a troca do piso. Ele pede o aceite para reservar a equipe."
+              },
+              {
+                "title": "Reunião de pais",
+                "kicker": "Pedem resposta",
+                "from": {
+                  "name": "Escola Aurora",
+                  "detail": null,
+                  "initials": "EA"
+                },
+                "due": null,
+                "sources": [],
+                "actions": [],
+                "body": "A escola pergunta qual dos dois horários serve."
+              }
+            ]
+          },
+          {
+            "kind": "rows",
+            "title": "Para saber",
+            "rows": [
+              {
+                "title": "Banco Prisma",
+                "text": "a fatura de novembro fechou em R$ 1.240.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Condomínio",
+                "text": "a assembleia ficou para o dia 5.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Entrega a caminho",
+                "text": "chega na segunda.",
+                "time": null,
+                "href": "https://loja.example.com/pedido/9",
+                "range": null
+              },
+              {
+                "title": null,
+                "text": "A academia fecha no feriado.",
+                "time": null,
+                "href": null,
+                "range": null
+              }
+            ],
+            "peaks": false
+          },
+          {
+            "kind": "rows",
+            "title": "Sem ação",
+            "rows": [
+              {
+                "title": "Boletim Bit",
+                "text": "edição da semana.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Loja Norte",
+                "text": "promoção de fim de ano.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Rede social",
+                "text": "resumo de atividade.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Clube de leitura",
+                "text": "livro de dezembro.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Cinema",
+                "text": "estreias.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Farmácia",
+                "text": "cupom.",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Streaming",
+                "text": "novidades do mês.",
+                "time": null,
+                "href": null,
+                "range": null
+              }
+            ],
+            "peaks": false
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "youtube_transcript",
+        "Luz mais barata em dezembro, ônibus noturno de volta e um selo novo para extensões de navegador.\n\n## Economia\n\n### Conta de luz fica mais barata em dezembro\nA bandeira tarifária passa a verde, sem cobrança extra. A chuva de novembro encheu os reservatórios do Sudeste acima do esperado para o mês.\n\nFontes: [Folha do Vale](https://folhadovale.example.com/luz) · [Portal Lume](https://lume.example.com/bandeira)\n\n## Cidade\n\n### Ônibus noturno volta a circular no dia 1º\nSeis linhas voltam a rodar da meia-noite às 5h, com intervalo de 40 minutos.\n\nFonte: [Diário do Centro](https://diariodocentro.example.com/onibus)\n\n## Tecnologia\n\n### Navegadores vão avisar quando uma extensão lê a página\nA partir de janeiro, um selo na barra de endereços mostra quando uma extensão tem acesso ao texto da página aberta.\n\n> As antigas terão 90 dias para se adaptar.\n\nFontes: Revista Trama, Portal Lume, Boletim Bit\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "Luz mais barata em dezembro, ônibus noturno de volta e um selo novo para extensões de navegador.",
+        "score": [],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": "Economia",
+            "intro": "",
+            "cards": [
+              {
+                "title": "Conta de luz fica mais barata em dezembro",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [
+                  {
+                    "label": "Folha do Vale",
+                    "href": "https://folhadovale.example.com/luz"
+                  },
+                  {
+                    "label": "Portal Lume",
+                    "href": "https://lume.example.com/bandeira"
+                  }
+                ],
+                "actions": [],
+                "body": "A bandeira tarifária passa a verde, sem cobrança extra. A chuva de novembro encheu os reservatórios do Sudeste acima do esperado para o mês."
+              }
+            ]
+          },
+          {
+            "kind": "cards",
+            "title": "Cidade",
+            "intro": "",
+            "cards": [
+              {
+                "title": "Ônibus noturno volta a circular no dia 1º",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [
+                  {
+                    "label": "Diário do Centro",
+                    "href": "https://diariodocentro.example.com/onibus"
+                  }
+                ],
+                "actions": [],
+                "body": "Seis linhas voltam a rodar da meia-noite às 5h, com intervalo de 40 minutos."
+              }
+            ]
+          },
+          {
+            "kind": "cards",
+            "title": "Tecnologia",
+            "intro": "",
+            "cards": [
+              {
+                "title": "Navegadores vão avisar quando uma extensão lê a página",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [
+                  {
+                    "label": "Revista Trama",
+                    "href": null
+                  },
+                  {
+                    "label": "Portal Lume",
+                    "href": null
+                  },
+                  {
+                    "label": "Boletim Bit",
+                    "href": null
+                  }
+                ],
+                "actions": [],
+                "body": "A partir de janeiro, um selo na barra de endereços mostra quando uma extensão tem acesso ao texto da página aberta.\n\n> As antigas terão 90 dias para se adaptar."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "email_summary",
+        "Fonte: [YouTube](https://www.youtube.com/watch?v=dQw4w9WgXcQ) · Corpo em Pauta\n\nPara a fisiologista Paula Reis, dormir sempre no mesmo horário pesa mais no treino do que dormir muito.\n\n## Resumo\n- [Abertura](#t-0) (00:00): Helena apresenta a convidada.\n- [O sono pesa mais que o treino](#t-190) (03:10): o músculo se refaz dormindo.\n- [Horário fixo antes da duração](#t-705) (11:45)\n\n## Momentos mais assistidos\n- [12:40–13:05](#t-705): o corpo confere se você apareceu na hora de sempre.\n- [37:20–38:00](#t-2240): cochilo de vinte minutos, antes das 15h.\n\n## Comentários\nQuem comentou pede um episódio só sobre cochilo.\n\nMuita gente discorda do corte de cafeína.\n\n## Transcrição\n{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Helena:** Hoje a conversa é sobre sono.\n\n{#t-190} [03:10](https://youtu.be/dQw4w9WgXcQ?t=190) **Paula:** O músculo se refaz dormindo.\n\n{#t-705} [11:45](https://youtu.be/dQw4w9WgXcQ?t=705) **Paula:** O corpo não soma horas de sono.\n\n{#t-2240} [37:20](https://youtu.be/dQw4w9WgXcQ?t=2240) **Helena:** E o cochilo?\n\n{#t-2870} [47:50](https://youtu.be/dQw4w9WgXcQ?t=2870) **Paula:** Vinte minutos, antes das 15h.\n"
+      ],
+      "result": {
+        "source": {
+          "label": "YouTube",
+          "href": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "byline": "Corpo em Pauta"
+        },
+        "lead": "Para a fisiologista Paula Reis, dormir sempre no mesmo horário pesa mais no treino do que dormir muito.",
+        "score": [
+          {
+            "value": 6,
+            "label": "e-mails"
+          },
+          {
+            "value": 3,
+            "label": "resumo"
+          },
+          {
+            "value": 2,
+            "label": "momentos mais assistidos"
+          }
+        ],
+        "durationSeconds": 2870,
+        "sections": [
+          {
+            "kind": "rows",
+            "title": "Resumo",
+            "rows": [
+              {
+                "title": "Abertura",
+                "text": "Helena apresenta a convidada.",
+                "time": "00:00",
+                "href": "#t-0",
+                "range": null
+              },
+              {
+                "title": "O sono pesa mais que o treino",
+                "text": "o músculo se refaz dormindo.",
+                "time": "03:10",
+                "href": "#t-190",
+                "range": null
+              },
+              {
+                "title": "Horário fixo antes da duração",
+                "text": "",
+                "time": "11:45",
+                "href": "#t-705",
+                "range": null
+              }
+            ],
+            "peaks": false
+          },
+          {
+            "kind": "rows",
+            "title": "Momentos mais assistidos",
+            "rows": [
+              {
+                "title": null,
+                "text": "o corpo confere se você apareceu na hora de sempre.",
+                "time": "12:40–13:05",
+                "href": "#t-705",
+                "range": {
+                  "start": 760,
+                  "end": 785
+                }
+              },
+              {
+                "title": null,
+                "text": "cochilo de vinte minutos, antes das 15h.",
+                "time": "37:20–38:00",
+                "href": "#t-2240",
+                "range": {
+                  "start": 2240,
+                  "end": 2280
+                }
+              }
+            ],
+            "peaks": true
+          },
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "",
+            "cards": [
+              {
+                "title": "Comentários",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [],
+                "actions": [],
+                "body": "Quem comentou pede um episódio só sobre cochilo.\n\nMuita gente discorda do corte de cafeína."
+              }
+            ]
+          },
+          {
+            "kind": "transcript",
+            "title": "Transcrição",
+            "body": "{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Helena:** Hoje a conversa é sobre sono.\n\n{#t-190} [03:10](https://youtu.be/dQw4w9WgXcQ?t=190) **Paula:** O músculo se refaz dormindo.\n\n{#t-705} [11:45](https://youtu.be/dQw4w9WgXcQ?t=705) **Paula:** O corpo não soma horas de sono.\n\n{#t-2240} [37:20](https://youtu.be/dQw4w9WgXcQ?t=2240) **Helena:** E o cochilo?\n\n{#t-2870} [47:50](https://youtu.be/dQw4w9WgXcQ?t=2870) **Paula:** Vinte minutos, antes das 15h."
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "news",
+        "Só um parágrafo.\n\n- e uma lista"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "email_summary",
+        ""
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "youtube_transcript",
+        "   \n\n"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "news",
+        "```\n## dentro de código\n```"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "email_summary",
+        "# Caixa de entrada\r\n\r\nAbertura.\r\n\r\n## Urgentes ##\r\n- **Ana:** responder.\r\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "Abertura.",
+        "score": [],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "rows",
+            "title": "Urgentes",
+            "rows": [
+              {
+                "title": "Ana",
+                "text": "responder.",
+                "time": null,
+                "href": null,
+                "range": null
+              }
+            ],
+            "peaks": false
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "email_summary",
+        "# Só um título\n\nE um texto."
+      ],
+      "result": {
+        "source": null,
+        "lead": "",
+        "score": [],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "",
+            "cards": [
+              {
+                "title": "Só um título",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [],
+                "actions": [],
+                "body": "E um texto."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "news",
+        "## Primeira\nTexto um.\n\n## Segunda\nTexto dois.\n\nFonte: [Jornal](https://jornal.example.com)"
+      ],
+      "result": {
+        "source": null,
+        "lead": "",
+        "score": [
+          {
+            "value": 2,
+            "label": "assuntos"
+          },
+          {
+            "value": 1,
+            "label": "fonte"
+          },
+          {
+            "value": 1,
+            "label": "min de leitura"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "",
+            "cards": [
+              {
+                "title": "Primeira",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [],
+                "actions": [],
+                "body": "Texto um."
+              },
+              {
+                "title": "Segunda",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [
+                  {
+                    "label": "Jornal",
+                    "href": "https://jornal.example.com"
+                  }
+                ],
+                "actions": [],
+                "body": "Texto dois."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "email_summary",
+        "## Grupo\n\n### Ficha\n**De:** Ana Maria de Souza · 10:30\n- Prazo: atrasado desde terça\nDe: Outra pessoa\n**Fontes**: A; B | C\nTexto.\n\n```\nPrazo: dentro de código\n```\n\n[Responder](mailto:ana@example.com)\n[Abrir](https://a.example.com) | [Ignorado](ftp://a.example.com)\n\n[Um link](https://b.example.com) no meio de uma frase.\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "",
+        "score": [
+          {
+            "value": 1,
+            "label": "e-mail"
+          },
+          {
+            "value": 1,
+            "label": "com prazo"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "",
+            "cards": [
+              {
+                "title": "Ficha",
+                "kicker": null,
+                "from": {
+                  "name": "Ana Maria de Souza",
+                  "detail": "10:30",
+                  "initials": "AS"
+                },
+                "due": {
+                  "text": "atrasado desde terça",
+                  "tone": "late"
+                },
+                "sources": [
+                  {
+                    "label": "A",
+                    "href": null
+                  },
+                  {
+                    "label": "B",
+                    "href": null
+                  },
+                  {
+                    "label": "C",
+                    "href": null
+                  }
+                ],
+                "actions": [
+                  {
+                    "label": "Responder",
+                    "href": "mailto:ana@example.com"
+                  },
+                  {
+                    "label": "Abrir",
+                    "href": "https://a.example.com"
+                  }
+                ],
+                "body": "De: Outra pessoa\nTexto.\n\n```\nPrazo: dentro de código\n```\n\n[Um link](https://b.example.com) no meio de uma frase."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "news",
+        "## Título\nTexto.\n\nFonte: [Jornal](javascript:alert(1))\n\n[Abrir](javascript:alert(1))\n\n## Lista\n- [Item](javascript:x): texto\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "",
+        "score": [
+          {
+            "value": 1,
+            "label": "assunto"
+          },
+          {
+            "value": 1,
+            "label": "fonte"
+          },
+          {
+            "value": 1,
+            "label": "min de leitura"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "",
+            "cards": [
+              {
+                "title": "Título",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [
+                  {
+                    "label": "[Jornal](javascript:alert(1))",
+                    "href": null
+                  }
+                ],
+                "actions": [],
+                "body": "Texto.\n\n[Abrir](javascript:alert(1))"
+              }
+            ]
+          },
+          {
+            "kind": "rows",
+            "title": "Lista",
+            "rows": [
+              {
+                "title": "Item",
+                "text": "texto",
+                "time": null,
+                "href": null,
+                "range": null
+              }
+            ],
+            "peaks": false
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "email_summary",
+        "## Lista\n1. **Um** — primeiro\n2) [ ] **Dois**: segundo\n   continua aqui\n* [x] feito\n+ `código` e *ênfase*\n\n## Não é lista\n- item\n\nUm parágrafo.\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "",
+        "score": [
+          {
+            "value": 5,
+            "label": "e-mails"
+          },
+          {
+            "value": 4,
+            "label": "lista"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "rows",
+            "title": "Lista",
+            "rows": [
+              {
+                "title": "Um",
+                "text": "primeiro",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": "Dois",
+                "text": "segundo continua aqui",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": null,
+                "text": "feito",
+                "time": null,
+                "href": null,
+                "range": null
+              },
+              {
+                "title": null,
+                "text": "código e ênfase",
+                "time": null,
+                "href": null,
+                "range": null
+              }
+            ],
+            "peaks": false
+          },
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "",
+            "cards": [
+              {
+                "title": "Não é lista",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [],
+                "actions": [],
+                "body": "- item\n\nUm parágrafo."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "youtube_transcript",
+        "## Partes\n- [1:02:03](#t-3723): tarde\n- [Tema](https://youtu.be/dQw4w9WgXcQ?t=5) (00:05)\n\n## Picos\n- [0:10-0:20](#t-10)\n- [1:00:00 — 1:00:30](#t-3600): fim\n\n## Texto\n{#t-10} [00:10](https://youtu.be/x?t=10) **Ana Lima:** Oi.\n\n{#t-3600} [1:00:00](https://youtu.be/x?t=3600) **ana lima**: De novo.\n\n{#intro} fora da convenção\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "",
+        "score": [
+          {
+            "value": 61,
+            "label": "minutos"
+          },
+          {
+            "value": 1,
+            "label": "pessoa"
+          },
+          {
+            "value": 2,
+            "label": "partes"
+          }
+        ],
+        "durationSeconds": 3630,
+        "sections": [
+          {
+            "kind": "rows",
+            "title": "Partes",
+            "rows": [
+              {
+                "title": null,
+                "text": "tarde",
+                "time": "1:02:03",
+                "href": "#t-3723",
+                "range": null
+              },
+              {
+                "title": "Tema",
+                "text": "",
+                "time": "00:05",
+                "href": "https://youtu.be/dQw4w9WgXcQ?t=5",
+                "range": null
+              }
+            ],
+            "peaks": false
+          },
+          {
+            "kind": "rows",
+            "title": "Picos",
+            "rows": [
+              {
+                "title": null,
+                "text": "",
+                "time": "0:10-0:20",
+                "href": "#t-10",
+                "range": {
+                  "start": 10,
+                  "end": 20
+                }
+              },
+              {
+                "title": null,
+                "text": "fim",
+                "time": "1:00:00 — 1:00:30",
+                "href": "#t-3600",
+                "range": {
+                  "start": 3600,
+                  "end": 3630
+                }
+              }
+            ],
+            "peaks": true
+          },
+          {
+            "kind": "transcript",
+            "title": "Texto",
+            "body": "{#t-10} [00:10](https://youtu.be/x?t=10) **Ana Lima:** Oi.\n\n{#t-3600} [1:00:00](https://youtu.be/x?t=3600) **ana lima**: De novo.\n\n{#intro} fora da convenção"
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "news",
+        "Fonte: [Folha \\[do\\] Vale](https://folha.example.com/a)\n\nAbertura.\n\n## Mundo\nUma nota do grupo.\n\n#### Fundo\nTexto.\n\n### Raso\nOutro.\n\n## Vazio\n\n## Solto\nTexto solto.\n"
+      ],
+      "result": {
+        "source": {
+          "label": "Folha [do] Vale",
+          "href": "https://folha.example.com/a",
+          "byline": null
+        },
+        "lead": "Abertura.",
+        "score": [
+          {
+            "value": 2,
+            "label": "assuntos"
+          },
+          {
+            "value": 1,
+            "label": "min de leitura"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "Uma nota do grupo.\n\n#### Fundo\nTexto.",
+            "cards": [
+              {
+                "title": "Raso",
+                "kicker": "Mundo",
+                "from": null,
+                "due": null,
+                "sources": [],
+                "actions": [],
+                "body": "Outro."
+              },
+              {
+                "title": "Solto",
+                "kicker": null,
+                "from": null,
+                "due": null,
+                "sources": [],
+                "actions": [],
+                "body": "Texto solto."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "email_summary",
+        "## Único\n### A\nDe: Zé\n### B\nPrazo: Hoje cedo\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "",
+        "score": [
+          {
+            "value": 2,
+            "label": "e-mails"
+          },
+          {
+            "value": 1,
+            "label": "vence hoje"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": null,
+            "intro": "",
+            "cards": [
+              {
+                "title": "A",
+                "kicker": null,
+                "from": {
+                  "name": "Zé",
+                  "detail": null,
+                  "initials": "Z"
+                },
+                "due": null,
+                "sources": [],
+                "actions": [],
+                "body": ""
+              },
+              {
+                "title": "B",
+                "kicker": null,
+                "from": null,
+                "due": {
+                  "text": "Hoje cedo",
+                  "tone": "soon"
+                },
+                "sources": [],
+                "actions": [],
+                "body": ""
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "args": [
+        "email_summary",
+        "## Ação\n### Olá\nDe: Érica  Ônix Çelik · às 9h\nPrazo: VENCIDO há dois dias\n\n## Outro\n- **Ímpar:** texto\n"
+      ],
+      "result": {
+        "source": null,
+        "lead": "",
+        "score": [
+          {
+            "value": 2,
+            "label": "e-mails"
+          },
+          {
+            "value": 1,
+            "label": "ação"
+          },
+          {
+            "value": 1,
+            "label": "com prazo"
+          }
+        ],
+        "durationSeconds": null,
+        "sections": [
+          {
+            "kind": "cards",
+            "title": "Ação",
+            "intro": "",
+            "cards": [
+              {
+                "title": "Olá",
+                "kicker": null,
+                "from": {
+                  "name": "Érica Ônix Çelik",
+                  "detail": "às 9h",
+                  "initials": "ÉÇ"
+                },
+                "due": {
+                  "text": "VENCIDO há dois dias",
+                  "tone": "late"
+                },
+                "sources": [],
+                "actions": [],
+                "body": ""
+              }
+            ]
+          },
+          {
+            "kind": "rows",
+            "title": "Outro",
+            "rows": [
+              {
+                "title": "Ímpar",
+                "text": "texto",
+                "time": null,
+                "href": null,
+                "range": null
+              }
+            ],
+            "peaks": false
+          }
+        ]
+      }
+    }
+  ],
+  "summaryCardsTypeOf": [
+    {
+      "args": [
+        "news",
+        "qualquer texto"
+      ],
+      "result": "news"
+    },
+    {
+      "args": [
+        "email_summary",
+        ""
+      ],
+      "result": "email_summary"
+    },
+    {
+      "args": [
+        "youtube_transcript",
+        ""
+      ],
+      "result": "youtube_transcript"
+    },
+    {
+      "args": [
+        "text",
+        "Fonte: [YouTube](https://www.youtube.com/watch?v=dQw4w9WgXcQ) · Corpo em Pauta\n\nPara a fisiologista Paula Reis, dormir sempre no mesmo horário pesa mais no treino do que dormir muito.\n\n## Resumo\n- [Abertura](#t-0) (00:00): Helena apresenta a convidada.\n- [O sono pesa mais que o treino](#t-190) (03:10): o músculo se refaz dormindo.\n- [Horário fixo antes da duração](#t-705) (11:45)\n\n## Momentos mais assistidos\n- [12:40–13:05](#t-705): o corpo confere se você apareceu na hora de sempre.\n- [37:20–38:00](#t-2240): cochilo de vinte minutos, antes das 15h.\n\n## Comentários\nQuem comentou pede um episódio só sobre cochilo.\n\nMuita gente discorda do corte de cafeína.\n\n## Transcrição\n{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Helena:** Hoje a conversa é sobre sono.\n\n{#t-190} [03:10](https://youtu.be/dQw4w9WgXcQ?t=190) **Paula:** O músculo se refaz dormindo.\n\n{#t-705} [11:45](https://youtu.be/dQw4w9WgXcQ?t=705) **Paula:** O corpo não soma horas de sono.\n\n{#t-2240} [37:20](https://youtu.be/dQw4w9WgXcQ?t=2240) **Helena:** E o cochilo?\n\n{#t-2870} [47:50](https://youtu.be/dQw4w9WgXcQ?t=2870) **Paula:** Vinte minutos, antes das 15h.\n"
+      ],
+      "result": "youtube_transcript"
+    },
+    {
+      "args": [
+        "text",
+        "\r\n\r\nFonte: [YouTube](https://youtu.be/dQw4w9WgXcQ)\r\n\r\n## Transcrição\r\n{#t-0} Oi."
+      ],
+      "result": "youtube_transcript"
+    },
+    {
+      "args": [
+        "text",
+        "Fonte: [Palestra](https://www.youtube.com/live/dQw4w9WgXcQ?si=abc) · Canal\n\n{#t-12} Só a fala."
+      ],
+      "result": "youtube_transcript"
+    },
+    {
+      "args": [
+        "text",
+        "## Compras\n- pão"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "text",
+        ""
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "text",
+        "Fonte: [Jornal](https://jornal.example.com/a)\n\n## Título\n{#t-0} Texto."
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "text",
+        "Fonte: [YouTube](https://www.youtube.com/@canal)\n\n{#t-0} Texto."
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "text",
+        "Fonte: [YouTube](https://www.youtube.com/watch?v=dQw4w9WgXcQ)\n\nTranscrição em andamento."
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "text",
+        "Texto antes.\n\nFonte: [YouTube](https://youtu.be/dQw4w9WgXcQ)\n\n{#t-0} Oi."
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "text",
+        "Fonte: [YouTube](https://youtu.be/dQw4w9WgXcQ)\n\nNo meio {#t-0} não é trecho."
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "router",
+        "Fonte: [YouTube](https://www.youtube.com/watch?v=dQw4w9WgXcQ) · Corpo em Pauta\n\nPara a fisiologista Paula Reis, dormir sempre no mesmo horário pesa mais no treino do que dormir muito.\n\n## Resumo\n- [Abertura](#t-0) (00:00): Helena apresenta a convidada.\n- [O sono pesa mais que o treino](#t-190) (03:10): o músculo se refaz dormindo.\n- [Horário fixo antes da duração](#t-705) (11:45)\n\n## Momentos mais assistidos\n- [12:40–13:05](#t-705): o corpo confere se você apareceu na hora de sempre.\n- [37:20–38:00](#t-2240): cochilo de vinte minutos, antes das 15h.\n\n## Comentários\nQuem comentou pede um episódio só sobre cochilo.\n\nMuita gente discorda do corte de cafeína.\n\n## Transcrição\n{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Helena:** Hoje a conversa é sobre sono.\n\n{#t-190} [03:10](https://youtu.be/dQw4w9WgXcQ?t=190) **Paula:** O músculo se refaz dormindo.\n\n{#t-705} [11:45](https://youtu.be/dQw4w9WgXcQ?t=705) **Paula:** O corpo não soma horas de sono.\n\n{#t-2240} [37:20](https://youtu.be/dQw4w9WgXcQ?t=2240) **Helena:** E o cochilo?\n\n{#t-2870} [47:50](https://youtu.be/dQw4w9WgXcQ?t=2870) **Paula:** Vinte minutos, antes das 15h.\n"
+      ],
+      "result": null
+    },
+    {
+      "args": [
+        "food",
+        "Fonte: [YouTube](https://www.youtube.com/watch?v=dQw4w9WgXcQ) · Corpo em Pauta\n\nPara a fisiologista Paula Reis, dormir sempre no mesmo horário pesa mais no treino do que dormir muito.\n\n## Resumo\n- [Abertura](#t-0) (00:00): Helena apresenta a convidada.\n- [O sono pesa mais que o treino](#t-190) (03:10): o músculo se refaz dormindo.\n- [Horário fixo antes da duração](#t-705) (11:45)\n\n## Momentos mais assistidos\n- [12:40–13:05](#t-705): o corpo confere se você apareceu na hora de sempre.\n- [37:20–38:00](#t-2240): cochilo de vinte minutos, antes das 15h.\n\n## Comentários\nQuem comentou pede um episódio só sobre cochilo.\n\nMuita gente discorda do corte de cafeína.\n\n## Transcrição\n{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Helena:** Hoje a conversa é sobre sono.\n\n{#t-190} [03:10](https://youtu.be/dQw4w9WgXcQ?t=190) **Paula:** O músculo se refaz dormindo.\n\n{#t-705} [11:45](https://youtu.be/dQw4w9WgXcQ?t=705) **Paula:** O corpo não soma horas de sono.\n\n{#t-2240} [37:20](https://youtu.be/dQw4w9WgXcQ?t=2240) **Helena:** E o cochilo?\n\n{#t-2870} [47:50](https://youtu.be/dQw4w9WgXcQ?t=2870) **Paula:** Vinte minutos, antes das 15h.\n"
+      ],
+      "result": null
+    }
+  ]
+}

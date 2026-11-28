@@ -3,8 +3,10 @@ import { hasTextBody } from "@repo/contracts/artifact-types";
 import { DetailFact, DetailFacts } from "@/components/detail/detail-parts";
 import { sleepAgendaOfArtifact } from "@/lib/artifacts/artifact-model";
 import { noteMarkdownOf } from "@/lib/notes/notes-model";
+import { summaryCardsFor } from "@/lib/notes/summary-cards";
 import { AgentFileNoteView } from "./AgentFileNoteView";
 import { MealNote, SleepNote, TextBody, TrainingNote } from "./NoteBody";
+import { SummaryCards } from "./SummaryCards";
 import styles from "./notes.module.css";
 
 const workoutCategoryLabels = { cardio: "Cardio", strength: "Força", free: "Livre" } as const;
@@ -13,11 +15,17 @@ const workoutCategoryLabels = { cardio: "Cardio", strength: "Força", free: "Liv
  * O conteúdo do artefato aberto, conforme o tipo. Texto e roteador: o markdown, sem o título repetido na
  * primeira linha. Alimento, treino e sono: os mesmos desenhos do cartão de tarefa. Skill e agente: o arquivo
  * para o qual apontam. Exercício do catálogo: a categoria e a situação.
+ *
+ * Com `cards` (o detalhe do artefato), notícias, resumo de e-mail e transcrição saem em fichas quando o
+ * texto tem títulos (`docs/summary-cards.md`); a nota que é a transcrição de um vídeo da Leitura diária
+ * também. Dentro da tarefa o artefato já é um cartão: fica o markdown.
  */
-export function ArtifactContent({ artifact }: { artifact: ArtifactDto }) {
+export function ArtifactContent({ artifact, cards = false }: { artifact: ArtifactDto; cards?: boolean }) {
   if (hasTextBody(artifact)) {
     const body = noteMarkdownOf(artifact);
     if (body === "") return null;
+    const summary = cards ? summaryCardsFor(artifact.type, body) : null;
+    if (summary) return <SummaryCards document={summary} />;
     return <article className={styles.noteCard} aria-label="Conteúdo da nota"><TextBody body={body} /></article>;
   }
   switch (artifact.type) {

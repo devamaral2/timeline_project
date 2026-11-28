@@ -393,3 +393,50 @@ test("o puxão que falha mantém o artefato na tela e avisa; o seguinte que dá 
   pullDown();
   await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
 });
+
+test("a nota que a Leitura diária guarda de um vídeo sai em fichas, com a transcrição atrás de um botão", async () => {
+  install({
+    artifacts: [
+      artifactFixture({
+        id: "art-video",
+        name: "Dormir bem para treinar melhor",
+        type: "text",
+        data: {
+          body: [
+            "Fonte: [YouTube](https://www.youtube.com/watch?v=dQw4w9WgXcQ) · Corpo em Pauta",
+            "",
+            "## Resumo",
+            "- [O sono pesa mais que o treino](#t-190) (03:10): o músculo se refaz dormindo.",
+            "",
+            "## Transcrição",
+            "{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Helena:** Hoje a conversa é sobre sono.",
+            "",
+            "{#t-190} [03:10](https://youtu.be/dQw4w9WgXcQ?t=190) **Paula:** O músculo se refaz dormindo.",
+          ].join("\n"),
+        },
+      }),
+    ],
+  });
+  renderArtifact("art-video");
+
+  // O artefato continua sendo uma nota: só a leitura muda.
+  expect(await screen.findByRole("heading", { level: 1, name: "Dormir bem para treinar melhor" })).toBeInTheDocument();
+  expect(screen.getByText("Nota")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: /O sono pesa mais que o treino/ })).toHaveAttribute("href", "#t-190");
+  expect(screen.queryByText(/Hoje a conversa é sobre sono/)).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Ler a transcrição" }));
+
+  expect(screen.getByText(/Hoje a conversa é sobre sono/)).toBeInTheDocument();
+});
+
+test("uma nota comum com títulos continua em markdown, sem fichas", async () => {
+  install({
+    artifacts: [artifactFixture({ id: "art-nota", name: "Compras", type: "text", data: { body: "## Mercado\n- pão\n- leite\n- café\n- arroz\n- feijão\n- sal" } })],
+  });
+  renderArtifact("art-nota");
+
+  expect(await screen.findByRole("heading", { level: 2, name: "Mercado" })).toBeInTheDocument();
+  expect(screen.getAllByRole("listitem")).toHaveLength(6);
+  expect(screen.queryByRole("button", { name: /Mostrar todas/ })).toBeNull();
+});
