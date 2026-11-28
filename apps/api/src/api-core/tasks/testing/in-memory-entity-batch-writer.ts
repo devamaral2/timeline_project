@@ -20,7 +20,7 @@ interface Store<T> {
 /**
  * Confere todos os alvos antes de aplicar qualquer mudanca, para que um
  * conflito nao deixe o lote pela metade: o equivalente em memoria da transacao
- * do escritor do Postgres.
+ * do escritor do SQLite.
  */
 export class InMemoryEntityBatchWriter implements EntityBatchWriter {
   readonly commits: EntityBatch[] = [];

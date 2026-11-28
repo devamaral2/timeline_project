@@ -1,7 +1,7 @@
 import type { ArtifactTaskLink, ArtifactTaskLinkQuery } from "../../../domain/ports";
 import type { InMemoryTaskDatabase } from "../../tasks/testing/in-memory-task-database";
 
-/** Onde cada artefato aparece, lido do banco em memoria com a mesma semantica de `PostgresArtifactTaskLinkQuery`. */
+/** Onde cada artefato aparece, lido do banco em memoria com a mesma semantica de `SqliteArtifactTaskLinkQuery`. */
 export class InMemoryArtifactTaskLinkQuery implements ArtifactTaskLinkQuery {
   constructor(private readonly database: InMemoryTaskDatabase) {}
 

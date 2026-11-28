@@ -158,7 +158,7 @@ export class InMemoryRecurrenceRepository implements RecurrenceRepository {
     const inserted: string[] = [];
     for (const occurrence of parentGone ? [] : occurrences) {
       const day = occurrence.occurrence?.occurrenceOn;
-      // O indice unico do Postgres: um dia da serie existe uma vez so.
+      // O indice unico do SQLite: um dia da serie existe uma vez so.
       const taken = this.tasks.tasks.some(
         (stored) => stored.occurrence?.recurrenceId === recurrence.id && stored.occurrence.occurrenceOn === day,
       );

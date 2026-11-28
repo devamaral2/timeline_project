@@ -1,6 +1,6 @@
 import type { TaskRequestLink, TaskRequestLinkQuery } from "../../../domain/ports";
 
-/** Os pedidos de cada tarefa, informados pelo teste, com a ordem de `PostgresTaskRequestLinkQuery` (do mais antigo ao mais novo). */
+/** Os pedidos de cada tarefa, informados pelo teste, com a ordem de `SqliteTaskRequestLinkQuery` (do mais antigo ao mais novo). */
 export class InMemoryTaskRequestLinkQuery implements TaskRequestLinkQuery {
   private readonly byTask = new Map<string, TaskRequestLink[]>();
 

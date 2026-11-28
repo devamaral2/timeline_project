@@ -30,7 +30,7 @@ interface LeasedJob {
   progress?: { stage: TranscriptionStage; percent: number };
 }
 
-/** O equivalente em memoria do que o Postgres grava na transacao do lote: os jobs e as entradas. */
+/** O equivalente em memoria do que o SQLite grava na transacao do lote: os jobs e as entradas. */
 export class InMemoryTranscriptionRequests implements TranscriptionRequests {
   /** Os jobs do servico local que ja nasceram, na ordem. */
   readonly jobs: { kind: string; userId: string; taskId: string }[] = [];
