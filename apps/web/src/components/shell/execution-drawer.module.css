@@ -26,10 +26,10 @@
 /* O que a tela por baixo reserva no fim: a altura atual da gaveta, animada junto com ela. */
 .spacer {
   height: calc(var(--list-height) + var(--chrome) + var(--seam));
-  transition: height 300ms var(--shrink);
+  transition: height var(--motion-drawer-shrink) var(--shrink);
   pointer-events: none;
 }
-.host[data-grow] .spacer { transition-duration: 420ms; transition-timing-function: var(--grow); }
+.host[data-grow] .spacer { transition-duration: var(--motion-drawer-grow); transition-timing-function: var(--grow); }
 
 .dock {
   position: fixed;
@@ -62,7 +62,7 @@
   border-radius: 23px;
   background: var(--card);
   color: var(--foreground);
-  transition: padding 300ms var(--shrink);
+  transition: padding var(--motion-drawer-shrink) var(--shrink);
 }
 .bar[data-mode="one"] { padding: 0 16px; }
 
@@ -71,13 +71,13 @@
   align-items: center;
   height: 44px;
   overflow: hidden;
-  transition: height 420ms var(--grow), opacity 200ms linear 100ms;
+  transition: height var(--motion-drawer-grow) var(--grow), opacity var(--motion-drawer-row-in) linear var(--motion-drawer-header-delay);
 }
 .bar[data-mode="one"] .headerWrap {
   height: 0;
   opacity: 0;
   visibility: hidden;
-  transition: height 300ms var(--shrink), opacity 120ms linear, visibility 0s 300ms;
+  transition: height var(--motion-drawer-shrink) var(--shrink), opacity var(--motion-drawer-row-out) linear, visibility 0s var(--motion-drawer-shrink);
 }
 .heading { flex: 1; min-width: 0; margin: 0; }
 
@@ -115,7 +115,7 @@
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transition: transform 420ms var(--grow);
+  transition: transform var(--motion-drawer-grow) var(--grow);
 }
 .toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
 
@@ -153,11 +153,11 @@
   padding: 0;
   overflow: hidden;
   list-style: none;
-  transition: max-height 300ms var(--shrink);
+  transition: max-height var(--motion-drawer-shrink) var(--shrink);
 }
 .bar[data-mode="all"] .list { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
 .bar[data-mode="all"] .list::-webkit-scrollbar { display: none; }
-.bar[data-grow] .list { transition: max-height 420ms var(--grow); }
+.bar[data-grow] .list { transition: max-height var(--motion-drawer-grow) var(--grow); }
 
 .row {
   flex: none;
@@ -165,7 +165,7 @@
   align-items: center;
   height: 40px;
   background: linear-gradient(var(--hairline), var(--hairline)) no-repeat 0 0 / 100% 1px;
-  transition: height 300ms var(--shrink);
+  transition: height var(--motion-drawer-shrink) var(--shrink);
 }
 .row[data-tier="first"] { background: none; }
 .bar[data-mode="one"] .row[data-tier="first"] { height: 44px; }
@@ -175,19 +175,19 @@
 .row[data-tier="more"] {
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 120ms linear, transform 300ms var(--shrink);
+  transition: opacity var(--motion-drawer-row-out) linear, transform var(--motion-drawer-shrink) var(--shrink);
 }
 .bar[data-mode="three"] .row[data-tier="peek"],
 .bar[data-mode="all"] .row[data-tier="peek"],
 .bar[data-mode="all"] .row[data-tier="more"] {
   opacity: 1;
   transform: none;
-  transition: opacity 200ms linear, transform 420ms var(--grow);
+  transition: opacity var(--motion-drawer-row-in) linear, transform var(--motion-drawer-grow) var(--grow);
 }
 /* Ao crescer, as linhas que entram chegam uma depois da outra. */
-.bar[data-grow] .row[data-step="1"] { transition-delay: var(--stagger, 40ms); }
-.bar[data-grow] .row[data-step="2"] { transition-delay: calc(2 * var(--stagger, 40ms)); }
-.bar[data-grow] .row[data-step="3"] { transition-delay: calc(3 * var(--stagger, 40ms)); }
+.bar[data-grow] .row[data-step="1"] { transition-delay: var(--stagger); }
+.bar[data-grow] .row[data-step="2"] { transition-delay: calc(2 * var(--stagger)); }
+.bar[data-grow] .row[data-step="3"] { transition-delay: calc(3 * var(--stagger)); }
 
 .link {
   flex: 1;
@@ -224,7 +224,7 @@
   overflow: hidden;
   opacity: 0;
   color: var(--muted-foreground);
-  transition: width 300ms var(--shrink), margin-right 300ms var(--shrink), opacity 150ms linear;
+  transition: width var(--motion-drawer-shrink) var(--shrink), margin-right var(--motion-drawer-shrink) var(--shrink), opacity calc(150ms * var(--motion-scale)) linear;
 }
 .up svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .bar[data-mode="one"] .up { width: 14px; margin-right: 0; opacity: 1; }
@@ -238,7 +238,7 @@
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 16px;
-  transition: max-width 300ms var(--shrink), margin-left 300ms var(--shrink), opacity 150ms linear;
+  transition: max-width var(--motion-drawer-shrink) var(--shrink), margin-left var(--motion-drawer-shrink) var(--shrink), opacity calc(150ms * var(--motion-scale)) linear;
 }
 .bar[data-mode="one"] .count { max-width: 40px; margin-left: 0; opacity: 1; }
 
@@ -267,7 +267,7 @@
 
 /* O chat cobre a tela; o menu de opções da barra abre por cima: a gaveta sai de vista. */
 :global(body):has(:global(nav[data-menu-open])) .dock { opacity: 0; pointer-events: none; }
-.dock { transition: opacity 200ms linear; }
+.dock { transition: opacity calc(200ms * var(--motion-scale)) linear; }
 
 @media (prefers-reduced-motion: reduce) {
   .spacer, .dock, .bar, .headerWrap, .list, .row, .up, .count, .chevron { transition: none !important; }

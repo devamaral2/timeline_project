@@ -68,7 +68,7 @@
 
 /* O livro-razão: um fio no topo e um fio curto entre as linhas. */
 .list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; }
-.list > li { position: relative; animation: rowIn 300ms var(--ease-out) backwards; animation-delay: calc(5 * var(--stagger)); }
+.list > li { position: relative; animation: rowIn calc(300ms * var(--motion-scale)) var(--ease-out) backwards; animation-delay: calc(5 * var(--stagger)); }
 .list > li:nth-child(1) { animation-delay: 0ms; }
 .list > li:nth-child(2) { animation-delay: var(--stagger); }
 .list > li:nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
@@ -76,7 +76,7 @@
 .list > li:nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
 /* A linha que acabou de chegar (criada pelo Hermes, por exemplo) leva um banho
    de `--brand-soft` que escorre, para mostrar onde ela caiu. */
-.list > li[data-fresh="true"] { border-radius: 10px; animation: rowIn 300ms var(--ease-out) backwards, wash 1600ms linear 200ms backwards; }
+.list > li[data-fresh="true"] { border-radius: 10px; animation: rowIn calc(300ms * var(--motion-scale)) var(--ease-out) backwards, wash calc(1600ms * var(--motion-scale)) linear calc(200ms * var(--motion-scale)) backwards; }
 /* Ao mudar a lista do dia em foco (linha nova, tempo livre ligado ou
    desligado), cada linha tem nome e desliza para o lugar novo (`reflow`). */
 [data-reflow] .dayGroup[data-selected="true"] .list > li { view-transition-name: var(--vt); }

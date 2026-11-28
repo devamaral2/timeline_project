@@ -1,0 +1,49 @@
+/* GERADO por scripts/theme/generate-motion.ts — não edite; rode `pnpm generate:motion`.
+   A fonte da verdade está em packages/theme/src/motion.ts: os tempos de desenho e a escala única do movimento.
+   O que só existe no web passa pela mesma escala: `calc(300ms * var(--motion-scale))`. */
+:root {
+  --motion-scale: 0.25;
+  --duration-fast: 38ms;
+  --duration-slow: 60ms;
+  --duration-screen: 95ms;
+  --duration-screen-back: 70ms;
+  --stagger: 10ms;
+  --motion-flight-out: 53ms;
+  --motion-flight-back: 90ms;
+  --motion-flight-land: 34ms;
+  --motion-flight-land-delay: 18ms;
+  --motion-bar-away: 32ms;
+  --motion-bar-return: 54ms;
+  --motion-bar-return-delay: 36ms;
+  --motion-panel-away: 59ms;
+  --motion-core-away: 50ms;
+  --motion-close-enter: 30ms;
+  --motion-close-enter-delay: 18ms;
+  --motion-sheet-open: 120ms;
+  --motion-sheet-close: 75ms;
+  --motion-scrim-open: 95ms;
+  --motion-scrim-close: 55ms;
+  --motion-sheet-block: 95ms;
+  --motion-sheet-block-delay: 25ms;
+  --motion-sheet-block-step: 15ms;
+  --motion-sheet-toggle: 50ms;
+  --motion-drawer-grow: 105ms;
+  --motion-drawer-shrink: 75ms;
+  --motion-drawer-row-in: 50ms;
+  --motion-drawer-row-out: 30ms;
+  --motion-drawer-header-delay: 25ms;
+  --motion-menu-pick-close: 45ms;
+  --motion-menu-settle: 90ms;
+  --motion-bot-fade: 30ms;
+  --motion-bot-pop: 115ms;
+  --motion-bot-pop-delay: 43ms;
+  --motion-bot-shake: 95ms;
+  --motion-bot-shake-delay: 20ms;
+  --motion-bot-check-draw: 75ms;
+  --motion-bot-check-fade: 15ms;
+  --motion-bot-check-delay: 28ms;
+  --motion-bot-ex-delay: 15ms;
+  --motion-bot-point: 95ms;
+  --motion-bot-point-delay: 38ms;
+  --motion-change-flash: 400ms;
+}

@@ -1,4 +1,5 @@
 import { type RefObject, useLayoutEffect } from "react";
+import { motion } from "@repo/theme";
 
 /**
  * O voo do botão do Hermes: ao abrir o chat, tocar numa janela livre ou entrar
@@ -6,8 +7,8 @@ import { type RefObject, useLayoutEffect } from "react";
  * barra inferior e pousa como o ícone de status do campo; ao sair, volta pelo
  * mesmo caminho. Só no celular e com movimento permitido.
  */
-export const FLIGHT_OUT_MS = 210;
-export const FLIGHT_BACK_MS = 360;
+export const FLIGHT_OUT_MS = motion.flightOut;
+export const FLIGHT_BACK_MS = motion.flightBack;
 
 /**
  * O caminho, em nove amostras igualmente espaçadas no tempo: quanto do desvio

@@ -1,10 +1,11 @@
 import { type RefObject, useEffect, useRef } from "react";
 import { riseIn } from "./enter";
+import { motion } from "@repo/theme";
 
 /** Por quanto tempo, depois de uma edição do Hermes, um valor que muda se anuncia. */
 const ARMED_MS = 4000;
-/** Quanto o fio fica sob o valor novo antes de apagar (o tempo do `sweep` no CSS). */
-const FLASH_MS = 1600;
+/** Quanto o fio fica sob o valor novo antes de apagar (o tempo do `sweep` no CSS, `--motion-change-flash`). */
+const FLASH_MS = motion.changeFlash;
 
 let armedUntil = 0;
 

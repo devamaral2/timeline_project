@@ -8,7 +8,7 @@
 - `apps/extension`: Chrome extension that saves the open page, as markdown, into the day's "Leitura diária" task.
 - `packages/contracts`: shared data contracts and types.
 - `packages/timeline`: shared date windows, grouping, and timeline calculations.
-- `packages/theme`: shared visual tokens and colors.
+- `packages/theme`: shared visual tokens, colors and motion. `src/motion.ts` holds every shared transition time plus `MOTION_SCALE`, the one knob for all transitions on web and Android; `pnpm generate:motion` writes `apps/web/src/styles/motion.css` and the app's `Motion.kt`.
 
 Use `pnpm` from the repository root. Common commands: `pnpm install`, `pnpm dev`, `pnpm build`, and `pnpm test`.
 Create an isolated worktree with `pnpm worktree:new <caminho> -b <branch>`.

@@ -24,6 +24,14 @@ O web não tem mais layout de desktop: numa tela larga ele mostra a mesma coluna
 `--app-width` (560 px) e centrada, com a barra inferior, as folhas e a gaveta na mesma largura.
 Nada muda no Android.
 
+Os tempos das animações de transição são um só para o web e o Android: `packages/theme/src/motion.ts` guarda o tempo
+de desenho de cada transição compartilhada e `MOTION_SCALE`, o multiplicador de todas (0,25 desde 2026-11-28: um quarto
+do tempo dos canvases; a troca de tela, 380 ms no desenho, leva 95 ms). `pnpm generate:motion` escreve o `apps/web/src/styles/motion.css` e o `Motion.kt` do app. O
+que só existe num lado passa pela mesma escala (`calc(… * var(--motion-scale))`, `motionMs`, `Motion.ms`, e as molas
+do Compose por `Motion.stiffness`); laços (giro, pulso, piscar, pontos do pensando, esqueleto) e o movimento reduzido
+ficam fora. Os milissegundos citados nas linhas abaixo são o tempo de desenho, antes da escala. No Android, as folhas e os diálogos do
+Material seguem no tempo deles.
+
 | Área | Funcionalidade | Web (referência) | Mobile | Observação |
 |---|---|---|---|---|
 | Sessão | Entrar com e-mail e senha, com o botão "Entrar" travado até os dois campos terem texto | `components/auth/LoginForm.tsx` | ✅ | Ticket 01. Fala direto com `POST /auth/login` e `GET /auth/me`. |

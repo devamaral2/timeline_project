@@ -3,6 +3,8 @@ package app.braid.mobile.ui.navigation
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -31,6 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.braid.mobile.core.designsystem.Motion
 import app.braid.mobile.domain.chat.ChatCommand
 import app.braid.mobile.domain.session.SessionState
 import app.braid.mobile.ui.agenda.AgendaScreen
@@ -222,7 +225,7 @@ fun AppNavHost(
 
     // A barra avisa ao voo quando aparece ou sai (entrar num detalhe a esconde).
     SideEffect { flight.barChanged(currentTab != null) }
-    // A barra que sai se apaga em 126 ms; voltando de um detalhe, reaparece depois que o botão começa a voltar.
+    // A barra que sai se apaga em `barAway` (Motion); voltando de um detalhe, reaparece depois que o botão começa a voltar.
     val barAlpha = remember { Animatable(1f) }
     var lastTab by remember { mutableStateOf(currentTab) }
     if (currentTab != null) SideEffect { lastTab = currentTab }
@@ -238,7 +241,7 @@ fun AppNavHost(
             else -> barAlpha.snapTo(1f)
         }
     }
-    // O painel do chat entra 73 ms depois de o botão partir e, na volta, se apaga enquanto ele voa.
+    // O painel do chat entra `flightLandDelay` (Motion) depois de o botão partir e, na volta, se apaga enquanto ele voa.
     val panelFlight = flight.current?.takeIf { it.role == MarkRole.Chat }
     val panelAlpha = remember(panelFlight?.serial) { Animatable(if (panelFlight?.kind == FlightKind.Out) 0f else 1f) }
     LaunchedEffect(panelFlight?.serial) {
@@ -260,7 +263,15 @@ fun AppNavHost(
         LocalExecutionReserve provides executionReserve,
     ) {
         Box(Modifier.fillMaxSize()) {
-            NavHost(navController = navController, startDestination = LoginRoute) {
+            NavHost(
+                navController = navController,
+                startDestination = LoginRoute,
+                // O padrão do Navigation é um fade de 700 ms; aqui, esse tempo de desenho na escala do Motion, na entrada, na saída e na volta.
+                enterTransition = { fadeIn(tween(NAV_FADE_MS)) },
+                exitTransition = { fadeOut(tween(NAV_FADE_MS)) },
+                popEnterTransition = { fadeIn(tween(NAV_FADE_MS)) },
+                popExitTransition = { fadeOut(tween(NAV_FADE_MS)) },
+            ) {
                 composable<LoginRoute> { if (session !is SessionState.Unknown) LoginScreen() }
                 composable<AgendaRoute> {
                     AgendaScreen(
@@ -418,12 +429,14 @@ fun AppNavHost(
     }
 }
 
-private const val BAR_AWAY_MS = 126
-private const val BAR_RETURN_DELAY_MS = 144L
-private const val BAR_RETURN_MS = 216
-private const val PANEL_ENTER_DELAY_MS = 73L
-private const val PANEL_ENTER_MS = 137
-private const val PANEL_AWAY_MS = 234
+/** O fade padrão do Navigation (700 ms no desenho), só do Android, na escala do Motion. */
+private val NAV_FADE_MS = Motion.ms(700)
+private const val BAR_AWAY_MS = Motion.BAR_AWAY_MS
+private const val BAR_RETURN_DELAY_MS = Motion.BAR_RETURN_DELAY_MS.toLong()
+private const val BAR_RETURN_MS = Motion.BAR_RETURN_MS
+private const val PANEL_ENTER_DELAY_MS = Motion.FLIGHT_LAND_DELAY_MS.toLong()
+private const val PANEL_ENTER_MS = Motion.FLIGHT_LAND_MS
+private const val PANEL_AWAY_MS = Motion.PANEL_AWAY_MS
 
 /** Trocar de seção desfaz o que está acima da Agenda: dela o voltar sai do app, das outras volta a ela. */
 private fun NavHostController.openTab(tab: MainTab) {

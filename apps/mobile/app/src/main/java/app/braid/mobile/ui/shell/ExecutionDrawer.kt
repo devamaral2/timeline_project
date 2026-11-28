@@ -3,6 +3,7 @@ package app.braid.mobile.ui.shell
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -63,6 +64,7 @@ import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.ProjectMark
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
+import app.braid.mobile.core.designsystem.scaledSpring
 import app.braid.mobile.domain.execution.ExecutionDrawerMode
 import app.braid.mobile.ui.chat.rememberReducedMotion
 import app.braid.mobile.ui.tasks.AgentStatusIcon
@@ -338,8 +340,8 @@ private fun RunRow(
         // Na altura de uma linha, a primeira ganha a seta de abrir e a contagem das outras.
         AnimatedVisibility(
             visible = one && row.count != null,
-            enter = if (reduced) EnterTransition.None else expandHorizontally(tweenOf(grow = false)) + fadeIn(),
-            exit = if (reduced) ExitTransition.None else shrinkHorizontally(tweenOf(grow = false)) + fadeOut(),
+            enter = if (reduced) EnterTransition.None else expandHorizontally(tweenOf(grow = false)) + fadeIn(FadeSpring),
+            exit = if (reduced) ExitTransition.None else shrinkHorizontally(tweenOf(grow = false)) + fadeOut(FadeSpring),
         ) {
             Text(
                 text = row.count.orEmpty(),
@@ -370,6 +372,9 @@ private fun RunRow(
 }
 
 private val UP_WIDTH = 24.dp
+
+/** A mola padrão do `fadeIn` e do `fadeOut` (`StiffnessMediumLow`), na escala do Motion. */
+private val FadeSpring = scaledSpring<Float>(Spring.StiffnessMediumLow)
 
 private fun <T> tweenOf(grow: Boolean) =
     tween<T>(

@@ -86,7 +86,7 @@
 .dayHeading h2 { display: flex; align-items: baseline; gap: 10px; font-family: var(--font-display); font-size: 24px; font-weight: 400; line-height: 1.1; color: var(--ink); }
 .dayHeading h2 span { font-family: var(--font-sans); font-size: 13px; font-weight: 400; color: var(--muted); }
 .dayHeading > span { font-size: 12px; font-weight: 500; line-height: 1; color: var(--muted); }
-.task { position: relative; line-height: normal; padding: 16px 24px; margin-inline: 0; border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; background: var(--card); box-shadow: none; transition: background 200ms, border-color 200ms, opacity 200ms; }
+.task { position: relative; line-height: normal; padding: 16px 24px; margin-inline: 0; border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; background: var(--card); box-shadow: none; transition: background calc(200ms * var(--motion-scale)), border-color calc(200ms * var(--motion-scale)), opacity calc(200ms * var(--motion-scale)); }
 .task[data-time-position="past"] { background: transparent; }
 .task[data-time-position="past"]:focus-within { background: var(--card); }
 .task[data-time-position="running"] { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
@@ -103,7 +103,7 @@
 .taskDuration small { color: var(--muted); font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; }
 .taskDuration small + strong { margin-left: 6px; }
 .taskDuration.stopwatch { color: var(--brand-accent); font-family: var(--font-mono); font-size: 20px; font-weight: 500; letter-spacing: -.02em; }
-.task .taskChevron { grid-column: 4; grid-row: 1 / 3; align-self: center; margin-left: -4px; justify-self: end; width: 18px; height: 18px; color: var(--muted); opacity: 0; transform: translateX(-4px); transition: opacity 150ms, transform 150ms; }
+.task .taskChevron { grid-column: 4; grid-row: 1 / 3; align-self: center; margin-left: -4px; justify-self: end; width: 18px; height: 18px; color: var(--muted); opacity: 0; transform: translateX(-4px); transition: opacity calc(150ms * var(--motion-scale)), transform calc(150ms * var(--motion-scale)); }
 @media (hover: hover) { .task:hover .taskChevron { opacity: 1; transform: none; } }
 .task:has(.taskLink:focus-visible) .taskChevron { opacity: 1; transform: none; }
 @media (hover: none) { .task .taskChevron { opacity: .6; transform: none; } }
@@ -120,7 +120,7 @@
 
 /* Ações compactas da agenda. */
 .monthToggle { display: flex; align-items: center; gap: 7px; color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; min-height: 44px; }
-.monthToggle svg { width: 14px; height: 14px; color: var(--muted); transition: transform 160ms; }
+.monthToggle svg { width: 14px; height: 14px; color: var(--muted); transition: transform calc(160ms * var(--motion-scale)); }
 .monthToggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .monthDays .weekday { padding: 7px 0; font-size: 12px; }
 .horizontalDays { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -14px; }
@@ -233,7 +233,7 @@
 .entityTaskTitleRow { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .entityTypeSelect { position: relative; width: 44px; margin: 0; padding: 0; border: 0; flex: 0 0 44px; }
 .entityTypeButton { position: relative; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; color: var(--ink); cursor: pointer; }
-.entityTypeButton > svg:last-child { position: absolute; right: -3px; bottom: -3px; width: 15px; height: 15px; padding: 2px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--control-bg); color: var(--muted); transition: transform 140ms; }
+.entityTypeButton > svg:last-child { position: absolute; right: -3px; bottom: -3px; width: 15px; height: 15px; padding: 2px; border: 1px solid var(--control-border); border-radius: 50%; background: var(--control-bg); color: var(--muted); transition: transform calc(140ms * var(--motion-scale)); }
 .entityTypeButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
 .entityTypeButton:focus-visible { outline: 0; }
 .entityTypeButton:focus-visible .entityTypeIcon { box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
@@ -248,7 +248,7 @@
 .pickerBack svg { width: 20px; height: 20px; }
 .pickerHeader h3 { margin: 0; color: var(--ink); font-size: 17px; font-weight: 500; }
 .pickerOptions { display: flex; flex: 1; flex-direction: column; justify-content: center; gap: 8px; min-height: 0; }
-.pickerOption { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 10px 14px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); font-size: 15px; text-align: left; cursor: pointer; transition: border-color 140ms, box-shadow 140ms; }
+.pickerOption { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 10px 14px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); font-size: 15px; text-align: left; cursor: pointer; transition: border-color calc(140ms * var(--motion-scale)), box-shadow calc(140ms * var(--motion-scale)); }
 .pickerOption:hover { border-color: var(--muted); }
 .pickerOption[aria-selected="true"] { border-color: var(--brand); background: var(--cyan-soft); }
 .pickerOption:focus-visible { border-color: var(--ring); }
@@ -284,7 +284,7 @@
 .taskDateGrid button:hover { background: var(--soft); }
 .taskDateGrid button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
 .entityForm label { display: grid; min-width: 0; gap: 10px; font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.entityForm label input, .entityForm select, .entityForm textarea { width: 100%; min-width: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 18px; background: transparent; box-shadow: none; color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 22px; letter-spacing: 0; text-transform: none; transition: border-color 140ms; }
+.entityForm label input, .entityForm select, .entityForm textarea { width: 100%; min-width: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 18px; background: transparent; box-shadow: none; color: var(--ink); font-family: var(--font-sans); font-size: 15px; line-height: 22px; letter-spacing: 0; text-transform: none; transition: border-color calc(140ms * var(--motion-scale)); }
 .entityForm label input:focus-visible, .entityForm select:focus-visible, .entityForm textarea:focus-visible, .quickCreate input:focus-visible, .quickCreate select:focus-visible { outline: 0; border-color: var(--brand); }
 .entityForm .entityControl { min-height: 56px; }
 .entityForm textarea.entityControl { min-height: 96px; resize: vertical; }
@@ -292,11 +292,11 @@
 .entitySelectors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .entitySelect { position: relative; min-width: 0; margin: 0; padding: 0; border: 0; }
 .entitySelectLabel { display: block; margin-bottom: 10px; font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.entitySelectButton { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 54px; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); cursor: pointer; transition: border-color 140ms, box-shadow 140ms; }
+.entitySelectButton { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 54px; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); color: var(--ink); cursor: pointer; transition: border-color calc(140ms * var(--motion-scale)), box-shadow calc(140ms * var(--motion-scale)); }
 .entitySelectButton:hover, .entitySelectButton[aria-expanded="true"] { border-color: var(--muted); }
 .entitySelectButton:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; border-color: var(--ring); }
 .entitySelectButton > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.entitySelectButton > svg:last-child { width: 15px; height: 15px; margin-left: auto; color: var(--muted); transition: transform 140ms; }
+.entitySelectButton > svg:last-child { width: 15px; height: 15px; margin-left: auto; color: var(--muted); transition: transform calc(140ms * var(--motion-scale)); }
 .entitySelectButton[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
 .entityPriorityIcon { display: inline-grid; place-items: center; width: 20px; height: 20px; color: var(--priority-low); flex-shrink: 0; }
 .entityPriorityIcon svg { width: 17px; height: 17px; }
@@ -344,44 +344,44 @@
    da barra o conteudo se apaga no chao. */
 .bottomFade { display: block; position: fixed; z-index: 19; left: 0; right: 0; bottom: 0; max-width: var(--app-width); margin-inline: auto; height: calc(132px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 58%); pointer-events: none; }
 .bottomNav { display: block; position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: calc(var(--app-width) - 32px); margin-inline: auto; --nav-pill: var(--primary); --nav-pill-ink: var(--primary-foreground); }
-.navDock { margin-right: 68px; border: 1px solid var(--line); border-radius: 29px; background: var(--card); transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms, border-radius 300ms cubic-bezier(.5,0,.2,1) 50ms, box-shadow 300ms; }
+.navDock { margin-right: 68px; border: 1px solid var(--line); border-radius: 29px; background: var(--card); transition: margin-right calc(300ms * var(--motion-scale)) cubic-bezier(.5,0,.2,1) calc(50ms * var(--motion-scale)), border-radius calc(300ms * var(--motion-scale)) cubic-bezier(.5,0,.2,1) calc(50ms * var(--motion-scale)), box-shadow calc(300ms * var(--motion-scale)); }
 /* Com o menu de opcoes aberto a dock cresce para cima (`section-menu.tsx`),
    passa a flutuar e avanca por baixo do circulo do chat, para o menu ter a
    largura toda. As abas nao saem do lugar: o que a dock ganha a direita, elas
    devolvem em margem, no mesmo tempo e na mesma curva. */
-.bottomNav[data-menu-open] .navDock { margin-right: 0; border-radius: 27px; box-shadow: var(--shadow-float); transition: margin-right 500ms cubic-bezier(.22,1,.36,1), border-radius 500ms cubic-bezier(.22,1,.36,1), box-shadow 400ms; }
-.navScrim { display: block; position: fixed; z-index: 19; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: var(--scrim); opacity: 0; pointer-events: none; cursor: default; transition: opacity 220ms ease-in; }
-.navScrim[data-open] { opacity: 1; pointer-events: auto; transition: opacity 340ms ease-out; }
-.navTabs { position: relative; display: flex; align-items: center; gap: 4px; padding: 5px; transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms; }
-.bottomNav[data-menu-open] .navTabs { margin-right: 68px; transition: margin-right 500ms cubic-bezier(.22,1,.36,1); }
+.bottomNav[data-menu-open] .navDock { margin-right: 0; border-radius: 27px; box-shadow: var(--shadow-float); transition: margin-right calc(500ms * var(--motion-scale)) cubic-bezier(.22,1,.36,1), border-radius calc(500ms * var(--motion-scale)) cubic-bezier(.22,1,.36,1), box-shadow calc(400ms * var(--motion-scale)); }
+.navScrim { display: block; position: fixed; z-index: 19; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: var(--scrim); opacity: 0; pointer-events: none; cursor: default; transition: opacity calc(220ms * var(--motion-scale)) ease-in; }
+.navScrim[data-open] { opacity: 1; pointer-events: auto; transition: opacity calc(340ms * var(--motion-scale)) ease-out; }
+.navTabs { position: relative; display: flex; align-items: center; gap: 4px; padding: 5px; transition: margin-right calc(300ms * var(--motion-scale)) cubic-bezier(.5,0,.2,1) calc(50ms * var(--motion-scale)); }
+.bottomNav[data-menu-open] .navTabs { margin-right: 68px; transition: margin-right calc(500ms * var(--motion-scale)) cubic-bezier(.22,1,.36,1); }
 /* A pilula da tela atual e uma so e desliza ate a secao escolhida
    (`--nav-index`, 0 a 2). A dock menos os respiros (18 ao todo) se divide em
    3,8 partes: a aba atual leva 1,8 (ela mostra o titulo) e as outras uma cada.
    Ao trocar, a borda do lado do destino sai na frente (`data-dir`) e a
    pilula estica ate la. */
-.navTabs::before { content: ""; position: absolute; top: 5px; bottom: 5px; left: calc(5px + var(--nav-index, 1) * ((100% - 18px) / 3.8 + 4px)); right: calc(5px + (2 - var(--nav-index, 1)) * ((100% - 18px) / 3.8 + 4px)); border-radius: 23px; background: var(--nav-pill); transition: left 420ms var(--ease-out), right 420ms var(--ease-out), background-color 300ms, opacity 200ms; }
-.bottomNav[data-dir="r"] .navTabs::before { transition: right 260ms var(--ease-out), left 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
-.bottomNav[data-dir="l"] .navTabs::before { transition: left 260ms var(--ease-out), right 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
+.navTabs::before { content: ""; position: absolute; top: 5px; bottom: 5px; left: calc(5px + var(--nav-index, 1) * ((100% - 18px) / 3.8 + 4px)); right: calc(5px + (2 - var(--nav-index, 1)) * ((100% - 18px) / 3.8 + 4px)); border-radius: 23px; background: var(--nav-pill); transition: left calc(420ms * var(--motion-scale)) var(--ease-out), right calc(420ms * var(--motion-scale)) var(--ease-out), background-color calc(300ms * var(--motion-scale)), opacity calc(200ms * var(--motion-scale)); }
+.bottomNav[data-dir="r"] .navTabs::before { transition: right calc(260ms * var(--motion-scale)) var(--ease-out), left calc(460ms * var(--motion-scale)) var(--ease-out), background-color calc(300ms * var(--motion-scale)), opacity calc(200ms * var(--motion-scale)); }
+.bottomNav[data-dir="l"] .navTabs::before { transition: left calc(260ms * var(--motion-scale)) var(--ease-out), right calc(460ms * var(--motion-scale)) var(--ease-out), background-color calc(300ms * var(--motion-scale)), opacity calc(200ms * var(--motion-scale)); }
 /* Icone em todas as abas; o titulo so na atual, que cresce para abrigá-lo. */
-.navTabs > button, .navTabs > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; height: 46px; border-radius: 23px; color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: flex-grow 420ms var(--ease-out), color 250ms; }
+.navTabs > button, .navTabs > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; height: 46px; border-radius: 23px; color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: flex-grow calc(420ms * var(--motion-scale)) var(--ease-out), color calc(250ms * var(--motion-scale)); }
 .navTabs > [aria-current="page"] { flex-grow: 1.8; color: var(--nav-pill-ink); }
 .navGlyph { position: relative; display: block; flex: none; width: 24px; height: 24px; }
 .navTabs svg { display: block; width: 24px; height: 24px; stroke-width: 1.75; }
-.navTabs .navGlyph > svg { transform: scale(.9); transition: transform 500ms cubic-bezier(.34,1.56,.64,1); }
+.navTabs .navGlyph > svg { transform: scale(.9); transition: transform calc(500ms * var(--motion-scale)) cubic-bezier(.34,1.56,.64,1); }
 .navTabs > [aria-current="page"] .navGlyph > svg { transform: none; }
-.navTabs > :active .navGlyph > svg { transform: scale(.8); transition-duration: 100ms; }
+.navTabs > :active .navGlyph > svg { transform: scale(.8); transition-duration: calc(100ms * var(--motion-scale)); }
 .bottomNav[data-menu-open] .navTabs > [aria-current="page"] .navGlyph > svg { transform: scale(.9); }
 /* O titulo: fechado nas outras abas, abre ao lado do icone na atual. */
-.navLabel { display: block; max-width: 0; margin-left: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: max-width 420ms var(--ease-out), margin-left 420ms var(--ease-out), opacity 200ms linear; }
-.navTabs > [aria-current="page"] .navLabel { max-width: 96px; margin-left: 8px; opacity: 1; transition-delay: 0s, 0s, 110ms; }
+.navLabel { display: block; max-width: 0; margin-left: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: max-width calc(420ms * var(--motion-scale)) var(--ease-out), margin-left calc(420ms * var(--motion-scale)) var(--ease-out), opacity calc(200ms * var(--motion-scale)) linear; }
+.navTabs > [aria-current="page"] .navLabel { max-width: 96px; margin-left: 8px; opacity: 1; transition-delay: 0s, 0s, calc(110ms * var(--motion-scale)); }
 /* O ponto: ha busca ou filtro ativo na tela atual. */
-.navDot { position: absolute; top: -5px; left: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 0 2px var(--nav-pill); transform: scale(0); transition: transform 350ms cubic-bezier(.34,1.56,.64,1); }
+.navDot { position: absolute; top: -5px; left: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 0 2px var(--nav-pill); transform: scale(0); transition: transform calc(350ms * var(--motion-scale)) cubic-bezier(.34,1.56,.64,1); }
 .navTabs > [aria-current="page"] .navDot[data-on] { transform: none; }
 /* O circulo do chat: um aro da cor da dock em volta do robo. Com o menu
    aberto a dock passa por baixo dele e o aro some. */
-.commandButton { position: absolute; z-index: 1; right: 0; bottom: 0; display: grid; place-items: center; width: 58px; height: 58px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--card); cursor: pointer; transition: border-color 300ms, background-color 300ms; }
+.commandButton { position: absolute; z-index: 1; right: 0; bottom: 0; display: grid; place-items: center; width: 58px; height: 58px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--card); cursor: pointer; transition: border-color calc(300ms * var(--motion-scale)), background-color calc(300ms * var(--motion-scale)); }
 .bottomNav[data-menu-open] .commandButton { border-color: transparent; background: transparent; }
-.commandCore { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; color: var(--ink); transition: transform 200ms var(--ease-out); }
+.commandCore { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; color: var(--ink); transition: transform calc(200ms * var(--motion-scale)) var(--ease-out); }
 .commandButton:active .commandCore { transform: scale(.92); }
 .commandCore > svg { width: 24px; height: 24px; stroke-width: 1.75; }
 /* O círculo de 46 px do robô vem do componente, pelo `font-size`
@@ -413,7 +413,7 @@
 .creationToggle svg { width: 16px; height: 16px; stroke-width: 1.4; }
 .manualPanel > .hubSearch:last-child { margin-top: 16px; }
 .sectionMenuHeading, .sheetHandle { flex-shrink: 0; }
-.hubSearch { display: flex; align-items: center; gap: 10px; border: 1px solid var(--control-border); padding: 8px 10px 8px 14px; border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); transition: border-color 140ms, box-shadow 140ms; }
+.hubSearch { display: flex; align-items: center; gap: 10px; border: 1px solid var(--control-border); padding: 8px 10px 8px 14px; border-radius: 14px; background: var(--control-bg); box-shadow: var(--control-shadow); transition: border-color calc(140ms * var(--motion-scale)), box-shadow calc(140ms * var(--motion-scale)); }
 .hubSearch:focus-within { border-color: var(--brand); }
 .hubSearch input { width: 100%; min-width: 0; border: 0; background: transparent; padding: 8px 0; font: inherit; font-size: 16px; color: var(--ink); }
 .hubSearch input:focus-visible { outline: 0; }
@@ -496,7 +496,7 @@
 .hubResults small { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
 .quickCreate { padding: 14px; background: var(--cyan-soft); border-radius: 12px; display: grid; gap: 12px; }
 .quickCreate label { display: grid; gap: 5px; font-size: 12px; color: var(--muted); }
-.quickCreate input, .quickCreate select { border: 1px solid var(--control-border); border-radius: 10px; background: var(--control-bg); box-shadow: var(--control-shadow); padding: 10px; font-size: 16px; color: var(--ink); width: 100%; transition: border-color 140ms, box-shadow 140ms; }
+.quickCreate input, .quickCreate select { border: 1px solid var(--control-border); border-radius: 10px; background: var(--control-bg); box-shadow: var(--control-shadow); padding: 10px; font-size: 16px; color: var(--ink); width: 100%; transition: border-color calc(140ms * var(--motion-scale)), box-shadow calc(140ms * var(--motion-scale)); }
 .quickCreate button, .chatPreview button { justify-self: start; padding: 9px 0; font-size: 12px; color: var(--brand-accent); cursor: pointer; }
 .hubNotice { font-size: 12px; color: var(--brand-accent); margin: 8px 0; }
 .hubNotice:empty { display: none; }
@@ -541,8 +541,8 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 
 /* No celular o painel e uma folha presa acima da barra inferior. */
 .shell:has(.sectionMenu[open]) .main { filter: blur(2px); }
-.sectionMenu { position: fixed; inset: auto 0 calc(90px + env(safe-area-inset-bottom)); margin: 0 auto; width: 100%; max-width: var(--app-width); max-height: calc(100dvh - 114px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 10px 26px 15px; background: var(--card); color: var(--ink); border: 0; border-radius: 24px 24px 0 0; animation: menuEnter 200ms cubic-bezier(.2,.7,.2,1); }
-.sectionMenu::backdrop { background: linear-gradient(to bottom, var(--scrim) calc(100% - 90px - env(safe-area-inset-bottom)), transparent 0); animation: backdropEnter 160ms ease-out; }
+.sectionMenu { position: fixed; inset: auto 0 calc(90px + env(safe-area-inset-bottom)); margin: 0 auto; width: 100%; max-width: var(--app-width); max-height: calc(100dvh - 114px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 10px 26px 15px; background: var(--card); color: var(--ink); border: 0; border-radius: 24px 24px 0 0; animation: menuEnter calc(200ms * var(--motion-scale)) cubic-bezier(.2,.7,.2,1); }
+.sectionMenu::backdrop { background: linear-gradient(to bottom, var(--scrim) calc(100% - 90px - env(safe-area-inset-bottom)), transparent 0); animation: backdropEnter calc(160ms * var(--motion-scale)) ease-out; }
 .sheetHandle { width: 30px; height: 3px; margin: 0 auto 7px; border-radius: 4px; background: var(--line); }
 /* O painel do hub: compacto no inicio do chat, alto na conversa, na lista e nos
    comandos, e a tela toda (acima da barra) quando expandido. */
@@ -582,18 +582,18 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
    pousa como o icone de status do campo, que so aparece no pouso; o painel
    entra por baixo dele e o X surge no lugar que o botao deixou. Na volta, o
    painel se apaga, o X some e o circulo retorna para a barra. */
-.bottomNav[data-flight] .navTabs > a, .bottomNav[data-flight] .navTabs > button { transition: background-color 200ms, color 200ms, border-color 200ms; }
-.bottomNav[data-flight="out"] .navTabs > a, .bottomNav[data-flight="out"] .navTabs > button { transition-duration: 100ms; }
-.bottomNav[data-flight="out"] .commandCore { animation: closeEnter 120ms 70ms cubic-bezier(.2,.7,.2,1) backwards; }
-.bottomNav[data-flight="back"] .commandCore { animation: flightAway 200ms forwards; }
-.sectionMenu.sectionMenu[data-hub-view][data-flight="out"] { animation: flightCome 137ms 73ms backwards; }
-.sectionMenu.sectionMenu[data-hub-view][data-flight="back"] { animation: flightAway 234ms forwards; }
+.bottomNav[data-flight] .navTabs > a, .bottomNav[data-flight] .navTabs > button { transition: background-color calc(200ms * var(--motion-scale)), color calc(200ms * var(--motion-scale)), border-color calc(200ms * var(--motion-scale)); }
+.bottomNav[data-flight="out"] .navTabs > a, .bottomNav[data-flight="out"] .navTabs > button { transition-duration: calc(100ms * var(--motion-scale)); }
+.bottomNav[data-flight="out"] .commandCore { animation: closeEnter var(--motion-close-enter) var(--motion-close-enter-delay) cubic-bezier(.2,.7,.2,1) backwards; }
+.bottomNav[data-flight="back"] .commandCore { animation: flightAway var(--motion-core-away) forwards; }
+.sectionMenu.sectionMenu[data-hub-view][data-flight="out"] { animation: flightCome var(--motion-flight-land) var(--motion-flight-land-delay) backwards; }
+.sectionMenu.sectionMenu[data-hub-view][data-flight="back"] { animation: flightAway var(--motion-panel-away) forwards; }
 .sectionMenu[data-flight] .chatStatus [data-hermes-mark] { visibility: hidden; }
-.sectionMenu[data-flight="out"] .chatField > form, .sectionMenu[data-flight="out"] .chatStatus > span:not([data-hermes-mark]) { animation: flightRise 137ms 73ms ease-out backwards; }
+.sectionMenu[data-flight="out"] .chatField > form, .sectionMenu[data-flight="out"] .chatStatus > span:not([data-hermes-mark]) { animation: flightRise var(--motion-flight-land) var(--motion-flight-land-delay) ease-out backwards; }
 /* Entrar num detalhe: a barra se apaga enquanto o botao voa para o campo do
    registro; ao sair, ela volta e o botao pousa de novo na ponta. */
-.bottomNav[data-flight="dock"] { animation: flightAway 126ms forwards; pointer-events: none; }
-.bottomNav[data-flight="undock"] { animation: flightCome 216ms 144ms backwards; }
+.bottomNav[data-flight="dock"] { animation: flightAway var(--motion-bar-away) forwards; pointer-events: none; }
+.bottomNav[data-flight="undock"] { animation: flightCome var(--motion-bar-return) var(--motion-bar-return-delay) backwards; }
 .bottomNav[data-flight="dock"] .commandCore, .bottomNav[data-flight="undock"] .commandCore { visibility: hidden; }
 
 .shell:has(:is(.detailMain, [data-detail])) .bottomNav:not([data-flight="dock"]), .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }

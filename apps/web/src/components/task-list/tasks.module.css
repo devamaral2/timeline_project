@@ -23,7 +23,7 @@
 /* O fio entre uma tarefa e a seguinte, o mesmo da agenda: começa onde começa o texto (glifo de 24px e 14px de respiro). */
 .list > li { position: relative; }
 .list > li + li::before { content: ""; position: absolute; top: 0; left: 38px; right: 0; height: 1px; background: var(--hairline); }
-.row { position: relative; display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; transition: opacity var(--duration-fast); animation: rowIn 300ms var(--ease-out) backwards; animation-delay: calc(5 * var(--stagger)); }
+.row { position: relative; display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; transition: opacity var(--duration-fast); animation: rowIn calc(300ms * var(--motion-scale)) var(--ease-out) backwards; animation-delay: calc(5 * var(--stagger)); }
 .row:nth-child(1) { animation-delay: 0ms; }
 .row:nth-child(2) { animation-delay: var(--stagger); }
 .row:nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
@@ -44,8 +44,8 @@
 .rowCheck .statusIcon[data-status="done"] circle { fill: currentColor; }
 .rowCheck .statusIcon[data-status="done"] path { stroke: var(--background); }
 /* Concluir: o círculo enche e o visto se desenha. */
-.statusIcon[data-status="done"] circle { animation: pop 260ms var(--ease-out); transform-box: fill-box; transform-origin: center; }
-.statusIcon[data-status="done"] path { stroke-dasharray: 12; animation: tick 200ms var(--ease-out) 60ms backwards; }
+.statusIcon[data-status="done"] circle { animation: pop calc(260ms * var(--motion-scale)) var(--ease-out); transform-box: fill-box; transform-origin: center; }
+.statusIcon[data-status="done"] path { stroke-dasharray: 12; animation: tick calc(200ms * var(--motion-scale)) var(--ease-out) calc(60ms * var(--motion-scale)) backwards; }
 @keyframes pop { 0% { transform: scale(.85); } 60% { transform: scale(1.08); } }
 @keyframes tick { from { stroke-dashoffset: 12; } }
 @media (hover: hover) {
@@ -56,7 +56,7 @@
 .name { margin: 0; overflow: hidden; font-size: var(--font-size-md); font-weight: 600; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
 /* O risco de quem foi concluída ou cancelada é um fio que atravessa o nome. */
 .name { transition: color var(--duration-slow); }
-.name a { color: inherit; background: linear-gradient(currentColor, currentColor) no-repeat 0 56% / 0 1px; transition: background-size var(--duration-slow) var(--ease-out) 80ms; }
+.name a { color: inherit; background: linear-gradient(currentColor, currentColor) no-repeat 0 56% / 0 1px; transition: background-size var(--duration-slow) var(--ease-out) calc(80ms * var(--motion-scale)); }
 .row[data-status="done"] .name, .row[data-status="cancel"] .name { color: var(--faint); }
 .row[data-status="done"] .name a, .row[data-status="cancel"] .name a { background-size: 100% 1px; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin: 0; padding: 0; list-style: none; font-size: 13px; line-height: 20px; color: var(--muted); }

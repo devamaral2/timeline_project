@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import app.braid.mobile.core.designsystem.Motion
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -33,8 +34,8 @@ import kotlin.math.roundToInt
  * fica escondido e o resto do campo sobe para o lugar. Com as animações desligadas no sistema, nada voa.
  */
 
-const val FLIGHT_OUT_MS = 210
-const val FLIGHT_BACK_MS = 360
+const val FLIGHT_OUT_MS = Motion.FLIGHT_OUT_MS
+const val FLIGHT_BACK_MS = Motion.FLIGHT_BACK_MS
 
 /** O caminho em nove amostras igualmente espaçadas no tempo: quanto do desvio horizontal, do vertical e do encolhimento. */
 private val PATH =
@@ -190,13 +191,13 @@ val LocalHermesFlight = staticCompositionLocalOf<HermesFlight?> { null }
 
 /** `ease-out` do CSS, a subida do campo. */
 private val RiseEasing = CubicBezierEasing(0f, 0f, 0.58f, 1f)
-private const val RISE_DELAY_MS = 73L
-private const val RISE_MS = 137
+private const val RISE_DELAY_MS = Motion.FLIGHT_LAND_DELAY_MS.toLong()
+private const val RISE_MS = Motion.FLIGHT_LAND_MS
 internal const val RISE_DISTANCE_DP = 14f
 
 /**
  * A subida do campo enquanto o botão pousa (de 0 a 1): o texto do status, o cartão e o resto chegam de 14 dp abaixo,
- * 73 ms depois de o voo partir. No campo de um detalhe também aparecem (a opacidade acompanha).
+ * o `flightLandDelay` do Motion depois de o voo partir. No campo de um detalhe também aparecem (a opacidade acompanha).
  */
 @Composable
 fun rememberHermesRise(role: MarkRole): State<Float> {

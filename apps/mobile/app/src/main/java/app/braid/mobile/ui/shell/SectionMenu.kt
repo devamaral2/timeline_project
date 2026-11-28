@@ -1,6 +1,7 @@
 package app.braid.mobile.ui.shell
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -57,20 +58,25 @@ import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidDisplayFont
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
+import app.braid.mobile.core.designsystem.Motion
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.core.designsystem.braidTokens
+import app.braid.mobile.core.designsystem.scaledSpring
 import app.braid.mobile.core.designsystem.svgCircle
 import app.braid.mobile.domain.executor.ViewMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/** A mola padrão do `fadeIn` e do `fadeOut` (`StiffnessMediumLow`), na escala do Motion. */
+private val FadeSpring = scaledSpring<Float>(Spring.StiffnessMediumLow)
+
 /** A linha escolhida acende antes de o menu fechar. */
-private const val PICK_CLOSE_DELAY_MS = 180L
+private const val PICK_CLOSE_DELAY_MS = Motion.MENU_PICK_CLOSE_MS.toLong()
 
 /** A configuração só volta ao início depois de o menu fechar, para não trocar de corpo no meio da saída. */
-private const val SETTINGS_RESET_DELAY_MS = 360L
+private const val SETTINGS_RESET_DELAY_MS = Motion.MENU_SETTLE_MS.toLong()
 
 private val Layers =
     listOf(
@@ -153,7 +159,7 @@ fun SectionMenuBody(
         )
         AnimatedContent(
             targetState = settingsOpen,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            transitionSpec = { fadeIn(FadeSpring) togetherWith fadeOut(FadeSpring) },
             label = "menuPane",
         ) { inSettings ->
             if (inSettings) {

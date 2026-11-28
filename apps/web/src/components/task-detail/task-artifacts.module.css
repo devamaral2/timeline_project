@@ -28,7 +28,7 @@
 .toggle { flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--muted); cursor: pointer; }
 .toggle:hover { color: var(--ink); }
 .toggle:focus-visible { outline: 2px solid var(--color-ring); outline-offset: -2px; }
-.toggle svg, .foodsChevron svg { transition: transform .24s cubic-bezier(.2, .8, .2, 1); }
+.toggle svg, .foodsChevron svg { transition: transform calc(240ms * var(--motion-scale)) cubic-bezier(.2, .8, .2, 1); }
 .toggle[aria-expanded="true"] svg, .foodsToggle[aria-expanded="true"] .foodsChevron svg { transform: rotate(180deg); }
 
 .content { min-width: 0; overflow-wrap: anywhere; }

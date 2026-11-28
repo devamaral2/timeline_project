@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.braidTokens
+import app.braid.mobile.core.designsystem.scaledSpring
 import app.braid.mobile.domain.timeline.dayNumber
 import app.braid.mobile.domain.timeline.longDate
 import app.braid.mobile.domain.timeline.weekOf
@@ -82,7 +83,12 @@ private fun WeekDay(
 ) {
     val scheme = MaterialTheme.colorScheme
     val tokens = braidTokens()
-    val background by animateColorAsState(if (isSelected) scheme.primary else Color.Transparent, label = "weekDayBackground")
+    val background by animateColorAsState(
+        if (isSelected) scheme.primary else Color.Transparent,
+        // A mola padrão da cor (`StiffnessMedium`), na escala do Motion.
+        scaledSpring(),
+        label = "weekDayBackground",
+    )
     val numberColor =
         when {
             isSelected -> scheme.onPrimary

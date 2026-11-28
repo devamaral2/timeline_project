@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.braid.mobile.core.designsystem.BraidIcons
+import app.braid.mobile.core.designsystem.Motion
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.ui.chat.BotState
@@ -66,9 +67,9 @@ fun AgentButton(
 
 /** `closeEnter` do web: o X que fica no lugar do botão que voou. */
 private val CloseEnterEasing = CubicBezierEasing(0.2f, 0.7f, 0.2f, 1f)
-private const val CLOSE_ENTER_DELAY_MS = 70L
-private const val CLOSE_ENTER_MS = 120
-private const val CORE_AWAY_MS = 200
+private const val CLOSE_ENTER_DELAY_MS = Motion.CLOSE_ENTER_DELAY_MS.toLong()
+private const val CLOSE_ENTER_MS = Motion.CLOSE_ENTER_MS
+private const val CORE_AWAY_MS = Motion.CORE_AWAY_MS
 private const val CLOSE_ENTER_SCALE = 0.6f
 private val CoreSize = 46.dp
 

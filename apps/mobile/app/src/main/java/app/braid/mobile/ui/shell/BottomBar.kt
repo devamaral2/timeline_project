@@ -2,6 +2,8 @@ package app.braid.mobile.ui.shell
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandHorizontally
@@ -46,6 +48,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.braid.mobile.core.designsystem.BraidIcons
@@ -53,6 +56,7 @@ import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidTokens
+import app.braid.mobile.core.designsystem.scaledSpring
 import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.ui.chat.BotState
 
@@ -69,6 +73,17 @@ enum class MainTab(
 private val DockHeight = 58.dp
 private val AgentButtonGap = 10.dp
 private val AgentButtonSize = 58.dp
+
+// As molas padrão de cada API, na escala do Motion (`scaledSpring`): o mesmo amortecimento e o mesmo limite de
+// visibilidade de quando não se passa mola nenhuma.
+// `expand*`/`shrink*` e `fadeIn`/`fadeOut`: `StiffnessMediumLow`; o tamanho leva o limite de `IntSize`.
+private val SizeSpring = scaledSpring(Spring.StiffnessMediumLow, IntSize.VisibilityThreshold)
+private val FadeSpring = scaledSpring<Float>(Spring.StiffnessMediumLow)
+
+// `animateDpAsState`, `animateColorAsState` e `animateFloatAsState`: `StiffnessMedium`, com o limite de cada tipo.
+private val DpSpring = scaledSpring(visibilityThreshold = Dp.VisibilityThreshold)
+private val ColorSpring = scaledSpring<Color>()
+private val FloatSpring = scaledSpring(visibilityThreshold = 0.01f)
 
 /**
  * A barra inferior flutua em duas peças: a dock com as três seções e, separado
@@ -97,8 +112,8 @@ fun BraidBottomBar(
     val background = MaterialTheme.colorScheme.background
     // Aberto o menu, a dock ocupa a largura toda e as abas ficam no mesmo lugar, ao lado do círculo do agente.
     val reserved = AgentButtonSize + AgentButtonGap
-    val dockEnd by animateDpAsState(if (menuOpen) 0.dp else reserved, label = "dockEnd")
-    val tabsEnd by animateDpAsState(if (menuOpen) reserved else 0.dp, label = "tabsEnd")
+    val dockEnd by animateDpAsState(if (menuOpen) 0.dp else reserved, DpSpring, label = "dockEnd")
+    val tabsEnd by animateDpAsState(if (menuOpen) reserved else 0.dp, DpSpring, label = "tabsEnd")
     Box(modifier.fillMaxWidth()) {
         Box(
             Modifier
@@ -160,8 +175,8 @@ private fun Dock(
     ) {
         AnimatedVisibility(
             visible = menuOpen,
-            enter = expandVertically(expandFrom = Alignment.Bottom) + fadeIn(),
-            exit = shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut(),
+            enter = expandVertically(SizeSpring, expandFrom = Alignment.Bottom) + fadeIn(FadeSpring),
+            exit = shrinkVertically(SizeSpring, shrinkTowards = Alignment.Bottom) + fadeOut(FadeSpring),
         ) {
             Column {
                 menu()
@@ -223,17 +238,18 @@ private fun RowScope.DockTab(
     val (pill, pillInk) = pillOf(mode)
     // Com o chat aberto nenhuma seção é preenchida: a pílula se apaga e a de onde se veio fica só contornada.
     val filled = selected && !chatOpen
-    val background by animateColorAsState(if (filled) pill else Color.Transparent, label = "tabPill")
+    val background by animateColorAsState(if (filled) pill else Color.Transparent, ColorSpring, label = "tabPill")
     val ink by animateColorAsState(
         when {
             filled -> pillInk
             selected -> scheme.onBackground
             else -> scheme.onSurfaceVariant
         },
+        animationSpec = ColorSpring,
         label = "tabInk",
     )
-    val iconScale by animateFloatAsState(if (selected) 1f else 0.9f, label = "tabIconScale")
-    val grow by animateFloatAsState(if (selected) 1.8f else 1f, label = "tabGrow")
+    val iconScale by animateFloatAsState(if (selected) 1f else 0.9f, FloatSpring, label = "tabIconScale")
+    val grow by animateFloatAsState(if (selected) 1.8f else 1f, FloatSpring, label = "tabGrow")
 
     Box(
         modifier =
@@ -265,8 +281,8 @@ private fun RowScope.DockTab(
             }
             AnimatedVisibility(
                 visible = selected,
-                enter = expandHorizontally() + fadeIn(),
-                exit = shrinkHorizontally() + fadeOut(),
+                enter = expandHorizontally(SizeSpring) + fadeIn(FadeSpring),
+                exit = shrinkHorizontally(SizeSpring) + fadeOut(FadeSpring),
             ) {
                 Text(
                     text = tab.label,
@@ -289,7 +305,7 @@ private fun FilterDot(
     ring: Color,
     modifier: Modifier = Modifier,
 ) {
-    val scale by animateFloatAsState(if (visible) 1f else 0f, label = "filterDot")
+    val scale by animateFloatAsState(if (visible) 1f else 0f, FloatSpring, label = "filterDot")
     Box(
         modifier
             .size(11.dp)

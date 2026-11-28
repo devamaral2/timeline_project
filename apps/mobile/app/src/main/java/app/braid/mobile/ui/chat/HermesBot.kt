@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
+import app.braid.mobile.core.designsystem.Motion
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.core.designsystem.svgCircle
 import app.braid.mobile.core.designsystem.svgRect
@@ -49,8 +50,8 @@ import kotlinx.coroutines.delay
 /*
  * O robô do Hermes e os seus cinco estados, com as animações do web (`hermes-bot.module.css`): parado ele pisca; ao ouvir,
  * pensar, concluir ou falhar o corpo se desfaz e as peças viram a onda, os três pontos que pulam, o ✓ (que se desenha, com um pulo)
- * ou a exclamação (que balança). Cada peça vai de uma pose a outra com os tempos do app: 240 ms na curva de saída para a
- * forma e 120 ms lineares para a opacidade. Com as animações desligadas no sistema, só a pose muda.
+ * ou a exclamação (que balança). Cada peça vai de uma pose a outra com os tempos do Motion: `durationSlow` na curva de saída para a
+ * forma e `botFade` lineares para a opacidade. Com as animações desligadas no sistema, só a pose muda.
  */
 
 private const val GRID = 32f
@@ -66,9 +67,21 @@ private val EaseInOut: Easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f)
 /** A queda do ponto da exclamação, que passa do lugar e volta. */
 private val Bounce: Easing = CubicBezierEasing(0.3f, 1.6f, 0.5f, 1f)
 
-private const val SLOW_MS = 240
-private const val FADE_MS = 120
+private const val SLOW_MS = Motion.DURATION_SLOW_MS
+private const val FADE_MS = Motion.BOT_FADE_MS
+
+/** O modo de menos movimento fica fora da escala: a pose muda com este tempo, sempre. */
 private const val REDUCED_MS = 150
+
+/** Os fades curtos de cor e de opacidade fora do modo de menos movimento (nele valem os [REDUCED_MS]). */
+private const val QUICK_MS = Motion.DURATION_FAST_MS
+
+private const val EX_DELAY_MS = Motion.BOT_EX_DELAY_MS
+private const val POINT_MS = Motion.BOT_POINT_MS
+private const val POINT_DELAY_MS = Motion.BOT_POINT_DELAY_MS
+private const val CHECK_DRAW_MS = Motion.BOT_CHECK_DRAW_MS
+private const val CHECK_FADE_MS = Motion.BOT_CHECK_FADE_MS
+private const val CHECK_DELAY_MS = Motion.BOT_CHECK_DELAY_MS
 
 private const val BLINK_DELAY_MS = 1400L
 private const val BLINK_PERIOD_MS = 4800L
@@ -80,10 +93,10 @@ private const val DOT_REST = 0.32f
 /** Quanto o ponto sobe e cresce no alto do pulo, em unidades da grade. */
 private const val DOT_JUMP = -4.8f
 private const val DOT_GROW = 1.12f
-private const val POP_DELAY_MS = 170L
-private const val POP_MS = 460L
-private const val SHAKE_DELAY_MS = 80L
-private const val SHAKE_MS = 380L
+private const val POP_DELAY_MS = Motion.BOT_POP_DELAY_MS.toLong()
+private const val POP_MS = Motion.BOT_POP_MS.toLong()
+private const val SHAKE_DELAY_MS = Motion.BOT_SHAKE_DELAY_MS.toLong()
+private const val SHAKE_MS = Motion.BOT_SHAKE_MS.toLong()
 
 /** As peças do desenho, na ordem do SVG do web. */
 private enum class Piece(
@@ -199,8 +212,8 @@ private fun transformSpec(
 ): FiniteAnimationSpec<Float> =
     when {
         reduced -> tween(REDUCED_MS)
-        piece == Piece.Ex && target == BotState.Error -> tween(SLOW_MS, delayMillis = 60, easing = EaseOut)
-        piece == Piece.Point && target == BotState.Error -> tween(380, delayMillis = 150, easing = Bounce)
+        piece == Piece.Ex && target == BotState.Error -> tween(SLOW_MS, delayMillis = EX_DELAY_MS, easing = EaseOut)
+        piece == Piece.Point && target == BotState.Error -> tween(POINT_MS, delayMillis = POINT_DELAY_MS, easing = Bounce)
         else -> tween(SLOW_MS, easing = EaseOut)
     }
 
@@ -211,10 +224,10 @@ private fun alphaSpec(
 ): FiniteAnimationSpec<Float> =
     when {
         reduced -> tween(REDUCED_MS)
-        piece == Piece.Check && target == BotState.Done -> tween(60, delayMillis = 110, easing = LinearEasing)
-        piece == Piece.Check -> tween(REDUCED_MS, easing = LinearEasing)
-        piece == Piece.Ex && target == BotState.Error -> tween(FADE_MS, delayMillis = 60, easing = LinearEasing)
-        piece == Piece.Point && target == BotState.Error -> tween(FADE_MS, delayMillis = 150, easing = LinearEasing)
+        piece == Piece.Check && target == BotState.Done -> tween(CHECK_FADE_MS, delayMillis = CHECK_DELAY_MS, easing = LinearEasing)
+        piece == Piece.Check -> tween(QUICK_MS, easing = LinearEasing)
+        piece == Piece.Ex && target == BotState.Error -> tween(FADE_MS, delayMillis = EX_DELAY_MS, easing = LinearEasing)
+        piece == Piece.Point && target == BotState.Error -> tween(FADE_MS, delayMillis = POINT_DELAY_MS, easing = LinearEasing)
         else -> tween(FADE_MS, easing = LinearEasing)
     }
 
@@ -352,8 +365,8 @@ fun HermesBotIcon(
             {
                 when {
                     reduced -> tween(REDUCED_MS)
-                    targetState == BotState.Done -> tween(300, delayMillis = 110, easing = EaseOut)
-                    else -> tween(REDUCED_MS, easing = LinearEasing)
+                    targetState == BotState.Done -> tween(CHECK_DRAW_MS, delayMillis = CHECK_DELAY_MS, easing = EaseOut)
+                    else -> tween(QUICK_MS, easing = LinearEasing)
                 }
             },
             label = "check",
@@ -480,7 +493,7 @@ fun HermesBot(
     val reduced = rememberReducedMotion()
     val disc by animateColorAsState(
         if (state == BotState.Error) scheme.error else brand,
-        tween(REDUCED_MS, easing = LinearEasing),
+        tween(if (reduced) REDUCED_MS else QUICK_MS, easing = LinearEasing),
         label = "disc",
     )
     val glyph by animateColorAsState(
@@ -490,7 +503,7 @@ fun HermesBot(
             outlined -> scheme.onSurfaceVariant
             else -> scheme.background
         },
-        tween(REDUCED_MS, easing = LinearEasing),
+        tween(if (reduced) REDUCED_MS else QUICK_MS, easing = LinearEasing),
         label = "glyph",
     )
     val halo by animateFloatAsState(

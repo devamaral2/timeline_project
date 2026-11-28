@@ -56,7 +56,7 @@
    uma gaveta aberta dentro dela; a última termina no cotovelo. */
 .item:not(:last-child)::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: var(--border); }
 
-.item { position: relative; animation: subIn 320ms var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * var(--stagger)); }
+.item { position: relative; animation: subIn calc(320ms * var(--motion-scale)) var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * var(--stagger)); }
 .line { position: relative; display: flex; align-items: center; gap: 10px; min-height: 40px; padding-left: 24px; }
 .elbow { position: absolute; top: 0; left: 0; width: 16px; height: 20px; border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); border-bottom-left-radius: 9px; }
 

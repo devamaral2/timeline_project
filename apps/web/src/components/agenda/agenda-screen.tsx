@@ -5,6 +5,7 @@ import {
   monthLabel, shiftDayKey, shiftMonthKey, weekOf, weekday, zonedDayEnd, zonedDayStart,
 } from "@repo/timeline";
 import type { TaskCardDto, HumanTaskStatus } from "@repo/contracts";
+import { motionMs } from "@repo/theme";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { TaskStatusPicker } from "@/components/tasks/task-status-picker";
@@ -43,7 +44,7 @@ const STALE_STATUS_MESSAGE = "Esta tarefa mudou em outro lugar. Carregamos a ver
 const FAILED_STATUS_MESSAGE = "Não foi possível trocar o status. Tente novamente.";
 
 /** Quanto a linha recém-chegada fica marcada, o tempo do banho escorrer. */
-const FRESH_MS = 2000;
+const FRESH_MS = motionMs(2000);
 
 /** Dias carregados a cada vez que a rolagem infinita chega a uma borda. */
 const INFINITE_STEP_DAYS = 7;

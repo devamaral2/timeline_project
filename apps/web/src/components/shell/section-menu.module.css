@@ -7,12 +7,12 @@
   --spring: cubic-bezier(.34, 1.56, .64, 1);
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 300ms var(--inout) 50ms;
+  transition: grid-template-rows calc(300ms * var(--motion-scale)) var(--inout) calc(50ms * var(--motion-scale));
 }
 
 .menu[data-open] {
   grid-template-rows: 1fr;
-  transition: grid-template-rows 500ms var(--out);
+  transition: grid-template-rows calc(500ms * var(--motion-scale)) var(--out);
 }
 
 .inner {
@@ -22,7 +22,7 @@
   min-height: 0;
   overflow: hidden;
   visibility: hidden;
-  transition: visibility 0s 360ms;
+  transition: visibility 0s var(--motion-menu-settle);
 }
 
 .menu[data-open] .inner {
@@ -155,7 +155,7 @@
   background: var(--secondary);
   color: var(--ink);
   cursor: pointer;
-  transition: background-color 200ms, color 200ms;
+  transition: background-color calc(200ms * var(--motion-scale)), color calc(200ms * var(--motion-scale));
 }
 
 .gear svg {
@@ -163,12 +163,12 @@
   height: 20px;
   stroke-width: 1.75;
   transform: scale(.7);
-  transition: transform 200ms ease-in;
+  transition: transform calc(200ms * var(--motion-scale)) ease-in;
 }
 
 .menu[data-open] .gear svg {
   transform: none;
-  transition: transform 700ms var(--spring);
+  transition: transform calc(700ms * var(--motion-scale)) var(--spring);
 }
 
 .gear[aria-pressed="true"] {
@@ -181,7 +181,7 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 6px;
-  animation: paneIn 300ms var(--ease-out) both;
+  animation: paneIn calc(300ms * var(--motion-scale)) var(--ease-out) both;
 }
 
 .list {
@@ -304,7 +304,7 @@
   border-radius: 22px;
   background: var(--secondary);
   color: var(--faint);
-  transition: box-shadow 180ms ease-out, color 180ms ease-out;
+  transition: box-shadow calc(180ms * var(--motion-scale)) ease-out, color calc(180ms * var(--motion-scale)) ease-out;
 }
 
 /* Foco: um fio de 1 px na cor da marca, no formato da pílula; a lupa acompanha. */
@@ -526,7 +526,7 @@
   font-weight: 600;
   line-height: 20px;
   cursor: pointer;
-  transition: background-color 200ms, color 200ms;
+  transition: background-color calc(200ms * var(--motion-scale)), color calc(200ms * var(--motion-scale));
 }
 
 .segment button[aria-pressed="true"],
@@ -559,13 +559,13 @@
   --s: 0;
   opacity: 0;
   transform: translateY(14px);
-  transition: opacity 100ms linear calc((7 - var(--s)) * 8ms), transform 160ms ease-in calc((7 - var(--s)) * 8ms), background-color 150ms;
+  transition: opacity calc(100ms * var(--motion-scale)) linear calc((7 - var(--s)) * 8ms * var(--motion-scale)), transform calc(160ms * var(--motion-scale)) ease-in calc((7 - var(--s)) * 8ms * var(--motion-scale)), background-color calc(150ms * var(--motion-scale));
 }
 
 .menu[data-open] .st {
   opacity: 1;
   transform: none;
-  transition: opacity 240ms ease-out calc(60ms + var(--s) * 24ms), transform 460ms var(--out) calc(60ms + var(--s) * 24ms), background-color 150ms;
+  transition: opacity calc(240ms * var(--motion-scale)) ease-out calc((60ms + var(--s) * 24ms) * var(--motion-scale)), transform calc(460ms * var(--motion-scale)) var(--out) calc((60ms + var(--s) * 24ms) * var(--motion-scale)), background-color calc(150ms * var(--motion-scale));
 }
 
 @keyframes paneIn {

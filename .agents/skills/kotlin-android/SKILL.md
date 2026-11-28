@@ -51,7 +51,11 @@ ui → domain ← data
   APIs Retrofit, repositórios e persistência.
 - `core/designsystem/`: `Color.kt` é **gerado** (`pnpm --filter @repo/mobile run
   generate:theme`, nunca à mão); `Type.kt`, `Shape.kt` e `BraidTheme`. Nenhuma
-  tela escreve um hexadecimal.
+  tela escreve um hexadecimal. `Motion.kt` também é gerado (`pnpm generate:motion`,
+  de `packages/theme/src/motion.ts`): toda transição lê dele o tempo compartilhado
+  com o web, ou passa o tempo de desenho por `Motion.ms` e a rigidez da mola por
+  `Motion.stiffness`; só laço e movimento reduzido ficam com número solto, marcado
+  `// fora da escala` (o teste de `packages/theme` confere).
 - `core/network/`: `BraidJson`, `createAuthApi`, `ApiClientFactory` (bearer,
   renovação num 401 e repetição única) e o módulo Hilt.
 

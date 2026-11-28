@@ -4,6 +4,7 @@ import android.provider.Settings
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -85,10 +86,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.braid.mobile.core.designsystem.BraidIcons
 import app.braid.mobile.core.designsystem.BraidMonoFont
+import app.braid.mobile.core.designsystem.Motion
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.SvgPart
 import app.braid.mobile.core.designsystem.braidBrand
 import app.braid.mobile.core.designsystem.braidTokens
+import app.braid.mobile.core.designsystem.scaledSpring
 import app.braid.mobile.core.designsystem.svgCircle
 import app.braid.mobile.domain.chat.ModelPicker
 import app.braid.mobile.domain.chat.ModelRow
@@ -118,19 +121,19 @@ class ModelActions(
 
 private val OpenEasing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
 private val CloseEasing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
-private const val SHEET_OPEN_MS = 480
-private const val SHEET_CLOSE_MS = 300
-private const val SCRIM_OPEN_MS = 380
-private const val SCRIM_CLOSE_MS = 220
-private const val BLOCK_MS = 380
-private const val STAR_MS = 200
-private const val RADIO_MS = 200
+private const val SHEET_OPEN_MS = Motion.SHEET_OPEN_MS
+private const val SHEET_CLOSE_MS = Motion.SHEET_CLOSE_MS
+private const val SCRIM_OPEN_MS = Motion.SCRIM_OPEN_MS
+private const val SCRIM_CLOSE_MS = Motion.SCRIM_CLOSE_MS
+private const val BLOCK_MS = Motion.SHEET_BLOCK_MS
+private const val STAR_MS = Motion.SHEET_TOGGLE_MS
+private const val RADIO_MS = Motion.SHEET_TOGGLE_MS
 private const val SCRIM_ALPHA = 0.5f
 private const val HAIRLINE_ALPHA = 0.7f
 private const val STAR_OFF_SCALE = 0.88f
 
 /** O atraso de cada um dos três blocos da folha ao abrir. */
-private val BlockDelays = listOf(100, 160, 220)
+private val BlockDelays = List(3) { Motion.SHEET_BLOCK_DELAY_MS + it * Motion.SHEET_BLOCK_STEP_MS }
 
 private val SheetTopCorner = 24.dp
 private val SheetSide = 20.dp
@@ -160,8 +163,8 @@ private fun <T> spec(
 
 /**
  * A folha da escolha do modelo. Fechada ([open] falso e a saída terminada) não ocupa nada. Aberta, é um diálogo de tela
- * inteira: o fundo escurece em 380 ms e a folha sobe em 480 ms; os três blocos sobem 18 dp e aparecem em fila. Fechar (o X, o
- * fundo ou o voltar do sistema, todos em [onClose]) a desce em 300 ms. Trocar o modelo não a fecha.
+ * inteira: o fundo escurece em `scrimOpen` e a folha sobe em `sheetOpen` (tempos do Motion); os três blocos sobem 18 dp e aparecem em fila. Fechar (o X, o
+ * fundo ou o voltar do sistema, todos em [onClose]) a desce em `sheetClose`. Trocar o modelo não a fecha.
  */
 @Composable
 internal fun ModelSheet(
@@ -368,7 +371,7 @@ private fun StarIcon(
     )
 }
 
-/** O círculo de seleção: o anel e, escolhido, o ponto verde-água dentro, que cresce em 200 ms. */
+/** O círculo de seleção: o anel e, escolhido, o ponto verde-água dentro, que cresce em `sheetToggle` (Motion). */
 @Composable
 private fun Radio(
     selected: Boolean,
@@ -712,7 +715,12 @@ private fun EffortBlock(
         SheetLabel("Esforço")
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val step = maxWidth / max(1, efforts.size)
-            val fill by animateDpAsState(step * level, label = "model-effort-fill")
+            val fill by animateDpAsState(
+                step * level,
+                // A mola padrão do `Dp` (`StiffnessMedium`, com o limite de `Dp`), na escala do Motion.
+                scaledSpring(visibilityThreshold = Dp.VisibilityThreshold),
+                label = "model-effort-fill",
+            )
             Box(
                 Modifier
                     .offset(x = step / 2, y = 13.dp)
