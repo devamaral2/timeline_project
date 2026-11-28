@@ -2,7 +2,7 @@ import { Controller, Get, Inject, Module, NotFoundException, Param, UseGuards } 
 import type { ArtifactDto } from "@repo/contracts";
 import { ARTIFACT_TASK_LINK_QUERY, ARTIFACT_REPOSITORY } from "../../infrastructure/persistence";
 import type { ArtifactTaskLinkQuery, ArtifactRepository } from "../../domain/ports";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";

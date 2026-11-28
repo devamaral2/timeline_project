@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Inject, Injectable, Module, type OnApplicationShutdown } from "@nestjs/common";
 import type {
   ArtifactTaskLinkQuery,
   ArtifactRepository,
@@ -13,50 +13,54 @@ import type {
   ScopedSqlQuery,
   TagRepository,
   WorkoutCatalog,
-} from "../../domain/ports";
-import { PostgresDatabase } from "./database/postgres-database";
-import { PostgresEntityBatchWriter } from "./agent-batch/postgres-entity-batch-writer";
-import { PostgresProjectQuery } from "./projects/postgres-project.query";
-import { PostgresProjectRepository } from "./projects/postgres-project.repository";
-import { PostgresScopedSqlQuery } from "./agent-sql/postgres-scoped-sql.query";
-import { PostgresWorkoutCatalog } from "./artifacts/postgres-workout.catalog";
-import { PostgresArtifactTaskLinkQuery } from "./artifacts/queries/postgres-artifact-task-link.query";
-import { PostgresArtifactRepository } from "./artifacts/repositories/postgres-artifact.repository";
-import { PostgresTaskCardQuery } from "./tasks/queries/postgres-task-card.query";
-import { PostgresTaskRequestLinkQuery } from "./tasks/queries/postgres-task-request-link.query";
-import { PostgresTaskRepository } from "./tasks/repositories/postgres-task.repository";
-import { PostgresTagRepository } from "./tasks/repositories/postgres-tag.repository";
-import { PostgresIdempotencyStore } from "./idempotency/postgres-idempotency.store";
-import { PostgresRecurrenceRepository } from "./recurrences/repositories/postgres-recurrence.repository";
-import { PostgresTranscriptionRequests } from "./transcription/postgres-transcription-requests";
-import { PostgresTaskRelations } from "./tasks/relations/postgres-task-relations";
-import type { TaskRelations } from "../../api-core/tasks/task-relations";
-import type { TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
+} from "../domain/ports";
+import type { TaskRelations } from "../api-core/tasks/task-relations";
+import type { TranscriptionRequests } from "../api-core/transcription/transcription-requests";
+import { PostgresDatabase } from "../infrastructure/persistence/database/postgres-database";
+import { PostgresEntityBatchWriter } from "../infrastructure/persistence/agent-batch/postgres-entity-batch-writer";
+import { PostgresProjectQuery } from "../infrastructure/persistence/projects/postgres-project.query";
+import { PostgresProjectRepository } from "../infrastructure/persistence/projects/postgres-project.repository";
+import { PostgresScopedSqlQuery } from "../infrastructure/persistence/agent-sql/postgres-scoped-sql.query";
+import { PostgresWorkoutCatalog } from "../infrastructure/persistence/artifacts/postgres-workout.catalog";
+import { PostgresArtifactTaskLinkQuery } from "../infrastructure/persistence/artifacts/queries/postgres-artifact-task-link.query";
+import { PostgresArtifactRepository } from "../infrastructure/persistence/artifacts/repositories/postgres-artifact.repository";
+import { PostgresTaskCardQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-card.query";
+import { PostgresTaskRequestLinkQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-request-link.query";
+import { PostgresTaskRepository } from "../infrastructure/persistence/tasks/repositories/postgres-task.repository";
+import { PostgresTagRepository } from "../infrastructure/persistence/tasks/repositories/postgres-tag.repository";
+import { PostgresIdempotencyStore } from "../infrastructure/persistence/idempotency/postgres-idempotency.store";
+import { PostgresRecurrenceRepository } from "../infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository";
+import { PostgresTranscriptionRequests } from "../infrastructure/persistence/transcription/postgres-transcription-requests";
+import { PostgresTaskRelations } from "../infrastructure/persistence/tasks/relations/postgres-task-relations";
+import {
+  ARTIFACT_REPOSITORY,
+  ARTIFACT_TASK_LINK_QUERY,
+  DATABASE,
+  ENTITY_BATCH_WRITER,
+  IDEMPOTENCY_STORE,
+  PROJECT_QUERY,
+  PROJECT_REPOSITORY,
+  RECURRENCE_REPOSITORY,
+  SCOPED_SQL_QUERY,
+  TAG_REPOSITORY,
+  TASK_CARD_QUERY,
+  TASK_RELATIONS,
+  TASK_REPOSITORY,
+  TASK_REQUEST_LINK_QUERY,
+  TRANSCRIPTION_REQUESTS,
+  WORKOUT_CATALOG,
+} from "../infrastructure/persistence/tokens";
 
-/**
- * Tokens de injecao. Sao strings, e nao symbols, porque o Nest os imprime tal
- * qual na mensagem de erro quando um provider nao resolve.
- *
- * As portas (`TaskRepository`, `TagRepository`, ...) sao interfaces e nao
- * existem em runtime: por isso quem as consome precisa de `@Inject(TOKEN)`
- * explicito.
- */
-export const DATABASE = "DATABASE";
-export const TASK_REPOSITORY = "TASK_REPOSITORY";
-export const TASK_CARD_QUERY = "TASK_CARD_QUERY";
-export const TASK_REQUEST_LINK_QUERY = "TASK_REQUEST_LINK_QUERY";
-export const PROJECT_QUERY = "PROJECT_QUERY";
-export const PROJECT_REPOSITORY = "PROJECT_REPOSITORY";
-export const TAG_REPOSITORY = "TAG_REPOSITORY";
-export const ARTIFACT_REPOSITORY = "ARTIFACT_REPOSITORY";
-export const ARTIFACT_TASK_LINK_QUERY = "ARTIFACT_TASK_LINK_QUERY";
-export const WORKOUT_CATALOG = "WORKOUT_CATALOG";
-export const RECURRENCE_REPOSITORY = "RECURRENCE_REPOSITORY";
-export const SCOPED_SQL_QUERY = "SCOPED_SQL_QUERY";
-export const ENTITY_BATCH_WRITER = "ENTITY_BATCH_WRITER";
-export const IDEMPOTENCY_STORE = "IDEMPOTENCY_STORE";
-export const TRANSCRIPTION_REQUESTS = "TRANSCRIPTION_REQUESTS";
-export const TASK_RELATIONS = "TASK_RELATIONS";
+/** Adaptador do lifecycle antigo: o banco tem `close` explicito e o Nest chama no shutdown. */
+@Injectable()
+export class DatabaseLifecycle implements OnApplicationShutdown {
+  constructor(@Inject(DATABASE) private readonly database: PostgresDatabase) {}
+
+  async onApplicationShutdown(): Promise<void> {
+    await this.database.close();
+  }
+}
+
 
 function requireDatabaseUrl(): string {
   const value = process.env.DATABASE_URL;
@@ -143,6 +147,7 @@ function requireDatabaseUrl(): string {
       inject: [DATABASE],
       useFactory: (database: PostgresDatabase): TranscriptionRequests => new PostgresTranscriptionRequests(database.db),
     },
+    DatabaseLifecycle,
   ],
   exports: [
     DATABASE,

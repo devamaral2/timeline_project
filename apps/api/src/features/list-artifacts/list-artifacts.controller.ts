@@ -3,7 +3,7 @@ import type { ArtifactDto } from "@repo/contracts";
 import { ARTIFACT_TYPES, type ArtifactType } from "../../domain";
 import { ARTIFACT_TASK_LINK_QUERY, ARTIFACT_REPOSITORY } from "../../infrastructure/persistence";
 import type { ArtifactTaskLinkQuery, ArtifactRepository } from "../../domain/ports";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { parseLimit } from "../../api-core/http-input-validation";
 import { normalizeSearch, parseEnum } from "../../api-core/list-filters";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";

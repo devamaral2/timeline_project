@@ -10,7 +10,7 @@ import {
   type OperationDoc,
   type QueryDoc,
   type SchemaName,
-} from "./openapi-operations";
+} from "../common/openapi-operations";
 
 type JsonObject = Record<string, unknown>;
 

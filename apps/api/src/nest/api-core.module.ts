@@ -5,8 +5,8 @@ import {
   TASK_REPOSITORY,
   RECURRENCE_REPOSITORY,
   WORKOUT_CATALOG,
-  PersistenceModule,
-} from "../infrastructure/persistence";
+} from "../infrastructure/persistence/tokens";
+import { PersistenceModule } from "./persistence.module";
 import type {
   ArtifactRepository,
   EntityBatchWriter,
@@ -14,12 +14,12 @@ import type {
   RecurrenceRepository,
   WorkoutCatalog,
 } from "../domain/ports";
-import { JobsModule } from "../infrastructure/jobs/jobs.module";
+import { JobsModule } from "./jobs.module";
 import { getCurrentJob } from "../infrastructure/jobs/job-context";
-import { ArtifactBuilder } from "./artifacts/services/artifact-builder.service";
-import { CreateTaskUseCase } from "./tasks/create-task.usecase";
-import { MaterializeRecurrencesUseCase } from "./recurrences/materialize-recurrences.usecase";
-import { REQUEST_EXPORTS, REQUEST_PROVIDERS } from "./requests/request-providers";
+import { ArtifactBuilder } from "../api-core/artifacts/services/artifact-builder.service";
+import { CreateTaskUseCase } from "../api-core/tasks/create-task.usecase";
+import { MaterializeRecurrencesUseCase } from "../api-core/recurrences/materialize-recurrences.usecase";
+import { REQUEST_EXPORTS, REQUEST_PROVIDERS } from "./request-providers";
 
 /** A espera na fila e as novas tentativas nao podem mudar o que "hoje" ou "agora" queriam dizer no envio. */
 export function requestClock(): Date {

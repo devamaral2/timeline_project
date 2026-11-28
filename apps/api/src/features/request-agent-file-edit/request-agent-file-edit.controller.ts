@@ -1,7 +1,7 @@
 import { Body, Controller, HttpCode, HttpStatus, Inject, Module, NotFoundException, Post, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 import type { RequestDto } from "@repo/contracts";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { clientMessageIdSchema } from "../../api-core/agent/agent-input.schemas";
 import { RequestOperations } from "../../api-core/requests/request-operations";
 import { assertConfigOwner, configAsNotFound, configPath, parseConfigInput } from "../../api-core/agent/config/agent-config-access";

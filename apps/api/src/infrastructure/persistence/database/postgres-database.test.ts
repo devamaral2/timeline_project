@@ -6,7 +6,7 @@ test("shuts down the pool exactly once", async () => {
   const pool = { end } as unknown as ConstructorParameters<typeof PostgresDatabase>[0];
   const database = new PostgresDatabase(pool);
 
-  await database.onApplicationShutdown();
+  await database.close();
 
   expect(end).toHaveBeenCalledTimes(1);
 });

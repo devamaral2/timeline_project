@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestError } from "../common/http-errors";
 
 /** Valor de query com lista separada por virgula ("todo,doing"); vazio vira `undefined`. */
 export function parseEnumList<T extends string>(name: string, raw: string | undefined, allowed: readonly T[]): T[] | undefined {
@@ -6,7 +6,7 @@ export function parseEnumList<T extends string>(name: string, raw: string | unde
   const values = raw.split(",").map((value) => value.trim());
   for (const value of values) {
     if (!(allowed as readonly string[]).includes(value)) {
-      throw new BadRequestException(`Invalid ${name}: "${value}". Allowed: ${allowed.join(", ")}`);
+      throw new BadRequestError(`Invalid ${name}: "${value}". Allowed: ${allowed.join(", ")}`);
     }
   }
   return [...new Set(values)] as T[];
@@ -15,7 +15,7 @@ export function parseEnumList<T extends string>(name: string, raw: string | unde
 export function parseEnum<T extends string>(name: string, raw: string | undefined, allowed: readonly T[]): T | undefined {
   if (raw === undefined || raw.trim() === "") return undefined;
   if (!(allowed as readonly string[]).includes(raw)) {
-    throw new BadRequestException(`Invalid ${name}: "${raw}". Allowed: ${allowed.join(", ")}`);
+    throw new BadRequestError(`Invalid ${name}: "${raw}". Allowed: ${allowed.join(", ")}`);
   }
   return raw as T;
 }
@@ -23,7 +23,7 @@ export function parseEnum<T extends string>(name: string, raw: string | undefine
 export function parseInstant(name: string, raw: string | undefined): Date | undefined {
   if (raw === undefined || raw === "") return undefined;
   const date = new Date(raw);
-  if (Number.isNaN(date.getTime())) throw new BadRequestException(`Invalid ${name} date`);
+  if (Number.isNaN(date.getTime())) throw new BadRequestError(`Invalid ${name} date`);
   return date;
 }
 

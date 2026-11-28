@@ -5,7 +5,7 @@ import { expect, test } from "vitest";
 import { z } from "zod";
 import { AppModule } from "../app.module";
 import { describeOperations } from "./openapi";
-import { documentedOperations, documentedSchemas, documentedTags } from "./openapi-operations";
+import { documentedOperations, documentedSchemas, documentedTags } from "../common/openapi-operations";
 
 const ROTA_ANTIGA = "/api/events"; // a rota antiga: o catálogo não pode tê-la
 type ModuleLike = (new (...args: never[]) => unknown) | { module: ModuleLike; imports?: ModuleLike[]; controllers?: ControllerClass[] };

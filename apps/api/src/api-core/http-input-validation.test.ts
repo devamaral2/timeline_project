@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestError } from "../common/http-errors";
 import { describe, expect, test } from "vitest";
 import { encodeAgendaCursor } from "../infrastructure/persistence/tasks/queries/agenda-cursor";
 import {
@@ -51,7 +51,7 @@ describe("assertTaskFields", () => {
       expect(creating({ status })).not.toThrow();
     }
     expect(creating({ kind: "request" })).toThrow("Invalid kind");
-    expect(creating({ kind: "step" })).toThrow(BadRequestException);
+    expect(creating({ kind: "step" })).toThrow(BadRequestError);
     expect(creating({ kind: 1 })).toThrow("Invalid kind");
     expect(creating({ status: "queued" })).toThrow("Invalid status");
     expect(creating({ status: "scheduled" })).toThrow("Invalid status");
@@ -126,7 +126,7 @@ describe("assertTaskFields", () => {
     const antigo = (campo: string) => campo.replace("task", velho).replace("Task", velho[0].toUpperCase() + velho.slice(1));
     for (const field of ["taskId", "previousTaskIds", "nextTaskIds", "missed", "notes"]) {
       const named = field === "missed" || field === "notes" ? field : antigo(field);
-      expect(creating({ [named]: ["x"] }), named).toThrow(BadRequestException);
+      expect(creating({ [named]: ["x"] }), named).toThrow(BadRequestError);
       expect(editing({ [named]: ["x"] }), named).toThrow(`Invalid field ${named}`);
     }
     expect(editing({ taskId: "t1", parentTaskId: null })).not.toThrow();
@@ -143,8 +143,8 @@ describe("assertExpectedRevision", () => {
     expect(() => assertExpectedRevision({})).toThrow("Invalid expectedRevision");
     expect(() => assertExpectedRevision({ expectedRevision: 0 })).toThrow("Invalid expectedRevision");
     expect(() => assertExpectedRevision({ expectedRevision: 1.5 })).toThrow("Invalid expectedRevision");
-    expect(() => assertExpectedRevision({ expectedRevision: "1" })).toThrow(BadRequestException);
-    expect(() => assertExpectedRevision(undefined as never)).toThrow(BadRequestException);
+    expect(() => assertExpectedRevision({ expectedRevision: "1" })).toThrow(BadRequestError);
+    expect(() => assertExpectedRevision(undefined as never)).toThrow(BadRequestError);
   });
 });
 
@@ -155,7 +155,7 @@ describe("assertAgendaCursor", () => {
     expect(() => assertAgendaCursor(cursor)).not.toThrow();
     expect(() => assertAgendaCursor("nao-e-um-cursor")).toThrow("Invalid cursor");
     expect(() => assertAgendaCursor(Buffer.from('{"startedAt":"x","id":"e"}').toString("base64url"))).toThrow(
-      BadRequestException,
+      BadRequestError,
     );
   });
 });
@@ -168,7 +168,7 @@ describe("parseLimit", () => {
     expect(() => parseLimit("0")).toThrow("Invalid limit");
     expect(() => parseLimit("101")).toThrow("Invalid limit");
     expect(() => parseLimit("2.5")).toThrow("Invalid limit");
-    expect(() => parseLimit("dez")).toThrow(BadRequestException);
+    expect(() => parseLimit("dez")).toThrow(BadRequestError);
   });
 });
 
@@ -199,7 +199,7 @@ describe("assertArtifactRequest", () => {
   test("refuses the old name of the task id list", () => {
     const antigo = "taskIds".replace("task", "event");
     expect(creating({ data: { body: "nota" }, [antigo]: [] })).toThrow(`Invalid field ${antigo}`);
-    expect(editing({ [antigo]: [] })).toThrow(BadRequestException);
+    expect(editing({ [antigo]: [] })).toThrow(BadRequestError);
     expect(creating({ data: { body: "nota" }, taskIds: ["t1"] })).not.toThrow();
   });
 
@@ -235,7 +235,7 @@ describe("assertRecurrenceTemplate", () => {
     expect(() => assertRecurrenceTemplate(undefined, true)).toThrow("Invalid template");
     expect(() => assertRecurrenceTemplate(null, false)).toThrow("Invalid template");
     expect(() => assertRecurrenceTemplate("Correr", true)).toThrow("Invalid template");
-    expect(() => assertRecurrenceTemplate([], false)).toThrow(BadRequestException);
+    expect(() => assertRecurrenceTemplate([], false)).toThrow(BadRequestError);
   });
 });
 
@@ -252,7 +252,7 @@ describe("list filters", () => {
   test("parseEnum reads one value", () => {
     expect(parseEnum("actor", "human", ["human", "agent"])).toBe("human");
     expect(parseEnum("actor", "", ["human", "agent"])).toBeUndefined();
-    expect(() => parseEnum("actor", "bot", ["human", "agent"])).toThrow(BadRequestException);
+    expect(() => parseEnum("actor", "bot", ["human", "agent"])).toThrow(BadRequestError);
   });
 
   test("parseInstant reads a date and names the field it refuses", () => {

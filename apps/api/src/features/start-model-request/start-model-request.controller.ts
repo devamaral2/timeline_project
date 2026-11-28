@@ -3,7 +3,7 @@ import type { RequestDto } from "@repo/contracts";
 import { modelSelectionSchema } from "@repo/contracts/schemas";
 import { z } from "zod";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { modelModeEnabled, selectionProblem } from "../../api-core/requests/model-catalog";
 import { modelAgendaOwner } from "../../api-core/requests/model-config";
 import { RequestOperations } from "../../api-core/requests/request-operations";
