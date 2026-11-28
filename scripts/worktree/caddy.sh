@@ -23,10 +23,10 @@ MAIN_ROOT="$(main_worktree_root)"
 TEMPLATE="$MAIN_ROOT/Caddyfile.tmpl"
 OUTPUT="$MAIN_ROOT/Caddyfile"
 
-# Imprime uma linha por worktree: slug|caminho|web|api|auth|postgres|estado
+# Imprime uma linha por worktree: slug|caminho|web|api|auth|estado
 # `estado` e "principal", "provisionada" ou "nao-provisionada".
 list_worktrees() {
-  local path slug base n env web api auth pg state
+  local path slug base n env web api auth state
   local -A seen=()
   while read -r path; do
     [ -d "$path" ] || continue
@@ -50,17 +50,15 @@ list_worktrees() {
       web="${web:-3000}"
       api="$(read_env_var "$env" API_PORT)"; api="${api:-3001}"
       auth="$(read_env_var "$env" AUTH_PORT)"; auth="${auth:-3002}"
-      pg="$(read_env_var "$env" POSTGRES_HOST_PORT)"; pg="${pg:-54391}"
     elif [ -n "$web" ]; then
       state="provisionada"
       api="$(read_env_var "$env" API_PORT)"
       auth="$(read_env_var "$env" AUTH_PORT)"
-      pg="$(read_env_var "$env" POSTGRES_HOST_PORT)"
     else
       state="nao-provisionada"
-      web="-"; api="-"; auth="-"; pg="-"
+      web="-"; api="-"; auth="-"
     fi
-    printf '%s|%s|%s|%s|%s|%s|%s\n' "$slug" "$path" "$web" "$api" "$auth" "$pg" "$state"
+    printf '%s|%s|%s|%s|%s|%s\n' "$slug" "$path" "$web" "$api" "$auth" "$state"
   done < <(git -C "$MAIN_ROOT" worktree list --porcelain | awk '/^worktree /{sub(/^worktree /, ""); print}') \
     | flag_port_conflicts
 }
@@ -75,24 +73,24 @@ flag_port_conflicts() {
         split(rows[r], f, "|")
         dup = 0
         for (i = 3; i <= 5; i++) if (f[i] != "-" && count[f[i]] > 1) dup = 1
-        if (dup) f[7] = f[7] "+conflito"
-        print f[1], f[2], f[3], f[4], f[5], f[6], f[7]
+        if (dup) f[6] = f[6] "+conflito"
+        print f[1], f[2], f[3], f[4], f[5], f[6]
       }
     }'
 }
 
 render_table() {
-  local slug path web api auth pg state
-  printf '# %-24s %-6s %-6s %-6s %-8s %s\n' worktree web api auth postgres estado
-  while IFS='|' read -r slug path web api auth pg state; do
-    printf '# %-24s %-6s %-6s %-6s %-8s %s\n' "$slug" "$web" "$api" "$auth" "$pg" "$state"
+  local slug path web api auth state
+  printf '# %-24s %-6s %-6s %-6s %s\n' worktree web api auth estado
+  while IFS='|' read -r slug path web api auth state; do
+    printf '# %-24s %-6s %-6s %-6s %s\n' "$slug" "$web" "$api" "$auth" "$state"
   done <<<"$1"
   printf '#\n'
 }
 
 render_sites() {
-  local slug path web api auth pg state svc port
-  while IFS='|' read -r slug path web api auth pg state; do
+  local slug path web api auth state svc port
+  while IFS='|' read -r slug path web api auth state; do
     if [ "$state" = "nao-provisionada" ]; then
       printf '# %s: nao provisionada (rode `pnpm worktree:provision` nela)\n\n' "$slug"
       continue
@@ -153,9 +151,9 @@ port_state() {
 }
 
 cmd_status() {
-  local slug path web api auth pg state
+  local slug path web api auth state
   printf '%-22s %-12s %-12s %-12s %s\n' worktree web api auth url
-  while IFS='|' read -r slug path web api auth pg state; do
+  while IFS='|' read -r slug path web api auth state; do
     printf '%-22s %-12s %-12s %-12s %s\n' "$slug" \
       "$(port_state "$web")" "$(port_state "$api")" "$(port_state "$auth")" \
       "$([ "$state" = "nao-provisionada" ] && echo "(nao provisionada)" || echo "https://${slug}.braid.local:${CADDY_HTTPS_PORT}")"

@@ -42,8 +42,8 @@ exigem estes campos no Environment:
 Para achar o seu id, consulte o banco do auth:
 
 ```bash
-# Local (Postgres compartilhado da porta 54391; ajuste o nome do banco da worktree)
-psql "$AUTH_DATABASE_URL" -c "select id, email from users"
+# Local: o SQLite do auth deste checkout (ADR 0025); rode da raiz
+node -e 'const { DatabaseSync } = require("node:sqlite"); console.table(new DatabaseSync(".data/auth.sqlite", { readOnly: true }).prepare("select id, email from users").all())'
 ```
 
 ```bash
@@ -70,7 +70,7 @@ Esperado: sem variável ausente.
 Pré-requisito: Docker rodando e o 1Password configurado como em
 [onepassword.md](./onepassword.md).
 
-Há **um Hermes por máquina**, compartilhado pelas worktrees (como o Postgres),
+Há **um Hermes por máquina**, compartilhado pelas worktrees,
 porque o volume não pode ser aberto por dois gateways. Consequência:
 as automações e a memória do Hermes local valem para todas as worktrees.
 

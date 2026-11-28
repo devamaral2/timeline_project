@@ -83,4 +83,4 @@ for port in "${ports[@]}"; do
   fi
 done
 
-echo "Web, API e Auth encerrados. O Postgres continua rodando."
+echo "Web, API e Auth encerrados."

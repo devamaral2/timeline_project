@@ -25,11 +25,11 @@ tabela `jobs` do banco da API, entao ja nasce isolada por worktree.
 
 1. **Confirme se a worktree atual ja esta provisionada.** Rode:
    ```bash
-   grep -q COMPOSE_PROJECT_NAME .env.local 2>/dev/null && echo provisionada || echo nao-provisionada
+   grep -q '^WORKTREE_SLUG=' .env.local 2>/dev/null && echo provisionada || echo nao-provisionada
    ```
-   Se `nao-provisionada`, rode `bash scripts/worktree/provision-env.sh` (ou
-   `pnpm worktree:provision`) de dentro da worktree. Isso gera o
-   `.env.local`, cria as bases da worktree, roda as migrations, cria o
+   Se `nao-provisionada`, rode `pnpm worktree:provision` de dentro da
+   worktree (ele injeta o ambiente do 1Password). Isso gera o `.env.local`,
+   cria os bancos SQLite da worktree com as migrations, cria o
    admin `admin@admin.com`, builda os pacotes e sobe web/api/auth. Leva um tempo na primeira vez — normal.
    Se voce esta na worktree principal do checkout (a original, nao uma criada
    com `git worktree add`), o script se recusa a rodar de proposito: a
@@ -38,7 +38,7 @@ tabela `jobs` do banco da API, entao ja nasce isolada por worktree.
 
 2. **Leia as portas desta worktree** direto do `.env.local`:
    ```bash
-   grep -E '^(WEB_PORT|API_PORT|AUTH_PORT|POSTGRES_HOST_PORT)=' .env.local
+   grep -E '^(WEB_PORT|API_PORT|AUTH_PORT)=' .env.local
    ```
 
 3. **Suba so o que o teste precisa**, nunca a stack inteira por reflexo.
@@ -73,15 +73,15 @@ tabela `jobs` do banco da API, entao ja nasce isolada por worktree.
      que a mudanca afeta, nao so a tela inicial.
 
 6. **Ao terminar**, encerre os processos de dev que voce subiu em background
-   (as bases da worktree ficam; isso e normal entre sessoes). Só rode
+   (os bancos em `.data/` ficam; isso e normal entre sessoes). Só rode
    `pnpm worktree:teardown <caminho>` quando for remover a worktree de vez —
-   isso apaga as bases dela.
+   os bancos saem junto com a pasta.
 
 ## O que nao fazer
 
 - Nao rode `scripts/worktree/provision-env.sh` na worktree principal sem
   motivo forte — ela nao foi feita para isso e o script bloqueia por padrao.
-- Nao assuma as portas 3000/3001/3002/54391 dentro de uma worktree secundaria
+- Nao assuma as portas 3000/3001/3002 dentro de uma worktree secundaria
   — elas so valem no checkout principal. Leia sempre do `.env.local` local.
 - Nao confunda isto com os testes automatizados (`npm run --silent test:ai`)
   — aquilo continua sendo a forma de rodar a suite Vitest; esta skill e para

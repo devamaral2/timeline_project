@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Cria uma worktree nova e a deixa rodando no navegador: pnpm install,
-# portas livres, alias <slug>.braid.local (Caddy + /etc/hosts), bases proprias
-# no Postgres compartilhado, migrations, admin e servidores de dev. Os passos estao em provision-env.sh; nenhum e opcional.
+# portas livres, alias <slug>.braid.local (Caddy + /etc/hosts), bancos SQLite
+# proprios em .data/, migrations, admin e servidores de dev. Os passos estao em
+# provision-env.sh; nenhum e opcional. Nao usa Docker.
 #
 # Uso: bash scripts/worktree/setup.sh <caminho> [args do git worktree add...]
 # Ex.:  bash scripts/worktree/setup.sh .worktrees/minha-feature -b minha-feature
@@ -26,7 +27,6 @@ REPO_ROOT="$(worktree_root)"
 cd "$REPO_ROOT"
 
 # Falha antes de criar qualquer coisa se um pre-requisito nao esta pronto.
-command -v docker >/dev/null || { echo "docker nao encontrado." >&2; exit 1; }
 bash "$SCRIPT_DIR/hosts.sh" ready
 
 WORKTREE_PATH="$1"

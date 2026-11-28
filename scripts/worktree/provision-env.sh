@@ -2,12 +2,12 @@
 # Provisiona (ou reaproveita) o ambiente isolado de UMA worktree. Idempotente.
 #
 # Passos (nenhum e opcional):
-#   1. .env.local com portas livres e nomes proprios (bases, dominio)
+#   1. .env.local com portas livres e dominio proprio
 #   2. alias <slug>.braid.local: /etc/hosts + Caddy (HTTPS na 8443, CA local do Caddy)
 #   3. node_modules integros (pnpm install reaplicado + binarios conferidos)
 #   4. bancos SQLite da propria worktree: .data/api.sqlite e .data/auth.sqlite
 #      (ADR 0024 e 0025); nenhum Postgres
-#   5. migrations da API e do Auth
+#   5. build das dependencias de workspace da API e do Auth e migrations das duas
 #   6. usuario admin (senha de ADMIN_PASSWORD)
 #   7. build, sonda de saude (bases, tabela de jobs, admin) e servidores de dev
 #   8. API respondendo, login de teste e link para abrir no navegador
@@ -46,8 +46,6 @@ for var in ADMIN_PASSWORD; do
 done
 
 SLUG="$(worktree_slug)"
-DB_NAME="$(db_name_for_slug "$SLUG")"
-AUTH_DB_NAME="${DB_NAME}_auth"
 HOST="${SLUG}.braid.local"
 # HTTPS: fora de `localhost` o navegador so libera geolocalizacao e afins em origem segura.
 APP_URL="https://${HOST}:${CADDY_HTTPS_PORT}"
@@ -71,8 +69,9 @@ if [ -z "$(read_env_var "$ENV_FILE" WORKTREE_SLUG)" ]; then
   AUTH_PORT="$(find_unreserved_port $((API_PORT + 1)))"
   RESERVED_PORTS="$RESERVED_PORTS $AUTH_PORT"
   MCP_PORT="$(find_unreserved_port $((AUTH_PORT + 1)))"
-  # Este arquivo guarda so configuracao local derivada. Segredos e URLs com
-  # senha continuam vindo do 1Password (o carregador monta as URLs das bases).
+  # Este arquivo guarda so configuracao local derivada; os segredos continuam
+  # vindo do 1Password. Com WORKTREE_SLUG, o carregador deriva das portas as URLs
+  # entre os servicos.
   cat > "$ENV_FILE" <<EOT
 WORKTREE_SLUG=${SLUG}
 WEB_PORT=${WEB_PORT}
@@ -81,9 +80,6 @@ API_HOST=127.0.0.1
 AUTH_PORT=${AUTH_PORT}
 AUTH_HOST=127.0.0.1
 MCP_PORT=${MCP_PORT}
-POSTGRES_HOST_PORT=${SHARED_PG_PORT}
-POSTGRES_DB=${DB_NAME}
-AUTH_POSTGRES_DB=${AUTH_DB_NAME}
 AUTH_WEB_APP_URL=${APP_URL}
 EOT
   echo "Escrevi $ENV_FILE."
@@ -96,13 +92,13 @@ AUTH_PORT="$(read_env_var "$ENV_FILE" AUTH_PORT)"
 echo "web=$WEB_PORT api=$API_PORT auth=$AUTH_PORT"
 
 # O carregador do 1Password le o .env.local ANTES deste script rodar; na
-# primeira vez ele ainda nao existia e o ambiente herdado aponta para as bases
+# primeira vez ele ainda nao existia e o ambiente herdado tem as portas e URLs
 # da principal. Recarrega o ambiente (agora com o .env.local) uma unica vez.
 if [ "${BRAID_ENV_RELOADED:-}" != "1" ]; then
   echo "Recarregando o ambiente com o .env.local da worktree..."
   BRAID_ENV_RELOADED=1 exec node scripts/onepassword/exec.mjs bash scripts/worktree/provision-env.sh
 fi
-# Trava: nunca migrar/criar admin se as URLs nao apontam para as bases desta worktree.
+# Trava: nunca migrar/criar admin se os caminhos nao apontam para os bancos desta worktree.
 # O SQLite da API fica dentro da worktree; um API_DATABASE_PATH herdado apontaria para o de outra.
 if [ -n "${API_DATABASE_PATH:-}" ]; then echo "API_DATABASE_PATH definido ('${API_DATABASE_PATH}'); a worktree usa o padrao .data/api.sqlite. Abortando." >&2; exit 1; fi
 if [ -n "${AUTH_DATABASE_PATH:-}" ]; then echo "AUTH_DATABASE_PATH definido ('${AUTH_DATABASE_PATH}'); a worktree usa o padrao .data/auth.sqlite. Abortando." >&2; exit 1; fi
@@ -130,6 +126,9 @@ echo "API em .data/api.sqlite e Auth em .data/auth.sqlite; as migrations do pass
 
 # --- 5. migrations -------------------------------------------------------------
 step 5 "Migrations (API e Auth)"
+# As migrations importam os pacotes de workspace pelo dist/, que nao existe numa
+# worktree nova. O `^...` compila so as dependencias, na ordem certa, sem os apps.
+pnpm turbo run build --filter='@repo/api^...' --filter='@repo/auth^...'
 pnpm db:migrate
 pnpm --filter @repo/auth run db:migrate
 

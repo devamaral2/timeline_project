@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Remove uma worktree: encerra os servidores de dev, apaga as bases dela no
-# Postgres compartilhado (ou o container proprio, no modelo antigo), remove a
-# worktree do git e atualiza Caddy e /etc/hosts. Destrutivo: apaga os dados
-# daquela worktree (a fila de jobs de IA e uma tabela da base e vai junto).
+# Remove uma worktree: encerra os servidores de dev, remove a worktree do git e
+# atualiza Caddy e /etc/hosts. Destrutivo: apaga os dados daquela worktree. Os
+# bancos SQLite sao arquivos em .data/ dentro dela (ADR 0024 e 0025) e saem junto
+# com a pasta, inclusive a fila de jobs de IA, que e uma tabela do banco da API.
 #
-# Precisa do ambiente do 1Password (use `pnpm worktree:teardown <caminho>`).
+# So uma worktree do modelo antigo (COMPOSE_PROJECT_NAME no .env.local) usa
+# Docker aqui, para derrubar o Postgres proprio dela; esse caso precisa do
+# ambiente do 1Password (use `pnpm worktree:teardown <caminho>`).
 # Recusa worktree com mudancas nao commitadas, salvo TEARDOWN_FORCE=1.
 #
 # Uso: bash scripts/worktree/teardown.sh <caminho-da-worktree>
@@ -26,7 +28,8 @@ if [ ! -d "$WORKTREE_PATH" ]; then
 fi
 
 # Antes de apagar qualquer dado: se a worktree tem mudancas nao commitadas, o
-# `git worktree remove` recusaria no fim e as bases ja teriam sido destruidas.
+# `git worktree remove` recusaria no fim, depois de ja ter derrubado os servidores
+# (e, no modelo antigo, destruido o banco).
 if [ -n "$(git -C "$WORKTREE_PATH" status --porcelain 2>/dev/null)" ] && [ "${TEARDOWN_FORCE:-}" != "1" ]; then
   echo "A worktree '$WORKTREE_PATH' tem mudancas nao commitadas; nada foi apagado." >&2
   git -C "$WORKTREE_PATH" status --short | head -10 >&2
@@ -42,23 +45,11 @@ SLUG="$(read_env_var "$ENV_FILE" WORKTREE_SLUG)"
 if [ -n "$SLUG" ]; then
   echo "Encerrando servidores de dev de '$SLUG'..."
   bash "$WORKTREE_PATH/scripts/worktree/stop-dev.sh" || echo "Aviso: nao consegui encerrar todos os servidores." >&2
-
-  PG_CONTAINER="$(shared_pg_container)"
-  if [ -n "$PG_CONTAINER" ]; then
-    for db in "$(read_env_var "$ENV_FILE" POSTGRES_DB)" "$(read_env_var "$ENV_FILE" AUTH_POSTGRES_DB)"; do
-      [ -n "$db" ] || continue
-      echo "Apagando a base '$db' de $PG_CONTAINER..."
-      docker exec -i "$PG_CONTAINER" psql -v ON_ERROR_STOP=1 -U "${POSTGRES_USER:?POSTGRES_USER ausente (use pnpm worktree:teardown)}" -d postgres \
-        -c "DROP DATABASE IF EXISTS \"${db}\" WITH (FORCE)"
-    done
-  else
-    echo "Aviso: Postgres compartilhado parado; as bases de '$SLUG' ficaram." >&2
-  fi
 elif [ -n "$PROJECT_NAME" ]; then
   echo "Derrubando Postgres do projeto '$PROJECT_NAME' (container + volume)..."
   docker compose --env-file "$ENV_FILE" --project-name "$PROJECT_NAME" -f "$WORKTREE_PATH/infra/docker-compose.local.yml" down -v || true
 else
-  echo "Nao achei COMPOSE_PROJECT_NAME em $ENV_FILE — pulando docker compose down." >&2
+  echo "Sem ambiente provisionado em $ENV_FILE; nada a encerrar."
 fi
 
 echo "Removendo a worktree do git..."

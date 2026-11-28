@@ -28,6 +28,10 @@ const DEFAULT_SCOPE_OPTIONAL_KEYS = new Set([
   "HERMES_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "MCP_TOKEN", "MCP_OWNER_USER_ID",
   // Servico local de transcricao (apps/transcriber): roda no computador de casa, nao em `pnpm dev`.
   "TRANSCRIBER_API_URL", "TRANSCRIBER_DEVICE_KEY", "HF_TOKEN",
+  // API e auth em SQLite (ADR 0024 e 0025): o Postgres antigo so serve a copia unica dos dados do auth e ao teardown
+  // de worktree do modelo antigo.
+  "POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB", "POSTGRES_HOST_PORT",
+  "DATABASE_URL", "AUTH_DATABASE_URL", "AUTH_TEST_DATABASE_URL",
 ]);
 const SCOPES = Object.freeze({
   "api-runtime": {
@@ -107,6 +111,8 @@ const SCOPES = Object.freeze({
   },
 });
 const LOCAL_OVERRIDE_KEYS = new Set([
+  // Marca o .env.local de uma worktree: com ele, as URLs entre os servicos saem das portas dela.
+  "WORKTREE_SLUG",
   "AGENT_CONFIG_OWNER_USER_ID",
   "WEB_PORT",
   "API_PORT",
@@ -151,7 +157,7 @@ export function readEnvKeys(file = ENV_EXAMPLE) {
     .filter(Boolean);
 }
 
-function readLocalOverrides(file = resolve(ROOT, ".env.local")) {
+export function readLocalOverrides(file = resolve(ROOT, ".env.local")) {
   if (!existsSync(file)) return {};
   const overrides = {};
   for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
@@ -166,16 +172,16 @@ export function applyLocalOverrides(environment, overrides) {
   if (overrides.API_PORT) {
     env.API_SERVICE_URL = `http://127.0.0.1:${overrides.API_PORT}`;
   }
-  if (!overrides.POSTGRES_HOST_PORT) return env;
+  // POSTGRES_HOST_PORT tambem vale: e o que o .env.local da principal, sem WORKTREE_SLUG, usa.
+  if (!overrides.WORKTREE_SLUG && !overrides.POSTGRES_HOST_PORT) return env;
 
-  const user = encodeURIComponent(env.POSTGRES_USER);
-  const password = encodeURIComponent(env.POSTGRES_PASSWORD);
-  const host = `127.0.0.1:${overrides.POSTGRES_HOST_PORT}`;
-  const database = encodeURIComponent(env.POSTGRES_DB);
-  const authDatabase = encodeURIComponent(overrides.AUTH_POSTGRES_DB ?? `${env.POSTGRES_DB}_auth`);
-  env.DATABASE_URL = `postgresql://${user}:${password}@${host}/${database}`;
-  env.AUTH_DATABASE_URL = `postgresql://${user}:${password}@${host}/${authDatabase}`;
-  env.AUTH_DATABASE_MIGRATION_URL = env.AUTH_DATABASE_URL;
+  // So para `db:copy-from-postgres`: aponta a URL para o Postgres antigo local.
+  if (overrides.POSTGRES_HOST_PORT && env.POSTGRES_USER && env.POSTGRES_PASSWORD && env.POSTGRES_DB) {
+    const user = encodeURIComponent(env.POSTGRES_USER);
+    const password = encodeURIComponent(env.POSTGRES_PASSWORD);
+    const authDatabase = encodeURIComponent(overrides.AUTH_POSTGRES_DB ?? `${env.POSTGRES_DB}_auth`);
+    env.AUTH_DATABASE_URL = `postgresql://${user}:${password}@127.0.0.1:${overrides.POSTGRES_HOST_PORT}/${authDatabase}`;
+  }
   // O browser fala com o gateway do Auth. A API continua sendo um destino
   // interno, usado somente pelo Auth através de API_SERVICE_URL.
   env.BACKEND_URL = `http://127.0.0.1:${overrides.AUTH_PORT ?? env.AUTH_PORT}`;

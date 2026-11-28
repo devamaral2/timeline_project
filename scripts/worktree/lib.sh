@@ -15,7 +15,7 @@ main_worktree_root() {
 }
 
 # Slug minúsculo/hífen a partir do nome do diretório da worktree atual.
-# Usado para nomear o projeto do Docker Compose e as bases do Postgres.
+# Usado no dominio <slug>.braid.local e gravado como WORKTREE_SLUG no .env.local.
 worktree_slug() {
   slugify "$(basename "$(worktree_root)")"
 }
@@ -35,21 +35,6 @@ read_env_var() {
   local file="$1" key="$2"
   [ -f "$file" ] || return 0
   { grep -m1 -E "^${key}=" "$file" || true; } | sed -E "s/^${key}=//"
-}
-
-# Porta e container do Postgres compartilhado (o da worktree principal, que
-# todas as outras worktrees reaproveitam com bases proprias).
-SHARED_PG_PORT="${SHARED_PG_PORT:-54391}"
-
-# Nome do container Docker que publica a porta do Postgres compartilhado.
-shared_pg_container() {
-  docker ps --filter "publish=${SHARED_PG_PORT}" --format '{{.Names}}' | head -n1
-}
-
-# Nome de base Postgres para um slug de worktree (hifen vira underscore, para
-# nao exigir aspas em nenhuma ferramenta que monte SQL/URL).
-db_name_for_slug() {
-  printf '%s' "$1" | tr '-' '_'
 }
 
 # Slugs de todas as worktrees, na mesma regra do caddy.sh: "main" para a
