@@ -2,6 +2,7 @@ import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { createServer, type AddressInfo } from "node:net";
+import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { Client, Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -269,6 +270,20 @@ describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
     const html = await docs.text();
     expect(html).toContain("Braid Auth API");
     expect(html.toLowerCase()).toContain("scalar");
+  });
+
+  it("a API compilada traz as definições de agente e serve a documentação", async () => {
+    const agents = (dir: string) => readdirSync(resolve(apiRoot, dir, "api-core/requests/agents")).filter((name) => name.endsWith(".md")).sort();
+    expect(agents("dist")).toEqual(agents("src"));
+    expect(agents("dist").length).toBeGreaterThan(0);
+
+    const document = await fetch(`${apiUrl}/openapi.json`);
+    expect(document.status).toBe(200);
+    expect(await document.json()).toHaveProperty("paths");
+
+    const docs = await fetch(`${apiUrl}/docs`);
+    expect(docs.status).toBe(200);
+    expect(docs.headers.get("content-type")).toContain("text/html");
   });
 
   it("uma sessão criada pelo Auth compilado executa uma operação na API compilada", async () => {
