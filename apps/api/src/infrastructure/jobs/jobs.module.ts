@@ -1,8 +1,8 @@
 import { Module } from "@nestjs/common";
 import { getJobsEnv } from "../../config/env";
 import { DATABASE, PersistenceModule } from "../persistence/persistence.module";
-import { PostgresDatabase } from "../persistence/database/postgres-database";
-import { PostgresJobStore } from "../persistence/jobs/postgres-job.store";
+import type { SqliteDatabase } from "../persistence/sqlite/database";
+import { SqliteJobStore } from "../persistence/jobs/sqlite-job.store";
 import { JobsService } from "./jobs.service";
 
 @Module({
@@ -10,9 +10,9 @@ import { JobsService } from "./jobs.service";
   providers: [{
     provide: JobsService,
     inject: [DATABASE],
-    useFactory: (database: PostgresDatabase) => {
+    useFactory: (database: SqliteDatabase) => {
       const env = getJobsEnv();
-      return new JobsService(new PostgresJobStore(database, env.AI_JOBS_LEASE_MS, env.AI_JOBS_MAX_ATTEMPTS), env);
+      return new JobsService(new SqliteJobStore(database, env.AI_JOBS_LEASE_MS, env.AI_JOBS_MAX_ATTEMPTS), env);
     },
   }],
   exports: [JobsService],

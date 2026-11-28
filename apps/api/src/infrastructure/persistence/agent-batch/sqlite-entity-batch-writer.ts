@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   EntityBatchConflictError,
   TaskValidationError,
@@ -19,28 +18,27 @@ import {
   insertDerivations,
   softDeleteArtifact,
   updateArtifactAggregate,
-} from "../artifacts/repositories/postgres-artifact.repository";
+} from "../artifacts/repositories/sqlite-artifact.repository";
 import { applySubtaskChanges } from "../tasks/repositories/task-relations";
 import {
   insertTaskAggregate,
   softDeleteTask,
   updateTaskAggregate,
-} from "../tasks/repositories/postgres-task.repository";
+} from "../tasks/repositories/sqlite-task.repository";
 import {
   deleteRecurrenceAggregate,
   insertRecurrenceAggregate,
   updateRecurrenceAggregate,
-} from "../recurrences/repositories/postgres-recurrence.repository";
+} from "../recurrences/repositories/sqlite-recurrence.repository";
+import { c, rowDecoder } from "../sqlite/columns";
+import { sql } from "../sqlite/sql";
 import type { Db, Tx } from "../shared/tx";
 
 type TargetTable = "tasks" | "artifacts";
 
-interface LockedRow extends Record<string, unknown> {
-  id: string;
-  revision: number;
-}
+const targetRow = rowDecoder({ id: c.text, revision: c.integer });
 
-export class PostgresEntityBatchWriter implements EntityBatchWriter {
+export class SqliteEntityBatchWriter implements EntityBatchWriter {
   constructor(private readonly db: Db) {}
 
   async commit(batch: EntityBatch): Promise<EntityBatchResult> {
@@ -131,8 +129,8 @@ function created<T>(changes: readonly StagedChange<T>[]): T[] {
 }
 
 /**
- * Trava as linhas alvo e confere dono, existencia e revisao antes de qualquer
- * escrita. `ORDER BY id` fixa a ordem das travas entre requisicoes paralelas.
+ * Confere dono, existencia e revisao dos alvos antes de qualquer escrita. Nao ha trava de linha: a transacao ja
+ * segura o escritor unico (`BEGIN IMMEDIATE`), entao nenhuma outra escrita muda os alvos ate o commit.
  */
 async function lockTargets<T extends { id: string }>(
   tx: Tx,
@@ -148,13 +146,13 @@ async function lockTargets<T extends { id: string }>(
   if (expected.size === 0) return;
 
   const ids = [...expected.keys()];
-  const locked = await tx.execute<LockedRow>(sql`
-    SELECT id, revision FROM ${sql.identifier(table)}
-    WHERE id IN ${ids} AND user_id = ${userId} AND deleted_at IS NULL
-    ORDER BY id
-    FOR UPDATE
-  `);
-  const found = new Map(locked.rows.map((row) => [row.id, Number(row.revision)]));
+  const rows = await tx.all(
+    sql`SELECT id, revision FROM ${sql.raw(table)}
+      WHERE id IN ${sql.in(ids)} AND user_id = ${userId} AND deleted_at IS NULL
+      ORDER BY id`,
+    targetRow,
+  );
+  const found = new Map(rows.map((row) => [row.id, row.revision]));
   for (const [id, revision] of expected) {
     if (!found.has(id)) {
       throw new EntityBatchConflictError(`${table}: ${id} não existe mais ou não pertence ao usuário`);
