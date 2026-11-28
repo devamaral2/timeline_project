@@ -167,11 +167,10 @@ test("reports Environment API failures without starting the application", async 
 
 test("defines minimal production scopes without requiring mobile or test variables", () => {
   assert.deepEqual(scopeKeys("api-runtime").required, [
-    "DATABASE_URL",
     "AUTH_SERVICE_URL",
     "AUTH_INTERNAL_SERVICE_KEY",
   ]);
-  // A fila de jobs de IA e uma tabela do Postgres: so ajustes opcionais, nenhum broker.
+  // A fila de jobs de IA e uma tabela do SQLite da API: so ajustes opcionais, nenhum broker.
   assert.ok(scopeKeys("api-runtime").optional.includes("AI_JOBS_POLL_MS"));
   assert.ok(scopeKeys("auth-runtime").required.includes("AUTH_KEY_ENCRYPTION_KEY"));
   assert.deepEqual(scopeKeys("web-build").required, ["BACKEND_URL", "AUTH_SERVICE_URL"]);
