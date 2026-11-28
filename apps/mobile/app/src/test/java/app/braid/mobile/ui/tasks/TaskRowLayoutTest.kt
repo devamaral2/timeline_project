@@ -16,9 +16,9 @@ import org.junit.Test
 import java.time.Instant
 
 /**
- * A arrumação da linha da tarefa (o que o `task-row.test.tsx` do web confere no DOM): título, linha do tipo com o
- * "quando" e a duração, tags em linha própria e a ponta direita de duas linhas (prioridade ou status; provedor e marca do
- * projeto). O Compose só pinta este modelo.
+ * A arrumação da linha da tarefa (o que o `task-row.test.tsx` do web confere no DOM): título com as marcas da ponta
+ * direita (prioridade ou provedor, e o projeto), a linha do tipo com o "quando", a duração e o status do agente, e as
+ * tags em linha própria. O Compose só pinta este modelo.
  */
 class TaskRowLayoutTest {
     private val now = Instant.parse("2026-09-14T10:00:00-03:00")
@@ -68,56 +68,55 @@ class TaskRowLayoutTest {
     private val chosenModel = ModelSelection(ModelProvider.Anthropic, "um-modelo", ModelEffort.High)
 
     @Test
-    fun `the project mark stands alone in the second line of the right end, the same for a person and an agent`() {
+    fun `the project mark stands alone at the right end of the title line, the same for a person and an agent`() {
         val person = taskRowLayout(card(project = timelineProject, withTimes = true), now)
         val agent = taskRowLayout(agentCard(project = timelineProject), now)
 
         for (layout in listOf(person, agent)) {
-            assertEquals(timelineProject, layout.side.marks.project)
-            assertEquals("timeline_project", layout.side.marks.project.name)
+            assertEquals(timelineProject, layout.marks.project)
+            assertEquals("timeline_project", layout.marks.project.name)
         }
     }
 
     @Test
     fun `the personal project also has its mark`() {
-        assertEquals(Project.Personal, taskRowLayout(card(), now).side.marks.project)
+        assertEquals(Project.Personal, taskRowLayout(card(), now).marks.project)
     }
 
     @Test
-    fun `a person's row carries the duration at the top of the right end and the priority beside the project mark, with no provider`() {
+    fun `a person's row carries the priority beside the project mark and the duration on the kind line`() {
         val layout = taskRowLayout(card(priority = TaskPriority.High, model = chosenModel, withTimes = true), now)
 
-        assertEquals(TaskRowTop.Duration("1h30"), layout.side.top)
-        assertEquals(TaskPriority.High, layout.side.marks.priority)
-        assertEquals("diario", layout.side.marks.project.name)
-        assertNull(layout.side.marks.provider)
-        // A duração não se repete na linha do tipo.
-        assertNull(layout.meta.duration)
+        assertEquals(TaskPriority.High, layout.marks.priority)
+        assertEquals("diario", layout.marks.project.name)
+        assertNull(layout.marks.provider)
+        assertEquals("1h30", layout.meta.duration)
+        assertNull(layout.meta.agentStatus)
     }
 
     @Test
-    fun `a person's row without a duration keeps the top place empty`() {
+    fun `a person's row without a duration keeps the marks on the title line`() {
         val layout = taskRowLayout(card(priority = TaskPriority.Low), now)
 
-        assertEquals(TaskRowTop.Duration(null), layout.side.top)
-        assertEquals(TaskPriority.Low, layout.side.marks.priority)
+        assertNull(layout.meta.duration)
+        assertEquals(TaskPriority.Low, layout.marks.priority)
     }
 
     @Test
-    fun `an agent's row shows the status instead of a priority, and the provider goes before the project mark`() {
+    fun `an agent's row has no priority, the provider goes before the project mark and the status on the kind line`() {
         val layout = taskRowLayout(agentCard(priority = TaskPriority.Urgent, model = chosenModel), now)
 
-        assertEquals(TaskRowTop.AgentStatus(TaskStatus.Completed), layout.side.top)
-        assertNull(layout.side.marks.priority)
-        assertEquals(ModelProvider.Anthropic, layout.side.marks.provider)
-        assertEquals("diario", layout.side.marks.project.name)
+        assertEquals(TaskRowAgentStatus(TaskStatus.Completed), layout.meta.agentStatus)
+        assertNull(layout.marks.priority)
+        assertEquals(ModelProvider.Anthropic, layout.marks.provider)
+        assertEquals("diario", layout.marks.project.name)
     }
 
     @Test
     fun `an agent's row without the model choice has no provider`() {
         val layout = taskRowLayout(agentCard(status = TaskStatus.Queued), now)
 
-        assertNull(layout.side.marks.provider)
+        assertNull(layout.marks.provider)
     }
 
     @Test
@@ -129,7 +128,7 @@ class TaskRowLayoutTest {
     }
 
     @Test
-    fun `an agent's duration stays next to the when, since the status takes the top of the right end`() {
+    fun `an agent's duration stays next to the when`() {
         val layout = taskRowLayout(agentCard(withTimes = true), now)
 
         assertEquals("1h30", layout.meta.duration)

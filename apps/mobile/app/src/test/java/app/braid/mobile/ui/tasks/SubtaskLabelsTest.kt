@@ -37,6 +37,13 @@ class SubtaskLabelsTest {
     }
 
     @Test
+    fun `the top of the thread says how many are done, in the singular when there is only one`() {
+        assertEquals("1 de 4 feitas", subtaskProgressText(tree.subtasksOf("trip")))
+        assertEquals("1 de 2 feitas", subtaskProgressText(tree.subtasksOf("sub-4")))
+        assertEquals("0 de 1 feita", subtaskProgressText(listOf(byId.getValue("sub-2"))))
+    }
+
+    @Test
     fun `the glyph of a person subtask says the status and what the tap does`() {
         assertEquals("A fazer. Mudar status de “Comprar passagens”", subtaskGlyphLabel(byId.getValue("sub-2")))
         assertEquals("Sem data. Mudar status de “Sem dia ainda”", subtaskGlyphLabel(byId.getValue("sub-7")))

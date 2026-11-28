@@ -4,12 +4,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +22,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,12 +37,11 @@ import app.braid.mobile.ui.chat.ProviderMark
 import java.time.Instant
 
 /**
- * A linha única das listas. À esquerda, o glifo (um ponto inerte ou o glifo de situação na tarefa de agente); no meio,
- * o título, a linha do tipo com o "quando" e, quando há, a linha das tags; à direita, duas linhas alinhadas na ponta:
- * no alto a duração (pessoa, quando tem) ou o nome e o ícone quadrado do status (agente, cuja duração fica junto do
- * "quando"), na altura do título; embaixo a marca do projeto, com a prioridade (pessoa) ou o provedor (agente, quando
- * o cartão traz a escolha) à esquerda dela. O que a
- * linha mostra sai de [taskRowLayout], a partir do cartão e de [now].
+ * A linha única das listas. À esquerda, o glifo (um ponto inerte ou o glifo de situação na tarefa de agente); no resto,
+ * três linhas: a do título, que leva sempre na ponta direita a marca do projeto, com a prioridade (pessoa) ou o provedor
+ * (agente, quando o cartão traz a escolha) à esquerda dela; a do tipo, com o "quando", a duração e, na de agente, o
+ * ícone quadrado e o nome do status; e, quando há, a das tags. O que a linha mostra sai de [taskRowLayout], a partir do
+ * cartão e de [now].
  */
 @Composable
 fun TaskRow(
@@ -61,33 +59,8 @@ fun TaskRow(
     onSituationClick: (() -> Unit)? = null,
     /** A lista pede a regra da série no lugar do horário, quando a ocorrência segue uma. */
     ruleInPlaceOfTime: Boolean = false,
-    /** Um controle na ponta da linha, fora da linha tocável: a fração das subtarefas. */
-    aside: @Composable (() -> Unit)? = null,
-) {
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        TaskRowBody(
-            card = card,
-            now = now,
-            onClick = onClick,
-            onStatusClick = onStatusClick,
-            onSituationClick = onSituationClick,
-            ruleInPlaceOfTime = ruleInPlaceOfTime,
-            modifier = Modifier.weight(1f),
-        )
-        if (aside != null) Box(Modifier.padding(top = 13.dp)) { aside() }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun TaskRowBody(
-    card: TaskCard,
-    now: Instant,
-    onClick: (() -> Unit)?,
-    onStatusClick: (() -> Unit)?,
-    onSituationClick: (() -> Unit)?,
-    ruleInPlaceOfTime: Boolean,
-    modifier: Modifier,
+    /** O respiro de baixo; a lista o zera quando a gaveta das subtarefas vem logo depois. */
+    bottomPadding: Dp = ROW_PADDING,
 ) {
     val isAgent = card.actor == TaskActor.Agent
     val layout = taskRowLayout(card, now, ruleInPlaceOfTime)
@@ -99,7 +72,7 @@ private fun TaskRowBody(
                 .fillMaxWidth()
                 .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
                 .semantics(mergeDescendants = true) {}
-                .padding(vertical = 16.dp),
+                .padding(top = ROW_PADDING, bottom = bottomPadding),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -119,14 +92,23 @@ private fun TaskRowBody(
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ROW_LINE_GAP)) {
-            Text(
-                text = layout.title,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // A prioridade (ou o provedor) e o projeto ficam sempre na linha do título, na ponta direita.
+            Row(
+                Modifier.fillMaxWidth().defaultMinSize(minHeight = 22.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = layout.title,
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                RowMarks(layout.marks)
+            }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 TaskKindMark(layout.meta.kind)
                 Text(
@@ -138,6 +120,7 @@ private fun TaskRowBody(
                 layout.meta.duration?.let { duration ->
                     Text(text = duration, color = muted, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 18.sp, maxLines = 1)
                 }
+                layout.meta.agentStatus?.let { agent -> AgentStatusMeta(agent.status) }
             }
             // As tags têm linha própria (só quando há); no web têm o cinza e o estilo da linha do tipo. As cores de tag são dos filtros e da edição.
             if (layout.tags.isNotEmpty()) {
@@ -148,7 +131,6 @@ private fun TaskRowBody(
                 }
             }
         }
-        RowSide(layout.side)
     }
 }
 
@@ -174,76 +156,51 @@ private fun AgentLead(
     }
 }
 
-/** O nome do status à esquerda do ícone quadrado. O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */
+/** O ícone quadrado e o nome do status. O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */
 @Composable
-private fun AgentStatusEnd(status: TaskStatus?) {
+private fun AgentStatusMeta(status: TaskStatus?) {
     val tone = agentToneColor(remember(status) { agentStatusIcon(status) }.tone)
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        AgentStatusIcon(status = status, size = 16.dp)
         agentStatusLabel(status)?.let { label ->
             Text(
                 text = label,
                 modifier = Modifier.clearAndSetSemantics {},
                 color = tone,
                 fontSize = 13.sp,
-                lineHeight = 22.sp,
+                lineHeight = 18.sp,
                 maxLines = 1,
             )
         }
-        AgentStatusIcon(status = status)
     }
 }
 
 /**
- * A ponta direita, alinhada à borda direita, a 16 dp do texto, em duas linhas com [ROW_LINE_GAP] entre elas. No alto,
- * na altura do título (22 dp): a duração (pessoa, quando tem) ou o nome do status à esquerda do ícone quadrado (agente).
- * Embaixo, a marca do projeto sozinha (o nome é só a descrição dela) e, à esquerda dela, a prioridade (pessoa) ou o
- * símbolo do provedor (agente com a escolha do pedido).
+ * A ponta direita da linha do título: a marca do projeto sozinha (o nome é só a descrição dela) e, à esquerda dela, a
+ * prioridade (pessoa) ou o símbolo do provedor (agente com a escolha do pedido).
  */
 @Composable
-private fun RowSide(side: TaskRowSide) {
-    // A linha já afasta os três blocos 14 dp; os 2 dp a mais dão os 16 dp do web entre o texto e a ponta.
-    Column(Modifier.padding(start = 2.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(ROW_LINE_GAP)) {
-        // O lugar do alto fica mesmo sem duração, para a linha de baixo cair na altura da linha do tipo.
-        Box(Modifier.height(22.dp), contentAlignment = Alignment.CenterEnd) {
-            when (val top = side.top) {
-                is TaskRowTop.Duration ->
-                    top.duration?.let { duration ->
-                        Text(
-                            text = duration,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = BraidMonoFont,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp,
-                            maxLines = 1,
-                        )
-                    }
-                is TaskRowTop.AgentStatus -> AgentStatusEnd(top.status)
+private fun RowMarks(marks: TaskRowMarks) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        marks.priority?.let { priority -> TaskPriorityMark(priority) }
+        marks.provider?.let { provider ->
+            Box(
+                Modifier.size(width = 20.dp, height = 16.dp).semantics {
+                    contentDescription = provider.label
+                    role = Role.Image
+                },
+                contentAlignment = Alignment.Center,
+            ) {
+                ProviderMark(provider, MaterialTheme.colorScheme.onSurfaceVariant, fitIn = DpSize(15.dp, 13.dp))
             }
         }
-        Row(
-            Modifier.defaultMinSize(minHeight = 18.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            side.marks.priority?.let { priority -> TaskPriorityMark(priority) }
-            side.marks.provider?.let { provider ->
-                Box(
-                    Modifier.size(width = 20.dp, height = 16.dp).semantics {
-                        contentDescription = provider.label
-                        role = Role.Image
-                    },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    ProviderMark(provider, MaterialTheme.colorScheme.onSurfaceVariant, fitIn = DpSize(15.dp, 13.dp))
-                }
-            }
-            ProjectMark(side.marks.project, labelled = true)
-        }
+        ProjectMark(marks.project, labelled = true)
     }
 }
 
 private val GLYPH_SLOT = 24.dp
 
-/** O respiro entre as linhas do texto e entre as da ponta direita: o mesmo, para as segundas linhas caírem na mesma altura. */
+/** O respiro entre as linhas do texto. */
 private val ROW_LINE_GAP = 8.dp
+private val ROW_PADDING = 16.dp
 private const val IDLE_DOT_ALPHA = 0.4f

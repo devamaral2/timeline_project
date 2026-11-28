@@ -273,7 +273,6 @@ private fun DrawerSection(
             // O glifo de uma tarefa de pessoa, com qualquer status, abre a folha; o de agente é só leitura.
             val opensPicker = card.actor == TaskActor.Human
             val subtasks = tree.subtasksOf(card.id)
-            val drawerOpen = card.id !in closedSubtasks
             // O glifo da tarefa de agente que terminou abre as três opções de situação logo abaixo da linha.
             var situationMenuOpen by remember(card.id) { mutableStateOf(false) }
             TaskRow(
@@ -283,12 +282,8 @@ private fun DrawerSection(
                 onStatusClick = if (opensPicker) ({ onStatusClick(card) }) else null,
                 onSituationClick = { situationMenuOpen = !situationMenuOpen },
                 ruleInPlaceOfTime = showsSeriesRule(card),
-                aside =
-                    if (subtasks.isEmpty()) {
-                        null
-                    } else {
-                        { SubtaskToggle(card = card, subtasks = subtasks, expanded = drawerOpen, onToggle = { onToggleSubtasks(card.id) }) }
-                    },
+                // Com subtarefas, a gaveta vem logo abaixo da linha do tipo.
+                bottomPadding = if (subtasks.isEmpty()) 16.dp else 0.dp,
             )
             val situation = card.situation
             if (situationMenuOpen && situation != null) {
@@ -301,7 +296,7 @@ private fun DrawerSection(
                     modifier = Modifier.padding(start = 36.dp, top = 2.dp, bottom = 10.dp),
                 )
             }
-            if (subtasks.isNotEmpty() && drawerOpen) {
+            if (subtasks.isNotEmpty()) {
                 SubtaskDrawer(
                     parent = card,
                     tree = tree,
@@ -310,7 +305,7 @@ private fun DrawerSection(
                     onToggle = onToggleSubtasks,
                     onStatusClick = onStatusClick,
                     onOpenTask = onOpenTask,
-                    modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 8.dp),
+                    modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 6.dp),
                 )
             }
         }

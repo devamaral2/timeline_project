@@ -1,12 +1,10 @@
 /* Linha única das listas (agenda e lista de tarefas). Pessoa e agente usam a
-   mesma grade, soltos no fundo: texto à esquerda (título, tipo e quando, tags) e
-   duas linhas na ponta direita (duração ou status; prioridade ou provedor, e projeto).
-   Cores só por token. */
+   mesma grade, soltos no fundo: o título com a prioridade ou o provedor e o
+   projeto na ponta direita; embaixo o tipo, o quando, a duração e o status do
+   agente; por último as tags. Cores só por token. */
 
 /* Quebra a linha só para o que vem embaixo (a gaveta das subtarefas, com largura toda). */
 .row {
-  /* O mesmo respiro entre as linhas do texto e as da ponta direita, para as segundas linhas caírem na mesma altura. */
-  --row-line-gap: 8px;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -47,9 +45,8 @@
 .body {
   display: flex;
   flex: 1;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  flex-direction: column;
+  gap: 8px;
   min-width: 0;
   color: inherit;
   text-decoration: none;
@@ -60,15 +57,18 @@
   border-radius: 8px;
 }
 
-.text {
+/* A linha do título: a prioridade (ou o provedor) e o projeto ficam sempre nela, na ponta direita. */
+.head {
   display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--row-line-gap);
+  align-items: center;
+  gap: 16px;
   min-width: 0;
+  min-height: 22px;
 }
 
 .title {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   color: var(--foreground);
   font-size: 16px;
@@ -123,34 +123,25 @@
   opacity: 0.4;
 }
 
-/* A ponta direita: no alto a duração (pessoa) ou o nome do status à esquerda do ícone quadrado (agente),
-   na altura do título; embaixo a marca do projeto, com a prioridade (pessoa) ou o provedor (agente) à esquerda dela. */
-.side {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--row-line-gap);
-}
-.sideTop {
-  display: grid;
-  place-items: center end;
-  height: 22px;
-}
 .marks {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  min-height: 18px;
 }
 .status {
   composes: tone from "./agent-status-icon.module.css";
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   font-size: 13px;
-  line-height: 22px;
+  line-height: 18px;
+}
+/* `.shell svg` força 20px em todo ícone; o do status na linha do tipo é de 16. */
+.status svg {
+  width: 16px;
+  height: 16px;
 }
 
 .provider {

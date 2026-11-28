@@ -10,41 +10,12 @@ import styles from "./subtasks.module.css";
 
 /** A volta do círculo da pizza (raio 5), para o traço das feitas. */
 const PIE_LENGTH = 2 * Math.PI * 5;
-/** Feita, cancelada e não realizada: o nome sai riscado no tom apagado. */
 /** O rótulo de `cardWhenLabel` para quem não tem dia. */
 const NO_DATE = "Sem data";
 
-interface ToggleProps {
-  card: TaskCardDto;
-  subtasks: readonly TaskCardDto[];
-  expanded: boolean;
-  onToggle: () => void;
-}
-
-/**
- * A fração das subtarefas na ponta da linha (canvas “Lista de tarefas —
- * subtarefas”, modelo A): a pizza das feitas, “1/4” e a seta. Abre e fecha a
- * gaveta logo abaixo da linha.
- */
-export function SubtaskToggle({ card, subtasks, expanded, onToggle }: ToggleProps) {
-  const done = subtasks.filter((subtask) => countsAsDone(subtask.actor, subtask.status)).length;
-  const filled = (done / subtasks.length) * PIE_LENGTH;
-  return (
-    <button
-      type="button"
-      className={styles.toggle}
-      aria-expanded={expanded}
-      aria-label={`Subtarefas de “${card.name}”: ${done} de ${subtasks.length} feitas`}
-      onClick={onToggle}
-    >
-      <svg className={styles.pie} viewBox="0 0 14 14" aria-hidden="true">
-        <circle className={styles.pieTrack} cx="7" cy="7" r="5" />
-        <circle className={styles.pieFill} cx="7" cy="7" r="5" strokeDasharray={`${filled} ${PIE_LENGTH}`} transform="rotate(-90 7 7)" />
-      </svg>
-      <span>{done}/{subtasks.length}</span>
-      <ChevronDown className={styles.chevron} aria-hidden="true" />
-    </button>
-  );
+/** "1 de 4 feitas"; com uma subtarefa só, "0 de 1 feita". */
+function progressText(done: number, total: number): string {
+  return `${done} de ${total} ${total === 1 ? "feita" : "feitas"}`;
 }
 
 interface DrawerProps {
@@ -59,68 +30,87 @@ interface DrawerProps {
 }
 
 /**
- * A gaveta: as subtarefas diretas, presas ao glifo da principal por um fio.
- * Cada uma tem o glifo (o de pessoa abre a mesma escolha de status da lista), o
- * nome que leva ao detalhe, o quando e, se tiver as suas, a própria fração.
+ * A gaveta (canvas “Lista de tarefas · prioridade e projeto à direita”, quadro C): presa ao glifo da principal por um
+ * fio. No topo do fio, a pizza das feitas, “1 de 4 feitas” e a seta, que abre e fecha; embaixo, as subtarefas diretas.
+ * Cada uma tem o glifo (o de pessoa abre a mesma escolha de status da lista), o nome que leva ao detalhe, o quando e,
+ * se tiver as suas, a própria gaveta logo abaixo.
  */
 export function SubtaskDrawer({ parent, tree, userId, now, closedIds, onToggle, onStatusClick }: DrawerProps) {
+  const subtasks = tree.subtasksOf(parent.id);
+  const open = !closedIds.includes(parent.id);
+  const done = subtasks.filter((subtask) => countsAsDone(subtask.actor, subtask.status)).length;
+  const filled = (done / subtasks.length) * PIE_LENGTH;
   return (
-    <ul className={styles.tree} aria-label={`Subtarefas de “${parent.name}”`}>
-      {tree.subtasksOf(parent.id).map((card, index) => {
-        const nested = tree.subtasksOf(card.id);
-        const open = !closedIds.includes(card.id);
-        const isAgent = card.actor === "agent";
-        const humanStatus = (card.status ?? null) as HumanTaskStatus | null;
-        // Na gaveta o quando só aparece quando diz alguma coisa: "Sem data" repetido vira ruído.
-        const when = cardWhenLabel(card, now);
-        return (
-          <li key={card.id} className={styles.item} style={{ "--i": index } as CSSProperties}>
-            <div className={styles.line}>
-              <span className={styles.elbow} aria-hidden="true" />
-              {isAgent ? (
-                <span className={styles.glyphSlot}>
-                  <TaskStatusGlyph actor="agent" status={card.status as AgentTaskStatus} size={18} />
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.glyphButton}
-                  aria-label={`${taskStatusName("human", humanStatus)}. Mudar status de “${card.name}”`}
-                  onClick={(event) => onStatusClick(card, event.currentTarget)}
-                >
-                  <TaskStatusGlyph actor="human" status={humanStatus} size={18} />
-                </button>
-              )}
-              <Link
-                href={`/${userId}/tarefas/${card.id}`}
-                className={styles.name}
-                data-closed={isClosedStatus(card.actor, card.status) ? "true" : "false"}
-              >
-                {card.name}
-              </Link>
-              <span className={styles.when} data-overdue={cardIsOverdue(card, now) ? "true" : "false"}>
-                {when === NO_DATE ? null : when}
-              </span>
-              {/* Decorativo: o nome do glifo já diz "Agente". */}
-              {isAgent ? <Bot className={styles.agentMark} aria-hidden="true" /> : null}
-              {nested.length > 0 ? (
-                <SubtaskToggle card={card} subtasks={nested} expanded={open} onToggle={() => onToggle(card.id)} />
-              ) : null}
-            </div>
-            {open && nested.length > 0 ? (
-              <SubtaskDrawer
-                parent={card}
-                tree={tree}
-                userId={userId}
-                now={now}
-                closedIds={closedIds}
-                onToggle={onToggle}
-                onStatusClick={onStatusClick}
-              />
-            ) : null}
-          </li>
-        );
-      })}
-    </ul>
+    <div className={styles.tree}>
+      <button
+        type="button"
+        className={styles.toggle}
+        aria-expanded={open}
+        aria-label={`Subtarefas de “${parent.name}”: ${progressText(done, subtasks.length)}`}
+        onClick={() => onToggle(parent.id)}
+      >
+        <span className={styles.elbow} aria-hidden="true" />
+        <svg className={styles.pie} viewBox="0 0 14 14" aria-hidden="true">
+          <circle className={styles.pieTrack} cx="7" cy="7" r="5" />
+          <circle className={styles.pieFill} cx="7" cy="7" r="5" strokeDasharray={`${filled} ${PIE_LENGTH}`} transform="rotate(-90 7 7)" />
+        </svg>
+        <span>{progressText(done, subtasks.length)}</span>
+        <ChevronDown className={styles.chevron} aria-hidden="true" />
+      </button>
+      {open ? (
+        <ul className={styles.items} aria-label={`Subtarefas de “${parent.name}”`}>
+          {subtasks.map((card, index) => {
+            const isAgent = card.actor === "agent";
+            const humanStatus = (card.status ?? null) as HumanTaskStatus | null;
+            // Na gaveta o quando só aparece quando diz alguma coisa: "Sem data" repetido vira ruído.
+            const when = cardWhenLabel(card, now);
+            return (
+              <li key={card.id} className={styles.item} style={{ "--i": index } as CSSProperties}>
+                <div className={styles.line}>
+                  <span className={styles.elbow} aria-hidden="true" />
+                  {isAgent ? (
+                    <span className={styles.glyphSlot}>
+                      <TaskStatusGlyph actor="agent" status={card.status as AgentTaskStatus} size={18} />
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.glyphButton}
+                      aria-label={`${taskStatusName("human", humanStatus)}. Mudar status de “${card.name}”`}
+                      onClick={(event) => onStatusClick(card, event.currentTarget)}
+                    >
+                      <TaskStatusGlyph actor="human" status={humanStatus} size={18} />
+                    </button>
+                  )}
+                  <Link
+                    href={`/${userId}/tarefas/${card.id}`}
+                    className={styles.name}
+                    data-closed={isClosedStatus(card.actor, card.status) ? "true" : "false"}
+                  >
+                    {card.name}
+                  </Link>
+                  <span className={styles.when} data-overdue={cardIsOverdue(card, now) ? "true" : "false"}>
+                    {when === NO_DATE ? null : when}
+                  </span>
+                  {/* Decorativo: o nome do glifo já diz "Agente". */}
+                  {isAgent ? <Bot className={styles.agentMark} aria-hidden="true" /> : null}
+                </div>
+                {tree.subtasksOf(card.id).length > 0 ? (
+                  <SubtaskDrawer
+                    parent={card}
+                    tree={tree}
+                    userId={userId}
+                    now={now}
+                    closedIds={closedIds}
+                    onToggle={onToggle}
+                    onStatusClick={onStatusClick}
+                  />
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </div>
   );
 }

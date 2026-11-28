@@ -22,7 +22,7 @@ import { useViewMode } from "@/lib/tasks/view-mode";
 import { nestSubtasks, oneRowPerSeries, showsSeriesRule } from "@/lib/tasks/task-groups";
 import { drawerOf, drawersOf, listedCards, toNowLabel, type ListDrawerKey } from "@/lib/tasks/task-drawers";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
-import { SubtaskDrawer, SubtaskToggle } from "./subtask-drawer";
+import { SubtaskDrawer } from "./subtask-drawer";
 import { TaskFilters } from "./TaskFilters";
 import styles from "./tasks.module.css";
 
@@ -44,7 +44,7 @@ const SEARCH_DEBOUNCE_MS = 250;
  * outras fechadas. O trabalho que o agente ainda faz não está aqui: mora na gaveta de
  * execução do shell. Cada
  * linha é a `TaskRow`; a subtarefa com a principal na lista não vira linha: fica
- * na gaveta que a fração da principal abre. O glifo de uma tarefa de pessoa abre a escolha dos
+ * na gaveta embaixo da principal. O glifo de uma tarefa de pessoa abre a escolha dos
  * status, e a linha muda de gaveta com o status escolhido (a de agente, com a situação). Tag, prioridade e texto são parâmetros da consulta: a
  * tela não filtra na mão. As opções de tag vêm da lista sem filtro. No celular os
  * filtros moram no menu de opções da barra inferior (tocar na aba Tarefas já
@@ -294,7 +294,6 @@ export function TaskListScreen({ userId }: { userId: string }) {
                     <ul className={styles.list}>
                       {drawer.cards.map((card) => {
                         const subtasks = tree.subtasksOf(card.id);
-                        const drawerOpen = subtasks.length > 0 && !closedSubtasks.includes(card.id);
                         return (
                           <TaskRow
                             key={card.id}
@@ -304,11 +303,8 @@ export function TaskListScreen({ userId }: { userId: string }) {
                             ruleInPlaceOfTime={showsSeriesRule(card)}
                             onStatusClick={openStatusPicker}
                             onSituationPick={(picked, situation) => void changeSituation(picked, situation)}
-                            aside={subtasks.length > 0 ? (
-                              <SubtaskToggle card={card} subtasks={subtasks} expanded={drawerOpen} onToggle={() => toggleSubtasks(card.id)} />
-                            ) : undefined}
                           >
-                            {drawerOpen ? (
+                            {subtasks.length > 0 ? (
                               <SubtaskDrawer
                                 parent={card}
                                 tree={tree}

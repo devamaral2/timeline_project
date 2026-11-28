@@ -146,7 +146,7 @@ const hierarchy = [
   taskFixture({ id: "rascunho", name: "Escrever o rascunho", status: "todo", parentTaskId: "fora-da-lista" }),
 ];
 
-test("a subtarefa só aparece dentro da principal: a principal mostra a fração e os grupos contam só as principais", async () => {
+test("a subtarefa só aparece dentro da principal: a principal mostra quantas estão feitas e os grupos contam só as principais", async () => {
   serve(hierarchy);
   render(<TaskListScreen userId="user-1" />);
 
@@ -159,12 +159,14 @@ test("a subtarefa só aparece dentro da principal: a principal mostra a fração
 
   const toggle = screen.getByRole("button", { name: "Subtarefas de “Revisar proposta”: 1 de 2 feitas" });
   expect(toggle).toHaveAttribute("aria-expanded", "true");
-  expect(toggle).toHaveTextContent("1/2");
+  expect(toggle).toHaveTextContent("1 de 2 feitas");
+  // Fica no topo do fio, antes da primeira subtarefa.
+  expect(toggle.compareDocumentPosition(drawer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   // A principal fora da lista não segura a subtarefa: ela continua linha.
   expect(within(screen.getByRole("region", { name: /Para agora/ })).getByRole("link", { name: /Escrever o rascunho/ })).toBeInTheDocument();
 });
 
-test("a gaveta vem aberta com as subtarefas, cada uma levando ao seu detalhe, e a fração fecha e reabre", async () => {
+test("a gaveta vem aberta com as subtarefas, cada uma levando ao seu detalhe, e a linha das feitas fecha e reabre", async () => {
   serve(hierarchy);
   render(<TaskListScreen userId="user-1" />);
 
@@ -197,7 +199,7 @@ test("o glifo da subtarefa abre a mesma escolha de status e grava com a revisão
     pathname: "/api/tasks/anotar",
     body: { expectedRevision: 2, status: "done" },
   });
-  await waitFor(() => expect(screen.getByRole("button", { name: /Subtarefas de “Revisar proposta”/ })).toHaveTextContent("2/2"));
+  await waitFor(() => expect(screen.getByRole("button", { name: /Subtarefas de “Revisar proposta”/ })).toHaveTextContent("2 de 2 feitas"));
 });
 
 test("a lista pede as tarefas acompanhadas, e não a agenda", async () => {
