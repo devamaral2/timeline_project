@@ -68,13 +68,13 @@ describe("Auth composition root", () => {
     expect(await unknown.json()).toEqual({ code: "not_found" });
   });
 
-  it("composes the core explicitly, without reflecting over modules", () => {
+  it("composes the core explicitly, without reflecting over modules", async () => {
     const env = testEnv(database.runtimeUrl);
-    const core = composeAuthCore(env);
+    const core = await composeAuthCore(env);
     expect(core.env).toBe(env);
     expect(core.database).toBeDefined();
     expect(core.userRepository).toBeInstanceOf(PostgresUserRepository);
     expect(core.signingKeyService).toBeInstanceOf(SigningKeyService);
-    return core.close();
+    await core.close();
   });
 });
