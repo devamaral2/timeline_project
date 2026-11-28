@@ -19,7 +19,7 @@ describe('auth feature routing', () => {
     ['/auth/invites/inspect', {}],
     ['/auth/invites/accept', {}],
     ['/auth/admin/invites', {}],
-  ])('routes %s to its feature controller', async (path, body) => {
+  ])('routes %s to its feature declaration', async (path, body) => {
     const response = await fetch(`${testApp.url}${path}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

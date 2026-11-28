@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { Client } from "pg";
 import { createTestUserForFile } from "../../../testing/test-user";
 import { ANONYMOUS_CONTEXT } from "../../../common/request-context";
-import { SigningKeyService } from "../../../auth-core/security/signing-key.service";
 import { ScryptPasswordHasher } from "../../../auth-core/password/scrypt-password-hasher";
 import { createTestApp, type TestApp } from "../../../testing/create-test-app";
 import { createPostgresTestDatabase, type PostgresTestDatabase } from "../../../testing/postgres-test-database";
@@ -25,7 +24,7 @@ describe("password login HTTP flow", () => {
       [user.id, user.email, user.name, hash],
     );
     app = await createTestApp({ AUTH_DATABASE_URL: database.runtimeUrl });
-    await app.app.get(SigningKeyService).ensureActive(new Date(), {
+    await app.core.signingKeyService.ensureActive(new Date(), {
       correlationId: "login-flow-test", actorUserId: null, action: "key.created",
       targetType: "signing_key", targetId: null, result: "succeeded",
       reason: null, metadata: {}, context: ANONYMOUS_CONTEXT, occurredAt: new Date(),

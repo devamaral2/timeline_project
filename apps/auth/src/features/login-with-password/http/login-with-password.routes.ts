@@ -11,7 +11,7 @@ const loginBody = z
   .object({ email: z.string().min(1).max(320), password: z.string().min(1).max(1024) })
   .strict();
 
-/** Login por email e senha emite a sessão; o Nest respondia 201 para POST. */
+/** Login por email e senha emite a sessão; POST responde 201. */
 export function loginWithPasswordRoutes(
   dependencies: LoginWithPasswordRouteDependencies,
 ): AuthRoute[] {

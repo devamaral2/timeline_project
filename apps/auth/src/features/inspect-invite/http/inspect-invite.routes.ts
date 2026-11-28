@@ -9,7 +9,7 @@ export interface InspectInviteRouteDependencies {
 
 const inspectBody = z.object({ token: z.string().min(1) }).strict();
 
-/** Inspeciona um convite antes do cadastro; o Nest respondia 201 para POST. */
+/** Inspeciona um convite antes do cadastro; POST responde 201. */
 export function inspectInviteRoutes(dependencies: InspectInviteRouteDependencies): AuthRoute[] {
   return [
     {

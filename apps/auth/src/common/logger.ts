@@ -1,7 +1,7 @@
 /**
  * O logger do servico, injetavel de proposito.
  *
- * O `Logger` do Nest escreve direto no stdout do processo e escapa do `silent`
+ * O logger do framework escrevia direto no stdout do processo e escapava do `silent`
  * do Vitest -- o `AGENTS.md` do monorepo ja documenta esse tropeço em
  * `apps/api`, onde o `DomainExceptionFilter` passou a receber o logger pelo
  * construtor pelo mesmo motivo. Sem essa costura, um unico teste de erro suja a

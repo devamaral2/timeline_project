@@ -1,139 +1,76 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const authRoot = resolve(process.cwd(), "apps/auth");
-const srcRoot = resolve(authRoot, "src");
+const authRoot = join(__dirname, "..");
+const srcRoot = join(authRoot, "src");
 
-function sourceFiles(directory: string): string[] {
+function filesUnder(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const file = resolve(directory, entry.name);
-    return entry.isDirectory() ? sourceFiles(file) : [file];
+    const path = join(directory, entry.name);
+    return entry.isDirectory() ? filesUnder(path) : [path];
   });
 }
 
-function productionFiles(): string[] {
-  return sourceFiles(srcRoot)
-    .filter((file) => file.endsWith(".ts"))
-    .filter((file) => !file.endsWith(".test.ts") && !file.endsWith(".spec.ts"));
-}
+const sources = filesUnder(srcRoot).filter((path) => path.endsWith(".ts"));
+const sourceOf = (path: string) => readFileSync(path, "utf8");
 
-const coreDirectories = [
-  "src/domain",
-  "src/common",
-  "src/config",
-  "src/audit",
-  "src/bootstrap",
-  "src/db",
-  "src/auth-core/persistence",
-  "src/auth-core/security",
-  "src/auth-core/password",
+/**
+ * Tudo o que só existia por causa do Nest e não pode voltar ao código nem aos
+ * testes. As regras olham o que atravessa o socket e a declaração de rotas; não
+ * inspecionam a estrutura interna do composition root.
+ */
+const FORBIDDEN = [
+  { name: "@nestjs", pattern: /from\s+["']@nestjs\/|require\(\s*["']@nestjs\// },
+  { name: "reflect-metadata", pattern: /from\s+["']reflect-metadata["']|require\(\s*["']reflect-metadata["']\s*\)/ },
+  { name: "tipos do Express", pattern: /from\s+["']express["']|require\(\s*["']express["']\s*\)/ },
+  { name: "decorators", pattern: /^\s*@(Controller|Injectable|Module|Inject|Get|Post|Put|Patch|Delete|UseGuards|Catch|Req|Param)\b/m },
 ];
 
-function isCoreFile(file: string): boolean {
-  const path = relative(authRoot, file);
-  if (coreDirectories.some((directory) => path.startsWith(`${directory}/`))) return true;
-  if (/^src\/features\/.*\/(usecases|services)\//.test(path)) return true;
-  return /\.repository\.ts$/.test(path);
-}
-
-function isAllowedNestConsumer(file: string): boolean {
-  const path = relative(authRoot, file);
-  if (path.startsWith("src/nest/")) return true;
-  if (path.startsWith("src/http/")) return true;
-  if (path.startsWith("src/testing/")) return true;
-  if (path === "src/app.module.ts" || path === "src/main.ts") return true;
-  if (path === "src/composition-root.ts") return true;
-  if (path.endsWith(".module.ts")) return true;
-  return false;
-}
-
-describe("auth core without Nest", () => {
-  it("keeps domain, application and infrastructure free of Nest, reflection and Express", () => {
-    const markers = ["@nestjs/", "reflect-metadata", 'from "express"', "from 'express'"];
-
-    for (const file of productionFiles().filter(isCoreFile)) {
-      const contents = readFileSync(file, "utf8");
-      for (const marker of markers) {
-        expect(contents, `framework marker ${marker} in ${relative(authRoot, file)}`).not.toContain(marker);
-      }
+describe("auth without Nest", () => {
+  it("nem o código nem os testes do Auth importam Nest, reflect-metadata, Express ou decorators", () => {
+    for (const forbidden of FORBIDDEN) {
+      const users = sources.filter((path) => forbidden.pattern.test(sourceOf(path)));
+      expect(users.map((path) => relative(authRoot, path)), forbidden.name).toEqual([]);
     }
   });
 
-  it("confines Nest consumers to the temporary adapters, modules, controllers and HTTP shell", () => {
-    for (const file of productionFiles()) {
-      const contents = readFileSync(file, "utf8");
-      if (!contents.includes("@nestjs/")) continue;
-      expect(isAllowedNestConsumer(file), `unexpected Nest consumer ${relative(authRoot, file)}`).toBe(true);
+  it("o Auth não depende mais do Nest, do Scalar do Nest, do Express nem do RxJS", () => {
+    const packageJson = JSON.parse(sourceOf(join(authRoot, "package.json"))) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+      scripts: Record<string, string>;
+    };
+    const dependencies = { ...packageJson.dependencies, ...packageJson.devDependencies };
+
+    for (const name of Object.keys(dependencies)) {
+      expect(name.startsWith("@nestjs/"), name).toBe(false);
+      expect(name, name).not.toBe("reflect-metadata");
+      expect(name, name).not.toBe("rxjs");
+      expect(name, name).not.toBe("express");
+      expect(name, name).not.toBe("@types/express");
+      expect(name, name).not.toBe("@scalar/nestjs-api-reference");
     }
   });
 
-  it("keeps every Nest adapter the running server still needs", () => {
-    const adapters = [
-      "src/nest/bearer-auth.guard.ts",
-      "src/nest/device-key-auth.guard.ts",
-      "src/nest/current-actor.decorator.ts",
-      "src/nest/auth-exception.filter.ts",
-      "src/nest/http-shell.ts",
-      "src/composition-root.ts",
-      "src/server/auth-server.ts",
-      "src/server/guards.ts",
-    ];
+  it("o build e o dev não usam Nest CLI e o tsconfig não emite metadata de decorator", () => {
+    const packageJson = JSON.parse(sourceOf(join(authRoot, "package.json"))) as {
+      scripts: Record<string, string>;
+    };
 
-    for (const adapter of adapters) {
-      expect(existsSync(resolve(authRoot, adapter)), `missing adapter ${adapter}`).toBe(true);
-    }
+    expect(packageJson.scripts.build).not.toContain("nest");
+    expect(packageJson.scripts.dev).not.toContain("nest");
+    expect(packageJson.scripts.start).not.toContain("nest");
+    expect(existsSync(join(authRoot, "nest-cli.json"))).toBe(false);
+    expect(sourceOf(join(authRoot, "tsconfig.json"))).not.toMatch(/Decorator/);
+    expect(sourceOf(join(authRoot, "tsconfig.build.json"))).not.toMatch(/Decorator/);
   });
 
-  it("does not keep the Nest adapters already replaced by the composition root", () => {
-    const removed = [
-      "src/nest/api-documentation.ts",
-      "src/nest/api-gateway.lifecycle.ts",
-      "src/nest/database.module.ts",
-      "src/nest/require-super-admin.guard.ts",
-      "src/http/health.controller.ts",
-      "src/http/jwks.controller.ts",
-      "src/http/http.module.ts",
-      "src/features/login-with-password/http/login-with-password.controller.ts",
-      "src/features/refresh-token/http/refresh-token.controller.ts",
-      "src/features/logout/http/logout.controller.ts",
-      "src/features/logout-all/http/logout-all.controller.ts",
-      "src/features/current-user/http/current-user.controller.ts",
-      "src/features/inspect-invite/http/inspect-invite.controller.ts",
-      "src/features/accept-invite/http/accept-invite.controller.ts",
-      "src/features/create-invite/http/create-invite.controller.ts",
-      "src/features/login-with-password/login-with-password.module.ts",
-      "src/features/refresh-token/refresh-token.module.ts",
-      "src/features/logout/logout.module.ts",
-      "src/features/logout-all/logout-all.module.ts",
-      "src/features/current-user/current-user.module.ts",
-      "src/features/inspect-invite/inspect-invite.module.ts",
-      "src/features/accept-invite/accept-invite.module.ts",
-      "src/features/create-invite/create-invite.module.ts",
-      "src/http/api-proxy/api-proxy.module.ts",
-      "src/http/api-proxy/api-gateway.controller.ts",
-      "src/http/api-proxy/device-gateway.controller.ts",
-    ];
-
-    for (const file of removed) {
-      expect(existsSync(resolve(authRoot, file)), `stale adapter ${file}`).toBe(false);
-    }
-  });
-
-  it("does not leave guard, filter, middleware or decorator adapters inside the core", () => {
-    const stale = [
-      "src/auth-core/security/bearer-auth.guard.ts",
-      "src/auth-core/security/device-key-auth.guard.ts",
-      "src/auth-core/security/require-super-admin.guard.ts",
-      "src/auth-core/security/current-actor.decorator.ts",
-      "src/http/auth-exception.filter.ts",
-      "src/http/request-context.middleware.ts",
-      "src/db/db.module.ts",
-      "src/http/api-proxy/api-gateway.proxy.ts",
-    ];
-
-    for (const file of stale) {
-      expect(existsSync(resolve(authRoot, file)), `stale adapter ${file}`).toBe(false);
-    }
+  it("a ausência do Nest não deixa pastas nem módulos de composição para trás", () => {
+    expect(existsSync(join(srcRoot, "nest"))).toBe(false);
+    expect(existsSync(join(srcRoot, "app.module.ts"))).toBe(false);
+    expect(existsSync(join(srcRoot, "auth-core/auth-core.module.ts"))).toBe(false);
+    expect(existsSync(join(srcRoot, "config/tokens.ts"))).toBe(false);
+    expect(existsSync(join(srcRoot, "db/tokens.ts"))).toBe(false);
   });
 });

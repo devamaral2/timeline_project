@@ -48,12 +48,12 @@ describe("Auth composition root", () => {
     expect(body.keys[0]).toMatchObject({ kty: "OKP", crv: "Ed25519", use: "sig", alg: "EdDSA" });
   });
 
-  it("builds one core instance and shares it with the Nest routes in coexistence", () => {
-    expect(runtime.nestApp.get(SigningKeyService)).toBe(runtime.core.signingKeyService);
-    expect(runtime.nestApp.get(PostgresUserRepository)).toBe(runtime.core.userRepository);
-  });
+  it("builds one core instance and serves every route from the same Fastify server", async () => {
+    expect(runtime.core.signingKeyService).toBeInstanceOf(SigningKeyService);
+    expect(runtime.core.userRepository).toBeInstanceOf(PostgresUserRepository);
+    expect(runtime.http.fastify).toBeDefined();
 
-  it("keeps the remaining Nest routes behind the Fastify server", async () => {
+    // A feature e a infraestrutura que atendem a request vêm do mesmo grafo.
     const invalid = await call("/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -141,17 +141,13 @@ describe("Auth Fastify server", () => {
     expect(logger.events.map((event) => event.status)).toEqual([401, 503, 500]);
   });
 
-  it("delegates unmatched requests to the coexistence server", async () => {
+  it("answers unmatched requests with the safe 404 and normalizes the trailing slash", async () => {
     const base = await start();
-    expect(server).toBeDefined();
-    server?.setFallback((_request, response) => {
-      response.writeHead(404, { "content-type": "application/json" });
-      response.end(JSON.stringify({ code: "not_found", servedBy: "nest" }));
-    });
 
     const unknown = await fetch(`${base}/auth/nao-existe`);
     expect(unknown.status).toBe(404);
-    expect(await unknown.json()).toEqual({ code: "not_found", servedBy: "nest" });
+    expect(await unknown.json()).toEqual({ code: "not_found" });
+    expect(unknown.headers.get("x-correlation-id")).toMatch(ULID);
 
     const live = await fetch(`${base}/health/live/`);
     expect(live.status).toBe(200);

@@ -9,7 +9,7 @@ export interface UpgradeProxyLogger {
 /**
  * Encaminha upgrades do chat para a API sem expor a API ao browser. O ciclo de
  * vida (attach/detach) e explicito para que o composition root o controle sem
- * depender de hooks do Nest.
+ * depender de hooks de framework.
  */
 export class ApiUpgradeProxy {
   constructor(

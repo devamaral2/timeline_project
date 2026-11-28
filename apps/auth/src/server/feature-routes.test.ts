@@ -62,11 +62,6 @@ const publicJwk = {
   alg: "EdDSA",
 } as PublicSigningJwk;
 
-/**
- * As rotas de feature já migradas são servidas pelo Fastify, não pelo Nest.
- * O fallback responde 418: qualquer operação que voltar 418 prova que ainda
- * depende da coexistência.
- */
 function fakeDependencies(
   overrides: Partial<AuthHttpServerDependencies> = {},
 ): AuthHttpServerDependencies {
@@ -117,12 +112,7 @@ describe("Auth feature routes on Fastify", () => {
       logger: new RecordingAuthLogger(),
       routes,
     });
-    const base = await server.listen(0, "127.0.0.1");
-    server.setFallback((_request, response) => {
-      response.writeHead(418, { "content-type": "application/json" });
-      response.end(JSON.stringify({ servedBy: "fallback" }));
-    });
-    return base;
+    return server.listen(0, "127.0.0.1");
   }
 
   const postJson = (base: string, path: string, body: unknown) =>
@@ -229,12 +219,13 @@ describe("Auth feature routes on Fastify", () => {
       expect(await oversized.json()).toEqual({ code: "payload_too_large" });
     });
 
-    it("leaves unmatched operations to the coexistence fallback", async () => {
+    it("answers unmatched operations with the safe 404", async () => {
       const base = await start(fakeDependencies());
 
       const response = await fetch(`${base}/auth/nao-existe`);
-      expect(response.status).toBe(418);
-      expect(await response.json()).toEqual({ servedBy: "fallback" });
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ code: "not_found" });
+      expect(response.headers.get("x-correlation-id")).toMatch(ULID);
     });
   });
 
@@ -392,7 +383,7 @@ describe("Auth feature routes on Fastify", () => {
   });
 
   describe("public invite operations", () => {
-    it("inspects and accepts invites with the Nest status of 201", async () => {
+    it("inspects and accepts invites with 201", async () => {
       const inspectInvite = vi.fn(async () => ({
         name: "Pessoa Convidada",
         email: "p***@example.test",

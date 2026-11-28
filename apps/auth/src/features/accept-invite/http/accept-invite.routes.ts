@@ -11,7 +11,7 @@ const acceptBody = z
   .object({ token: z.string().min(1).max(1024), password: z.string().min(1).max(1024) })
   .strict();
 
-/** Aceita o convite e define a senha; o Nest respondia 201 para POST. */
+/** Aceita o convite e define a senha; POST responde 201. */
 export function acceptInviteRoutes(dependencies: AcceptInviteRouteDependencies): AuthRoute[] {
   return [
     {
