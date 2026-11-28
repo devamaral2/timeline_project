@@ -29,22 +29,19 @@ export interface TaskRowProps {
    * própria linha. Sem isto (a agenda), o lugar fica com o ponto inerte.
    */
   onSituationPick?: (card: TaskCardDto, situation: TaskSituation) => void;
-  /** Controle na ponta direita da linha, fora do link (a fração das subtarefas na lista). */
-  aside?: ReactNode;
   /** O que vem embaixo da linha, na largura dela (a gaveta das subtarefas na lista). */
   children?: ReactNode;
 }
 
 /**
- * A linha única das listas. À esquerda, o glifo; no meio, o título, a linha do tipo com o "quando" e, quando há, a
- * linha das tags; à direita, duas linhas alinhadas na ponta: no alto a duração (pessoa, quando a tarefa tem) ou o nome
- * e o ícone quadrado do status (agente, que não se edita; a duração dele fica junto do "quando"); embaixo a marca do
- * projeto, com a prioridade à esquerda dela na tarefa de pessoa e o símbolo do provedor na de agente (quando o pedido
- * levou a escolha).
+ * A linha única das listas. À esquerda, o glifo; no resto, três linhas: a do título, que leva sempre na ponta direita a
+ * marca do projeto, com a prioridade à esquerda dela na tarefa de pessoa e o símbolo do provedor na de agente (quando o
+ * pedido levou a escolha); a do tipo, com o "quando", a duração (quando a tarefa tem) e, na de agente, o ícone quadrado
+ * e o nome do status, que não se edita; e, quando há, a das tags.
  * O glifo de pessoa é um botão; à esquerda da tarefa de agente fica o glifo da situação, que abre as três
  * opções na própria linha, ou um ponto inerte (esperando você, execução agendada e a linha sem quem trate a situação).
  */
-export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, onSituationPick, aside, children }: TaskRowProps) {
+export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, onSituationPick, children }: TaskRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isAgent = card.actor === "agent";
   const overdue = !isAgent && cardIsOverdue(card, now);
@@ -81,40 +78,9 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
         </button>
       )}
       <Link href={`/${userId}/tarefas/${card.id}`} className={styles.body}>
-        <span className={styles.text}>
+        <span className={styles.head} data-row-head>
           <span className={styles.title}>{card.name}</span>
-          <span className={styles.meta}>
-            <TaskKindMark kind={card.kind} />
-            <span className={styles.when} data-overdue={overdue ? "true" : "false"}>
-              {when}
-            </span>
-            {/* Na tarefa de agente o alto da ponta direita é do status: a duração fica junto do "quando". */}
-            {isAgent && duration ? <span className={styles.duration}>{duration}</span> : null}
-          </span>
-          {card.tags.length > 0 ? (
-            <span className={styles.tags} data-row-tags>
-              {card.tags.map((tag) => (
-                <span key={tag} className={styles.tag}>
-                  #{tag}
-                </span>
-              ))}
-            </span>
-          ) : null}
-        </span>
-        <span className={styles.side} data-row-side>
-          {isAgent ? (
-            <span className={styles.status} data-status={agentStatus}>
-              {/* O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */}
-              <span aria-hidden="true">{agentStatusNames[agentStatus]}</span>
-              <AgentStatusIcon status={agentStatus} />
-            </span>
-          ) : (
-            // O lugar fica mesmo sem duração, para a linha de baixo cair na altura da linha do tipo.
-            <span className={styles.sideTop} data-row-duration>
-              {duration ? <span className={styles.duration}>{duration}</span> : null}
-            </span>
-          )}
-          <span className={styles.marks} data-row-side-marks>
+          <span className={styles.marks} data-row-marks>
             {isAgent && card.model ? (
               <span className={styles.provider} role="img" aria-label={providerNames[card.model.provider]}>
                 <ProviderMark provider={card.model.provider} />
@@ -124,8 +90,30 @@ export function TaskRow({ card, userId, now, ruleInPlaceOfTime, onStatusClick, o
             <ProjectMark project={card.project} labelled />
           </span>
         </span>
+        <span className={styles.meta} data-row-meta>
+          <TaskKindMark kind={card.kind} />
+          <span className={styles.when} data-overdue={overdue ? "true" : "false"}>
+            {when}
+          </span>
+          {duration ? <span className={styles.duration}>{duration}</span> : null}
+          {isAgent ? (
+            <span className={styles.status} data-status={agentStatus}>
+              <AgentStatusIcon status={agentStatus} size={16} />
+              {/* O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */}
+              <span aria-hidden="true">{agentStatusNames[agentStatus]}</span>
+            </span>
+          ) : null}
+        </span>
+        {card.tags.length > 0 ? (
+          <span className={styles.tags} data-row-tags>
+            {card.tags.map((tag) => (
+              <span key={tag} className={styles.tag}>
+                #{tag}
+              </span>
+            ))}
+          </span>
+        ) : null}
       </Link>
-      {aside}
       {menuOpen && situation ? (
         <SituationMenu
           value={situation}

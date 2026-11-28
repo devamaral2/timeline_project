@@ -1,8 +1,6 @@
 package app.braid.mobile.ui.tasks
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +24,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -61,11 +57,15 @@ private const val NO_DATE = "Sem data"
 /** Quantas das subtarefas diretas estão feitas, cada uma pelo seu executor. */
 fun subtasksDone(subtasks: List<TaskCard>): Int = subtasks.count { countsAsDone(it.actor, it.status) }
 
-/** O que o leitor de tela anuncia no botão da fração. */
+/** O texto do topo do fio: "1 de 4 feitas"; com uma subtarefa só, "0 de 1 feita". */
+fun subtaskProgressText(subtasks: List<TaskCard>): String =
+    "${subtasksDone(subtasks)} de ${subtasks.size} ${if (subtasks.size == 1) "feita" else "feitas"}"
+
+/** O que o leitor de tela anuncia no botão que abre e fecha a gaveta. */
 fun subtaskToggleLabel(
     parentName: String,
     subtasks: List<TaskCard>,
-): String = "Subtarefas de “$parentName”: ${subtasksDone(subtasks)} de ${subtasks.size} feitas"
+): String = "Subtarefas de “$parentName”: ${subtaskProgressText(subtasks)}"
 
 /** O nome da lista da gaveta. */
 fun subtaskDrawerLabel(parentName: String): String = "Subtarefas de “$parentName”"
@@ -80,72 +80,80 @@ fun subtaskWhenLabel(
 ): String? = cardWhenLabel(card, now).takeUnless { it == NO_DATE }
 
 /**
- * A fração das subtarefas na ponta da linha (canvas “Lista de tarefas — subtarefas”, modelo A): a pizza das feitas,
- * "1/4" e a seta. Abre e fecha a gaveta logo abaixo da linha.
+ * O topo do fio: a pizza das feitas, "1 de 4 feitas" e a seta, ligados à principal pelo cotovelo. Abre e fecha as
+ * subtarefas logo abaixo.
  */
 @Composable
-fun SubtaskToggle(
+private fun SubtaskToggle(
     card: TaskCard,
     subtasks: List<TaskCard>,
     expanded: Boolean,
+    riseToGlyph: Dp,
     onToggle: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     val done = subtasksDone(subtasks)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
-    val foreground = if (expanded) MaterialTheme.colorScheme.onBackground else muted
-    val track = MaterialTheme.colorScheme.outline
+    val wire = MaterialTheme.colorScheme.outline
     val success = braidTokens().success
     val label = subtaskToggleLabel(card.name, subtasks)
-    // A área de toque passa dos 44 dp sem engordar o desenho.
-    Box(
-        modifier
-            .minimumInteractiveComponentSize()
-            .semantics {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(TOGGLE_HEIGHT)
+            .drawBehind {
+                // Aberta, o fio passa por aqui e segue até as subtarefas; fechada, termina no cotovelo.
+                val x = 0.5.dp.toPx()
+                val elbowEnd = TOGGLE_HEIGHT.toPx() / 2
+                val bottom = if (expanded) size.height else elbowEnd - ELBOW_RADIUS.toPx()
+                drawLine(wire, Offset(x, -riseToGlyph.toPx()), Offset(x, bottom), strokeWidth = 1.dp.toPx())
+                drawPath(
+                    elbowPath(ELBOW_WIDTH.toPx(), elbowEnd, ELBOW_RADIUS.toPx()),
+                    wire,
+                    style = Stroke(width = 1.dp.toPx()),
+                )
+            }.semantics {
                 role = Role.Button
                 contentDescription = label
                 stateDescription = if (expanded) "Aberto" else "Recolhido"
-            }.clickable(role = Role.Button, onClick = onToggle),
-        contentAlignment = Alignment.Center,
+            }.clickable(role = Role.Button, onClick = onToggle)
+            .padding(start = LINE_START),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            Modifier
-                .height(28.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (expanded) MaterialTheme.colorScheme.secondary else Color.Transparent)
-                .border(1.dp, track, RoundedCornerShape(14.dp))
-                .padding(horizontal = 7.dp)
-                .clearAndSetSemantics {},
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Canvas(Modifier.size(14.dp)) {
-                val stroke = 2.4.dp.toPx()
-                val radius = 5.dp.toPx()
-                val topLeft = Offset(center.x - radius, center.y - radius)
-                val arc = Size(radius * 2, radius * 2)
-                drawCircle(track, radius = radius, style = Stroke(width = stroke))
-                if (done > 0) {
-                    drawArc(
-                        color = success,
-                        startAngle = -90f,
-                        sweepAngle = 360f * done / subtasks.size,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arc,
-                        style = Stroke(width = stroke, cap = StrokeCap.Butt),
-                    )
-                }
+        Canvas(Modifier.size(14.dp)) {
+            val stroke = 2.4.dp.toPx()
+            val radius = 5.dp.toPx()
+            val topLeft = Offset(center.x - radius, center.y - radius)
+            val arc = Size(radius * 2, radius * 2)
+            drawCircle(wire, radius = radius, style = Stroke(width = stroke))
+            if (done > 0) {
+                drawArc(
+                    color = success,
+                    startAngle = -90f,
+                    sweepAngle = 360f * done / subtasks.size,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arc,
+                    style = Stroke(width = stroke, cap = StrokeCap.Butt),
+                )
             }
-            Text(text = "$done/${subtasks.size}", color = foreground, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 16.sp)
-            SvgIcon(
-                BraidIcons.chevronDown,
-                size = 12.dp,
-                color = foreground,
-                strokeWidth = 2.2f,
-                modifier = Modifier.rotate(if (expanded) 180f else 0f),
-            )
         }
+        Text(
+            text = subtaskProgressText(subtasks),
+            modifier = Modifier.clearAndSetSemantics {},
+            color = muted,
+            fontFamily = BraidMonoFont,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            maxLines = 1,
+        )
+        SvgIcon(
+            BraidIcons.chevronDown,
+            size = 12.dp,
+            color = muted,
+            strokeWidth = 2.2f,
+            modifier = Modifier.rotate(if (expanded) 180f else 0f).clearAndSetSemantics {},
+        )
     }
 }
 
@@ -167,11 +175,13 @@ private val ELBOW_HEIGHT = 20.dp
 private val ELBOW_RADIUS = 9.dp
 private val LINE_START = 24.dp
 private val GLYPH_TOUCH = 36.dp
+private val TOGGLE_HEIGHT = 44.dp
 
 /**
- * A gaveta: as subtarefas diretas de [parent], presas ao glifo da principal por um fio. Cada uma tem o glifo (o de
- * pessoa abre a mesma escolha de status da lista), o nome que leva ao detalhe, o quando e, se tiver as suas, a própria
- * fração com a gaveta aninhada. [closedIds] são as tarefas com a gaveta fechada.
+ * A gaveta: presa ao glifo da principal por um fio, com a linha das feitas no topo ([SubtaskToggle]) e, quando aberta,
+ * as subtarefas diretas de [parent]. Cada uma tem o glifo (o de pessoa abre a mesma escolha de status da lista), o nome
+ * que leva ao detalhe, o quando e, se tiver as suas, a própria gaveta logo abaixo. [closedIds] são as tarefas com a
+ * gaveta fechada.
  */
 @Composable
 fun SubtaskDrawer(
@@ -187,44 +197,42 @@ fun SubtaskDrawer(
     riseToGlyph: Dp = 22.dp,
 ) {
     val items = tree.subtasksOf(parent.id)
+    val expanded = parent.id !in closedIds
     val wire = MaterialTheme.colorScheme.outline
-    Column(
-        modifier.fillMaxWidth().semantics { contentDescription = subtaskDrawerLabel(parent.name) },
-    ) {
-        items.forEachIndexed { index, card ->
-            val nested = tree.subtasksOf(card.id)
-            val open = card.id !in closedIds
-            val last = index == items.lastIndex
-            Column(
-                Modifier.drawBehind {
-                    val x = 0.5.dp.toPx()
-                    val top = if (index == 0) -riseToGlyph.toPx() else 0f
-                    // O fio segue até a subtarefa seguinte, passando pela gaveta aninhada; a última termina no cotovelo.
-                    val bottom = if (last) ELBOW_HEIGHT.toPx() - ELBOW_RADIUS.toPx() else size.height
-                    drawLine(wire, Offset(x, top), Offset(x, bottom), strokeWidth = 1.dp.toPx())
-                },
-            ) {
-                SubtaskLine(
-                    card = card,
-                    now = now,
-                    nested = nested,
-                    open = open,
-                    onToggle = { onToggle(card.id) },
-                    onStatusClick = onStatusClick,
-                    onOpenTask = onOpenTask,
-                )
-                if (open && nested.isNotEmpty()) {
-                    SubtaskDrawer(
-                        parent = card,
-                        tree = tree,
-                        now = now,
-                        closedIds = closedIds,
-                        onToggle = onToggle,
-                        onStatusClick = onStatusClick,
-                        onOpenTask = onOpenTask,
-                        modifier = Modifier.padding(start = 33.dp, bottom = 4.dp),
-                        riseToGlyph = 11.dp,
-                    )
+    Column(modifier.fillMaxWidth()) {
+        SubtaskToggle(
+            card = parent,
+            subtasks = items,
+            expanded = expanded,
+            riseToGlyph = riseToGlyph,
+            onToggle = { onToggle(parent.id) },
+        )
+        if (!expanded) return@Column
+        Column(Modifier.fillMaxWidth().semantics { contentDescription = subtaskDrawerLabel(parent.name) }) {
+            items.forEachIndexed { index, card ->
+                val last = index == items.lastIndex
+                Column(
+                    Modifier.drawBehind {
+                        val x = 0.5.dp.toPx()
+                        // O fio segue até a subtarefa seguinte, passando pela gaveta aninhada; a última termina no cotovelo.
+                        val bottom = if (last) ELBOW_HEIGHT.toPx() - ELBOW_RADIUS.toPx() else size.height
+                        drawLine(wire, Offset(x, 0f), Offset(x, bottom), strokeWidth = 1.dp.toPx())
+                    },
+                ) {
+                    SubtaskLine(card = card, now = now, onStatusClick = onStatusClick, onOpenTask = onOpenTask)
+                    if (tree.subtasksOf(card.id).isNotEmpty()) {
+                        SubtaskDrawer(
+                            parent = card,
+                            tree = tree,
+                            now = now,
+                            closedIds = closedIds,
+                            onToggle = onToggle,
+                            onStatusClick = onStatusClick,
+                            onOpenTask = onOpenTask,
+                            modifier = Modifier.padding(start = 33.dp),
+                            riseToGlyph = 11.dp,
+                        )
+                    }
                 }
             }
         }
@@ -235,9 +243,6 @@ fun SubtaskDrawer(
 private fun SubtaskLine(
     card: TaskCard,
     now: Instant,
-    nested: List<TaskCard>,
-    open: Boolean,
-    onToggle: () -> Unit,
     onStatusClick: (TaskCard) -> Unit,
     onOpenTask: (String) -> Unit,
 ) {
@@ -313,9 +318,6 @@ private fun SubtaskLine(
                 strokeWidth = 1.9f,
                 modifier = Modifier.padding(start = 10.dp).clearAndSetSemantics {},
             )
-        }
-        if (nested.isNotEmpty()) {
-            SubtaskToggle(card = card, subtasks = nested, expanded = open, onToggle = onToggle, modifier = Modifier.padding(start = 6.dp))
         }
     }
 }

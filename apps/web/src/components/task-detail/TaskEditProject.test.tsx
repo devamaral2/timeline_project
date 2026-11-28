@@ -146,7 +146,7 @@ describe("criação", () => {
     const card = JSON.parse(JSON.stringify([...api.store.table<TaskDto>("tasks").values()][0])) as TaskCardDto;
     render(<ul><TaskRow card={card} userId="user-1" now={new Date()} /></ul>);
 
-    const mark = document.querySelector("[data-row-side] [data-project-mark]");
+    const mark = document.querySelector("[data-row-marks] [data-project-mark]");
     expect(mark).toHaveAccessibleName("Alfa");
     expect(mark).toHaveTextContent("A");
   });
