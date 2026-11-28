@@ -1,7 +1,7 @@
 import type { AuthDatabase } from './client';
 import { RequiredDependencyUnavailableError } from '../common/errors';
 export async function checkReadiness(
-  db: AuthDatabase,
+  db: Pick<AuthDatabase, 'query'>,
   expectedVersion = 2,
 ): Promise<void> {
   try {

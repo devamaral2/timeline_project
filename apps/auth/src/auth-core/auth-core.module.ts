@@ -1,11 +1,10 @@
 import { Module, type DynamicModule } from '@nestjs/common';
-import { Clock, SystemClock } from '../common/clock';
-import { CryptoSecretGenerator, SecretGenerator } from '../common/secret-generator';
+import { Clock } from '../common/clock';
+import { SecretGenerator } from '../common/secret-generator';
 import type { RuntimeEnv } from '../config/env';
 import { RUNTIME_ENV } from '../config/tokens';
 import { AUTH_DATABASE } from '../db/tokens';
-import { DatabaseModule } from '../nest/database.module';
-import type { AuthDatabase } from '../db/client';
+import type { AuthCore } from '../composition-root';
 import { HttpPwnedPasswordsGateway } from './password/http-pwned-passwords.gateway';
 import { PreparePassword } from './password/prepare-password';
 import { ScryptPasswordHasher } from './password/scrypt-password-hasher';
@@ -22,73 +21,32 @@ import { PostgresSigningKeyRepository } from './security/postgres-signing-key.re
 import { RequireSuperAdminGuard } from '../nest/require-super-admin.guard';
 import { SigningKeyService } from './security/signing-key.service';
 
+/**
+ * Adaptador temporário do Nest: expõe ao container as instâncias que o
+ * composition root já criou, para que as rotas em coexistência usem exatamente
+ * o mesmo banco, repositórios e serviços de segurança do servidor Fastify.
+ */
 @Module({})
 export class AuthCoreModule {
-  static forRoot(env: RuntimeEnv): DynamicModule {
+  static forRoot(env: RuntimeEnv, core: AuthCore): DynamicModule {
     const providers = [
       { provide: RUNTIME_ENV, useValue: env },
-      ...DatabaseModule.providers(RUNTIME_ENV),
-      { provide: Clock, useClass: SystemClock },
-      { provide: SecretGenerator, useClass: CryptoSecretGenerator },
-      { provide: ScryptPasswordHasher, useClass: ScryptPasswordHasher },
-      {
-        provide: HttpPwnedPasswordsGateway,
-        inject: [RUNTIME_ENV],
-        useFactory: (runtime: RuntimeEnv) => new HttpPwnedPasswordsGateway(runtime.passwordBlocklistTimeoutMs),
-      },
-      {
-        provide: PreparePassword,
-        inject: [HttpPwnedPasswordsGateway, ScryptPasswordHasher],
-        useFactory: (pwned: HttpPwnedPasswordsGateway, hasher: ScryptPasswordHasher) => new PreparePassword(pwned, hasher),
-      },
-      {
-        provide: PostgresDeviceKeyRepository,
-        inject: [AUTH_DATABASE],
-        useFactory: (db: AuthDatabase) => new PostgresDeviceKeyRepository(db),
-      },
-      {
-        provide: AuthenticateDeviceKeyUseCase,
-        inject: [PostgresDeviceKeyRepository, Clock],
-        useFactory: (keys: PostgresDeviceKeyRepository, clock: Clock) => new AuthenticateDeviceKeyUseCase(keys, clock),
-      },
+      { provide: AUTH_DATABASE, useValue: core.database },
+      { provide: Clock, useValue: core.clock },
+      { provide: SecretGenerator, useValue: core.secrets },
+      { provide: ScryptPasswordHasher, useValue: core.passwordHasher },
+      { provide: HttpPwnedPasswordsGateway, useValue: core.pwnedPasswords },
+      { provide: PreparePassword, useValue: core.preparePassword },
+      { provide: PostgresDeviceKeyRepository, useValue: core.deviceKeyRepository },
+      { provide: AuthenticateDeviceKeyUseCase, useValue: core.authenticateDeviceKey },
+      { provide: PostgresInviteRepository, useValue: core.inviteRepository },
+      { provide: PostgresRbacRepository, useValue: core.rbacRepository },
+      { provide: PostgresUserRepository, useValue: core.userRepository },
+      { provide: PostgresSessionRepository, useValue: core.sessionRepository },
+      { provide: PostgresSigningKeyRepository, useValue: core.signingKeyRepository },
+      { provide: SigningKeyService, useValue: core.signingKeyService },
+      { provide: AuthorizationService, useValue: core.authorizationService },
       { provide: DeviceKeyAuthGuard, useClass: DeviceKeyAuthGuard },
-      {
-        provide: PostgresInviteRepository,
-        inject: [AUTH_DATABASE],
-        useFactory: (db: AuthDatabase) => new PostgresInviteRepository(db),
-      },
-      {
-        provide: PostgresRbacRepository,
-        inject: [AUTH_DATABASE],
-        useFactory: (db: AuthDatabase) => new PostgresRbacRepository(db),
-      },
-      {
-        provide: PostgresUserRepository,
-        inject: [AUTH_DATABASE],
-        useFactory: (db: AuthDatabase) => new PostgresUserRepository(db),
-      },
-      {
-        provide: PostgresSessionRepository,
-        inject: [AUTH_DATABASE, RUNTIME_ENV],
-        useFactory: (db: AuthDatabase, runtime: RuntimeEnv) => new PostgresSessionRepository(db, runtime.issuer, runtime.audience),
-      },
-      {
-        provide: PostgresSigningKeyRepository,
-        inject: [AUTH_DATABASE],
-        useFactory: (db: AuthDatabase) => new PostgresSigningKeyRepository(db),
-      },
-      {
-        provide: SigningKeyService,
-        inject: [PostgresSigningKeyRepository, RUNTIME_ENV, SecretGenerator],
-        useFactory: (repository: PostgresSigningKeyRepository, runtime: RuntimeEnv, secrets: SecretGenerator) =>
-          new SigningKeyService(repository, runtime.keyEncryptionKey, secrets),
-      },
-      {
-        provide: AuthorizationService,
-        inject: [PostgresSessionRepository, PostgresUserRepository, PostgresRbacRepository],
-        useFactory: (sessions: PostgresSessionRepository, users: PostgresUserRepository, rbac: PostgresRbacRepository) =>
-          new AuthorizationService(sessions, users, rbac),
-      },
       { provide: BearerAuthGuard, useClass: BearerAuthGuard },
       { provide: RequireSuperAdminGuard, useClass: RequireSuperAdminGuard },
     ];
@@ -96,7 +54,6 @@ export class AuthCoreModule {
     return {
       global: true,
       module: AuthCoreModule,
-      imports: [DatabaseModule],
       providers,
       exports: [
         RUNTIME_ENV,
@@ -108,7 +65,6 @@ export class AuthCoreModule {
         PreparePassword,
         PostgresDeviceKeyRepository,
         AuthenticateDeviceKeyUseCase,
-        DeviceKeyAuthGuard,
         PostgresInviteRepository,
         PostgresRbacRepository,
         PostgresSessionRepository,
@@ -116,6 +72,7 @@ export class AuthCoreModule {
         PostgresSigningKeyRepository,
         SigningKeyService,
         AuthorizationService,
+        DeviceKeyAuthGuard,
         BearerAuthGuard,
         RequireSuperAdminGuard,
       ],
