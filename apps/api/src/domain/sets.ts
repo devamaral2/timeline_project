@@ -1,7 +1,7 @@
 /**
  * Os conjuntos fechados do dominio (docs/tdd/novo-banco-de-dados.md). Cada um
- * aparece duas vezes: no tipo da coluna, para o TypeScript, e no check, para o
- * Postgres. Os dois saem daqui.
+ * aparece duas vezes: no codec da coluna (`persistence/database/tables.ts`), para o
+ * TypeScript, e no CHECK da migration, para o SQLite.
  */
 
 /** Quem executa a tarefa. */

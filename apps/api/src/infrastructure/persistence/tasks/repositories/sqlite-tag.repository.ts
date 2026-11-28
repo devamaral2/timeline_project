@@ -1,19 +1,18 @@
-import { sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { TagRepository, TagSuggestionDto } from "../../../../domain/ports";
-import * as schema from "../../database/schema/index";
+import { sql } from "../../sqlite/sql";
+import type { Db } from "../../shared/tx";
 
 function escapeLikePrefix(value: string): string {
   return value.replace(/[\\%_]/g, (char) => `\\${char}`);
 }
 
-export class PostgresTagRepository implements TagRepository {
-  constructor(private readonly db: NodePgDatabase<typeof schema>) {}
+export class SqliteTagRepository implements TagRepository {
+  constructor(private readonly db: Db) {}
 
   async suggest(params: { userId: string; query: string; limit: number }): Promise<TagSuggestionDto[]> {
     const prefix = `${escapeLikePrefix(params.query.trim().toLowerCase())}%`;
 
-    const result = await this.db.execute<{ id: string; name: string }>(sql`
+    return this.db.all<TagSuggestionDto>(sql`
       SELECT id, name
       FROM tags
       WHERE user_id = ${params.userId}
@@ -21,7 +20,5 @@ export class PostgresTagRepository implements TagRepository {
       ORDER BY name
       LIMIT ${params.limit}
     `);
-
-    return result.rows.map((row) => ({ id: row.id, name: row.name }));
   }
 }

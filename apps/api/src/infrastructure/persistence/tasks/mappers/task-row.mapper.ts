@@ -1,8 +1,8 @@
 import { Task, type ArtifactLink } from "../../../../domain/index";
-import type * as schema from "../../database/schema/index";
+import type { TaskRow } from "../../database/tables";
 import { occurrenceLinkOf } from "../../recurrences/mappers/occurrence-columns";
 
-export type TaskRow = typeof schema.tasks.$inferSelect;
+export type { TaskRow };
 
 /** O que vem das outras tabelas para completar o agregado. */
 export interface TaskRowParts {
