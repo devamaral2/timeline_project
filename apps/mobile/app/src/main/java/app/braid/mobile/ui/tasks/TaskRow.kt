@@ -38,10 +38,11 @@ import java.time.Instant
 
 /**
  * A linha única das listas. À esquerda, o glifo (um ponto inerte ou o glifo de situação na tarefa de agente); no resto,
- * três linhas: a do título, que leva sempre na ponta direita a marca do projeto, com a prioridade (pessoa) ou o provedor
- * (agente, quando o cartão traz a escolha) à esquerda dela; a do tipo, com o "quando", a duração e, na de agente, o
- * ícone quadrado e o nome do status; e, quando há, a das tags. O que a linha mostra sai de [taskRowLayout], a partir do
- * cartão e de [now].
+ * três linhas. A ponta direita das duas primeiras forma uma coluna: na do título, o nome do status e, na ponta, o ícone
+ * quadrado dele na tarefa de agente e, na de pessoa, a duração, ou nada quando ela não tem; na do tipo, embaixo, a marca do projeto, com
+ * a prioridade (pessoa) ou o provedor (agente, quando o cartão traz a escolha) à esquerda dela. A linha do tipo leva
+ * ainda o "quando" e, na de agente, a duração. A terceira linha, quando há, é a das tags. O que a linha mostra sai de
+ * [taskRowLayout], a partir do cartão e de [now].
  */
 @Composable
 fun TaskRow(
@@ -92,7 +93,7 @@ fun TaskRow(
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ROW_LINE_GAP)) {
-            // A prioridade (ou o provedor) e o projeto ficam sempre na linha do título, na ponta direita.
+            // Na ponta direita da linha do título, o status do agente ou a duração da tarefa de pessoa.
             Row(
                 Modifier.fillMaxWidth().defaultMinSize(minHeight = 22.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -107,20 +108,33 @@ fun TaskRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                RowMarks(layout.marks)
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                TaskKindMark(layout.meta.kind)
-                Text(
-                    text = layout.meta.whenText,
-                    color = if (layout.meta.overdue) MaterialTheme.colorScheme.error else muted,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                )
-                layout.meta.duration?.let { duration ->
-                    Text(text = duration, color = muted, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 18.sp, maxLines = 1)
+                when (val aside = layout.aside) {
+                    is TaskRowAside.AgentStatus -> AgentStatusMeta(aside.status)
+                    is TaskRowAside.Duration -> DurationText(aside.text)
+                    null -> Unit
                 }
-                layout.meta.agentStatus?.let { agent -> AgentStatusMeta(agent.status) }
+            }
+            // Embaixo dela, na ponta direita, a prioridade (ou o provedor) e o projeto; o texto quebra à esquerda.
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FlowRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    TaskKindMark(layout.meta.kind)
+                    Text(
+                        text = layout.meta.whenText,
+                        color = if (layout.meta.overdue) MaterialTheme.colorScheme.error else muted,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                    )
+                    layout.meta.duration?.let { duration -> DurationText(duration) }
+                }
+                RowMarks(layout.marks)
             }
             // As tags têm linha própria (só quando há); no web têm o cinza e o estilo da linha do tipo. As cores de tag são dos filtros e da edição.
             if (layout.tags.isNotEmpty()) {
@@ -156,12 +170,23 @@ private fun AgentLead(
     }
 }
 
-/** O ícone quadrado e o nome do status. O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */
+@Composable
+private fun DurationText(duration: String) {
+    Text(
+        text = duration,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontFamily = BraidMonoFont,
+        fontSize = 12.sp,
+        lineHeight = 18.sp,
+        maxLines = 1,
+    )
+}
+
+/** O nome do status e, na extrema direita, o ícone quadrado. O ícone já diz o nome por inteiro ("Agente, na fila"); o texto é só para quem enxerga. */
 @Composable
 private fun AgentStatusMeta(status: TaskStatus?) {
     val tone = agentToneColor(remember(status) { agentStatusIcon(status) }.tone)
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        AgentStatusIcon(status = status, size = 16.dp)
         agentStatusLabel(status)?.let { label ->
             Text(
                 text = label,
@@ -172,11 +197,12 @@ private fun AgentStatusMeta(status: TaskStatus?) {
                 maxLines = 1,
             )
         }
+        AgentStatusIcon(status = status, size = 16.dp)
     }
 }
 
 /**
- * A ponta direita da linha do título: a marca do projeto sozinha (o nome é só a descrição dela) e, à esquerda dela, a
+ * A ponta direita da linha do tipo: a marca do projeto sozinha (o nome é só a descrição dela) e, à esquerda dela, a
  * prioridade (pessoa) ou o símbolo do provedor (agente com a escolha do pedido).
  */
 @Composable

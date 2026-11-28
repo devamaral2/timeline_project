@@ -187,6 +187,21 @@ test("a gaveta vem aberta com as subtarefas, cada uma levando ao seu detalhe, e 
   expect(screen.getByRole("list", { name: "Subtarefas de “Revisar proposta”" })).toBeInTheDocument();
 });
 
+test("a subtarefa de agente leva o ícone do status na extrema direita e um ponto inerte à esquerda", async () => {
+  serve([
+    taskFixture({ id: "proposta", name: "Revisar proposta", status: "doing", subtaskIds: ["resumo"] }),
+    taskFixture({ id: "resumo", name: "Resumir a proposta", actor: "agent", kind: "request", status: "completed", parentTaskId: "proposta" }),
+  ]);
+  render(<TaskListScreen userId="user-1" />);
+
+  const drawer = await screen.findByRole("list", { name: "Subtarefas de “Revisar proposta”" });
+  const line = within(drawer).getByRole("link", { name: "Resumir a proposta" }).parentElement as HTMLElement;
+  expect(within(line).getByRole("img", { name: "Agente, concluído" })).toBe(line.lastElementChild);
+  expect(line.querySelector("[data-row-lead]")).toHaveAttribute("aria-hidden", "true");
+  expect(line.querySelector("[data-row-lead] svg")).not.toBeInTheDocument();
+  expect(within(line).queryByRole("button")).not.toBeInTheDocument();
+});
+
 test("o glifo da subtarefa abre a mesma escolha de status e grava com a revisão dela", async () => {
   const api = serve(hierarchy);
   render(<TaskListScreen userId="user-1" />);
@@ -365,9 +380,12 @@ test("tocar no glifo de uma tarefa de agente final e escolher Revisada a leva pa
   expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Para revisar. Mudar situação de “Pesquisar voos”");
   expect(within(screen.getByRole("region", { name: /Para agora/ })).getByRole("link", { name: /Pesquisar voos/ })).toBeInTheDocument();
   fireEvent.click(await situationButton("Pesquisar voos"));
-  const menu = screen.getByRole("group", { name: "Situação da tarefa" });
-  expect(within(menu).getAllByRole("button").map((button) => button.textContent)).toEqual(["Para revisar", "Revisada", "Guardada"]);
-  fireEvent.click(within(menu).getByRole("button", { name: "Revisada" }));
+  const picker = screen.getByRole("dialog", { name: "Situação de “Pesquisar voos”" });
+  const menu = within(picker).getByRole("listbox", { name: "Situação da tarefa" });
+  expect(within(menu).getAllByRole("option").map((option) => option.textContent)).toEqual(["Para revisar", "Revisada", "Guardada"]);
+  expect(within(menu).getByRole("option", { name: "Para revisar" })).toHaveAttribute("aria-selected", "true");
+  fireEvent.click(within(menu).getByRole("option", { name: "Revisada" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
   // Na hora, sem reler: a linha sai de Para agora e entra em Finalizadas (fechada).
   expect(screen.queryByRole("link", { name: /Pesquisar voos/ })).not.toBeInTheDocument();
@@ -395,7 +413,7 @@ test("escolher Guardada leva a tarefa de agente para Para depois, antes de a API
   render(<TaskListScreen userId="user-1" />);
 
   fireEvent.click(await situationButton("Pesquisar voos"));
-  fireEvent.click(screen.getByRole("button", { name: "Guardada" }));
+  fireEvent.click(screen.getByRole("option", { name: "Guardada" }));
 
   expect(screen.queryByRole("link", { name: /Pesquisar voos/ })).not.toBeInTheDocument();
   expect(drawerNames()).toEqual(["Para agora1", "Para depois1"]);
@@ -413,7 +431,7 @@ test("com a API falhando, a tarefa volta para a gaveta de antes e a tela avisa",
   api.failNext("PUT", "/api/tasks/voos/situation", 500);
 
   fireEvent.click(await situationButton("Pesquisar voos"));
-  fireEvent.click(screen.getByRole("button", { name: "Revisada" }));
+  fireEvent.click(screen.getByRole("option", { name: "Revisada" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível mudar a situação");
   expect(await situationButton("Pesquisar voos")).toHaveAccessibleName("Para revisar. Mudar situação de “Pesquisar voos”");

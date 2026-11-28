@@ -445,7 +445,7 @@ private fun Header(
 
 /** O botão de escolha do topo: o glifo e o nome com a seta, sem moldura, com a área de toque de 48dp. */
 @Composable
-private fun ChoiceChip(
+internal fun ChoiceChip(
     description: String,
     enabled: Boolean,
     onClick: () -> Unit,

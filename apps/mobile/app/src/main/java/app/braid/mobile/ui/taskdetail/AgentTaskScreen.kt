@@ -37,7 +37,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -84,9 +83,9 @@ import app.braid.mobile.ui.chat.HermesStatusLine
 import app.braid.mobile.ui.chat.VoiceButton
 import app.braid.mobile.ui.chat.VoiceUiState
 import app.braid.mobile.ui.documents.DocumentIcons
-import app.braid.mobile.ui.tasks.SituationMenu
 import app.braid.mobile.ui.tasks.TaskKindMark
 import app.braid.mobile.ui.tasks.TaskSituationGlyph
+import app.braid.mobile.ui.tasks.TaskSituationSheet
 import app.braid.mobile.ui.tasks.TaskStatusGlyph
 import app.braid.mobile.ui.tasks.agentStatusLabel
 import app.braid.mobile.ui.tasks.situationName
@@ -206,7 +205,7 @@ private fun Body(
 }
 
 /**
- * O topo: o código do tipo, o título e o status do agente, solto na ponta direita da linha e só com o nome dele ("Concluído"). O pedido que terminou ganha o controle de situação na ponta esquerda: o toque abre as três opções logo abaixo.
+ * O topo: o código do tipo, o título e o status do agente, solto na ponta direita da linha e só com o nome dele ("Concluído"). O pedido que terminou ganha o controle de situação na ponta esquerda, o mesmo botão do status de pessoa: o toque abre a folha das três.
  */
 @Composable
 private fun Header(
@@ -215,7 +214,7 @@ private fun Header(
     situationError: String?,
     onSituationPick: (TaskSituation) -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
+    var situationOpen by remember { mutableStateOf(false) }
     val situation = request.situation
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         TaskKindMark(task.card.kind)
@@ -226,15 +225,12 @@ private fun Header(
         )
         Row(Modifier.fillMaxWidth().defaultMinSize(minHeight = 40.dp), verticalAlignment = Alignment.CenterVertically) {
             if (situation != null) {
-                Row(
-                    Modifier
-                        .defaultMinSize(minHeight = 40.dp)
-                        .clickable(role = Role.Button) { menuOpen = !menuOpen }
-                        .semantics(mergeDescendants = true) { contentDescription = "${situationName(situation)}. Mudar situação" },
-                    verticalAlignment = Alignment.CenterVertically,
+                ChoiceChip(
+                    description = "${situationName(situation)}. Mudar situação",
+                    enabled = true,
+                    onClick = { situationOpen = true },
                 ) {
-                    TaskSituationGlyph(situation, size = 16.dp)
-                    Spacer(Modifier.width(8.dp))
+                    TaskSituationGlyph(situation, size = 18.dp)
                     Text(situationName(situation), color = MaterialTheme.colorScheme.onBackground, fontSize = 14.sp, lineHeight = 20.sp)
                 }
                 Spacer(Modifier.width(12.dp))
@@ -249,13 +245,16 @@ private fun Header(
                 lineHeight = 20.sp,
             )
         }
-        if (menuOpen && situation != null) {
-            SituationMenu(
-                value = situation,
+        if (situationOpen && situation != null) {
+            TaskSituationSheet(
+                taskName = task.card.name,
+                current = situation,
                 onPick = {
-                    menuOpen = false
-                    onSituationPick(it)
+                    situationOpen = false
+                    // Escolher a que já está não grava nada.
+                    if (it != situation) onSituationPick(it)
                 },
+                onDismiss = { situationOpen = false },
             )
         }
         situationError?.let { Alert(it) }

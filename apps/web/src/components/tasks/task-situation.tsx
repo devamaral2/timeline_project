@@ -1,4 +1,5 @@
 import type { TaskSituation } from "@repo/contracts";
+import type { ReactNode } from "react";
 import styles from "./task-glyphs.module.css";
 
 /** As três situações do pedido de agente que terminou, na ordem em que o menu as mostra. */
@@ -9,6 +10,11 @@ export const situationNames: Record<TaskSituation, string> = {
   reviewed: "Revisada",
   bookmarked: "Guardada",
 };
+
+/** As três situações como opções de escolha: o glifo e o nome. */
+export function situationOptions(): { value: TaskSituation; label: string; icon: ReactNode }[] {
+  return TASK_SITUATIONS.map((value) => ({ value, label: situationNames[value], icon: <TaskSituationGlyph situation={value} size={18} /> }));
+}
 
 /**
  * O glifo da situação, no desenho do canvas: Para revisar é o círculo vazio de "A fazer" (cor apagada), Revisada é um

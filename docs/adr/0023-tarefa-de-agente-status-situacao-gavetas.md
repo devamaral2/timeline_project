@@ -163,7 +163,8 @@ não tem onde marcar.
    entram as três, ou nenhuma.
 6. **No web:** na linha da tarefa de agente que tem situação, o glifo da esquerda mostra a situação (Para revisar é o
    círculo vazio de "A fazer", em cor apagada; Revisada, um círculo com dois vistos, em sucesso; Guardada, um marcador,
-   na cor de informação, o azul de `--routine`) e abre as três opções na própria linha. A mudança aparece na hora e é
+   na cor de informação, o azul de `--routine`) e abre as três opções na própria linha (desde 2026-11-28, no mesmo seletor
+   do status de pessoa: o cartão ancorado no glifo e, no detalhe, a pílula com a seta). A mudança aparece na hora e é
    desfeita se a gravação falhar. Na tarefa de agente `waiting` e na execução agendada o glifo é um ponto inerte. O
    cabeçalho do detalhe do pedido terminado ganha o mesmo controle. A lista continua agrupando como antes: as quatro
    gavetas vêm com a regra das gavetas, e o status continua onde é desenhado, até o ticket do ícone quadrado o levar

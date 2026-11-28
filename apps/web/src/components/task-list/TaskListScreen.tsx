@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TaskCardDto, TaskPriority, HumanTaskStatus, TaskSituation } from "@repo/contracts";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { TaskRow } from "@/components/tasks/task-row";
+import { TaskSituationPicker } from "@/components/tasks/task-situation-picker";
 import { TaskStatusPicker } from "@/components/tasks/task-status-picker";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
 import page from "@/components/ui/page.module.css";
@@ -65,6 +66,8 @@ export function TaskListScreen({ userId }: { userId: string }) {
   /** A tarefa cujo glifo foi tocado: a escolha de status fica aberta para ela. */
   const [statusCard, setStatusCard] = useState<TaskCardDto | null>(null);
   const [statusAnchor, setStatusAnchor] = useState<HTMLElement | null>(null);
+  const [situationCard, setSituationCard] = useState<TaskCardDto | null>(null);
+  const [situationAnchor, setSituationAnchor] = useState<HTMLElement | null>(null);
   const [tag, setTag] = useState<string | null>(null);
   const [priorities, setPriorities] = useState<TaskPriority[]>([]);
   const [typed, setTyped] = useState("");
@@ -141,6 +144,12 @@ export function TaskListScreen({ userId }: { userId: string }) {
     setStatusCard(card);
   }
 
+  /** O glifo da esquerda de um pedido de agente que terminou abre a escolha da situação. */
+  function openSituationPicker(card: TaskCardDto, anchor: HTMLElement) {
+    setSituationAnchor(anchor);
+    setSituationCard(card);
+  }
+
   /**
    * Grava o status escolhido com a revisão lida; revisão velha relê a lista e
    * avisa. Escolher o status que a tarefa já tem só fecha a escolha.
@@ -179,6 +188,7 @@ export function TaskListScreen({ userId }: { userId: string }) {
    * conflito a tratar, só a falha.
    */
   async function changeSituation(card: TaskCardDto, situation: TaskSituation) {
+    setSituationCard(null);
     if (situation === card.situation) return;
     setNotice(null);
     showSituation(card.id, situation);
@@ -302,7 +312,7 @@ export function TaskListScreen({ userId }: { userId: string }) {
                             now={now}
                             ruleInPlaceOfTime={showsSeriesRule(card)}
                             onStatusClick={openStatusPicker}
-                            onSituationPick={(picked, situation) => void changeSituation(picked, situation)}
+                            onSituationClick={openSituationPicker}
                           >
                             {subtasks.length > 0 ? (
                               <SubtaskDrawer
@@ -326,6 +336,14 @@ export function TaskListScreen({ userId }: { userId: string }) {
           </div>
         )}
       </section>
+      {situationCard ? (
+        <TaskSituationPicker
+          card={situationCard}
+          anchor={situationAnchor}
+          onPick={(situation) => void changeSituation(situationCard, situation)}
+          onClose={() => setSituationCard(null)}
+        />
+      ) : null}
       {statusCard ? (
         <TaskStatusPicker
           card={statusCard}
