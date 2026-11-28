@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { startAuth } from './composition-root';
 import { getRuntimeEnv } from './config/env';
 import { findMonorepoRoot, loadRootEnv } from './config/load-env';

@@ -1,20 +1,27 @@
-import { apiReference } from "@scalar/nestjs-api-reference";
-import type { IncomingMessage, ServerResponse } from "node:http";
 import { authOpenApiDocument } from "../http/openapi";
 import type { AuthRoute } from "./routes";
 
-const referenceHandler = apiReference({
-  withFastify: true,
-  pageTitle: "Braid Auth API",
-  theme: "purple",
-  darkMode: false,
-  spec: { content: authOpenApiDocument },
-}) as unknown as (request: IncomingMessage, response: ServerResponse) => void;
-
 /**
- * O documento é estático e a referência é servida pelo Scalar diretamente no
- * Fastify. Nenhuma das duas passa por autenticação.
+ * O documento é estático e a referência é servida pelo renderer do Scalar. O
+ * pacote é ESM: o processo do Auth continua CommonJS, então ele entra por
+ * import dinâmico, uma única vez por processo. Nenhuma das duas rotas passa
+ * por autenticação.
  */
+
+let referenceHtml: Promise<string> | undefined;
+
+function documentationHtml(): Promise<string> {
+  referenceHtml ??= import("@scalar/client-side-rendering").then(
+    ({ DEFAULT_CDN, renderApiReference }) =>
+      renderApiReference({
+        config: { theme: "purple", darkMode: false, content: authOpenApiDocument },
+        pageTitle: "Braid Auth API",
+        cdn: DEFAULT_CDN,
+      }),
+  );
+  return referenceHtml;
+}
+
 export function documentationRoutes(): AuthRoute[] {
   return [
     {
@@ -25,13 +32,7 @@ export function documentationRoutes(): AuthRoute[] {
     {
       method: "GET",
       path: "/docs",
-      handler: async (request, reply) => {
-        reply.hijack();
-        // O Scalar escreve os headers dele com `writeHead`; o correlation id
-        // precisa já estar no socket para não sumir na resposta.
-        reply.raw.setHeader("X-Correlation-Id", request.authContext.correlationId);
-        referenceHandler(request.raw, reply.raw);
-      },
+      handler: async (_request, reply) => reply.type("text/html; charset=utf-8").send(await documentationHtml()),
     },
   ];
 }

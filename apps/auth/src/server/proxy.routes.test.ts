@@ -62,7 +62,6 @@ interface ProxyServer {
   readonly server: AuthHttpServer;
   readonly base: string;
   readonly authorized: AccessRequest[];
-  readonly fallbackCalls: string[];
 }
 
 /** As famílias fora do proxy existem para o tipo; o proxy não as aciona. */
@@ -93,7 +92,6 @@ async function startProxyServer(input: {
   deviceKey?: DeviceKeyIdentity | null;
 }): Promise<ProxyServer> {
   const authorized: AccessRequest[] = [];
-  const fallbackCalls: string[] = [];
   const server = createAuthHttpServer({
     dependencies: serverDependencies({
       proxy: {
@@ -117,13 +115,8 @@ async function startProxyServer(input: {
     }),
     logger: new RecordingAuthLogger(),
   });
-  server.setFallback((request, response) => {
-    fallbackCalls.push(`${request.method} ${request.url}`);
-    response.writeHead(599);
-    response.end();
-  });
   const base = await server.listen(0, "127.0.0.1");
-  return { server, base, authorized, fallbackCalls };
+  return { server, base, authorized };
 }
 
 function bodyOf(field: string, bytes: number): string {
@@ -142,10 +135,6 @@ describe("proxy Fastify: chave de dispositivo, bearer e limites", () => {
     upstream = undefined;
   });
 
-  function expectNoFallback(target: ProxyServer): void {
-    expect(target.fallbackCalls).toEqual([]);
-  }
-
   it("serve a chave de dispositivo antes do proxy geral e encaminha só a identidade validada", async () => {
     upstream = await startFakeHttpServer(() => ({ status: 200, body: "ok" }));
     proxy = await startProxyServer({ apiServiceUrl: upstream.url, deviceKey: owner });
@@ -163,7 +152,6 @@ describe("proxy Fastify: chave de dispositivo, bearer e limites", () => {
     });
 
     expect(response.status).toBe(200);
-    expectNoFallback(proxy);
     expect(proxy.authorized).toEqual([]);
     expect(upstream.requests).toHaveLength(1);
     const forwarded = upstream.requests[0];
@@ -226,7 +214,6 @@ describe("proxy Fastify: chave de dispositivo, bearer e limites", () => {
     expect(response.headers.get("content-type")).toBe("application/problem+json");
     expect(response.headers.get("x-upstream")).toBe("yes");
     expect(await response.text()).toBe("created");
-    expectNoFallback(proxy);
     expect(proxy.authorized).toEqual([
       { userId: "user-1", sessionId: "session-1", resource: "artifact", action: "create", targetUserId: undefined },
     ]);

@@ -6,7 +6,7 @@ Monorepo Turborepo + pnpm workspace.
 apps/web              Next.js 16 — frontend web (porta 3000)
 apps/mobile           Android nativo em Kotlin + Jetpack Compose
 apps/api              Fastify — backend (porta 3001, so loopback por padrao)
-apps/auth             NestJS — identidade, convite, login, sessao e RBAC
+apps/auth             Fastify — identidade, convite, login, sessao e RBAC
 packages/contracts    @repo/contracts — contratos de dados compartilhados
 packages/timeline     @repo/timeline — datas, janelas e agrupamento da timeline
 packages/theme        @repo/theme — os tokens de cor do design system

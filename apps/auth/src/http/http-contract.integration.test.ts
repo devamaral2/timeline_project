@@ -14,7 +14,6 @@ import { LEAK_PROBE, createTestApp, type TestApp } from "../testing/create-test-
 import { createPostgresTestDatabase, type PostgresTestDatabase } from "../testing/postgres-test-database";
 import { InMemoryDeviceKeyRepository } from "../testing/in-memory-device-key.repository";
 import { ScryptPasswordHasher } from "../auth-core/password/scrypt-password-hasher";
-import { SigningKeyService } from "../auth-core/security/signing-key.service";
 import { startFakeHttpServer, type FakeHttpServer } from "../testing/fake-http-server";
 import { AUTH_HTTP_OPERATIONS, documentedOperations } from "./http-contract.inventory";
 import { authOpenApiDocument } from "./openapi";
@@ -22,10 +21,10 @@ import { authOpenApiDocument } from "./openapi";
 /**
  * A linha de base executável do contrato HTTP do Auth.
  *
- * Ela sobe o Nest de verdade numa porta efêmera, com Postgres de verdade, e
- * fala HTTP como o web, o Android, a extensão e o serviço local falam. Nada
- * aqui inspeciona decorators, providers ou metadata: o que está congelado é o
- * que atravessa o socket.
+ * Ela sobe o processo real numa porta efêmera, com Postgres de verdade, e fala
+ * HTTP como o web, o Android, a extensão e o serviço local falam. Nada aqui
+ * inspeciona a estrutura interna: o que está congelado é o que atravessa o
+ * socket.
  */
 
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
@@ -92,7 +91,7 @@ describe("Auth HTTP contract baseline", () => {
     );
     // O bootstrap real garante a chave ativa antes do listen; aqui a garantia é
     // exercitada no teste dedicado e reproduzida para o restante da suíte.
-    await app.app.get(SigningKeyService).ensureActive(new Date(), {
+    await app.core.signingKeyService.ensureActive(new Date(), {
       correlationId: "contract-baseline", actorUserId: null, action: "key.created",
       targetType: "signing_key", targetId: null, result: "succeeded",
       reason: null, metadata: {}, context: ANONYMOUS_CONTEXT, occurredAt: new Date(),
@@ -592,8 +591,8 @@ describe("Auth HTTP contract baseline", () => {
         headers: { authorization: `Bearer ${tokens.accessToken}`, "x-correlation-id": "proxy-policy" },
       });
 
-      // Comportamento atual do Nest, congelado para a migração: o throw do
-      // `policyFor` cai no filtro como erro inesperado, não como 404.
+      // Comportamento herdado do transporte anterior: o throw do `policyFor`
+      // cai no error handler como erro inesperado, não como 404.
       expect(response.status).toBe(500);
       expect(response.headers.get("x-correlation-id")).toBe("proxy-policy");
       expect(await response.json()).toEqual({ code: "internal_error", correlationId: "proxy-policy" });

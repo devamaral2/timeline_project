@@ -1,5 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
-import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import type { Server } from "node:http";
 import { ulid } from "ulid";
 import { ConsoleAuthLogger, type AuthLogger } from "../common/logger";
 import { resolveRequestContext, type RequestContext } from "../common/request-context";
@@ -19,7 +19,7 @@ export type { AuthRoute } from "./routes";
 declare module "fastify" {
   interface FastifyRequest {
     authContext: RequestContext;
-    /** O ator validado pelo guard, como no adaptador do Nest. */
+    /** O ator validado pelo guard da rota. */
     actor?: AuthenticatedActor;
   }
 }
@@ -44,16 +44,9 @@ export interface AuthHttpServerOptions {
   readonly routes?: readonly AuthRoute[];
 }
 
-export type AuthFallbackHandler = (
-  request: IncomingMessage,
-  response: ServerResponse,
-) => void;
-
 export interface AuthHttpServer {
   readonly fastify: FastifyInstance;
   readonly server: Server;
-  /** As rotas ainda não migradas são entregues ao servidor em coexistência. */
-  setFallback(handler: AuthFallbackHandler): void;
   listen(port: number, host: string): Promise<string>;
   close(): Promise<void>;
 }
@@ -94,8 +87,8 @@ function parseProxyJsonBody(
 
 /**
  * Os parsers do proxy vivem num escopo filho próprio. O escopo raiz continua
- * sem parser, e o handler de coexistência (404) recebe o corpo cru intacto para
- * o Nest/Express consumir. O limite de cada rota vem declarado nela.
+ * sem parser, e as rotas públicas (health, JWKS, documentação e sondas) não
+ * pagam o custo de ler corpo. O limite de cada rota vem declarado nela.
  */
 function registerProxyRoutes(
   fastify: FastifyInstance,
@@ -118,9 +111,9 @@ function statusOf(error: unknown): number | undefined {
 }
 
 /**
- * O Express das rotas em coexistência não reconhecia `text/plain` nem corpo
- * sem content-type: o parser ignorava e a validação respondia 400. O Fastify
- * recusa antes, com 415; aqui a borda volta ao contrato observado.
+ * O Express das rotas antigas não reconhecia `text/plain` nem corpo sem
+ * content-type: o parser ignorava e a validação respondia 400. O Fastify recusa
+ * antes, com 415; aqui a borda volta ao contrato observado.
  */
 function transportStatus(status: number | undefined): number | undefined {
   return status === 415 ? 400 : status;
@@ -144,15 +137,13 @@ function addMigratedBodyParsers(fastify: FastifyInstance): void {
 }
 
 /**
- * O servidor Fastify do Auth. Ele serve as rotas já migradas e entrega o resto
- * ao handler em coexistência (hoje o Express do Nest), preservando os
- * contratos que ainda vivem lá.
+ * O servidor Fastify do Auth. Ele serve sozinho todas as rotas declaradas:
+ * infraestrutura, proxies e features.
  *
- * O escopo raiz continua sem parsers de propósito: assim o corpo cru chega
- * intacto à rota em coexistência, que mantém seus limites de 32 KB, Leitura
- * diária e entrega. Cada família migrada ganha um escopo filho com os seus
- * parsers: as features com o JSON comum e o proxy com o `json()` do Express e o
- * limite declarado em cada rota.
+ * O escopo raiz continua sem parsers de propósito: health, JWKS, documentação
+ * e sondas não leem corpo. Cada família que precisa de corpo ganha um escopo
+ * filho com os seus parsers: as features com o JSON comum e o proxy com o
+ * `json()` do Express e o limite declarado em cada rota.
  */
 export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpServer {
   const logger = options.logger ?? new ConsoleAuthLogger();
@@ -160,7 +151,6 @@ export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpSe
   fastify.removeAllContentTypeParsers();
 
   const guards = createAuthGuards(options.dependencies);
-  let fallback: AuthFallbackHandler | undefined;
 
   fastify.decorateRequest("authContext", null as unknown as RequestContext);
   fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
@@ -185,12 +175,7 @@ export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpSe
     return mapped.body === undefined ? reply.send() : reply.send(mapped.body);
   });
 
-  fastify.setNotFoundHandler((request, reply) => {
-    if (!fallback) return reply.code(404).send({ code: "not_found" });
-    reply.hijack();
-    fallback(request.raw, reply.raw);
-    return reply;
-  });
+  fastify.setNotFoundHandler((_request, reply) => reply.code(404).send({ code: "not_found" }));
 
   registerAuthRoutes(
     fastify,
@@ -213,9 +198,6 @@ export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpSe
   return {
     fastify,
     server: fastify.server,
-    setFallback(handler) {
-      fallback = handler;
-    },
     async listen(port, host) {
       await fastify.listen({ port, host });
       const address = fastify.server.address();

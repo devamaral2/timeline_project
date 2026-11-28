@@ -1,5 +1,3 @@
-import type { INestApplication, Type } from "@nestjs/common";
-import { NestFactory } from "@nestjs/core";
 import type { PwnedPasswordsGateway } from "./auth-core/password/pwned-passwords.gateway";
 import { HttpPwnedPasswordsGateway } from "./auth-core/password/http-pwned-passwords.gateway";
 import { PreparePassword } from "./auth-core/password/prepare-password";
@@ -19,7 +17,6 @@ import { Clock, SystemClock } from "./common/clock";
 import { ConsoleAuthLogger, type AuthLogger } from "./common/logger";
 import { CryptoSecretGenerator, type SecretGenerator } from "./common/secret-generator";
 import type { RuntimeEnv } from "./config/env";
-import { AppModule } from "./app.module";
 import { ensureSigningKeyActive } from "./bootstrap/signing-key-startup";
 import { AuthenticateDeviceKeyUseCase } from "./features/device-keys/usecases/authenticate-device-key.usecase";
 import { LoginWithPasswordUseCase } from "./features/login-with-password/usecases/login-with-password.usecase";
@@ -34,7 +31,6 @@ import { InspectInviteUseCase } from "./features/inspect-invite/usecases/inspect
 import { AcceptInviteUseCase } from "./features/accept-invite/usecases/accept-invite.usecase";
 import { CreateInviteUseCase } from "./features/create-invite/usecases/create-invite.usecase";
 import { ApiUpgradeProxy } from "./http/api-proxy/api-upgrade-proxy";
-import { configureHttpShell } from "./nest/http-shell";
 import { createAuthHttpServer, type AuthHttpServer } from "./server/auth-server";
 import type { AuthRoute } from "./server/routes";
 
@@ -110,8 +106,8 @@ export function composeAuthCore(env: RuntimeEnv, overrides: AuthCoreOverrides = 
   const loginRepository = new PostgresLoginRepository(database, env.issuer, env.audience);
   const rateLimiter = new PostgresRateLimiter(database, env.keyEncryptionKey);
 
-  // O hash de comparação é calculado uma única vez por processo, como no antigo
-  // provider do Nest: toda tentativa paga exatamente um KDF.
+  // O hash de comparação é calculado uma única vez por processo: toda tentativa
+  // paga exatamente um KDF.
   return passwordHasher.hash("timeline-auth-login-dummy").then((dummyHash) => {
     const credentials = new LoginCredentialChecker(passwordHasher, dummyHash);
     const loginWithPassword = new LoginWithPasswordUseCase(
@@ -173,22 +169,20 @@ export interface StartAuthOptions {
   readonly ensureSigningKey?: boolean;
   readonly overrides?: AuthCoreOverrides;
   readonly logger?: AuthLogger;
-  /** Controllers só de teste (as sondas de contrato) viajam com o Nest temporário. */
-  readonly controllers?: readonly Type<unknown>[];
+  /** Rotas adicionais (as suítes registram sondas de contrato por aqui). */
   readonly routes?: readonly AuthRoute[];
 }
 
 export interface RunningAuth {
   readonly url: string;
   readonly core: AuthCore;
-  readonly nestApp: INestApplication;
   readonly http: AuthHttpServer;
   close(): Promise<void>;
 }
 
 /**
- * A ordem do processo é parte do contrato operacional: composição, garantia da
- * chave de assinatura, inicialização do Nest em coexistência, listener de
+ * A ordem do processo é parte do contrato operacional: composição, servidor
+ * com as rotas registradas, garantia da chave de assinatura, listener de
  * upgrade, listen. O shutdown desfaz na ordem inversa.
  */
 export async function startAuth(
@@ -211,7 +205,6 @@ export async function startAuth(
     logger,
     routes: options.routes,
   });
-  let nestApp: INestApplication | undefined;
   const upgradeProxy = new ApiUpgradeProxy(env.apiServiceUrl);
   let closed = false;
 
@@ -222,11 +215,7 @@ export async function startAuth(
     try {
       await http.close();
     } finally {
-      try {
-        await nestApp?.close();
-      } finally {
-        await core.close();
-      }
+      await core.close();
     }
   };
 
@@ -235,20 +224,12 @@ export async function startAuth(
       await ensureSigningKeyActive(core.signingKeyService);
     }
 
-    nestApp = await NestFactory.create(
-      AppModule.forRoot(env, core, { controllers: options.controllers }),
-      { bodyParser: false, logger: false },
-    );
-    configureHttpShell(nestApp, logger);
-    await nestApp.init();
-    http.setFallback(nestApp.getHttpAdapter().getInstance());
-
     // O listener de upgrade é instalado antes do listen e removido no close,
-    // fora dos hooks de lifecycle do Nest.
+    // sem depender de hooks de lifecycle de framework.
     upgradeProxy.attach(http.server);
 
     const url = await http.listen(options.port ?? env.port, options.host ?? env.host);
-    return { url, core, nestApp, http, close };
+    return { url, core, http, close };
   } catch (error) {
     await close().catch(() => undefined);
     throw error;

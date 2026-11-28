@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "pg";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import { ScryptPasswordHasher } from "../auth-core/password/scrypt-password-hasher";
-import { SigningKeyService } from "../auth-core/security/signing-key.service";
 import { verifyJwt } from "../auth-core/security/jwt";
 import { createTestApp, type TestApp } from "../testing/create-test-app";
 import { createPostgresTestDatabase, type PostgresTestDatabase } from "../testing/postgres-test-database";
@@ -46,7 +45,7 @@ describe("chave de assinatura no startup do Auth", () => {
   });
 
   const ensureActive = () =>
-    app.app.get(SigningKeyService).ensureActive(new Date(), {
+    app.core.signingKeyService.ensureActive(new Date(), {
       correlationId: "startup", actorUserId: null, action: "key.created",
       targetType: "signing_key", targetId: null, result: "succeeded",
       reason: null, metadata: {}, context: ANONYMOUS_CONTEXT, occurredAt: new Date(),

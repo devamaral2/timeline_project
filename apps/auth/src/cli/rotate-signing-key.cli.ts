@@ -1,4 +1,3 @@
-import 'reflect-metadata';
 import { createAuthDatabase } from '../db/client';
 import { getRuntimeEnv } from '../config/env';
 import { findMonorepoRoot, loadRootEnv } from '../config/load-env';

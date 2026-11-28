@@ -1,35 +1,23 @@
-import { Controller, Get, HttpException, HttpStatus, Param, Req, type INestApplication } from "@nestjs/common";
 import type { Server } from "node:http";
-import type { Request } from "express";
 import { randomBytes } from "node:crypto";
-import { startAuth } from "../composition-root";
+import { startAuth, type AuthCore } from "../composition-root";
 import { AccessDeniedError, AuthenticationFailedError, ConflictError, NotFoundError, RateLimitedError, RequiredDependencyUnavailableError, SemanticInputError } from "../common/errors";
 import { RecordingAuthLogger } from "../common/logger";
 import { getRuntimeEnv, type EnvSource } from "../config/env";
 import type { PwnedPasswordsGateway } from "../auth-core/password/pwned-passwords.gateway";
 import type { DeviceKeyRepository } from "../auth-core/persistence/postgres-device-key.repository";
+import type { AuthRoute } from "../server/routes";
 
 /** O segredo que os testes de redacao procuram na resposta. */
 export const LEAK_PROBE = "leak-probe-9d3f";
 
-@Controller("testing")
-class TestContextController {
-  @Get("request-context")
-  requestContext(@Req() request: Request) {
-    return request.context;
-  }
-
-  @Get("generic-rate-limit")
-  genericRateLimit(): never {
-    throw new HttpException("rate limited", HttpStatus.TOO_MANY_REQUESTS);
-  }
-
-  /**
-   * Uma rota por ramo do filtro. Cada erro carrega `LEAK_PROBE` no lugar que
-   * nunca pode sair na resposta -- `internalReason`, `message` ou `cause`.
-   */
-  @Get("raise/:kind")
-  raise(@Param("kind") kind: string): never {
+/**
+ * As sondas de contrato viajam como rotas declarativas, no mesmo servidor
+ * Fastify das features. Elas existem só nos testes: nenhuma monta o processo de
+ * produção, e nenhuma depende de framework para ler a request.
+ */
+function errorProbes(): AuthRoute[] {
+  const raise = (kind: string): never => {
     switch (kind) {
       case "authentication": throw new AuthenticationFailedError(`unknown email ${LEAK_PROBE}`);
       case "access": throw new AccessDeniedError(`missing permission ${LEAK_PROBE}`);
@@ -40,12 +28,35 @@ class TestContextController {
       case "dependency": throw new RequiredDependencyUnavailableError(`provider down ${LEAK_PROBE}`);
       default: throw new Error(`unhandled failure ${LEAK_PROBE}`);
     }
-  }
+  };
+
+  return [
+    {
+      method: "GET",
+      path: "/testing/request-context",
+      handler: async (request) => request.authContext,
+    },
+    {
+      method: "GET",
+      path: "/testing/generic-rate-limit",
+      handler: async () => {
+        throw Object.assign(new Error("rate limited"), { statusCode: 429 });
+      },
+    },
+    {
+      // Uma rota por ramo do filtro. Cada erro carrega `LEAK_PROBE` no lugar
+      // que nunca pode sair na resposta -- `internalReason`, `message` ou `cause`.
+      method: "GET",
+      path: "/testing/raise/:kind",
+      handler: async (request) => raise((request.params as { kind: string }).kind),
+    },
+  ];
 }
 
 export interface TestApp {
   url: string;
-  app: INestApplication;
+  /** O grafo do processo, para os testes de startup acionarem a chave. */
+  core: AuthCore;
   /** O socket do Fastify, usado pelos testes de upgrade e teardown. */
   server: Server;
   logger: RecordingAuthLogger;
@@ -83,10 +94,9 @@ function testEnv(overrides: EnvSource = {}) {
 }
 
 /**
- * Sobe o processo real de coexistência (Fastify na frente, Nest atrás) numa
- * porta efêmera. O logger do filtro guarda o evento em memória em vez de
- * imprimir: o Logger do Nest escapa do `silent` do Vitest e sujaria a saída que
- * o `test:ai` promete manter limpa.
+ * Sobe o processo real do Auth numa porta efêmera. O logger do filtro guarda o
+ * evento em memória em vez de imprimir, para não sujar a saída que o `test:ai`
+ * promete manter limpa.
  */
 export async function createTestApp(overrides: EnvSource = {}, options: TestAppOptions = {}): Promise<TestApp> {
   const logger = new RecordingAuthLogger();
@@ -99,12 +109,12 @@ export async function createTestApp(overrides: EnvSource = {}, options: TestAppO
       deviceKeys: options.deviceKeys,
     },
     logger,
-    controllers: [TestContextController],
+    routes: errorProbes(),
   });
 
   return {
     url: runtime.url,
-    app: runtime.nestApp,
+    core: runtime.core,
     server: runtime.http.server,
     logger,
     close: () => runtime.close(),

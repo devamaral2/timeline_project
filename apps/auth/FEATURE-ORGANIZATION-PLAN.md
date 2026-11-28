@@ -1,5 +1,10 @@
 # Nova organização de features em `apps/auth`
 
+> Documento histórico da reorganização de features. As seções que citam
+> controllers, modules e wiring do Nest foram superadas pela migração para
+> Fastify (spec #92): cada operação é hoje uma declaração de rota, e o grafo é
+> montado explicitamente no composition root, sem Nest.
+
 ## Resumo
 
 Reorganizar somente a estrutura interna de `apps/auth`, preservando:
