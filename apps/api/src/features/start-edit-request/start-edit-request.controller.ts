@@ -4,7 +4,7 @@ import { modelSelectionSchema } from "@repo/contracts/schemas";
 import { z } from "zod";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
 import { agentTextSchema } from "../../api-core/agent/agent-input.schemas";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { selectionProblem } from "../../api-core/requests/model-catalog";
 import { RequestOperations } from "../../api-core/requests/request-operations";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";

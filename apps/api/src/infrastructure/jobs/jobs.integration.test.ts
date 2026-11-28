@@ -551,11 +551,11 @@ describe("fila de jobs", () => {
       service.register("work", async (_payload, context) => void handled.push(context.jobId));
       const id = await enqueue();
 
-      service.onModuleInit();
+      service.start();
       try {
         await vi.waitFor(async () => expect(await statusOf(id)).toBe("succeeded"), { timeout: 5000, interval: 25 });
       } finally {
-        await service.onApplicationShutdown();
+        await service.shutdown();
       }
 
       const late = await enqueue();
@@ -578,7 +578,7 @@ describe("fila de jobs", () => {
 
       await service.tick();
       await handlerStarted;
-      await service.onApplicationShutdown();
+      await service.shutdown();
 
       // Fica cercado pelo lease: quando vencer, outro worker o recupera.
       expect(await rowOf(id)).toMatchObject({ status: "running", attempts: 1 });

@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { TASK_CARD_QUERY } from "../../infrastructure/persistence/index";
 import type { TaskCardQuery } from "../../domain/ports";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { MaterializeRecurrencesUseCase } from "../../api-core/recurrences/materialize-recurrences.usecase";
 import { ListAgendaTasksController } from "./list-agenda-tasks.controller";
 import { ListAgendaTasksUseCase } from "./list-agenda-tasks.usecase";

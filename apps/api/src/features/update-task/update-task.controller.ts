@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Inject, Module, Param, Patch, U
 import type { UpdateTaskInput } from "@repo/contracts";
 import { ARTIFACT_REPOSITORY, ENTITY_BATCH_WRITER, TASK_REPOSITORY } from "../../infrastructure/persistence/index";
 import type { ArtifactRepository, EntityBatchWriter, TaskRepository } from "../../domain/ports";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
 import { assertTaskFields, assertExpectedRevision } from "../../api-core/http-input-validation";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";

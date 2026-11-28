@@ -1,5 +1,5 @@
-import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../../common/http-errors";
 import { WorkerAttemptsExhaustedError, type JobFailureHandler, type JobHandler } from "../../infrastructure/jobs/jobs.service";
 import { RequestOperations, type RequestWorkers } from "./request-operations";
 import { InMemoryRequestStore } from "./testing/in-memory-request-store";
@@ -24,7 +24,7 @@ function setup() {
     food: { execute: vi.fn(async () => "completed"), fail: vi.fn(async () => "failed") },
   };
   const operations = new RequestOperations(jobs, store, workers as unknown as RequestWorkers);
-  operations.onModuleInit();
+  operations.startHandlers();
   const context = { jobId: "j1", userId: "user-1", actorId: "user-1", attempt: 1, signal: new AbortController().signal, progress: vi.fn(async () => {}) };
   return { store, jobs, handlers, workers, operations, context };
 }
@@ -39,6 +39,15 @@ describe("fila dos pedidos", () => {
       "request-finalize", "request-step", "voice-task",
     ]);
     for (const [kind, handler] of handlers) expect(handler.onFailure, kind).toBeTypeOf("function");
+  });
+
+  test("começar de novo não registra o mesmo handler duas vezes", () => {
+    const { jobs, operations } = setup();
+    expect(jobs.register).toHaveBeenCalledTimes(8);
+
+    operations.startHandlers();
+
+    expect(jobs.register).toHaveBeenCalledTimes(8);
   });
 
   test("o job do passo roda no worker do agente dele", async () => {
@@ -147,10 +156,10 @@ describe("iniciar um pedido", () => {
     expect(store.require(next).sessionId).toBe(first);
     expect(store.require(first).sessionId).toBeUndefined();
 
-    await expect(operations.start({ userId: "user-1", text: "x", sessionId: next }, actor)).rejects.toBeInstanceOf(BadRequestException);
-    await expect(operations.start({ userId: "user-1", text: "x", sessionId: "nao-existe" }, actor)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(operations.start({ userId: "user-1", text: "x", sessionId: next }, actor)).rejects.toBeInstanceOf(BadRequestError);
+    await expect(operations.start({ userId: "user-1", text: "x", sessionId: "nao-existe" }, actor)).rejects.toBeInstanceOf(NotFoundError);
     store.seed({ id: "alheio", prompt: "x", userId: "outro" });
-    await expect(operations.start({ userId: "user-1", text: "x", sessionId: "alheio" }, actor)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(operations.start({ userId: "user-1", text: "x", sessionId: "alheio" }, actor)).rejects.toBeInstanceOf(NotFoundError);
   });
 
   test("o projectId das tres rotas que abrem pedido chega ao armazenamento, e o edit e a voz nao o aceitam", async () => {
@@ -171,10 +180,10 @@ describe("iniciar um pedido", () => {
 
   test("ninguem pede em nome de outro usuario", async () => {
     const { store, operations } = setup();
-    await expect(operations.start({ userId: "outro", text: "x" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(operations.startEdit({ userId: "outro", text: "x", entityType: "task", entityId: "e1" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(operations.startHermes({ userId: "outro", text: "x", clientMessageId: "m" }, actor)).rejects.toBeInstanceOf(ForbiddenException);
-    await expect(operations.startModel({ userId: "outro", text: "x", clientMessageId: "m", model: SELECTION }, actor)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(operations.start({ userId: "outro", text: "x" }, actor)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(operations.startEdit({ userId: "outro", text: "x", entityType: "task", entityId: "e1" }, actor)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(operations.startHermes({ userId: "outro", text: "x", clientMessageId: "m" }, actor)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(operations.startModel({ userId: "outro", text: "x", clientMessageId: "m", model: SELECTION }, actor)).rejects.toBeInstanceOf(ForbiddenError);
     expect(store.requests.size).toBe(0);
   });
 
@@ -200,9 +209,9 @@ describe("iniciar um pedido", () => {
     const { store, operations } = setup();
     const input = { userId: "user-1", text: "mude", entityType, entityId: "a1" };
     vi.stubEnv("AGENT_CONFIG_OWNER_USER_ID", "");
-    await expect(operations.startEdit(input, actor)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(operations.startEdit(input, actor)).rejects.toBeInstanceOf(ForbiddenError);
     vi.stubEnv("AGENT_CONFIG_OWNER_USER_ID", "alguem-mais");
-    await expect(operations.startEdit(input, actor)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(operations.startEdit(input, actor)).rejects.toBeInstanceOf(ForbiddenError);
     expect(store.requests.size).toBe(0);
     vi.stubEnv("AGENT_CONFIG_OWNER_USER_ID", "user-1");
     await expect(operations.startEdit(input, actor)).resolves.toEqual(expect.any(String));
@@ -230,7 +239,7 @@ describe("iniciar um pedido", () => {
   test("com as ferramentas da agenda ligadas, so o dono do MCP usa o modo modelo", async () => {
     const { store, operations } = setup();
     const input = { userId: "user-1", text: "x", clientMessageId: "m1", model: SELECTION };
-    await expect(operations.startModel(input, actor, "dono")).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(operations.startModel(input, actor, "dono")).rejects.toBeInstanceOf(ForbiddenError);
     expect(store.requests.size).toBe(0);
     await expect(operations.startModel(input, actor, "user-1")).resolves.toMatchObject({ route: "model" });
   });
@@ -240,9 +249,9 @@ describe("acompanhar e cancelar", () => {
   test("o pedido de outro usuario e um 404, como um id que nao existe", async () => {
     const { store, operations } = setup();
     store.seed({ id: "r1", prompt: "x", userId: "outro" });
-    await expect(operations.view("r1", actor)).rejects.toBeInstanceOf(NotFoundException);
-    await expect(operations.view("nao-existe", actor)).rejects.toBeInstanceOf(NotFoundException);
-    await expect(operations.cancel("r1", actor)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(operations.view("r1", actor)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(operations.view("nao-existe", actor)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(operations.cancel("r1", actor)).rejects.toBeInstanceOf(NotFoundError);
   });
 
   test("enquanto o Hermes trabalha, o rastro e os passos vem do progresso do job; depois, do que ficou gravado", async () => {
@@ -317,7 +326,7 @@ describe("acompanhar e cancelar", () => {
   test("o pedido que calcula um alimento nao se cancela por aqui", async () => {
     const { store, jobs, operations } = setup();
     store.seed({ id: "b1", prompt: "banana", route: "food", kind: "build_request", status: "queued" });
-    await expect(operations.cancel("b1", actor)).rejects.toBeInstanceOf(ConflictException);
+    await expect(operations.cancel("b1", actor)).rejects.toBeInstanceOf(ConflictError);
     expect(jobs.cancelOfTasks).not.toHaveBeenCalled();
     expect(store.require("b1").status).toBe("queued");
   });

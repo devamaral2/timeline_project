@@ -1,6 +1,6 @@
 import "reflect-metadata";
-import { ForbiddenException, NotFoundException } from "@nestjs/common";
 import { GUARDS_METADATA } from "@nestjs/common/constants";
+import { ForbiddenError, NotFoundError } from "../../common/http-errors";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { AgentFileNotFoundError, type AgentFilesService } from "../../api-core/agent/config/agent-files.service";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
@@ -45,12 +45,12 @@ describe("/api/ai/config (arquivos do Hermes)", () => {
     const files = service();
     const asFiles = files as unknown as AgentFilesService;
     vi.stubEnv("AGENT_CONFIG_OWNER_USER_ID", "");
-    expect(() => new ListAgentFilesController(asFiles).list(owner)).toThrow(ForbiddenException);
+    expect(() => new ListAgentFilesController(asFiles).list(owner)).toThrow(ForbiddenError);
     vi.stubEnv("AGENT_CONFIG_OWNER_USER_ID", owner.userId);
-    expect(() => new ListAgentFilesController(asFiles).list(stranger)).toThrow(ForbiddenException);
+    expect(() => new ListAgentFilesController(asFiles).list(stranger)).toThrow(ForbiddenError);
     await expect(
       new RestoreAgentFileController(asFiles).execute({ path: "hermes/skills/a.md", backupId: "a.bak" }, stranger),
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).rejects.toBeInstanceOf(ForbiddenError);
     expect(files.restoreBackup).not.toHaveBeenCalled();
   });
 
@@ -59,7 +59,7 @@ describe("/api/ai/config (arquivos do Hermes)", () => {
     const files = service();
     const asFiles = files as unknown as AgentFilesService;
     expect(new ListAgentFilesController(asFiles).list(owner)).toEqual({ files: [] });
-    await expect(new ReadAgentFileController(asFiles).execute("hermes/skills/a.md", owner)).rejects.toBeInstanceOf(NotFoundException);
+    await expect(new ReadAgentFileController(asFiles).execute("hermes/skills/a.md", owner)).rejects.toBeInstanceOf(NotFoundError);
     await expect(new RestoreAgentFileController(asFiles).execute("nope", owner)).rejects.toBeInstanceOf(InvalidInputError);
     await expect(
       new RestoreAgentFileController(asFiles).execute({ path: "hermes/skills/a.md", backupId: "a.bak" }, owner),

@@ -1,6 +1,6 @@
-import { Logger } from "@nestjs/common";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { CreateRecurrenceInput } from "@repo/contracts";
+import { Logger } from "../../common/logger";
 import { Artifact, Task, RecurrenceRevisionConflictError, type Recurrence } from "../../domain";
 import { InMemoryTaskCardQuery } from "../tasks/testing/in-memory-task-card.query";
 import type { InMemoryTaskDatabase } from "../tasks/testing/in-memory-task-database";

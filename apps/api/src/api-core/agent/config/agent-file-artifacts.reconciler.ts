@@ -1,4 +1,4 @@
-import { Logger } from "@nestjs/common";
+import { Logger } from "../../../common/logger";
 import { Artifact, isAgentFileArtifactType, type AgentFileData } from "../../../domain";
 import type { ArtifactRepository } from "../../../domain/ports";
 import type { AgentFileEntry, AgentFilesService } from "./agent-files.service";

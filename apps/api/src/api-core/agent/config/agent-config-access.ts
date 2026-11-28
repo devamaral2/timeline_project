@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from "@nestjs/common";
+import { ForbiddenError, NotFoundError } from "../../../common/http-errors";
 import { z } from "zod";
 import { getServerEnv } from "../../../config/env";
 import type { AuthenticatedUser } from "../../../http/request-identity/authenticated-user";
@@ -8,7 +8,7 @@ import { AgentFileNotFoundError } from "./agent-files.service";
 /** So o dono, definido em `AGENT_CONFIG_OWNER_USER_ID`, le e altera; sem essa variavel ninguem altera. */
 export function assertConfigOwner(actor: AuthenticatedUser): void {
   const owner = getServerEnv().AGENT_CONFIG_OWNER_USER_ID;
-  if (!owner || actor.userId !== owner) throw new ForbiddenException("Só o dono altera a configuração do agente.");
+  if (!owner || actor.userId !== owner) throw new ForbiddenError("Só o dono altera a configuração do agente.");
 }
 
 export function parseConfigInput<T>(schema: z.ZodType<T>, value: unknown): T {
@@ -22,7 +22,7 @@ export function configAsNotFound<T>(run: () => Promise<T> | T): Promise<T> {
   return Promise.resolve()
     .then(run)
     .catch((error: unknown) => {
-      if (error instanceof AgentFileNotFoundError) throw new NotFoundException(error.message);
+      if (error instanceof AgentFileNotFoundError) throw new NotFoundError(error.message);
       throw error;
     });
 }

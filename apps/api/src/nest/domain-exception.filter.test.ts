@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException, type ArgumentsHost } from "@nestjs/common";
 import { describe, expect, test } from "vitest";
+import { BadRequestError, ForbiddenError } from "../common/http-errors";
 import {
   AgentLimitReachedError,
   AgentRunCancelledError,
@@ -143,6 +144,14 @@ describe("everything else", () => {
   test("keeps the status of a Nest HttpException", () => {
     expect(statusOf(new BadRequestException("Invalid limit"))).toBe(400);
     expect(statusOf(new NotFoundException("Task not found"))).toBe(404);
+  });
+
+  test("maps the application's own request errors, with the same body and log level", () => {
+    const bad = respond(new BadRequestError("Invalid limit"));
+    expect(bad).toMatchObject({ status: 400, body: { error: "Invalid limit" }, logged: [{ level: "warn", message: "400 — Invalid limit" }] });
+
+    const forbidden = respond(new ForbiddenError("Sem permissão"));
+    expect(forbidden).toMatchObject({ status: 403, body: { error: "Sem permissão" } });
   });
 
   test("maps unexpected errors to 500, and not to 401", () => {

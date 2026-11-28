@@ -1,5 +1,12 @@
-import type { ModuleMetadata, Provider } from "@nestjs/common";
-import { getServerEnv } from "../../config/env";
+import {
+  Inject,
+  Injectable,
+  type ModuleMetadata,
+  type OnModuleDestroy,
+  type OnModuleInit,
+  type Provider,
+} from "@nestjs/common";
+import { getServerEnv } from "../config/env";
 import type {
   ArtifactRepository,
   EntityBatchWriter,
@@ -7,18 +14,18 @@ import type {
   FoodGenerationRepository,
   RecurrenceRepository,
   ScopedSqlQuery,
-} from "../../domain/ports";
-import { AgentFilesBootstrap } from "../../infrastructure/agent-files/agent-files.bootstrap";
-import { McpAgendaTools } from "../../infrastructure/model-agent/agenda-tools";
-import { AnthropicProvider } from "../../infrastructure/model-agent/anthropic-provider";
-import { AnthropicStructuredCompletionGateway } from "../../infrastructure/model-agent/anthropic-structured.gateway";
-import { ModelAgent, type ModelProviderClient } from "../../infrastructure/model-agent/model-agent";
-import { OpenAIProvider } from "../../infrastructure/model-agent/openai-provider";
-import { OpenAIStructuredCompletionGateway } from "../../infrastructure/model-agent/openai-structured.gateway";
-import { OpenRouterProvider } from "../../infrastructure/model-agent/openrouter-provider";
-import { HermesClient } from "../../infrastructure/hermes/hermes.client";
-import { JobsService } from "../../infrastructure/jobs/jobs.service";
-import type { PostgresDatabase } from "../../infrastructure/persistence/database/postgres-database";
+} from "../domain/ports";
+import { AgentFilesBootstrap } from "../infrastructure/agent-files/agent-files.bootstrap";
+import { McpAgendaTools } from "../infrastructure/model-agent/agenda-tools";
+import { AnthropicProvider } from "../infrastructure/model-agent/anthropic-provider";
+import { AnthropicStructuredCompletionGateway } from "../infrastructure/model-agent/anthropic-structured.gateway";
+import { ModelAgent, type ModelProviderClient } from "../infrastructure/model-agent/model-agent";
+import { OpenAIProvider } from "../infrastructure/model-agent/openai-provider";
+import { OpenAIStructuredCompletionGateway } from "../infrastructure/model-agent/openai-structured.gateway";
+import { OpenRouterProvider } from "../infrastructure/model-agent/openrouter-provider";
+import { HermesClient } from "../infrastructure/hermes/hermes.client";
+import { JobsService } from "../infrastructure/jobs/jobs.service";
+import type { PostgresDatabase } from "../infrastructure/persistence/database/postgres-database";
 import {
   ARTIFACT_REPOSITORY,
   DATABASE,
@@ -26,41 +33,65 @@ import {
   TASK_REPOSITORY,
   RECURRENCE_REPOSITORY,
   SCOPED_SQL_QUERY,
-} from "../../infrastructure/persistence/persistence.module";
-import { PostgresCandidateQuery } from "../../infrastructure/persistence/requests/postgres-candidate.query";
-import { PostgresRequestStore } from "../../infrastructure/persistence/requests/postgres-request.store";
-import { AgentFileArtifactsReconciler } from "../agent/config/agent-file-artifacts.reconciler";
-import { AgentFilesService } from "../agent/config/agent-files.service";
+} from "../infrastructure/persistence/tokens";
+import { PostgresCandidateQuery } from "../infrastructure/persistence/requests/postgres-candidate.query";
+import { PostgresRequestStore } from "../infrastructure/persistence/requests/postgres-request.store";
+import { AgentFileArtifactsReconciler } from "../api-core/agent/config/agent-file-artifacts.reconciler";
+import { AgentFilesService } from "../api-core/agent/config/agent-files.service";
 import {
   OpenRouterStructuredCompletionGateway, SelectedModelCompletionGateway, type StructuredCompletionGateway,
-} from "../agent/gateways/structured-completion.gateway";
-import { GenerateFoodUseCase } from "../artifacts/generate-food.usecase";
-import { ArtifactBuilder } from "../artifacts/services/artifact-builder.service";
-import { CreateTaskUseCase } from "../tasks/create-task.usecase";
-import { OpenRouterTaskCommandParsingGateway } from "../tasks/gateways/openrouter-task-command-parsing.gateway";
-import { OpenRouterFoodParsingGateway } from "../tasks/gateways/openrouter-food-parsing.gateway";
-import { PlaceResolver } from "../tasks/services/place-resolver.service";
-import { PhotonPlaceSearchGateway } from "../../infrastructure/places/photon-place-search.gateway";
-import { providerKeys } from "./model-catalog";
-import { configModelFor, modelAgendaOwner } from "./model-config";
-import { modelSystemPrompt } from "./model-prompt";
-import { ModelTurnWorker } from "./model-turn-worker";
-import { HermesTurnWorker } from "./hermes-turn-worker";
-import { JevClient } from "./jev.client";
-import { RouterArtifactsReconciler } from "./jev-router-artifacts";
-import { RequestAgentRunner } from "./request-agent-runner";
-import { uiConfig } from "./request-config";
-import { RequestDispatcher } from "./request-dispatcher";
-import { RequestEditTargetWorker } from "./request-edit-target-worker";
-import { RequestEditWorker } from "./request-edit-worker";
-import { RequestEntityWorker } from "./request-entity-worker";
-import { RequestFinalizer } from "./request-finalizer";
-import { RequestOperations } from "./request-operations";
-import { RequestQueryWorker } from "./request-query-worker";
-import { RequestTargetEditWorker } from "./request-target-edit-worker";
-import { VoiceTaskWorker } from "./voice-task-worker";
+} from "../api-core/agent/gateways/structured-completion.gateway";
+import { GenerateFoodUseCase } from "../api-core/artifacts/generate-food.usecase";
+import { ArtifactBuilder } from "../api-core/artifacts/services/artifact-builder.service";
+import { CreateTaskUseCase } from "../api-core/tasks/create-task.usecase";
+import { OpenRouterTaskCommandParsingGateway } from "../api-core/tasks/gateways/openrouter-task-command-parsing.gateway";
+import { OpenRouterFoodParsingGateway } from "../api-core/tasks/gateways/openrouter-food-parsing.gateway";
+import { PlaceResolver } from "../api-core/tasks/services/place-resolver.service";
+import { PhotonPlaceSearchGateway } from "../infrastructure/places/photon-place-search.gateway";
+import { providerKeys } from "../api-core/requests/model-catalog";
+import { configModelFor, modelAgendaOwner } from "../api-core/requests/model-config";
+import { modelSystemPrompt } from "../api-core/requests/model-prompt";
+import { ModelTurnWorker } from "../api-core/requests/model-turn-worker";
+import { HermesTurnWorker } from "../api-core/requests/hermes-turn-worker";
+import { JevClient } from "../api-core/requests/jev.client";
+import { RouterArtifactsReconciler } from "../api-core/requests/jev-router-artifacts";
+import { RequestAgentRunner } from "../api-core/requests/request-agent-runner";
+import { uiConfig } from "../api-core/requests/request-config";
+import { RequestDispatcher } from "../api-core/requests/request-dispatcher";
+import { RequestEditTargetWorker } from "../api-core/requests/request-edit-target-worker";
+import { RequestEditWorker } from "../api-core/requests/request-edit-worker";
+import { RequestEntityWorker } from "../api-core/requests/request-entity-worker";
+import { RequestFinalizer } from "../api-core/requests/request-finalizer";
+import { RequestOperations } from "../api-core/requests/request-operations";
+import { RequestQueryWorker } from "../api-core/requests/request-query-worker";
+import { RequestTargetEditWorker } from "../api-core/requests/request-target-edit-worker";
+import { VoiceTaskWorker } from "../api-core/requests/voice-task-worker";
 
 const configOwner = () => getServerEnv().AGENT_CONFIG_OWNER_USER_ID;
+
+/** Adaptador do lifecycle antigo: o registro de handlers tem `start` explicito. */
+@Injectable()
+export class RequestOperationsLifecycle implements OnModuleInit {
+  constructor(@Inject(RequestOperations) private readonly operations: RequestOperations) {}
+
+  onModuleInit(): void {
+    this.operations.startHandlers();
+  }
+}
+
+/** Adaptador do lifecycle antigo: os watchers da pasta de agentes tem `start`/`stop` explicitos. */
+@Injectable()
+export class AgentFilesLifecycle implements OnModuleInit, OnModuleDestroy {
+  constructor(@Inject(AgentFilesBootstrap) private readonly bootstrap: AgentFilesBootstrap) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.bootstrap.start();
+  }
+
+  onModuleDestroy(): void {
+    this.bootstrap.stop();
+  }
+}
 
 /**
  * Tudo o que a IA precisa montado: a configuracao editavel do agente (ADR 0005), os gateways dos modelos, a
@@ -79,7 +110,12 @@ export const REQUEST_PROVIDERS: Provider[] = [
     inject: [ARTIFACT_REPOSITORY],
     useFactory: (artifacts: ArtifactRepository) => new RouterArtifactsReconciler(artifacts, configOwner),
   },
-  AgentFilesBootstrap,
+  {
+    provide: AgentFilesBootstrap,
+    inject: [AgentFilesService, AgentFileArtifactsReconciler, RouterArtifactsReconciler],
+    useFactory: (files: AgentFilesService, reconciler: AgentFileArtifactsReconciler, router: RouterArtifactsReconciler) =>
+      new AgentFilesBootstrap(files, reconciler, router),
+  },
   { provide: OpenRouterFoodParsingGateway, useFactory: () => new OpenRouterFoodParsingGateway() },
   { provide: OpenRouterTaskCommandParsingGateway, useFactory: () => new OpenRouterTaskCommandParsingGateway() },
   {
@@ -137,6 +173,8 @@ export const REQUEST_PROVIDERS: Provider[] = [
       });
     },
   },
+  RequestOperationsLifecycle,
+  AgentFilesLifecycle,
 ];
 
 /**

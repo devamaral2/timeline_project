@@ -113,7 +113,7 @@ beforeAll(async () => {
     }),
     food: new GenerateFoodUseCase(artifacts, foodParsing),
   });
-  operations.onModuleInit();
+  operations.startHandlers();
   // Cada mudanca de status de uma tarefa de agente fica registrada, na ordem: e o que prova o ciclo de vida inteiro,
   // inclusive os status que duram um instante (`starting`).
   await ctx.pool.query(`

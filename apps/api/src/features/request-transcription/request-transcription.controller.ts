@@ -3,7 +3,7 @@ import type { TranscriptionRequestResult } from "@repo/contracts";
 import { transcriptionRequestInputSchema } from "@repo/contracts/schemas";
 import { z } from "zod";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import type { TaskRelations } from "../../api-core/tasks/task-relations";
 import type { TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";

@@ -7,7 +7,7 @@ import {
   TASK_REPOSITORY,
 } from "../../infrastructure/persistence";
 import type { ArtifactTaskLinkQuery, ArtifactRepository, EntityBatchWriter, TaskRepository } from "../../domain/ports";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
 import { assertArtifactRequest, assertExpectedRevision } from "../../api-core/http-input-validation";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";

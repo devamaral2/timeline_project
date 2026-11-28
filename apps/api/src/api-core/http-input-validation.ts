@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestError } from "../common/http-errors";
 import {
   createArtifactRequestSchema,
   createProjectInputSchema,
@@ -37,7 +37,7 @@ const UPDATE_ARTIFACT_FIELDS = bodyFieldsOf(updateArtifactRequestSchema);
 function assertKnownFields(body: unknown, known: ReadonlySet<string>): void {
   if (typeof body !== "object" || body === null) return;
   for (const key of Object.keys(body)) {
-    if (!known.has(key)) throw new BadRequestException(`Invalid field ${key}`);
+    if (!known.has(key)) throw new BadRequestError(`Invalid field ${key}`);
   }
 }
 
@@ -52,7 +52,7 @@ function isOneOf(values: readonly string[], value: unknown): boolean {
 function assertInstant(value: unknown, field: string, nullable: boolean): void {
   if (value === undefined || (nullable && value === null)) return;
   if (typeof value !== "string" || Number.isNaN(new Date(value).getTime())) {
-    throw new BadRequestException(`Invalid ${field}`);
+    throw new BadRequestError(`Invalid ${field}`);
   }
 }
 
@@ -63,59 +63,59 @@ function assertInstant(value: unknown, field: string, nullable: boolean): void {
  */
 export function assertTaskFields(body: Record<string, unknown>, editing: boolean): void {
   assertKnownFields(body, editing ? UPDATE_TASK_FIELDS : CREATE_TASK_FIELDS);
-  if (body?.kind !== undefined && !isOneOf(HUMAN_KINDS, body.kind)) throw new BadRequestException("Invalid kind");
+  if (body?.kind !== undefined && !isOneOf(HUMAN_KINDS, body.kind)) throw new BadRequestError("Invalid kind");
   if (body?.status !== undefined && !(editing && body.status === null) && !isOneOf(HUMAN_STATUSES, body.status)) {
-    throw new BadRequestException("Invalid status");
+    throw new BadRequestError("Invalid status");
   }
   if (body?.priority !== undefined && !isOneOf(PRIORITIES, body.priority)) {
-    throw new BadRequestException("Invalid priority");
+    throw new BadRequestError("Invalid priority");
   }
   if (
     body?.notifyOffsetsMinutes !== undefined &&
     !(Array.isArray(body.notifyOffsetsMinutes) && body.notifyOffsetsMinutes.every(isNotificationOffsetMinutes))
   ) {
-    throw new BadRequestException("Invalid notifyOffsetsMinutes");
+    throw new BadRequestError("Invalid notifyOffsetsMinutes");
   }
   // Na edicao, `null` (ou vazio) tira o local; ausente, nao muda.
   if (
     body?.location !== undefined && !(editing && body.location === null) &&
     (typeof body.location !== "string" || body.location.length > 300)
   ) {
-    throw new BadRequestException("Invalid location");
+    throw new BadRequestError("Invalid location");
   }
   if (body?.longRunning !== undefined && typeof body.longRunning !== "boolean") {
-    throw new BadRequestException("Invalid longRunning");
+    throw new BadRequestError("Invalid longRunning");
   }
   for (const field of ["tags", "subtaskIds", "artifactIds"]) {
-    if (body?.[field] !== undefined && !isStringList(body[field])) throw new BadRequestException(`Invalid ${field}`);
+    if (body?.[field] !== undefined && !isStringList(body[field])) throw new BadRequestError(`Invalid ${field}`);
   }
   if (body?.parentTaskId !== undefined && body.parentTaskId !== null && typeof body.parentTaskId !== "string") {
-    throw new BadRequestException("Invalid parentTaskId");
+    throw new BadRequestError("Invalid parentTaskId");
   }
-  if (body?.artifacts !== undefined && !Array.isArray(body.artifacts)) throw new BadRequestException("Invalid artifacts");
+  if (body?.artifacts !== undefined && !Array.isArray(body.artifacts)) throw new BadRequestError("Invalid artifacts");
   // Na edicao, `null` devolve a tarefa a `diario`; ausente nao muda.
   if (body?.projectId !== undefined && !(editing && body.projectId === null) && typeof body.projectId !== "string") {
-    throw new BadRequestException("Invalid projectId");
+    throw new BadRequestError("Invalid projectId");
   }
   for (const field of ["startedAt", "estimatedFinishAt", "finishedAt"]) assertInstant(body?.[field], field, editing);
 }
 
 /** O que a rota de projetos confere antes do dominio: o corpo e um objeto so com os campos do contrato. O nome e do dominio. */
 export function assertProjectFields(body: Record<string, unknown>): void {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new BadRequestException("Invalid body");
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new BadRequestError("Invalid body");
   assertKnownFields(body, CREATE_PROJECT_FIELDS);
 }
 
 /** O que a rota da situacao confere: o corpo tem so `situation`, e um dos tres valores. Se a tarefa aceita e do dominio. */
 export function assertSituationBody(body: Record<string, unknown>): void {
-  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new BadRequestException("Invalid body");
+  if (typeof body !== "object" || body === null || Array.isArray(body)) throw new BadRequestError("Invalid body");
   assertKnownFields(body, SET_SITUATION_FIELDS);
-  if (!isOneOf(SITUATIONS, body.situation)) throw new BadRequestException("Invalid situation");
+  if (!isOneOf(SITUATIONS, body.situation)) throw new BadRequestError("Invalid situation");
 }
 
 export function assertExpectedRevision(body: { expectedRevision?: unknown }): void {
   if (!Number.isInteger(body?.expectedRevision) || (body.expectedRevision as number) < 1) {
-    throw new BadRequestException("Invalid expectedRevision");
+    throw new BadRequestError("Invalid expectedRevision");
   }
 }
 
@@ -123,7 +123,7 @@ export function assertAgendaCursor(cursor: string): void {
   try {
     decodeAgendaCursor(cursor);
   } catch {
-    throw new BadRequestException("Invalid cursor");
+    throw new BadRequestError("Invalid cursor");
   }
 }
 
@@ -131,7 +131,7 @@ export function parseLimit(raw?: string): number | undefined {
   if (raw === undefined) return undefined;
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 1 || value > 100) {
-    throw new BadRequestException("Invalid limit");
+    throw new BadRequestError("Invalid limit");
   }
   return value;
 }
@@ -147,22 +147,22 @@ export function assertArtifactRequest(
 ): void {
   assertKnownFields(body, creating ? CREATE_ARTIFACT_FIELDS : UPDATE_ARTIFACT_FIELDS);
   if (body?.type !== undefined && !EDITABLE_ARTIFACT_TYPES.includes(body.type as string)) {
-    throw new BadRequestException("Invalid type");
+    throw new BadRequestError("Invalid type");
   }
   if (creating ? body?.data === undefined && (body?.type === undefined || isFreeTextArtifactType(body.type)) : (body?.type === undefined) !== (body?.data === undefined)) {
-    throw new BadRequestException("Invalid data");
+    throw new BadRequestError("Invalid data");
   }
   if (body?.data !== undefined && (typeof body.data !== "object" || body.data === null || Array.isArray(body.data))) {
-    throw new BadRequestException("Invalid data");
+    throw new BadRequestError("Invalid data");
   }
-  if (body?.name !== undefined && typeof body.name !== "string") throw new BadRequestException("Invalid name");
-  if (body?.tags !== undefined && !isStringList(body.tags)) throw new BadRequestException("Invalid tags");
-  if (body?.taskIds !== undefined && !isStringList(body.taskIds)) throw new BadRequestException("Invalid taskIds");
+  if (body?.name !== undefined && typeof body.name !== "string") throw new BadRequestError("Invalid name");
+  if (body?.tags !== undefined && !isStringList(body.tags)) throw new BadRequestError("Invalid tags");
+  if (body?.taskIds !== undefined && !isStringList(body.taskIds)) throw new BadRequestError("Invalid taskIds");
 }
 
 export function assertRecurrenceTemplate(template: unknown, required: boolean): void {
   if (template === undefined && !required) return;
   if (typeof template !== "object" || template === null || Array.isArray(template)) {
-    throw new BadRequestException("Invalid template");
+    throw new BadRequestError("Invalid template");
   }
 }

@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { RestoreAgentFileController } from "./restore-agent-file.controller";
 
 @Module({

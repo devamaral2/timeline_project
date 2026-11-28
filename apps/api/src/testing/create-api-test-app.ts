@@ -4,8 +4,8 @@ import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
 import { TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES } from "@repo/contracts/device-key";
 import { AppModule } from "../app.module";
-import { DomainExceptionFilter } from "../common/domain-exception.filter";
-import { configureApiDocumentation } from "../common/openapi";
+import { DomainExceptionFilter } from "../nest/domain-exception.filter";
+import { configureApiDocumentation } from "../nest/openapi";
 import { DAILY_READING_BODY_LIMIT_BYTES } from "../features/save-daily-reading/save-daily-reading.controller";
 
 /** O Logger do filtro escreveria direto no stdout e escaparia do `silent` do Vitest. */

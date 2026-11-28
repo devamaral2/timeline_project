@@ -1,6 +1,6 @@
 import { Controller, Get, Inject, Module, Param, UseGuards } from "@nestjs/common";
 import type { RequestDto } from "@repo/contracts";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { RequestOperations } from "../../api-core/requests/request-operations";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";
