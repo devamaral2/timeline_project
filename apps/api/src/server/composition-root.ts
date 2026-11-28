@@ -76,25 +76,25 @@ import { UpdateTaskUseCase } from "../features/update-task/update-task.usecase";
 import type { ApiRoute } from "../http/api-route";
 import { AgentFilesBootstrap } from "../infrastructure/agent-files/agent-files.bootstrap";
 import { JobsService } from "../infrastructure/jobs/jobs.service";
-import { PostgresEntityBatchWriter } from "../infrastructure/persistence/agent-batch/postgres-entity-batch-writer";
-import { PostgresScopedSqlQuery } from "../infrastructure/persistence/agent-sql/postgres-scoped-sql.query";
-import { PostgresWorkoutCatalog } from "../infrastructure/persistence/artifacts/postgres-workout.catalog";
-import { PostgresArtifactTaskLinkQuery } from "../infrastructure/persistence/artifacts/queries/postgres-artifact-task-link.query";
-import { PostgresArtifactRepository } from "../infrastructure/persistence/artifacts/repositories/postgres-artifact.repository";
-import { PostgresDatabase } from "../infrastructure/persistence/database/postgres-database";
-import { PostgresIdempotencyStore } from "../infrastructure/persistence/idempotency/postgres-idempotency.store";
-import { PostgresJobStore } from "../infrastructure/persistence/jobs/postgres-job.store";
-import { PostgresProjectQuery } from "../infrastructure/persistence/projects/postgres-project.query";
-import { PostgresProjectRepository } from "../infrastructure/persistence/projects/postgres-project.repository";
-import { PostgresRecurrenceRepository } from "../infrastructure/persistence/recurrences/repositories/postgres-recurrence.repository";
-import { PostgresRequestStore } from "../infrastructure/persistence/requests/postgres-request.store";
-import { PostgresTaskCardQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-card.query";
-import { PostgresTaskRequestLinkQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-request-link.query";
-import { PostgresTaskRelations } from "../infrastructure/persistence/tasks/relations/postgres-task-relations";
-import { PostgresTagRepository } from "../infrastructure/persistence/tasks/repositories/postgres-tag.repository";
-import { PostgresTaskRepository } from "../infrastructure/persistence/tasks/repositories/postgres-task.repository";
+import { SqliteEntityBatchWriter } from "../infrastructure/persistence/agent-batch/sqlite-entity-batch-writer";
+import { SqliteScopedSqlQuery } from "../infrastructure/persistence/agent-sql/sqlite-scoped-sql.query";
+import { SqliteWorkoutCatalog } from "../infrastructure/persistence/artifacts/sqlite-workout.catalog";
+import { SqliteArtifactTaskLinkQuery } from "../infrastructure/persistence/artifacts/queries/sqlite-artifact-task-link.query";
+import { SqliteArtifactRepository } from "../infrastructure/persistence/artifacts/repositories/sqlite-artifact.repository";
+import { openApiDatabase } from "../infrastructure/persistence/database/api-database";
+import { SqliteIdempotencyStore } from "../infrastructure/persistence/idempotency/sqlite-idempotency.store";
+import { SqliteJobStore } from "../infrastructure/persistence/jobs/sqlite-job.store";
+import { SqliteProjectQuery } from "../infrastructure/persistence/projects/sqlite-project.query";
+import { SqliteProjectRepository } from "../infrastructure/persistence/projects/sqlite-project.repository";
+import { SqliteRecurrenceRepository } from "../infrastructure/persistence/recurrences/repositories/sqlite-recurrence.repository";
+import { SqliteRequestStore } from "../infrastructure/persistence/requests/sqlite-request.store";
+import { SqliteTaskCardQuery } from "../infrastructure/persistence/tasks/queries/sqlite-task-card.query";
+import { SqliteTaskRequestLinkQuery } from "../infrastructure/persistence/tasks/queries/sqlite-task-request-link.query";
+import { SqliteTaskRelations } from "../infrastructure/persistence/tasks/relations/sqlite-task-relations";
+import { SqliteTagRepository } from "../infrastructure/persistence/tasks/repositories/sqlite-tag.repository";
+import { SqliteTaskRepository } from "../infrastructure/persistence/tasks/repositories/sqlite-task.repository";
 import { PhotonPlaceSearchGateway } from "../infrastructure/places/photon-place-search.gateway";
-import { PostgresTranscriptionRequests } from "../infrastructure/persistence/transcription/postgres-transcription-requests";
+import { SqliteTranscriptionRequests } from "../infrastructure/persistence/transcription/sqlite-transcription-requests";
 import {
   createAgentFiles,
   createDailyReading,
@@ -110,7 +110,7 @@ export interface ApiRuntime {
   fastify: FastifyInstance;
   /** As operacoes registradas, na mesma ordem da declaracao. */
   routes: readonly ApiRoute[];
-  /** O worker unico da fila em Postgres (ADR 0013). */
+  /** O worker unico da fila no SQLite da API (ADR 0013). */
   jobs: JobsService;
   /** O registro unico dos handlers dos pedidos. */
   requestOperations: RequestOperations;
@@ -125,8 +125,8 @@ export interface ApiRuntime {
 }
 
 export interface CreateApiRuntimeOptions {
-  /** Sem valor, usa `DATABASE_URL` do ambiente. */
-  databaseUrl?: string;
+  /** O arquivo SQLite da API (ADR 0024). Sem valor, usa `API_DATABASE_PATH` do ambiente. */
+  databasePath?: string;
   /** Sem valor, usa `AUTH_INTERNAL_SERVICE_KEY` do ambiente. */
   authInternalServiceKey?: string;
   /** Silencia a saida nos testes. */
@@ -141,30 +141,31 @@ export interface CreateApiRuntimeOptions {
  * container, tokens, reflection nem auto-registro.
  */
 export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): Promise<ApiRuntime> {
-  const databaseUrl = options.databaseUrl ?? getDatabaseEnv().DATABASE_URL;
+  const databasePath = options.databasePath ?? getDatabaseEnv().API_DATABASE_PATH;
   const serverEnv: ServerEnv = getServerEnv();
   const authInternalServiceKey = options.authInternalServiceKey ?? serverEnv.AUTH_INTERNAL_SERVICE_KEY;
   const jobsEnv = getJobsEnv();
 
-  const database = PostgresDatabase.connect(databaseUrl);
+  // Abre o arquivo e aplica as migrations pendentes, com uma copia antes de mudar o schema.
+  const database = openApiDatabase(databasePath);
   try {
-    const taskRepository = new PostgresTaskRepository(database.db);
-    const tagRepository = new PostgresTagRepository(database.db);
+    const taskRepository = new SqliteTaskRepository(database);
+    const tagRepository = new SqliteTagRepository(database);
     const placeSearch = new PhotonPlaceSearchGateway();
-    const taskCardQuery = new PostgresTaskCardQuery(database.db);
-    const taskRequestLinkQuery = new PostgresTaskRequestLinkQuery(database.db);
-    const projectQuery = new PostgresProjectQuery(database.db);
-    const projectRepository = new PostgresProjectRepository(database.db);
-    const artifactRepository = new PostgresArtifactRepository(database.db);
-    const artifactTaskLinkQuery = new PostgresArtifactTaskLinkQuery(database.db);
-    const recurrenceRepository = new PostgresRecurrenceRepository(database.db);
-    const workoutCatalog = new PostgresWorkoutCatalog(database.db);
-    const entityBatchWriter = new PostgresEntityBatchWriter(database.db);
-    const scopedSql = new PostgresScopedSqlQuery(database.pool);
-    const idempotencyStore = new PostgresIdempotencyStore(database.db);
-    const requestStore = new PostgresRequestStore(database);
-    const transcriptionRequests = new PostgresTranscriptionRequests(database.db);
-    const taskRelations = new PostgresTaskRelations();
+    const taskCardQuery = new SqliteTaskCardQuery(database);
+    const taskRequestLinkQuery = new SqliteTaskRequestLinkQuery(database);
+    const projectQuery = new SqliteProjectQuery(database);
+    const projectRepository = new SqliteProjectRepository(database);
+    const artifactRepository = new SqliteArtifactRepository(database);
+    const artifactTaskLinkQuery = new SqliteArtifactTaskLinkQuery(database);
+    const recurrenceRepository = new SqliteRecurrenceRepository(database);
+    const workoutCatalog = new SqliteWorkoutCatalog(database);
+    const entityBatchWriter = new SqliteEntityBatchWriter(database);
+    const scopedSql = new SqliteScopedSqlQuery(database);
+    const idempotencyStore = new SqliteIdempotencyStore(database);
+    const requestStore = new SqliteRequestStore(database);
+    const transcriptionRequests = new SqliteTranscriptionRequests(database);
+    const taskRelations = new SqliteTaskRelations();
 
     const artifactBuilder = new ArtifactBuilder(workoutCatalog);
     const materializeRecurrences = new MaterializeRecurrencesUseCase(recurrenceRepository, artifactRepository);
@@ -199,8 +200,8 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
     const updateRecurrence = new UpdateRecurrenceUseCase(recurrenceRepository, createTask, taskRepository);
     const deleteRecurrence = new DeleteRecurrenceUseCase(recurrenceRepository);
 
-    // O worker unico da fila em Postgres: uma instancia por processo, um registro por handler.
-    const jobStore = new PostgresJobStore(database, jobsEnv.AI_JOBS_LEASE_MS, jobsEnv.AI_JOBS_MAX_ATTEMPTS);
+    // O worker unico da fila no SQLite da API: uma instancia por processo, um registro por handler.
+    const jobStore = new SqliteJobStore(database, jobsEnv.AI_JOBS_LEASE_MS, jobsEnv.AI_JOBS_MAX_ATTEMPTS);
     const jobs = new JobsService(jobStore, jobsEnv);
 
     // A pasta de skills e agentes tem um servico e um watcher, compartilhados pelas rotas e pelo worker.

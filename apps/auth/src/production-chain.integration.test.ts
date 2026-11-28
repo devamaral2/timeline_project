@@ -2,20 +2,19 @@ import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import { randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { createServer, type AddressInfo } from "node:net";
-import { readdirSync } from "node:fs";
-import { resolve } from "node:path";
-import { Client, Pool } from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ScryptPasswordHasher } from "./auth-core/password/scrypt-password-hasher";
-import { migrateAuthDatabase } from "./db/migrate";
+import { DatabaseSync } from "@repo/sqlite";
+import { openAuthDatabase, type AuthDatabase } from "./db/client";
 
 /**
  * A cadeia de produção: Auth e API executados a partir dos `dist/`.
  *
  * Cada processo é um `node apps/<app>/dist/main.js` de verdade, em portas
- * efêmeras, contra um Postgres com as migrations dos dois apps. Uma sessão
+ * efêmeras, cada um com o próprio arquivo SQLite (ADR 0024 e 0025), que ele mesmo migra ao subir. Uma sessão
  * criada pelo Auth compilado atravessa o proxy e executa uma operação na API
  * compilada; autorização, correlation id, erros e encerramento são observados
  * pelo socket, nunca pela estrutura interna de cada processo.
@@ -111,20 +110,9 @@ async function isPortFree(port: number): Promise<boolean> {
   }
 }
 
-async function dropDatabase(adminUrl: string, databaseName: string): Promise<void> {
-  const admin = new Client({ connectionString: adminUrl });
-  await admin.connect();
-  try {
-    await admin.query(`DROP DATABASE IF EXISTS "${databaseName}" WITH (FORCE)`);
-  } finally {
-    await admin.end();
-  }
-}
-
 describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
-  let databaseName: string;
-  let connectionString: string;
-  let admin: Client;
+  let dataDir: string;
+  let admin: AuthDatabase;
   let api: RunningProcess;
   let auth: RunningProcess;
   let apiUrl: string;
@@ -137,6 +125,15 @@ describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
   let viewerEmail: string;
 
   const call = (path: string, init: RequestInit = {}) => fetch(`${authUrl}${path}`, init);
+  /** O que a API compilada gravou no arquivo dela, lido somente leitura enquanto ela roda. */
+  const apiRows = (text: string, ...params: string[]) => {
+    const db = new DatabaseSync(join(dataDir, "api.sqlite"), { readOnly: true });
+    try {
+      return db.prepare(text).all(...params).map((row) => ({ ...row }));
+    } finally {
+      db.close();
+    }
+  };
   const postJson = (path: string, body: unknown, headers: Record<string, string> = {}) =>
     call(path, {
       method: "POST",
@@ -155,8 +152,8 @@ describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
     const email = `${label}-${randomUUID()}@example.test`;
     const passwordHash = await new ScryptPasswordHasher().hash(PASSWORD);
     await admin.query(
-      "INSERT INTO users (id,email,name,password_hash,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'active',now(),now())",
-      [id, email, `Pessoa ${label}`, passwordHash],
+      "INSERT INTO users (id,email,name,password_hash,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'active',$5,$5)",
+      [id, email, `Pessoa ${label}`, passwordHash, new Date()],
     );
     await admin.query("INSERT INTO user_roles (user_id,role_key) VALUES ($1,$2)", [id, role]);
     return { id, email };
@@ -171,34 +168,9 @@ describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
       { cwd: repoRoot, stdio: "pipe", timeout: 180_000 },
     );
 
-    const adminUrl = inject("authPostgresUrl");
-    databaseName = `chain_test_${randomUUID().replaceAll("-", "")}`;
-    const databaseAdmin = new Client({ connectionString: adminUrl });
-    await databaseAdmin.connect();
-    try {
-      await databaseAdmin.query(`CREATE DATABASE "${databaseName}"`);
-    } finally {
-      await databaseAdmin.end();
-    }
-
-    const url = new URL(adminUrl);
-    url.pathname = `/${databaseName}`;
-    connectionString = url.toString();
-
-    const pool = new Pool({ connectionString });
-    try {
-      await migrate(drizzle(pool), { migrationsFolder: resolve(apiRoot, "drizzle") });
-    } finally {
-      await pool.end();
-    }
-    // O Auth usa o mesmo banco: as tabelas dele não colidem com as da API.
-    await migrateAuthDatabase({
-      migrationDatabaseUrl: connectionString,
-      migrationsFolder: resolve(authRoot, "drizzle"),
-    });
-
-    admin = new Client({ connectionString });
-    await admin.connect();
+    dataDir = mkdtempSync(join(tmpdir(), "chain-test-"));
+    // O arquivo do Auth nasce migrado aqui para receber os usuários; o processo do Auth o abre de novo ao subir.
+    admin = openAuthDatabase(join(dataDir, "auth.sqlite"));
 
     const member = await seedUser("membro", "member");
     memberId = member.id;
@@ -213,7 +185,7 @@ describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
 
     api = startProcess("api", apiRoot, {
       NODE_ENV: "production",
-      DATABASE_URL: connectionString,
+      API_DATABASE_PATH: join(dataDir, "api.sqlite"),
       AUTH_INTERNAL_SERVICE_KEY: GATEWAY_KEY,
       API_HOST: "127.0.0.1",
       API_PORT: String(apiPort),
@@ -225,7 +197,7 @@ describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
       NODE_ENV: "production",
       AUTH_HOST: "127.0.0.1",
       AUTH_PORT: String(authPort),
-      AUTH_DATABASE_URL: connectionString,
+      AUTH_DATABASE_PATH: join(dataDir, "auth.sqlite"),
       AUTH_ISSUER: "https://auth.example.test",
       AUTH_AUDIENCE: "timeline-api",
       AUTH_PUBLIC_URL: "https://auth.example.test",
@@ -243,8 +215,8 @@ describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
   afterAll(async () => {
     await auth?.stop().catch(() => undefined);
     await api?.stop().catch(() => undefined);
-    await admin?.end().catch(() => undefined);
-    if (databaseName) await dropDatabase(inject("authPostgresUrl"), databaseName).catch(() => undefined);
+    await admin?.close().catch(() => undefined);
+    if (dataDir) rmSync(dataDir, { recursive: true, force: true });
   }, 60_000);
 
   it("o Auth compilado sobe com health, documentação e shutdown próprio", async () => {
@@ -305,8 +277,7 @@ describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
     expect(task.taskId).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
 
     // A operação foi executada e persistida pela API compilada, não só respondida pelo Auth.
-    const rows = await admin.query("SELECT id, name, user_id FROM tasks WHERE id=$1", [task.taskId]);
-    expect(rows.rows).toEqual([{ id: task.taskId, name: "Tarefa da cadeia real", user_id: memberId }]);
+    expect(apiRows("SELECT id, name, user_id FROM tasks WHERE id = ?", task.taskId)).toEqual([{ id: task.taskId, name: "Tarefa da cadeia real", user_id: memberId }]);
 
     const read = await call(`/api/tasks/${task.taskId}`, { headers: { authorization: `Bearer ${tokens.accessToken}` } });
     expect(read.status).toBe(200);
@@ -329,8 +300,7 @@ describe("cadeia Auth -> API a partir dos artefatos de produção", () => {
     expect(await forbidden.text()).toBe("");
     expect(forbidden.headers.get("x-correlation-id")).toBe("chain-forbidden");
 
-    const rows = await admin.query("SELECT id FROM tasks WHERE user_id=$1", [viewerId]);
-    expect(rows.rows).toEqual([]);
+    expect(apiRows("SELECT id FROM tasks WHERE user_id = ?", viewerId)).toEqual([]);
   });
 
   it("preserva o erro da API e o correlation id do Auth na resposta", async () => {

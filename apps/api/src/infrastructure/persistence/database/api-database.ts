@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { Logger } from "@nestjs/common";
+import { Logger } from "../../../common/logger";
 import { loadMigrations, openMigratedDatabase, type Migration, type SqliteDatabase } from "@repo/sqlite";
 
 /** As migrations da API, em `apps/api/migrations` (a partir de `src` ou de `dist`). */
@@ -19,6 +19,6 @@ export function openApiDatabase(path: string, options: OpenApiDatabaseOptions = 
   return openMigratedDatabase(path, {
     migrations: options.migrations ?? loadMigrations(API_MIGRATIONS_DIR),
     memory: options.memory,
-    log: (message) => Logger.log(message, "Database"),
+    log: (message) => new Logger("Database").log(message),
   });
 }

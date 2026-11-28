@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { createPostgresTestContext, type PostgresTestContext } from "../../infrastructure/persistence/testing/postgres-test-context";
+import { createSqliteTestContext, type SqliteTestContext } from "../../infrastructure/persistence/testing/sqlite-test-context";
 import { createApiTestApp, type ApiTestApp } from "../../testing/create-api-test-app";
 import { API_HTTP_OPERATIONS, operationKey } from "./api-http-operations";
 
@@ -16,7 +16,7 @@ import { API_HTTP_OPERATIONS, operationKey } from "./api-http-operations";
 const GATEWAY_KEY = "baseline-gateway-key-with-32-characters";
 const OWNER = "baseline-owner";
 
-let ctx: PostgresTestContext;
+let ctx: SqliteTestContext;
 let app: ApiTestApp;
 let agentFilesDir: string;
 
@@ -67,7 +67,7 @@ const concrete = (path: string) => path.replace(/\{(\w+)\}/g, (_match, name: str
 const newUser = () => `baseline-user-${randomUUID()}`;
 
 beforeAll(async () => {
-  ctx = await createPostgresTestContext();
+  ctx = await createSqliteTestContext();
   agentFilesDir = await mkdtemp(join(tmpdir(), "api-baseline-"));
   await mkdir(join(agentFilesDir, "hermes/skills/foo"), { recursive: true });
   await writeFile(join(agentFilesDir, "hermes/skills/foo/SKILL.md"), "---\ndescription: foo\n---\n\n# foo\n");
@@ -78,7 +78,7 @@ beforeAll(async () => {
   );
 
   app = await createApiTestApp({
-    DATABASE_URL: ctx.connectionString,
+    API_DATABASE_PATH: ctx.path,
     AUTH_INTERNAL_SERVICE_KEY: GATEWAY_KEY,
     AI_AUTOMATION: "off",
     AGENT_CONFIG_OWNER_USER_ID: OWNER,
@@ -457,7 +457,7 @@ describe("idempotência", () => {
     const user = newUser();
     const key = `key-${randomUUID()}`;
     const requestHash = createHash("sha256").update(JSON.stringify(body)).digest("hex");
-    await ctx.pool.query(
+    await ctx.query(
       "INSERT INTO idempotency_keys (user_id, scope, key, request_hash) VALUES ($1, $2, $3, $4)",
       [user, "/api/artifacts", key, requestHash],
     );

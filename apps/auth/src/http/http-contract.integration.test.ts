@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { Client } from "pg";
 import {
   DEVICE_PERMISSIONS_HEADER,
   TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES,
@@ -11,7 +10,8 @@ import { CryptoSecretGenerator } from "../common/secret-generator";
 import { SECURITY_POLICY } from "../config/security-policy";
 import { IssueDeviceKeyUseCase } from "../features/device-keys/usecases/issue-device-key.usecase";
 import { LEAK_PROBE, createTestApp, type TestApp } from "../testing/create-test-app";
-import { createPostgresTestDatabase, type PostgresTestDatabase } from "../testing/postgres-test-database";
+import type { AuthDatabase } from "../db/client";
+import { createAuthTestDatabase, type AuthTestDatabase } from "../testing/sqlite-test-database";
 import { InMemoryDeviceKeyRepository } from "../testing/in-memory-device-key.repository";
 import { ScryptPasswordHasher } from "../auth-core/password/scrypt-password-hasher";
 import { startFakeHttpServer, type FakeHttpServer } from "../testing/fake-http-server";
@@ -37,8 +37,8 @@ interface UserSeed {
 }
 
 describe("Auth HTTP contract baseline", () => {
-  let database: PostgresTestDatabase;
-  let admin: Client;
+  let database: AuthTestDatabase;
+  let admin: AuthDatabase;
   let app: TestApp;
   let passwordHash: string;
   let deviceKeys: InMemoryDeviceKeyRepository;
@@ -53,7 +53,7 @@ describe("Auth HTTP contract baseline", () => {
     const email = `${label}-${crypto.randomUUID()}@example.test`;
     const user = { id, email, name: `Pessoa ${label}`, roleKeys };
     await admin.query(
-      "INSERT INTO users (id,email,name,password_hash,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'active',now(),now())",
+      "INSERT INTO users (id,email,name,password_hash,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'active',strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
       [user.id, user.email, user.name, passwordHash],
     );
     for (const roleKey of roleKeys) {
@@ -75,15 +75,14 @@ describe("Auth HTTP contract baseline", () => {
   }
 
   beforeAll(async () => {
-    database = await createPostgresTestDatabase();
-    admin = new Client({ connectionString: database.adminUrl });
-    await admin.connect();
+    database = await createAuthTestDatabase();
+    admin = database.open();
     upstream = await startFakeHttpServer(() => ({ status: 200, body: "ok" }));
     passwordHash = await new ScryptPasswordHasher().hash("Integration-password-42!");
     deviceKeys = new InMemoryDeviceKeyRepository();
     app = await createTestApp(
       {
-        AUTH_DATABASE_URL: database.runtimeUrl,
+        AUTH_DATABASE_PATH: database.path,
         AUTH_PASSWORD_IP_LIMIT: "1000",
         API_SERVICE_URL: upstream.url,
       },
@@ -101,7 +100,6 @@ describe("Auth HTTP contract baseline", () => {
   afterAll(async () => {
     await app?.close();
     await upstream?.close();
-    await admin?.end();
     await database?.close();
   });
 
@@ -604,7 +602,7 @@ describe("Auth HTTP contract baseline", () => {
       const deadUrl = deadUpstream.url;
       await deadUpstream.close();
       const deadApp = await createTestApp({
-        AUTH_DATABASE_URL: database.runtimeUrl,
+        AUTH_DATABASE_PATH: database.path,
         API_SERVICE_URL: deadUrl,
       });
       try {

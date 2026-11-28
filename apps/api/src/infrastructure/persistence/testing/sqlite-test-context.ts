@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openApiDatabase } from "../database/api-database";
-import type { SqliteDatabase } from "@repo/sqlite";
+import { sql, type SqliteDatabase } from "@repo/sqlite";
 import type { Db } from "../shared/tx";
 
 export interface SqliteTestContext {
@@ -10,6 +10,8 @@ export interface SqliteTestContext {
   database: SqliteDatabase;
   db: Db;
   path: string;
+  /** SQL de conferencia com `$1`, `$2`..., no formato do `pool.query` do `pg` (sempre pelo escritor). */
+  query<T = Record<string, unknown>>(text: string, params?: readonly unknown[]): Promise<{ rows: T[]; rowCount: number }>;
   /** Apaga os dados de todas as tabelas, menos o catalogo global de exercicios que a migration semeia. */
   reset(): Promise<void>;
   stop(): Promise<void>;
@@ -59,5 +61,8 @@ export async function createSqliteTestContext(): Promise<SqliteTestContext> {
     rmSync(dir, { recursive: true, force: true });
   }
 
-  return { database, db: database, path, reset, stop };
+  const query = <T = Record<string, unknown>>(text: string, params: readonly unknown[] = []) =>
+    database.execute<T>(sql.unsafe(text, params));
+
+  return { database, db: database, path, query, reset, stop };
 }

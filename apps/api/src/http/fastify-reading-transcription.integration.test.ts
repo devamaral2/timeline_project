@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { TRANSCRIPTION_FORMAT_JOB, TRANSCRIPTION_JOB } from "../api-core/transcription/transcription-requests";
-import { createPostgresTestContext, type PostgresTestContext } from "../infrastructure/persistence/testing/postgres-test-context";
+import { createSqliteTestContext, type SqliteTestContext } from "../infrastructure/persistence/testing/sqlite-test-context";
 import { createApiTestApp, type ApiTestApp } from "../testing/create-api-test-app";
 
 /**
@@ -13,7 +13,7 @@ import { createApiTestApp, type ApiTestApp } from "../testing/create-api-test-ap
 
 const GATEWAY_KEY = "reading-transcription-gateway-key-32";
 const ORIGIN = "https://app.example.com";
-let ctx: PostgresTestContext;
+let ctx: SqliteTestContext;
 let app: ApiTestApp;
 
 const session = (userId: string): Record<string, string> => ({
@@ -72,9 +72,9 @@ const transcriptionResult = {
 };
 
 beforeAll(async () => {
-  ctx = await createPostgresTestContext();
+  ctx = await createSqliteTestContext();
   app = await createApiTestApp({
-    DATABASE_URL: ctx.connectionString,
+    API_DATABASE_PATH: ctx.path,
     AUTH_INTERNAL_SERVICE_KEY: GATEWAY_KEY,
     API_HOST: "0.0.0.0",
     AI_AUTOMATION: "off",
@@ -92,7 +92,7 @@ afterAll(async () => {
 });
 
 const jobOf = async (taskId: string, kind: string) =>
-  (await ctx.pool.query<{ id: string; status: string; kind: string }>(
+  (await ctx.query<{ id: string; status: string; kind: string }>(
     "SELECT id, status, kind FROM jobs WHERE task_id = $1 AND kind = $2 ORDER BY id DESC LIMIT 1",
     [taskId, kind],
   )).rows[0];
@@ -163,11 +163,11 @@ describe("pedido de transcrição", () => {
     expect(again.status).toBe(200);
     expect(again.json).toEqual({ ...(first.json as object), created: false });
 
-    const rows = await ctx.pool.query<{ count: string }>(
-      "SELECT count(*) FROM tasks WHERE user_id = $1 AND kind = 'save_content_with_transcription'",
+    const rows = await ctx.query<{ count: number }>(
+      "SELECT count(*) AS count FROM tasks WHERE user_id = $1 AND kind = 'save_content_with_transcription'",
       [user],
     );
-    expect(rows.rows[0]?.count).toBe("1");
+    expect(rows.rows[0]?.count).toBe(1);
   });
 });
 

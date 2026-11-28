@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { Client } from "pg";
 import { ANONYMOUS_CONTEXT } from "../common/request-context";
 import { ScryptPasswordHasher } from "../auth-core/password/scrypt-password-hasher";
 import { verifyJwt } from "../auth-core/security/jwt";
 import { createTestApp, type TestApp } from "../testing/create-test-app";
-import { createPostgresTestDatabase, type PostgresTestDatabase } from "../testing/postgres-test-database";
+import type { AuthDatabase } from "../db/client";
+import { createAuthTestDatabase, type AuthTestDatabase } from "../testing/sqlite-test-database";
 
 /**
  * O contrato operacional do startup: a chave de assinatura ativa é garantida
@@ -15,32 +15,30 @@ import { createPostgresTestDatabase, type PostgresTestDatabase } from "../testin
  * app pronto). Cada um depende do anterior de propósito.
  */
 describe("chave de assinatura no startup do Auth", () => {
-  let database: PostgresTestDatabase;
-  let admin: Client;
+  let database: AuthTestDatabase;
+  let admin: AuthDatabase;
   let app: TestApp;
   let user: { id: string; email: string };
 
   const call = (path: string, init: RequestInit = {}) => fetch(`${app.url}${path}`, init);
 
   beforeAll(async () => {
-    database = await createPostgresTestDatabase();
-    admin = new Client({ connectionString: database.adminUrl });
-    await admin.connect();
+    database = await createAuthTestDatabase();
+    admin = database.open();
     const email = `startup-${crypto.randomUUID()}@example.test`;
     user = { id: `user-startup-${crypto.randomUUID()}`, email };
     const passwordHash = await new ScryptPasswordHasher().hash("Integration-password-42!");
     await admin.query(
-      "INSERT INTO users (id,email,name,password_hash,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'active',now(),now())",
+      "INSERT INTO users (id,email,name,password_hash,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'active',strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
       [user.id, email, "Pessoa Startup", passwordHash],
     );
     // Sem `ensureActive`: é o estado de um processo que subiu mas ainda não
     // garantiu a chave, exatamente o que o readiness precisa barrar.
-    app = await createTestApp({ AUTH_DATABASE_URL: database.runtimeUrl });
+    app = await createTestApp({ AUTH_DATABASE_PATH: database.path });
   });
 
   afterAll(async () => {
     await app?.close();
-    await admin?.end();
     await database?.close();
   });
 

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { createPostgresTestContext, type PostgresTestContext } from "../infrastructure/persistence/testing/postgres-test-context";
+import { createSqliteTestContext, type SqliteTestContext } from "../infrastructure/persistence/testing/sqlite-test-context";
 import { createApiTestApp, type ApiTestApp } from "../testing/create-api-test-app";
 
 /**
@@ -12,7 +12,7 @@ import { createApiTestApp, type ApiTestApp } from "../testing/create-api-test-ap
 
 const GATEWAY_KEY = "requests-gateway-key-with-32-chars";
 const ORIGIN = "https://app.example.com";
-let ctx: PostgresTestContext;
+let ctx: SqliteTestContext;
 let app: ApiTestApp;
 
 const session = (userId: string): Record<string, string> => ({
@@ -50,9 +50,9 @@ async function call(
 }
 
 beforeAll(async () => {
-  ctx = await createPostgresTestContext();
+  ctx = await createSqliteTestContext();
   app = await createApiTestApp({
-    DATABASE_URL: ctx.connectionString,
+    API_DATABASE_PATH: ctx.path,
     AUTH_INTERNAL_SERVICE_KEY: GATEWAY_KEY,
     API_HOST: "0.0.0.0",
     AI_AUTOMATION: "off",

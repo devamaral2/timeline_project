@@ -30,7 +30,7 @@ export async function createApiTestApp(env: ApiTestEnv): Promise<ApiTestApp> {
   let runtime: ApiRuntime | undefined;
   try {
     runtime = await createApiRuntime({
-      databaseUrl: env.DATABASE_URL,
+      databasePath: env.API_DATABASE_PATH,
       authInternalServiceKey: env.AUTH_INTERNAL_SERVICE_KEY,
       logger: { warn() {}, error() {} },
     });

@@ -46,8 +46,8 @@ import { OpenAIProvider } from "../infrastructure/model-agent/openai-provider";
 import { OpenAIStructuredCompletionGateway } from "../infrastructure/model-agent/openai-structured.gateway";
 import { OpenRouterProvider } from "../infrastructure/model-agent/openrouter-provider";
 import { McpAgendaTools } from "../infrastructure/model-agent/agenda-tools";
-import type { PostgresDatabase } from "../infrastructure/persistence/database/postgres-database";
-import { PostgresCandidateQuery } from "../infrastructure/persistence/requests/postgres-candidate.query";
+import type { SqliteDatabase } from "@repo/sqlite";
+import { SqliteCandidateQuery } from "../infrastructure/persistence/requests/sqlite-candidate.query";
 import { PhotonPlaceSearchGateway } from "../infrastructure/places/photon-place-search.gateway";
 import { LlmUnavailableError } from "../api-core/agent/errors/agent.errors";
 import { FormatTranscriptionUseCase } from "../features/format-transcription/format-transcription.usecase";
@@ -130,7 +130,7 @@ function modelAgent(env: ServerEnv): ModelAgent | undefined {
 export interface RequestOperationsDeps {
   jobs: JobsService;
   store: RequestStore;
-  database: PostgresDatabase;
+  database: SqliteDatabase;
   tasks: TaskRepository;
   artifacts: ArtifactRepository;
   recurrences: RecurrenceRepository;
@@ -161,7 +161,7 @@ export function createRequestOperations(deps: RequestOperationsDeps): RequestOpe
 
   return new RequestOperations(deps.jobs, store, {
     dispatcher: new RequestDispatcher(store, new JevClient(), {
-      candidates: new PostgresCandidateQuery(deps.database), model: configModelFor,
+      candidates: new SqliteCandidateQuery(deps.database), model: configModelFor,
     }),
     entity: new RequestEntityWorker({ ...workers, sql: deps.sql }),
     edit: new RequestEditWorker(workers),

@@ -4,14 +4,14 @@ import { SigningKeyService } from "./auth-core/security/signing-key.service";
 import { PostgresUserRepository } from "./auth-core/persistence/postgres-user.repository";
 import { getRuntimeEnv, type RuntimeEnv } from "./config/env";
 import { composeAuthCore, startAuth, type RunningAuth } from "./composition-root";
-import { createPostgresTestDatabase, type PostgresTestDatabase } from "./testing/postgres-test-database";
+import { createAuthTestDatabase, type AuthTestDatabase } from "./testing/sqlite-test-database";
 
 const ULID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
-function testEnv(databaseUrl: string): RuntimeEnv {
+function testEnv(databasePath: string): RuntimeEnv {
   return getRuntimeEnv({
     NODE_ENV: "test",
-    AUTH_DATABASE_URL: databaseUrl,
+    AUTH_DATABASE_PATH: databasePath,
     AUTH_ISSUER: "https://auth.example.test",
     AUTH_PUBLIC_URL: "https://auth.example.test",
     AUTH_WEB_APP_URL: "https://web.example.test",
@@ -21,14 +21,14 @@ function testEnv(databaseUrl: string): RuntimeEnv {
 }
 
 describe("Auth composition root", () => {
-  let database: PostgresTestDatabase;
+  let database: AuthTestDatabase;
   let runtime: RunningAuth;
 
   const call = (path: string, init: RequestInit = {}) => fetch(`${runtime.url}${path}`, init);
 
   beforeAll(async () => {
-    database = await createPostgresTestDatabase();
-    runtime = await startAuth(testEnv(database.runtimeUrl), { port: 0, host: "127.0.0.1" });
+    database = await createAuthTestDatabase();
+    runtime = await startAuth(testEnv(database.path), { port: 0, host: "127.0.0.1" });
   });
 
   afterAll(async () => {
@@ -69,7 +69,7 @@ describe("Auth composition root", () => {
   });
 
   it("composes the core explicitly, without reflecting over modules", async () => {
-    const env = testEnv(database.runtimeUrl);
+    const env = testEnv(database.path);
     const core = await composeAuthCore(env);
     expect(core.env).toBe(env);
     expect(core.database).toBeDefined();
