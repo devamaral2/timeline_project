@@ -16,7 +16,6 @@ fi
 /opt/braid/bin/backup.sh
 bash ops/production/check-auth-schema.sh "$ROOT"
 
-docker build --target builder -f apps/api/Dockerfile -t "braid-api-migrate:$SHA" .
 docker build --target builder -f apps/auth/Dockerfile -t "braid-auth-migrate:$SHA" .
 docker build -f apps/api/Dockerfile -t "braid-api:$SHA" .
 docker build -f apps/auth/Dockerfile -t "braid-auth:$SHA" .
@@ -30,12 +29,9 @@ PGHOST=$(kubectl -n braid get svc postgres -o jsonpath='{.spec.clusterIP}')
 get_secret() {
   kubectl -n braid get secret postgres-env -o "jsonpath={.data.$1}" | base64 -d
 }
-APP_PW=$(get_secret PG_APP_PASSWORD)
 OWNER_PW=$(get_secret AUTH_OWNER_PASSWORD)
 
-export DATABASE_URL="postgres://braid:${APP_PW}@${PGHOST}:5432/braid"
-docker run --rm --network host -e DATABASE_URL \
-  "braid-api-migrate:$SHA" pnpm db:migrate
+# A API migra o proprio arquivo SQLite na subida do pod (ADR 0024), com uma copia antes de cada mudanca de schema.
 
 export AUTH_DATABASE_MIGRATION_URL="postgres://auth_owner:${OWNER_PW}@${PGHOST}:5432/braid_auth"
 docker run --rm --network host -e AUTH_DATABASE_MIGRATION_URL \

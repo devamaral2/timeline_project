@@ -5,12 +5,21 @@ metadata:
   namespace: braid
 spec:
   replicas: 1
+  # O banco da API e um arquivo SQLite no volume do pod, com um escritor so (ADR 0024): o pod novo so sobe depois
+  # que o antigo saiu, para os dois nunca abrirem o arquivo ao mesmo tempo.
+  strategy: {type: Recreate}
   selector:
     matchLabels: {app: api}
   template:
     metadata:
       labels: {app: api}
     spec:
+      securityContext:
+        # O usuario `node` da imagem (uid 1000) grava no volume.
+        fsGroup: 1000
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: api-data}
       containers:
         - name: api
           image: braid-api:REPLACE_SHA
@@ -18,6 +27,9 @@ spec:
           env:
             # Modo Claude do chat (ADR 0019): as ferramentas da agenda passam pelo MCP interno.
             - {name: MCP_URL, value: http://mcp.braid.svc.cluster.local:3003/mcp}
+            - {name: API_DATABASE_PATH, value: /data/api.sqlite}
+          volumeMounts:
+            - {name: data, mountPath: /data}
           envFrom:
             - secretRef: {name: onepassword-loader}
           ports:
@@ -35,6 +47,17 @@ spec:
           resources:
             requests: {cpu: 100m, memory: 256Mi}
             limits: {cpu: "1", memory: 768Mi}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: api-data
+  namespace: braid
+spec:
+  # Disco local do no (local-path do k3s): o SQLite nao funciona sobre sistema de arquivos de rede.
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: {storage: 2Gi}
 ---
 apiVersion: v1
 kind: Service
