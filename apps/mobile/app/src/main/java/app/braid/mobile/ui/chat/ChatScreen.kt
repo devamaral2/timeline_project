@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -40,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -53,10 +53,12 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -76,7 +78,6 @@ import app.braid.mobile.domain.chat.start
 import app.braid.mobile.domain.request.PROMPT_MAX_LENGTH
 import app.braid.mobile.domain.request.appendTranscript
 import app.braid.mobile.domain.request.isModelCommand
-import app.braid.mobile.domain.task.isSuccessAgentStatus
 import app.braid.mobile.domain.timeline.briefDate
 import app.braid.mobile.ui.agenda.freeDurationLabel
 import kotlinx.coroutines.flow.Flow
@@ -117,8 +118,8 @@ fun ChatOverlay(
         onSend = chat::submit,
         onChoose = { chat.send(it) },
         onRetry = chat::retry,
-        onCancel = chat::cancel,
         onNewConversation = chat::startNewConversation,
+        onCancel = chat::cancel,
         onPane = chat::setPane,
         onClearWindow = chat::clearFreeWindow,
         onClose = chat::close,
@@ -189,6 +190,9 @@ fun ChatScreen(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    val status = chatStatus(state)
+    val statusInLog = state.isConversation && matches.isEmpty() && state.pane != ChatPane.Process
+
     fun submit() {
         val first = matches.firstOrNull()
         if (first != null) {
@@ -234,11 +238,14 @@ fun ChatScreen(
                             prompt = ""
                         }
                     state.pane == ChatPane.Process -> AgentTraceView(state.turns, Modifier.padding(top = 20.dp))
-                    else -> Conversation(state, links, onChoose, onRetry, onClose, onOpenProcess = { onPane(ChatPane.Process) })
+                    else -> Conversation(state, status, links, onChoose, onRetry, onClose)
                 }
             }
             ChatField(
                 state = state,
+                // Com a conversa à vista, a linha de status vai logo abaixo da última mensagem; no início, nos comandos e
+                // na aba "Processo" ela fica em cima do campo.
+                status = status.takeUnless { statusInLog },
                 prompt = shown,
                 onPrompt = {
                     onTyped(it.take(PROMPT_MAX_LENGTH))
@@ -255,6 +262,7 @@ fun ChatScreen(
     }
 }
 
+/** O topo do chat: o "+" da conversa nova à esquerda e o nome de quem responde no centro, como o "TAREFA" do detalhe. */
 @Composable
 private fun ChatHeader(
     state: ChatUiState,
@@ -262,37 +270,29 @@ private fun ChatHeader(
 ) {
     val scheme = MaterialTheme.colorScheme
     val enabled = state.isConversation && state.pending == null
-    Column {
-        Row(Modifier.fillMaxWidth().heightIn(min = 60.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(44.dp)
-                    .alpha(if (enabled) 1f else 0.4f)
-                    .clickable(enabled = enabled, role = Role.Button, onClick = onNewConversation)
-                    .semantics { contentDescription = "Nova conversa" },
-                contentAlignment = Alignment.Center,
-            ) {
-                SvgIcon(BraidIcons.plus, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f)
-            }
-            Column(Modifier.weight(1f).padding(start = 4.dp)) {
-                Text(
-                    text = (state.agentMode?.title ?: "Assistente").uppercase(),
-                    color = scheme.onSurfaceVariant,
-                    fontFamily = BraidMonoFont,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    letterSpacing = 0.1.em,
-                )
-                Text(
-                    text = if (state.isConversation) "Conversa" else "Nova conversa",
-                    color = scheme.onBackground,
-                    fontSize = 15.sp,
-                    lineHeight = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
+    Box(Modifier.fillMaxWidth().heightIn(min = 60.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .align(Alignment.CenterStart)
+                .size(44.dp)
+                .clip(CircleShape)
+                .alpha(if (enabled) 1f else 0.4f)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onNewConversation)
+                .semantics { contentDescription = "Nova conversa" },
+            contentAlignment = Alignment.Center,
+        ) {
+            SvgIcon(BraidIcons.plus, size = 20.dp, color = scheme.onSurfaceVariant, strokeWidth = 2f)
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(scheme.outline))
+        Text(
+            text = (state.agentMode?.title ?: "Assistente").uppercase(),
+            modifier = Modifier.semantics { heading() },
+            color = scheme.onSurfaceVariant,
+            fontFamily = BraidMonoFont,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            letterSpacing = 0.1.em,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -461,39 +461,20 @@ private fun CommandList(
 @Composable
 private fun Conversation(
     state: ChatUiState,
+    status: ChatStatus,
     links: ChatEntityLinks,
     onChoose: (String) -> Unit,
     onRetry: (String) -> Unit,
     onClose: () -> Unit,
-    onOpenProcess: () -> Unit,
 ) {
     val listState = rememberLazyListState()
     val last = state.messages.lastOrNull()
     val lastId = last?.id
     val free = state.pending == null
     val shown = remember(state.messages) { state.messages.filter { it.inConversation() } }
-    // O nome sobre cada fala é o de quem responde agora, o mesmo do topo do chat.
-    val name = state.agentMode?.title ?: "Assistente"
-    // A última fala do assistente, quando é ela que fecha a conversa: é dela que se copia o texto.
-    val lastAnswer =
-        when (last) {
-            is ChatMessage.Assistant -> last.text
-            is ChatMessage.Process ->
-                last.request
-                    ?.takeIf { isSuccessAgentStatus(it.status) }
-                    ?.message
-                    .orEmpty()
-            else -> ""
-        }
-    val actions = free && lastAnswer.isNotBlank()
-    val steps =
-        state.turns
-            .lastOrNull()
-            ?.trace
-            ?.entries
-            ?.size ?: 0
-    val count = shown.size + if (actions) 1 else 0
-    // Rola até o fim a cada mensagem nova e quando as ações da última resposta entram.
+    // A linha de status é sempre o último item.
+    val count = shown.size + 1
+    // Rola até o fim a cada mensagem nova.
     LaunchedEffect(lastId, count) {
         if (count > 0) listState.animateScrollToItem(count - 1)
     }
@@ -514,26 +495,54 @@ private fun Conversation(
                 is ChatMessage.User -> UserBubble(message)
                 is ChatMessage.Assistant ->
                     Column {
-                        ChatReply(name) {
-                            // Os botões de escolha só valem na última mensagem, com o chat livre.
-                            ChatAnswer(message.text, onChoose = if (message.id == lastId && state.ready && free) onChoose else null)
-                        }
+                        // A fala é só o texto: sem o robô e o nome sobre ela, sem copiar e sem o atalho dos passos.
+                        // Os botões de escolha só valem na última mensagem, com o chat livre.
+                        ChatAnswer(message.text, onChoose = if (message.id == lastId && state.ready && free) onChoose else null)
                         EntityRows(message.entities, links, onClose)
                         message.model?.let { ModelFooter(state.model.options, it) }
                     }
-                is ChatMessage.Process -> message.request?.let { ProcessAnswer(it, name, links, onClose) }
+                is ChatMessage.Process -> message.request?.let { ProcessAnswer(it, links, onClose) }
                 is ChatMessage.HermesSteps -> Unit
                 is ChatMessage.Error -> ErrorBubble(message, onRetry = if (free) ({ onRetry(message.id) }) else null)
             }
         }
-        // As ações encostam na resposta: sobem por cima do respiro entre os itens da lista.
-        if (actions) item(key = "actions") { ChatActions(lastAnswer, steps, onOpenProcess, Modifier.offset(y = (-14).dp)) }
+        // O status (esperando, ouvindo, o passo do pedido) fica logo abaixo da última mensagem.
+        item(key = "status") { HermesStatusLine(status.mark, status.text, role = MarkRole.Chat, plain = true) }
     }
+}
+
+/** O ícone e o texto da linha de status do chat. */
+private data class ChatStatus(
+    val mark: BotState,
+    val text: String,
+)
+
+private fun chatStatus(state: ChatUiState): ChatStatus {
+    val lastIsError = state.messages.lastOrNull() is ChatMessage.Error
+    val listening = state.voice.listening
+    val mark =
+        when {
+            listening -> BotState.Listening
+            state.pending != null -> BotState.Thinking
+            lastIsError -> BotState.Error
+            else -> BotState.Idle
+        }
+    val text =
+        when {
+            listening -> "Ouvindo…"
+            // Enquanto o pedido roda, a linha diz o passo em que o agente está (a conversa não mostra o andamento).
+            state.pending != null -> "${pendingStepLabel(state.messages, state.pending)}…"
+            lastIsError -> "Não deu certo"
+            else -> "Esperando o seu pedido"
+        }
+    return ChatStatus(mark, text)
 }
 
 @Composable
 private fun ChatField(
     state: ChatUiState,
+    /** A linha de status em cima do campo; nula quando ela está na conversa, abaixo da última mensagem. */
+    status: ChatStatus?,
     prompt: String,
     onPrompt: (String) -> Unit,
     canSend: Boolean,
@@ -544,26 +553,6 @@ private fun ChatField(
 ) {
     val scheme = MaterialTheme.colorScheme
     val window = state.freeWindow
-    val lastIsError = state.messages.lastOrNull() is ChatMessage.Error
-    val listening = state.voice.listening
-    val mark =
-        if (listening) {
-            BotState.Listening
-        } else if (state.pending != null) {
-            BotState.Thinking
-        } else if (lastIsError) {
-            BotState.Error
-        } else {
-            BotState.Idle
-        }
-    val status =
-        when {
-            listening -> "Ouvindo…"
-            // Enquanto o pedido roda, a linha diz o passo em que o agente está (a conversa não mostra o andamento).
-            state.pending != null -> "${pendingStepLabel(state.messages, state.pending)}…"
-            lastIsError -> "Não deu certo"
-            else -> "Esperando o seu pedido"
-        }
     // Abrir o chat foca o campo, para já dar para digitar (o campo só aceita foco depois de a sessão chegar).
     val focus = remember { FocusRequester() }
     LaunchedEffect(state.ready) {
@@ -583,7 +572,7 @@ private fun ChatField(
                 lineHeight = 20.sp,
             )
         }
-        HermesStatusLine(mark, status, role = MarkRole.Chat, plain = true)
+        if (status != null) HermesStatusLine(status.mark, status.text, role = MarkRole.Chat, plain = true)
         HermesComposer(
             draft =
                 HermesDraft(

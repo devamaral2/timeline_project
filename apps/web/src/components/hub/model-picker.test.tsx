@@ -46,7 +46,7 @@ const closeSheet = () => fireEvent.click(screen.getByRole("button", { name: "Fec
 const savedChoice = () => JSON.parse(window.localStorage.getItem(MODEL_SELECTION_KEY) ?? "{}").current;
 const field = () => screen.getByRole("textbox", { name: "Mensagem para a IA" });
 const form = () => field().closest("form");
-const modeName = () => screen.getByRole("heading", { name: "Conversa" }).parentElement;
+const modeName = () => screen.getByRole("heading", { level: 2 });
 
 /** O campo ja tem a escolha (as opcoes do servidor chegaram), mesmo sem mostra-la. */
 async function choiceReady() {

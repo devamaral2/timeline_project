@@ -467,11 +467,12 @@
 .hubHeader .hubSearch { flex: 1; padding: 2px 14px; border-radius: 999px; }
 
 .assistantPanel { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.chatHeader { flex-shrink: 0; display: flex; align-items: center; gap: 4px; min-height: 60px; margin: 0 -8px; border-bottom: 1px solid var(--line); }
-.chatHeader h2, .chatTitle p { min-width: 0; margin: 0; overflow: hidden; font-size: 15px; font-weight: 600; line-height: 20px; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
+/* O topo do chat: o "+" da conversa nova à esquerda, o nome de quem responde no centro (como o "Tarefa" do detalhe) e, à direita, expandir e fechar no computador. */
+.chatHeader { flex-shrink: 0; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; min-height: 60px; margin: 0 -8px; }
+.chatNew { grid-column: 1; justify-self: start; }
+.chatHeaderActions { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: 4px; }
 /* O titulo da conversa leva em cima quem responde: o assistente da agenda ou o Hermes (`/hermes`). */
-.chatTitle { flex: 1; min-width: 0; display: flex; flex-direction: column; padding-left: 4px; }
-.chatLive { font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.chatLive { grid-column: 2; margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .chatIconButton { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; border-radius: 50%; color: var(--muted); cursor: pointer; }
 .chatIconButton:hover:not(:disabled) { color: var(--ink); }
 [data-chat-view="list"] .chatIconButton { color: var(--ink); }
@@ -550,24 +551,15 @@
    do Hermes, de largura inteira (fio e fundo do campo); a fala do assistente e texto solto, sem caixa, sob o robo cinza
    e o nome. Enquanto o pedido roda a conversa nao ganha nada:
    o passo em que o agente esta aparece na linha de status do campo e o resto fica na aba "Processo". */
+.chatStatus { flex-shrink: 0; }
 .chatLog { list-style: none; margin: 0 0 8px; padding: 20px 0 0; display: flex; flex-direction: column; gap: 18px; min-width: 0; font-size: 15px; line-height: 24px; }
 .chatBubble { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .chatBubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .chatBubble[data-role="user"] { padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-xs); background: var(--background); line-height: 22px; }
-.chatWho { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; font-weight: 600; line-height: 20px; color: var(--muted); }
-.chatAvatar { flex: none; display: grid; place-items: center; width: 18px; height: 18px; font-size: 18px; }
 .chatBubble[data-role="error"] { padding: 10px 14px; border: 1px solid color-mix(in oklab, var(--destructive) 40%, transparent); border-radius: var(--radius-xs); color: var(--destructive); font-size: 13px; line-height: 20px; }
 .chatBubble[data-role="error"] button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: 4px; padding: 0; color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
 .chatBubble[data-role="error"] svg { width: 14px; height: 14px; }
 /* O que da para fazer com a ultima resposta, encostado nela: copiar e abrir os passos na aba "Processo". */
-.chatActions { display: flex; align-items: center; margin: -14px -12px 0; color: var(--faint); }
-.chatActions button { display: grid; place-items: center; min-width: 44px; height: 44px; border-radius: var(--radius-sm); color: inherit; cursor: pointer; transition: color var(--duration-fast), transform var(--duration-fast); }
-.chatActions button:hover { color: var(--ink); }
-.chatActions button:active { transform: scale(.94); }
-.chatActions button:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
-.shell .chatActions svg { width: 16px; height: 16px; }
-.chatActions button[data-trace] { display: flex; align-items: center; gap: 4px; margin-left: auto; padding: 0 12px; font-family: var(--font-mono); font-size: 12px; line-height: 16px; }
-.shell .chatActions button[data-trace] svg { width: 12px; height: 12px; stroke-width: 2; }
 /* O passo em que o agente esta, na linha de status do campo: uma luz corre pelo texto enquanto o pedido roda. */
 .chatStep { background: linear-gradient(90deg, var(--muted) 35%, var(--ink) 50%, var(--muted) 65%) 0 0 / 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: chatSweep 1.8s linear infinite; }
 /* Cada registro da resposta e uma linha que abre a pagina dele (o apagado fica so como texto). */
@@ -591,8 +583,6 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 .processRows p { margin: 6px 0 0; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) {
   .chatStep { animation: none; background: none; color: inherit; }
-  .chatActions button { transition: none; }
-  .chatActions button:active { transform: none; }
 }
 
 /* No celular o painel e uma folha presa acima da barra inferior. */
@@ -645,8 +635,8 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
   .bottomNav[data-flight="back"] .commandCore { animation: flightAway 200ms forwards; }
   .sectionMenu.sectionMenu[data-hub-view][data-flight="out"] { animation: flightCome 137ms 73ms backwards; }
   .sectionMenu.sectionMenu[data-hub-view][data-flight="back"] { animation: flightAway 234ms forwards; }
-  .sectionMenu[data-flight] .chatField [data-hermes-mark] { visibility: hidden; }
-  .sectionMenu[data-flight="out"] .chatField > form, .sectionMenu[data-flight="out"] .chatField > p > span:not([data-hermes-mark]) { animation: flightRise 137ms 73ms ease-out backwards; }
+  .sectionMenu[data-flight] .chatStatus [data-hermes-mark] { visibility: hidden; }
+  .sectionMenu[data-flight="out"] .chatField > form, .sectionMenu[data-flight="out"] .chatStatus > span:not([data-hermes-mark]) { animation: flightRise 137ms 73ms ease-out backwards; }
   /* Entrar num detalhe: a barra se apaga enquanto o botao voa para o campo do
      registro; ao sair, ela volta e o botao pousa de novo na ponta. */
   .bottomNav[data-flight="dock"] { animation: flightAway 126ms forwards; pointer-events: none; }
