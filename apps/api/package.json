@@ -22,6 +22,7 @@
     "@repo/timeline": "workspace:*",
     "@scalar/nestjs-api-reference": "^1.2.17",
     "drizzle-orm": "^0.45.2",
+    "fastify": "^5.12.8",
     "libpg-query": "17.7.4",
     "openai": "^7.59.0",
     "pg": "^8.23.0",

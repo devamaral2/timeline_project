@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
@@ -14,6 +13,7 @@ import { catchError, from, map, mergeMap, of, throwError, type Observable } from
 import type { IdempotencyKeyRef, IdempotencyStore } from "../../domain/ports";
 import { IDEMPOTENCY_STORE } from "../../infrastructure/persistence";
 import type { GatewayRequest } from "../request-identity/gateway-identity.guard";
+import { IDEMPOTENCY_KEY_FORMAT, idempotencyRequestHash } from "./idempotency-key";
 
 /** Rotas de criacao que aceitam `Idempotency-Key`. Nas demais o header e ignorado. */
 export const IDEMPOTENT_ROUTES: ReadonlySet<string> = new Set([
@@ -21,8 +21,6 @@ export const IDEMPOTENT_ROUTES: ReadonlySet<string> = new Set([
   "/api/artifacts",
   "/api/recurrences",
 ]);
-
-export const IDEMPOTENCY_KEY_FORMAT = /^[A-Za-z0-9._:-]{1,128}$/;
 
 /**
  * Header opcional `Idempotency-Key` nas rotas de criacao. Sem ele nada muda (a
@@ -47,7 +45,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     if (!IDEMPOTENCY_KEY_FORMAT.test(key)) throw new BadRequestException("Invalid Idempotency-Key");
 
     const ref: IdempotencyKeyRef = { userId: request.actor.userId, scope, key };
-    const requestHash = createHash("sha256").update(JSON.stringify(request.body ?? null)).digest("hex");
+    const requestHash = idempotencyRequestHash(request.body);
     const response = http.getResponse<Response>();
 
     return from(this.store.claim({ ...ref, requestHash })).pipe(

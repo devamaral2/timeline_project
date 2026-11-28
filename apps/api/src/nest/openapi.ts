@@ -56,12 +56,29 @@ function responsesOf(doc: OperationDoc): JsonObject {
 }
 
 /**
+ * O Swagger so enxerga os controllers que ainda estao no Nest. As operacoes
+ * declarativas do Fastify entram no mesmo documento a partir do catalogo, para
+ * que `/openapi.json` continue listando todas as rotas da API.
+ */
+function ensureDocumentedPaths(document: OpenAPIObject): void {
+  if (!document.paths) document.paths = {};
+  const paths = document.paths as unknown as Record<string, Record<string, JsonObject>>;
+  for (const key of Object.keys(documentedOperations)) {
+    const [method, path] = key.split(" ");
+    if (!method || !path) continue;
+    paths[path] ??= {};
+    paths[path][method.toLowerCase()] ??= {};
+  }
+}
+
+/**
  * Completa o documento que o Swagger gera dos controllers com o que esta no
  * catalogo: grupo, resumo, filtros opcionais, corpo e resposta. Uma rota fora do
  * catalogo fica como o Swagger a gerou; o teste deste arquivo impede que isso
  * aconteca sem ninguem ver.
  */
 export function describeOperations(document: OpenAPIObject): OpenAPIObject {
+  ensureDocumentedPaths(document);
   const paths = document.paths as unknown as Record<string, Record<string, JsonObject>>;
   for (const [path, item] of Object.entries(paths)) {
     for (const method of METHODS) {
@@ -69,10 +86,19 @@ export function describeOperations(document: OpenAPIObject): OpenAPIObject {
       const doc = documentedOperations[`${method.toUpperCase()} ${path}`];
       if (!operation || !doc) continue;
 
-      const pathParameters = ((operation.parameters as JsonObject[] | undefined) ?? [])
+      const generatedPathParameters = ((operation.parameters as JsonObject[] | undefined) ?? [])
         .filter((parameter) => parameter.in === "path")
         .map((parameter) => ({ ...parameter, description: "O id que a criação ou a listagem devolveu." }));
+      const declaredPathParameters = [...path.matchAll(/\{(\w+)\}/g)].map(([, name]) => ({
+        name,
+        in: "path",
+        required: true,
+        description: "O id que a criação ou a listagem devolveu.",
+        schema: { type: "string" },
+      }));
+      const pathParameters = generatedPathParameters.length > 0 ? generatedPathParameters : declaredPathParameters;
       const query = Object.entries(doc.query ?? {}).map(([name, queryDoc]) => queryParameter(name, queryDoc));
+
 
       operation.tags = [doc.tag];
       operation.summary = doc.summary;
@@ -115,5 +141,5 @@ export function configureApiDocumentation(app: INestApplication): void {
     theme: "purple",
     darkMode: false,
     spec: { content: document },
-  }));
+  }) as unknown as (request: Request, response: Response) => void);
 }
