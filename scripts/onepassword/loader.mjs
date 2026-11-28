@@ -57,9 +57,9 @@ const SCOPES = Object.freeze({
     ],
   },
   "auth-runtime": {
+    // O banco e um arquivo SQLite no volume do pod (AUTH_DATABASE_PATH, no manifesto), sem segredo (ADR 0025).
     required: [
       "NODE_ENV",
-      "AUTH_DATABASE_URL",
       "AUTH_ISSUER",
       "AUTH_AUDIENCE",
       "AUTH_PUBLIC_URL",
