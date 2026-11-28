@@ -128,16 +128,28 @@ metadata:
   namespace: braid
 spec:
   replicas: 1
+  # O banco do auth e um arquivo SQLite no volume do pod, com um escritor so (ADR 0025): o pod novo so sobe depois
+  # que o antigo saiu.
+  strategy: {type: Recreate}
   selector:
     matchLabels: {app: auth}
   template:
     metadata:
       labels: {app: auth}
     spec:
+      securityContext:
+        fsGroup: 1000
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: auth-data}
       containers:
         - name: auth
           image: braid-auth:REPLACE_SHA
           imagePullPolicy: Never
+          env:
+            - {name: AUTH_DATABASE_PATH, value: /data/auth.sqlite}
+          volumeMounts:
+            - {name: data, mountPath: /data}
           envFrom:
             - secretRef: {name: onepassword-loader}
           ports:
@@ -155,6 +167,16 @@ spec:
           resources:
             requests: {cpu: 50m, memory: 192Mi}
             limits: {cpu: 500m, memory: 512Mi}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: auth-data
+  namespace: braid
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: {storage: 1Gi}
 ---
 apiVersion: v1
 kind: Service
