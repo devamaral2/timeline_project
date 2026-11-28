@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { RECURRENCE_REPOSITORY } from "../../infrastructure/persistence";
 import type { RecurrenceRepository } from "../../domain/ports";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { GetRecurrenceController } from "./get-recurrence.controller";
 import { GetRecurrenceUseCase } from "./get-recurrence.usecase";
 

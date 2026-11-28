@@ -1,6 +1,6 @@
 import { Controller, HttpCode, HttpStatus, Inject, Module, Param, Post, UseGuards } from "@nestjs/common";
 import type { RequestDto } from "@repo/contracts";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { RequestOperations } from "../../api-core/requests/request-operations";
 import { CancelTranscriptionUseCase } from "../request-transcription/cancel-transcription.usecase";
 import { RequestTranscriptionModule } from "../request-transcription/request-transcription.controller";

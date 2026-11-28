@@ -3,7 +3,7 @@ import type { DailyReadingResult } from "@repo/contracts";
 import { dailyReadingInputSchema } from "@repo/contracts/schemas";
 import { z } from "zod";
 import { InvalidInputError } from "../../api-core/agent/errors/agent.errors";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { ArtifactBuilder } from "../../api-core/artifacts/services/artifact-builder.service";
 import { MaterializeRecurrencesUseCase } from "../../api-core/recurrences/materialize-recurrences.usecase";
 import type { TaskRelations } from "../../api-core/tasks/task-relations";

@@ -1,4 +1,4 @@
-import { Logger, type OnApplicationShutdown, type OnModuleInit } from "@nestjs/common";
+import { Logger } from "../../common/logger";
 import { setTimeout as delay } from "node:timers/promises";
 import { getJobsEnv, type JobsEnv } from "../../config/env";
 import { PostgresJobStore, retryDelay, type Job } from "../persistence/jobs/postgres-job.store";
@@ -71,7 +71,7 @@ export function isRetryableJobError(error: unknown, seen = new Set<unknown>()): 
  * O worker da fila unica (ADR 0013). Nao ha broker: a cada intervalo ele pega
  * do Postgres os jobs prontos dos tipos que tem handler, ate encher as vagas.
  */
-export class JobsService implements OnModuleInit, OnApplicationShutdown {
+export class JobsService {
   private readonly logger = new Logger(JobsService.name);
   private readonly handlers = new Map<string, JobHandler>();
   private readonly failureHandlers = new Map<string, JobFailureHandler>();
@@ -102,7 +102,8 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
     return (await this.store.activeOfTask(taskId))?.progress ?? undefined;
   }
 
-  onModuleInit(): void {
+  /** Comeca o laco que pega jobs. O composition root chama depois de registrar os handlers. */
+  start(): void {
     this.loop = this.run();
   }
 
@@ -188,7 +189,8 @@ export class JobsService implements OnModuleInit, OnApplicationShutdown {
     }
   }
 
-  async onApplicationShutdown(): Promise<void> {
+  /** Para de aceitar trabalho, aborta o que roda e espera o laco e os jobs ativos. */
+  async shutdown(): Promise<void> {
     this.stop.abort();
     for (const abort of this.active.values()) abort.abort();
     await this.loop;

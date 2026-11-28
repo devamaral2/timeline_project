@@ -1,4 +1,4 @@
-import { Logger } from "@nestjs/common";
+import { Logger } from "../../common/logger";
 import { z } from "zod";
 import { getServerEnv } from "../../config/env";
 import type { ChoiceQuestion } from "./request-config";

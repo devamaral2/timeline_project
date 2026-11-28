@@ -1,9 +1,8 @@
 import { Pool } from "pg";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
-import type { OnApplicationShutdown } from "@nestjs/common";
 import * as schema from "./schema";
 
-export class PostgresDatabase implements OnApplicationShutdown {
+export class PostgresDatabase {
   readonly db: NodePgDatabase<typeof schema>;
 
   constructor(readonly pool: Pool) {
@@ -14,7 +13,8 @@ export class PostgresDatabase implements OnApplicationShutdown {
     return new PostgresDatabase(new Pool({ connectionString }));
   }
 
-  async onApplicationShutdown(): Promise<void> {
+  /** Encerra o pool. O lifecycle do processo chama no shutdown, depois de parar de aceitar trabalho. */
+  async close(): Promise<void> {
     await this.pool.end();
   }
 }

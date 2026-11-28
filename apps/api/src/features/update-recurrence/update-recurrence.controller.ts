@@ -2,7 +2,7 @@ import { BadRequestException, Body, Controller, HttpCode, HttpStatus, Inject, Mo
 import type { UpdateRecurrenceInput } from "@repo/contracts";
 import { TASK_REPOSITORY, RECURRENCE_REPOSITORY } from "../../infrastructure/persistence";
 import type { TaskRepository, RecurrenceRepository } from "../../domain/ports";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { assertRecurrenceTemplate } from "../../api-core/http-input-validation";
 import { CreateTaskUseCase } from "../../api-core/tasks/create-task.usecase";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";

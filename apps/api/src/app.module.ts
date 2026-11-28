@@ -1,8 +1,8 @@
 import { Module } from "@nestjs/common";
 import { APP_INTERCEPTOR } from "@nestjs/core";
-import { ApiCoreModule } from "./api-core/api-core.module";
+import { ApiCoreModule } from "./nest/api-core.module";
 import { IdempotencyInterceptor } from "./http/idempotency/idempotency.interceptor";
-import { PersistenceModule } from "./infrastructure/persistence";
+import { PersistenceModule } from "./nest/persistence.module";
 import { CreateTaskModule } from "./features/create-task/create-task.module";
 import { SaveDailyReadingModule } from "./features/save-daily-reading/save-daily-reading.controller";
 import { RequestTranscriptionModule } from "./features/request-transcription/request-transcription.controller";

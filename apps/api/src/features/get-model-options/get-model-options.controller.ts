@@ -1,6 +1,6 @@
 import { Controller, Get, Module, NotFoundException, UseGuards } from "@nestjs/common";
 import type { ModelOptionsDto } from "@repo/contracts";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { modelOptions } from "../../api-core/requests/model-catalog";
 import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
 

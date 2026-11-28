@@ -1,4 +1,4 @@
-import { Logger } from "@nestjs/common";
+import { Logger } from "../../common/logger";
 import type { ModelSelection, TranscriptionResult } from "@repo/contracts";
 import { z } from "zod";
 import {

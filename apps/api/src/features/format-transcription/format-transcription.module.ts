@@ -1,7 +1,7 @@
 import { Inject, Injectable, Module, type OnModuleInit } from "@nestjs/common";
 import { LlmUnavailableError } from "../../api-core/agent/errors/agent.errors";
 import type { StructuredCompletionGateway } from "../../api-core/agent/gateways/structured-completion.gateway";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { providerKeys } from "../../api-core/requests/model-catalog";
 import { TRANSCRIPTION_FORMAT_JOB, type TranscriptionRequests } from "../../api-core/transcription/transcription-requests";
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
@@ -17,14 +17,13 @@ const NO_ANTHROPIC: StructuredCompletionGateway = {
 };
 
 /** Registra o job interno `video-transcription-format` (spec #39, #46) no worker da fila única (ADR 0013). */
-@Injectable()
-export class FormatTranscriptionJob implements OnModuleInit {
+export class FormatTranscriptionJob {
   constructor(
-    @Inject(JobsService) private readonly jobs: Pick<JobsService, "register">,
-    @Inject(FormatTranscriptionUseCase) private readonly format: FormatTranscriptionUseCase,
+    private readonly jobs: Pick<JobsService, "register">,
+    private readonly format: FormatTranscriptionUseCase,
   ) {}
 
-  onModuleInit(): void {
+  start(): void {
     this.jobs.register(
       TRANSCRIPTION_FORMAT_JOB,
       async (raw, context) => {
@@ -40,6 +39,16 @@ export class FormatTranscriptionJob implements OnModuleInit {
   }
 }
 
+/** Adaptador do lifecycle antigo: o registro do job tem `start` explicito. */
+@Injectable()
+export class FormatTranscriptionJobLifecycle implements OnModuleInit {
+  constructor(@Inject(FormatTranscriptionJob) private readonly job: FormatTranscriptionJob) {}
+
+  onModuleInit(): void {
+    this.job.start();
+  }
+}
+
 @Module({
   imports: [ApiCoreModule.forRoot(), SaveDailyReadingModule],
   providers: [
@@ -51,7 +60,12 @@ export class FormatTranscriptionJob implements OnModuleInit {
         return new FormatTranscriptionUseCase(gate, requests, key ? new AnthropicStructuredCompletionGateway(key) : NO_ANTHROPIC);
       },
     },
-    FormatTranscriptionJob,
+    {
+      provide: FormatTranscriptionJob,
+      inject: [JobsService, FormatTranscriptionUseCase],
+      useFactory: (jobs: JobsService, format: FormatTranscriptionUseCase) => new FormatTranscriptionJob(jobs, format),
+    },
+    FormatTranscriptionJobLifecycle,
   ],
 })
 export class FormatTranscriptionModule {}

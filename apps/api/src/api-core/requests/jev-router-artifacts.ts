@@ -1,4 +1,4 @@
-import { Logger } from "@nestjs/common";
+import { Logger } from "../../common/logger";
 import { Artifact } from "../../domain";
 import type { ArtifactRepository } from "../../domain/ports";
 import { dispatchConfig } from "./request-config";

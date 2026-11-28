@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { GUARDS_METADATA, HTTP_CODE_METADATA } from "@nestjs/common/constants";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestError } from "../../common/http-errors";
 import { expect, test } from "vitest";
 import { InMemoryProjectRepository } from "../../api-core/projects/testing/in-memory-project.repository";
 import { ProjectNameTakenError, ProjectValidationError } from "../../domain";
@@ -54,7 +54,7 @@ test.each([{ name: "" }, { name: "   " }, { name: "a".repeat(61) }, { name: 7 },
 test("a field the contract does not know is a bad request", () => {
   const { controller } = setup();
 
-  expect(() => controller.execute({ name: "braid", personal: true } as never, actor)).toThrow(BadRequestException);
+  expect(() => controller.execute({ name: "braid", personal: true } as never, actor)).toThrow(BadRequestError);
 });
 
 test("the route answers 201 and is behind the gateway identity guard", () => {

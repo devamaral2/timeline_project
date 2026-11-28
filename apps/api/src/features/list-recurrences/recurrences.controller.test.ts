@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { BadRequestError } from "../../common/http-errors";
 import { GUARDS_METADATA } from "@nestjs/common/constants";
 import { expect, test } from "vitest";
 import { createTasksKit } from "../../api-core/tasks/testing/in-memory-tasks-kit";
@@ -63,8 +64,8 @@ test("POST rejects a template that is missing or is not an object", async () => 
   const { create } = makeControllers();
 
   await expect(async () => create.execute({ ...body, template: "Academia" } as never, actor)).rejects.toThrow("Invalid template");
-  await expect(async () => create.execute({ ...body, template: undefined } as never, actor)).rejects.toThrow(BadRequestException);
-  await expect(async () => create.execute({ ...body, template: [] } as never, actor)).rejects.toThrow(BadRequestException);
+  await expect(async () => create.execute({ ...body, template: undefined } as never, actor)).rejects.toThrow(BadRequestError);
+  await expect(async () => create.execute({ ...body, template: [] } as never, actor)).rejects.toThrow(BadRequestError);
 });
 
 test("PATCH requires expectedRevision and an object template when one is sent", async () => {

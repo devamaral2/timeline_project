@@ -1,8 +1,8 @@
 import { Controller, HttpCode, HttpStatus, Inject, Module, Post, Res, UseGuards } from "@nestjs/common";
 import type { TranscriptionReservation } from "@repo/contracts";
 import type { Response } from "express";
-import { ApiCoreModule } from "../../api-core/api-core.module";
-import { TRANSCRIPTION_WORKER_PROVIDER } from "../../api-core/transcription/transcription-worker.provider";
+import { ApiCoreModule } from "../../nest/api-core.module";
+import { TRANSCRIPTION_WORKER_PROVIDER } from "../../nest/transcription-worker.provider";
 import { TranscriptionWorkerUseCase } from "../../api-core/transcription/transcription-worker.usecase";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { CurrentUser } from "../../http/request-identity/current-user.decorator";

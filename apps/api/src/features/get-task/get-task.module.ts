@@ -7,7 +7,7 @@ import {
   RECURRENCE_REPOSITORY,
 } from "../../infrastructure/persistence/index";
 import type { ArtifactRepository, ProjectQuery, TaskRepository, TaskRequestLinkQuery, RecurrenceRepository } from "../../domain/ports";
-import { ApiCoreModule } from "../../api-core/api-core.module";
+import { ApiCoreModule } from "../../nest/api-core.module";
 import { GetTaskController } from "./get-task.controller";
 import { GetTaskUseCase } from "./get-task.usecase";
 

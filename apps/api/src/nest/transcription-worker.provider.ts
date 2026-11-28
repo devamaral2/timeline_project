@@ -1,9 +1,9 @@
 import type { Provider } from "@nestjs/common";
-import type { EntityBatchWriter } from "../../domain/ports";
-import { ENTITY_BATCH_WRITER, TRANSCRIPTION_REQUESTS } from "../../infrastructure/persistence";
-import { DailyReadingGate } from "../tasks/daily-reading.gate";
-import type { TranscriptionRequests } from "./transcription-requests";
-import { TranscriptionWorkerUseCase } from "./transcription-worker.usecase";
+import type { EntityBatchWriter } from "../domain/ports";
+import { ENTITY_BATCH_WRITER, TRANSCRIPTION_REQUESTS } from "../infrastructure/persistence/tokens";
+import { DailyReadingGate } from "../api-core/tasks/daily-reading.gate";
+import type { TranscriptionRequests } from "../api-core/transcription/transcription-requests";
+import { TranscriptionWorkerUseCase } from "../api-core/transcription/transcription-worker.usecase";
 
 /**
  * O caso de uso das três operações do serviço local (reservar, renovar o lease,

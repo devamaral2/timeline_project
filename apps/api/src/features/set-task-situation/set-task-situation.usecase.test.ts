@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { GUARDS_METADATA, HTTP_CODE_METADATA } from "@nestjs/common/constants";
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestError } from "../../common/http-errors";
 import { describe, expect, test } from "vitest";
 import { Task, TaskNotFoundError, TaskSituationNotAllowedError, type TaskCreateProps } from "../../domain";
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
@@ -78,9 +78,9 @@ describe("PUT /api/tasks/:taskId/situation", () => {
     const { controller } = setup([agent("r1")]);
 
     await expect(controller.execute("r1", { situation: "reviewed" }, actor)).resolves.toMatchObject({ situation: "reviewed" });
-    expect(() => controller.execute("r1", { situation: "archived" } as never, actor)).toThrow(BadRequestException);
-    expect(() => controller.execute("r1", { situation: "reviewed", expectedRevision: 1 } as never, actor)).toThrow(BadRequestException);
-    expect(() => controller.execute("r1", {} as never, actor)).toThrow(BadRequestException);
+    expect(() => controller.execute("r1", { situation: "archived" } as never, actor)).toThrow(BadRequestError);
+    expect(() => controller.execute("r1", { situation: "reviewed", expectedRevision: 1 } as never, actor)).toThrow(BadRequestError);
+    expect(() => controller.execute("r1", {} as never, actor)).toThrow(BadRequestError);
   });
 
   test("responde 200 e fica atras da identidade do gateway", () => {
