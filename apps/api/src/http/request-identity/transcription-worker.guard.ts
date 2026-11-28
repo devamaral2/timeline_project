@@ -17,7 +17,10 @@ export class TranscriptionWorkerGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<GatewayRequest>();
     const userId = assertFromGateway(request);
-    const permissions = (request.header(DEVICE_PERMISSIONS_HEADER) ?? "").split(",").map((value) => value.trim());
+    const permissionsHeader = request.header(DEVICE_PERMISSIONS_HEADER);
+    const permissions = (typeof permissionsHeader === "string" ? permissionsHeader : "")
+      .split(",")
+      .map((value) => value.trim());
     if (!permissions.includes(TRANSCRIPTION_WORK_PERMISSION)) throw new ForbiddenException();
 
     request.actor = { userId, permissions: [TRANSCRIPTION_WORK_PERMISSION] };

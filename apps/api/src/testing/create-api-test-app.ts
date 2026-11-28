@@ -2,11 +2,13 @@ import "reflect-metadata";
 import type { LoggerService } from "@nestjs/common";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Test } from "@nestjs/testing";
-import { TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES } from "@repo/contracts/device-key";
+import { API_BODY_LIMIT_BYTES } from "../config/body-limits";
+import { isLoopbackHost } from "../config/env";
 import { AppModule } from "../app.module";
 import { DomainExceptionFilter } from "../nest/domain-exception.filter";
 import { configureApiDocumentation } from "../nest/openapi";
-import { DAILY_READING_BODY_LIMIT_BYTES } from "../features/save-daily-reading/save-daily-reading.controller";
+import { createApiRuntime, type ApiRuntime } from "../server/composition-root";
+import { delegateToFastify } from "../server/coexistence";
 
 /** O Logger do filtro escreveria direto no stdout e escaparia do `silent` do Vitest. */
 const silentLogger: LoggerService = {
@@ -21,6 +23,7 @@ const silentLogger: LoggerService = {
 export interface ApiTestApp {
   url: string;
   app: NestExpressApplication;
+  runtime: ApiRuntime;
   close(): Promise<void>;
 }
 
@@ -28,8 +31,9 @@ export type ApiTestEnv = Record<string, string>;
 
 /**
  * Sobe a API como o `main.ts` sobe: o mesmo parser de corpo com o teto da maior
- * rota, o mesmo filtro global de erros e a mesma documentação. O único ajuste é
- * o logger silencioso, para a saída do Vitest ficar limpa.
+ * rota, o mesmo filtro global de erros, a mesma documentacao e o mesmo Fastify
+ * em coexistencia com as rotas Nest restantes. O unico ajuste e o logger
+ * silencioso, para a saida do Vitest ficar limpa.
  */
 export async function createApiTestApp(env: ApiTestEnv): Promise<ApiTestApp> {
   const previous = new Map<string, string | undefined>();
@@ -38,12 +42,27 @@ export async function createApiTestApp(env: ApiTestEnv): Promise<ApiTestApp> {
     process.env[key] = value;
   }
 
+  const restoreEnv = (): void => {
+    for (const [key, value] of previous) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
+
+  let runtime: ApiRuntime | undefined;
   try {
+    runtime = await createApiRuntime({
+      databaseUrl: env.DATABASE_URL,
+      authInternalServiceKey: env.AUTH_INTERNAL_SERVICE_KEY,
+      logger: { warn() {}, error() {} },
+    });
+    await runtime.start();
+
     const module = await Test.createTestingModule({ imports: [AppModule] }).compile();
     const app = module.createNestApplication<NestExpressApplication>({ bodyParser: false, logger: false });
-    app.useBodyParser("json", {
-      limit: Math.max(DAILY_READING_BODY_LIMIT_BYTES, TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES),
-    });
+    if (!isLoopbackHost(env.API_HOST ?? "127.0.0.1")) app.enableCors();
+    delegateToFastify(app.getHttpAdapter().getInstance(), runtime.fastify, runtime.routes);
+    app.useBodyParser("json", { limit: API_BODY_LIMIT_BYTES });
     app.useGlobalFilters(new DomainExceptionFilter(silentLogger));
     configureApiDocumentation(app);
     await app.listen(0, "127.0.0.1");
@@ -54,19 +73,16 @@ export async function createApiTestApp(env: ApiTestEnv): Promise<ApiTestApp> {
     return {
       url: `http://127.0.0.1:${address.port}`,
       app,
+      runtime,
       close: async () => {
         await app.close();
-        for (const [key, value] of previous) {
-          if (value === undefined) delete process.env[key];
-          else process.env[key] = value;
-        }
+        await runtime?.close();
+        restoreEnv();
       },
     };
   } catch (error) {
-    for (const [key, value] of previous) {
-      if (value === undefined) delete process.env[key];
-      else process.env[key] = value;
-    }
+    await runtime?.close();
+    restoreEnv();
     throw error;
   }
 }

@@ -20,12 +20,6 @@ import { SaveDailyReadingUseCase } from "./save-daily-reading.usecase";
 export const DAILY_READING_PATH = "/api/tasks/daily-reading";
 
 /**
- * O corpo que a rota aceita: o markdown de uma pagina longa nao cabe nos 100 kB
- * padrao do Express. A folga sobre o teto do markdown cobre os escapes do JSON.
- */
-export const DAILY_READING_BODY_LIMIT_BYTES = 1024 * 1024;
-
-/**
  * `POST /api/tasks/daily-reading`: guarda uma pagina lida, ja em markdown, na
  * tarefa "Leitura diária" do dia. Quem manda e a extensao do navegador
  * (`apps/extension`).

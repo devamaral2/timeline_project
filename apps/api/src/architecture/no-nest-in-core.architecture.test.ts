@@ -42,3 +42,8 @@ test("nas features, so os arquivos de borda (controller/module) falam Nest", () 
 test("a borda temporaria do Nest fica isolada em src/nest", () => {
   expect(existsSync(join(src, "nest"))).toBe(true);
 });
+
+test("o servidor Fastify e a composicao nao importam Nest", () => {
+  expect(nestUsersUnder(join(src, "server"))).toEqual([]);
+});
+
