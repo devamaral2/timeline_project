@@ -31,6 +31,11 @@ export interface ApiRouteOperation {
   /** O caminho no formato do registrador (`/api/tasks/:taskId`). */
   path: string;
   status: ApiSuccessStatus;
+  /**
+   * O status quando o handler nao tem nada a devolver (a reserva do servico
+   * local: 200 com o pedido, 204 sem corpo quando a fila esta vazia).
+   */
+  statusWhenEmpty?: ApiSuccessStatus;
   authentication: ApiAuthentication;
   /** A criacao aceita `Idempotency-Key`; nas demais o header e ignorado. */
   idempotent?: boolean;

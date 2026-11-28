@@ -114,8 +114,9 @@ async function handleRoute(
     ? await runIdempotent(route, request, reply, options.idempotencyStore, actor.userId, execute)
     : await execute();
 
-  if (route.status === 204) return reply.code(204).send();
-  return reply.code(route.status).send(result);
+  const status = route.statusWhenEmpty !== undefined && result === undefined ? route.statusWhenEmpty : route.status;
+  if (status === 204) return reply.code(204).send();
+  return reply.code(status).send(result);
 }
 
 async function runIdempotent(

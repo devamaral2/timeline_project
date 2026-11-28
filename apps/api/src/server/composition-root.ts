@@ -7,6 +7,7 @@ import { RequestOperations } from "../api-core/requests/request-operations";
 import { CreateTaskUseCase } from "../api-core/tasks/create-task.usecase";
 import { OpenRouterFoodParsingGateway } from "../api-core/tasks/gateways/openrouter-food-parsing.gateway";
 import { requestClock } from "../api-core/tasks/request-clock";
+import { TranscriptionWorkerUseCase } from "../api-core/transcription/transcription-worker.usecase";
 import type { LogSink } from "../common/logger";
 import { getDatabaseEnv, getJobsEnv, getServerEnv, type ServerEnv } from "../config/env";
 import { cancelRequestRoute } from "../features/cancel-request/cancel-request.route";
@@ -23,6 +24,7 @@ import { deleteRecurrenceRoute } from "../features/delete-recurrence/delete-recu
 import { DeleteRecurrenceUseCase } from "../features/delete-recurrence/delete-recurrence.usecase";
 import { deleteTaskRoute } from "../features/delete-task/delete-task.route";
 import { DeleteTaskUseCase } from "../features/delete-task/delete-task.usecase";
+import { deliverTranscriptionRoute } from "../features/deliver-transcription/deliver-transcription.route";
 import { getArtifactRoute } from "../features/get-artifact/get-artifact.route";
 import { GetArtifactUseCase } from "../features/get-artifact/get-artifact.usecase";
 import { getModelOptionsRoute } from "../features/get-model-options/get-model-options.route";
@@ -43,6 +45,12 @@ import { listRequestsRoute } from "../features/list-requests/list-requests.route
 import { listTrackedTasksRoute } from "../features/list-tracked-tasks/list-tracked-tasks.route";
 import { ListTrackedTasksUseCase } from "../features/list-tracked-tasks/list-tracked-tasks.usecase";
 import { CancelTranscriptionUseCase } from "../features/request-transcription/cancel-transcription.usecase";
+import { requestTranscriptionRoute } from "../features/request-transcription/request-transcription.route";
+import { RequestTranscriptionUseCase } from "../features/request-transcription/request-transcription.usecase";
+import { renewTranscriptionLeaseRoute } from "../features/renew-transcription-lease/renew-transcription-lease.route";
+import { reserveTranscriptionRoute } from "../features/reserve-transcription/reserve-transcription.route";
+import { saveDailyReadingRoute } from "../features/save-daily-reading/save-daily-reading.route";
+import { SaveDailyReadingUseCase } from "../features/save-daily-reading/save-daily-reading.usecase";
 import { setTaskSituationRoute } from "../features/set-task-situation/set-task-situation.route";
 import { SetTaskSituationUseCase } from "../features/set-task-situation/set-task-situation.usecase";
 import { startEditRequestRoute } from "../features/start-edit-request/start-edit-request.route";
@@ -73,6 +81,7 @@ import { PostgresRecurrenceRepository } from "../infrastructure/persistence/recu
 import { PostgresRequestStore } from "../infrastructure/persistence/requests/postgres-request.store";
 import { PostgresTaskCardQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-card.query";
 import { PostgresTaskRequestLinkQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-request-link.query";
+import { PostgresTaskRelations } from "../infrastructure/persistence/tasks/relations/postgres-task-relations";
 import { PostgresTaskRepository } from "../infrastructure/persistence/tasks/repositories/postgres-task.repository";
 import { PostgresTranscriptionRequests } from "../infrastructure/persistence/transcription/postgres-transcription-requests";
 import {
@@ -141,6 +150,7 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
     const idempotencyStore = new PostgresIdempotencyStore(database.db);
     const requestStore = new PostgresRequestStore(database);
     const transcriptionRequests = new PostgresTranscriptionRequests(database.db);
+    const taskRelations = new PostgresTaskRelations();
 
     const artifactBuilder = new ArtifactBuilder(workoutCatalog);
     const materializeRecurrences = new MaterializeRecurrencesUseCase(recurrenceRepository, artifactRepository);
@@ -189,6 +199,11 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
       recurrences: materializeRecurrences,
     });
     const cancelTranscription = new CancelTranscriptionUseCase(dailyReading, transcriptionRequests, jobs);
+    // A Leitura diaria e o servico local compartilham a porta da leitura e as
+    // relacoes de tarefa montadas uma vez aqui.
+    const saveDailyReading = new SaveDailyReadingUseCase(dailyReading, taskRelations);
+    const requestTranscription = new RequestTranscriptionUseCase(dailyReading, transcriptionRequests, taskRelations);
+    const transcriptionWorker = new TranscriptionWorkerUseCase(dailyReading, entityBatchWriter, transcriptionRequests);
 
     const food = new GenerateFoodUseCase(artifactRepository, new OpenRouterFoodParsingGateway());
     const requestOperations = createRequestOperations({
@@ -213,6 +228,12 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
       listTrackedTasksRoute(listTrackedTasks),
       listAgendaTasksRoute(listAgendaTasks),
       createTaskRoute(createTask),
+      // Estaticas antes de `/api/tasks/:taskId`.
+      saveDailyReadingRoute(saveDailyReading),
+      requestTranscriptionRoute(requestTranscription),
+      reserveTranscriptionRoute(transcriptionWorker),
+      renewTranscriptionLeaseRoute(transcriptionWorker),
+      deliverTranscriptionRoute(transcriptionWorker),
       getTaskRoute(getTask),
       updateTaskRoute(updateTask),
       setTaskSituationRoute(setTaskSituation),

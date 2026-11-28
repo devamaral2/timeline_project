@@ -3,6 +3,7 @@ import { createArtifactOperation } from "../features/create-artifact/create-arti
 import { createProjectOperation } from "../features/create-project/create-project.route";
 import { createRecurrenceOperation } from "../features/create-recurrence/create-recurrence.route";
 import { createTaskOperation } from "../features/create-task/create-task.route";
+import { deliverTranscriptionOperation } from "../features/deliver-transcription/deliver-transcription.route";
 import { deleteArtifactOperation } from "../features/delete-artifact/delete-artifact.route";
 import { deleteRecurrenceOperation } from "../features/delete-recurrence/delete-recurrence.route";
 import { deleteTaskOperation } from "../features/delete-task/delete-task.route";
@@ -17,6 +18,10 @@ import { listProjectsOperation } from "../features/list-projects/list-projects.r
 import { listRecurrencesOperation } from "../features/list-recurrences/list-recurrences.route";
 import { listRequestsOperation } from "../features/list-requests/list-requests.route";
 import { listTrackedTasksOperation } from "../features/list-tracked-tasks/list-tracked-tasks.route";
+import { renewTranscriptionLeaseOperation } from "../features/renew-transcription-lease/renew-transcription-lease.route";
+import { requestTranscriptionOperation } from "../features/request-transcription/request-transcription.route";
+import { reserveTranscriptionOperation } from "../features/reserve-transcription/reserve-transcription.route";
+import { saveDailyReadingOperation } from "../features/save-daily-reading/save-daily-reading.route";
 import { setTaskSituationOperation } from "../features/set-task-situation/set-task-situation.route";
 import { startEditRequestOperation } from "../features/start-edit-request/start-edit-request.route";
 import { startHermesRequestOperation } from "../features/start-hermes-request/start-hermes-request.route";
@@ -37,6 +42,12 @@ export const DECLARED_API_OPERATIONS: readonly ApiRouteOperation[] = [
   listTrackedTasksOperation,
   listAgendaTasksOperation,
   createTaskOperation,
+  // A Leitura diaria e o pedido de transcricao sao estaticas: vem antes de `/api/tasks/:taskId`.
+  saveDailyReadingOperation,
+  requestTranscriptionOperation,
+  reserveTranscriptionOperation,
+  renewTranscriptionLeaseOperation,
+  deliverTranscriptionOperation,
   getTaskOperation,
   updateTaskOperation,
   setTaskSituationOperation,

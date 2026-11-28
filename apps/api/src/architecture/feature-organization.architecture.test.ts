@@ -43,6 +43,11 @@ const MIGRATED = [
   "list-requests",
   "get-request",
   "cancel-request",
+  "save-daily-reading",
+  "request-transcription",
+  "reserve-transcription",
+  "renew-transcription-lease",
+  "deliver-transcription",
 ];
 
 /** Operacoes que ainda respondem pelo Nest durante a coexistencia. */
