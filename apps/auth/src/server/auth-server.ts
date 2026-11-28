@@ -3,8 +3,12 @@ import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { ulid } from "ulid";
 import { ConsoleAuthLogger, type AuthLogger } from "../common/logger";
 import { resolveRequestContext, type RequestContext } from "../common/request-context";
+import { SECURITY_POLICY } from "../config/security-policy";
+import type { AuthenticatedActor } from "../domain/users/user";
 import { toAuthErrorResponse } from "../http/auth-error-response";
 import { documentationRoutes } from "./documentation.routes";
+import { authFeatureRoutes, type AuthFeatureDependencies } from "./feature.routes";
+import { createAuthGuards, type AuthGuardDependencies, type AuthGuards } from "./guards";
 import { healthRoutes, type HealthRouteDependencies } from "./health.routes";
 import { jwksRoutes, type JwksRouteDependencies } from "./jwks.routes";
 import { apiProxyRoutes, type ApiProxyDependencies } from "./proxy.routes";
@@ -15,12 +19,20 @@ export type { AuthRoute } from "./routes";
 declare module "fastify" {
   interface FastifyRequest {
     authContext: RequestContext;
+    /** O ator validado pelo guard, como no adaptador do Nest. */
+    actor?: AuthenticatedActor;
   }
 }
 
-/** O que as rotas do servidor precisam: banco para readiness, chave para JWKS. */
+/**
+ * O que as rotas do servidor precisam: banco para readiness, chave para JWKS,
+ * guards de sessão, os use cases das features já migradas e, quando ligado, o
+ * proxy Auth -> API.
+ */
 export type AuthHttpServerDependencies = HealthRouteDependencies &
-  JwksRouteDependencies & {
+  JwksRouteDependencies &
+  AuthGuardDependencies &
+  AuthFeatureDependencies & {
     /** Quando presente, o próprio Fastify serve o proxy Auth -> API. */
     readonly proxy?: ApiProxyDependencies;
   };
@@ -81,17 +93,21 @@ function parseProxyJsonBody(
 }
 
 /**
- * Os parsers vivem num escopo filho, só das rotas do proxy. O handler de
- * coexistência (404) continua no escopo raiz, que não tem parser, e por isso
- * recebe o corpo cru intacto para o Nest/Express consumir.
+ * Os parsers do proxy vivem num escopo filho próprio. O escopo raiz continua
+ * sem parser, e o handler de coexistência (404) recebe o corpo cru intacto para
+ * o Nest/Express consumir. O limite de cada rota vem declarado nela.
  */
-function registerProxyRoutes(fastify: FastifyInstance, proxy: ApiProxyDependencies): void {
+function registerProxyRoutes(
+  fastify: FastifyInstance,
+  proxy: ApiProxyDependencies,
+  guards: AuthGuards,
+): void {
   void fastify.register(async (scope) => {
     scope.addContentTypeParser("application/json", { parseAs: "buffer" }, parseProxyJsonBody);
     scope.addContentTypeParser("*", { parseAs: "buffer" }, (_request, _body, done) => {
       done(null, undefined);
     });
-    registerAuthRoutes(scope, apiProxyRoutes(proxy));
+    registerAuthRoutes(scope, apiProxyRoutes(proxy), guards);
   });
 }
 
@@ -102,20 +118,48 @@ function statusOf(error: unknown): number | undefined {
 }
 
 /**
- * O servidor Fastify do Auth. Ele serve apenas as rotas já migradas e entrega o
- * resto ao handler em coexistência (hoje o Express do Nest), preservando os
+ * O Express das rotas em coexistência não reconhecia `text/plain` nem corpo
+ * sem content-type: o parser ignorava e a validação respondia 400. O Fastify
+ * recusa antes, com 415; aqui a borda volta ao contrato observado.
+ */
+function transportStatus(status: number | undefined): number | undefined {
+  return status === 415 ? 400 : status;
+}
+
+/** O parser JSON das rotas migradas, no escopo filho que as contém. */
+function addMigratedBodyParsers(fastify: FastifyInstance): void {
+  fastify.addContentTypeParser(
+    "application/json",
+    { parseAs: "string", bodyLimit: SECURITY_POLICY.maxRequestBodyBytes },
+    (_request, body, done) => {
+      try {
+        done(null, JSON.parse(typeof body === "string" ? body : body.toString("utf8")));
+      } catch {
+        const error = new Error("invalid json body") as Error & { statusCode: number };
+        error.statusCode = 400;
+        done(error);
+      }
+    },
+  );
+}
+
+/**
+ * O servidor Fastify do Auth. Ele serve as rotas já migradas e entrega o resto
+ * ao handler em coexistência (hoje o Express do Nest), preservando os
  * contratos que ainda vivem lá.
  *
- * Os parsers de corpo do escopo raiz continuam removidos de propósito: assim o
- * corpo cru chega intacto à rota em coexistência, que mantém seus limites de
- * 32 KB, Leitura diária e entrega. As rotas do proxy têm parsers próprios num
- * escopo filho, com o limite declarado em cada rota.
+ * O escopo raiz continua sem parsers de propósito: assim o corpo cru chega
+ * intacto à rota em coexistência, que mantém seus limites de 32 KB, Leitura
+ * diária e entrega. Cada família migrada ganha um escopo filho com os seus
+ * parsers: as features com o JSON comum e o proxy com o `json()` do Express e o
+ * limite declarado em cada rota.
  */
 export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpServer {
   const logger = options.logger ?? new ConsoleAuthLogger();
   const fastify = Fastify({ logger: false, routerOptions: { ignoreTrailingSlash: true } });
   fastify.removeAllContentTypeParsers();
 
+  const guards = createAuthGuards(options.dependencies);
   let fallback: AuthFallbackHandler | undefined;
 
   fastify.decorateRequest("authContext", null as unknown as RequestContext);
@@ -134,7 +178,7 @@ export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpSe
     const mapped = toAuthErrorResponse(error, {
       correlationId,
       logger,
-      status: statusOf(error),
+      status: transportStatus(statusOf(error)),
     });
     for (const [name, value] of Object.entries(mapped.headers)) reply.header(name, value);
     reply.code(mapped.status);
@@ -148,14 +192,23 @@ export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpSe
     return reply;
   });
 
-  registerAuthRoutes(fastify, [
-    ...healthRoutes(options.dependencies),
-    ...jwksRoutes(options.dependencies),
-    ...documentationRoutes(),
-    ...(options.routes ?? []),
-  ]);
+  registerAuthRoutes(
+    fastify,
+    [
+      ...healthRoutes(options.dependencies),
+      ...jwksRoutes(options.dependencies),
+      ...documentationRoutes(),
+      ...(options.routes ?? []),
+    ],
+    guards,
+  );
 
-  if (options.dependencies.proxy) registerProxyRoutes(fastify, options.dependencies.proxy);
+  fastify.register(async (scope) => {
+    addMigratedBodyParsers(scope);
+    registerAuthRoutes(scope, authFeatureRoutes(options.dependencies), guards);
+  });
+
+  if (options.dependencies.proxy) registerProxyRoutes(fastify, options.dependencies.proxy, guards);
 
   return {
     fastify,

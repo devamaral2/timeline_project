@@ -45,7 +45,7 @@ function isAllowedNestConsumer(file: string): boolean {
   if (path === "src/app.module.ts" || path === "src/main.ts") return true;
   if (path === "src/composition-root.ts") return true;
   if (path.endsWith(".module.ts")) return true;
-  return /^src\/features\/.*\/http\/.*\.controller\.ts$/.test(path);
+  return false;
 }
 
 describe("auth core without Nest", () => {
@@ -72,12 +72,12 @@ describe("auth core without Nest", () => {
     const adapters = [
       "src/nest/bearer-auth.guard.ts",
       "src/nest/device-key-auth.guard.ts",
-      "src/nest/require-super-admin.guard.ts",
       "src/nest/current-actor.decorator.ts",
       "src/nest/auth-exception.filter.ts",
       "src/nest/http-shell.ts",
       "src/composition-root.ts",
       "src/server/auth-server.ts",
+      "src/server/guards.ts",
     ];
 
     for (const adapter of adapters) {
@@ -90,9 +90,29 @@ describe("auth core without Nest", () => {
       "src/nest/api-documentation.ts",
       "src/nest/api-gateway.lifecycle.ts",
       "src/nest/database.module.ts",
+      "src/nest/require-super-admin.guard.ts",
       "src/http/health.controller.ts",
       "src/http/jwks.controller.ts",
       "src/http/http.module.ts",
+      "src/features/login-with-password/http/login-with-password.controller.ts",
+      "src/features/refresh-token/http/refresh-token.controller.ts",
+      "src/features/logout/http/logout.controller.ts",
+      "src/features/logout-all/http/logout-all.controller.ts",
+      "src/features/current-user/http/current-user.controller.ts",
+      "src/features/inspect-invite/http/inspect-invite.controller.ts",
+      "src/features/accept-invite/http/accept-invite.controller.ts",
+      "src/features/create-invite/http/create-invite.controller.ts",
+      "src/features/login-with-password/login-with-password.module.ts",
+      "src/features/refresh-token/refresh-token.module.ts",
+      "src/features/logout/logout.module.ts",
+      "src/features/logout-all/logout-all.module.ts",
+      "src/features/current-user/current-user.module.ts",
+      "src/features/inspect-invite/inspect-invite.module.ts",
+      "src/features/accept-invite/accept-invite.module.ts",
+      "src/features/create-invite/create-invite.module.ts",
+      "src/http/api-proxy/api-proxy.module.ts",
+      "src/http/api-proxy/api-gateway.controller.ts",
+      "src/http/api-proxy/device-gateway.controller.ts",
     ];
 
     for (const file of removed) {

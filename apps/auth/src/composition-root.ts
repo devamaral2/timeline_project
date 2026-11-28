@@ -22,6 +22,17 @@ import type { RuntimeEnv } from "./config/env";
 import { AppModule } from "./app.module";
 import { ensureSigningKeyActive } from "./bootstrap/signing-key-startup";
 import { AuthenticateDeviceKeyUseCase } from "./features/device-keys/usecases/authenticate-device-key.usecase";
+import { LoginWithPasswordUseCase } from "./features/login-with-password/usecases/login-with-password.usecase";
+import { LoginCredentialChecker } from "./features/login-with-password/services/login-credential-checker";
+import { PostgresRateLimiter } from "./features/login-with-password/services/rate-limit/postgres-rate-limiter";
+import { PostgresLoginRepository } from "./features/login-with-password/postgres-login.repository";
+import { RefreshTokenUseCase } from "./features/refresh-token/usecases/refresh-token.usecase";
+import { LogoutUseCase } from "./features/logout/usecases/logout.usecase";
+import { LogoutAllUseCase } from "./features/logout-all/usecases/logout-all.usecase";
+import { CurrentUserUseCase } from "./features/current-user/usecases/current-user.usecase";
+import { InspectInviteUseCase } from "./features/inspect-invite/usecases/inspect-invite.usecase";
+import { AcceptInviteUseCase } from "./features/accept-invite/usecases/accept-invite.usecase";
+import { CreateInviteUseCase } from "./features/create-invite/usecases/create-invite.usecase";
 import { ApiUpgradeProxy } from "./http/api-proxy/api-upgrade-proxy";
 import { configureHttpShell } from "./nest/http-shell";
 import { createAuthHttpServer, type AuthHttpServer } from "./server/auth-server";
@@ -49,6 +60,14 @@ export interface AuthCore {
   readonly signingKeyRepository: PostgresSigningKeyRepository;
   readonly signingKeyService: SigningKeyService;
   readonly authorizationService: AuthorizationService;
+  readonly loginWithPassword: LoginWithPasswordUseCase;
+  readonly refresh: RefreshTokenUseCase;
+  readonly logout: LogoutUseCase;
+  readonly logoutAll: LogoutAllUseCase;
+  readonly currentUser: CurrentUserUseCase;
+  readonly inspectInvite: InspectInviteUseCase;
+  readonly acceptInvite: AcceptInviteUseCase;
+  readonly createInvite: CreateInviteUseCase;
   close(): Promise<void>;
 }
 
@@ -57,7 +76,7 @@ export interface AuthCoreOverrides {
   readonly deviceKeys?: DeviceKeyRepository;
 }
 
-export function composeAuthCore(env: RuntimeEnv, overrides: AuthCoreOverrides = {}): AuthCore {
+export function composeAuthCore(env: RuntimeEnv, overrides: AuthCoreOverrides = {}): Promise<AuthCore> {
   const database = createAuthDatabase({ connectionString: env.databaseUrl });
   const clock = new SystemClock();
   const secrets = new CryptoSecretGenerator();
@@ -88,24 +107,61 @@ export function composeAuthCore(env: RuntimeEnv, overrides: AuthCoreOverrides = 
     rbacRepository,
   );
 
-  return Object.freeze({
-    env,
-    database,
-    clock,
-    secrets,
-    passwordHasher,
-    pwnedPasswords,
-    preparePassword,
-    deviceKeyRepository,
-    authenticateDeviceKey,
-    inviteRepository,
-    rbacRepository,
-    userRepository,
-    sessionRepository,
-    signingKeyRepository,
-    signingKeyService,
-    authorizationService,
-    close: () => database.close(),
+  const loginRepository = new PostgresLoginRepository(database, env.issuer, env.audience);
+  const rateLimiter = new PostgresRateLimiter(database, env.keyEncryptionKey);
+
+  // O hash de comparação é calculado uma única vez por processo, como no antigo
+  // provider do Nest: toda tentativa paga exatamente um KDF.
+  return passwordHasher.hash("timeline-auth-login-dummy").then((dummyHash) => {
+    const credentials = new LoginCredentialChecker(passwordHasher, dummyHash);
+    const loginWithPassword = new LoginWithPasswordUseCase(
+      userRepository,
+      credentials,
+      rateLimiter,
+      loginRepository,
+      clock,
+      secrets,
+      env.limits,
+      signingKeyService.signAccessToken,
+    );
+
+    return Object.freeze({
+      env,
+      database,
+      clock,
+      secrets,
+      passwordHasher,
+      pwnedPasswords,
+      preparePassword,
+      deviceKeyRepository,
+      authenticateDeviceKey,
+      inviteRepository,
+      rbacRepository,
+      userRepository,
+      sessionRepository,
+      signingKeyRepository,
+      signingKeyService,
+      authorizationService,
+      loginWithPassword,
+      refresh: new RefreshTokenUseCase(
+        sessionRepository,
+        signingKeyService.signAccessToken,
+        clock,
+        secrets,
+      ),
+      logout: new LogoutUseCase(sessionRepository, clock),
+      logoutAll: new LogoutAllUseCase(sessionRepository, clock),
+      currentUser: new CurrentUserUseCase(authorizationService),
+      inspectInvite: new InspectInviteUseCase(inviteRepository, clock),
+      acceptInvite: new AcceptInviteUseCase(inviteRepository, preparePassword, clock),
+      createInvite: new CreateInviteUseCase(
+        inviteRepository,
+        clock,
+        secrets,
+        env.webAppUrl,
+      ),
+      close: () => database.close(),
+    });
   });
 }
 
@@ -139,13 +195,12 @@ export async function startAuth(
   env: RuntimeEnv,
   options: StartAuthOptions = {},
 ): Promise<RunningAuth> {
-  const core = composeAuthCore(env, options.overrides);
+  const core = await composeAuthCore(env, options.overrides);
   const logger = options.logger ?? new ConsoleAuthLogger();
 
   const http = createAuthHttpServer({
     dependencies: {
-      database: core.database,
-      signingKeyService: core.signingKeyService,
+      ...core,
       proxy: {
         env: core.env,
         authorization: core.authorizationService,

@@ -65,6 +65,28 @@ interface ProxyServer {
   readonly fallbackCalls: string[];
 }
 
+/** As famílias fora do proxy existem para o tipo; o proxy não as aciona. */
+function serverDependencies(overrides: Partial<AuthHttpServerDependencies> = {}): AuthHttpServerDependencies {
+  return {
+    database: fakeDatabase(),
+    signingKeyService: {
+      publicJwks: () => ({ keys: [key.publicJwk] }),
+      publicKeyFor: async (kid: string) => (kid === key.kid ? key.publicJwk : null),
+    },
+    env: { issuer: ISSUER, audience: AUDIENCE },
+    authorizationService: { currentUser: async () => { throw new Error("unexpected currentUser"); } },
+    loginWithPassword: { execute: async () => { throw new Error("unexpected login"); } },
+    refresh: { execute: async () => { throw new Error("unexpected refresh"); } },
+    logout: { execute: async () => { throw new Error("unexpected logout"); } },
+    logoutAll: { execute: async () => { throw new Error("unexpected logoutAll"); } },
+    currentUser: { execute: async () => { throw new Error("unexpected currentUser usecase"); } },
+    inspectInvite: { execute: async () => { throw new Error("unexpected inspectInvite"); } },
+    acceptInvite: { execute: async () => { throw new Error("unexpected acceptInvite"); } },
+    createInvite: { execute: async () => { throw new Error("unexpected createInvite"); } },
+    ...overrides,
+  } as AuthHttpServerDependencies;
+}
+
 async function startProxyServer(input: {
   apiServiceUrl: string;
   authorize?: (request: AccessRequest) => Promise<void>;
@@ -73,11 +95,7 @@ async function startProxyServer(input: {
   const authorized: AccessRequest[] = [];
   const fallbackCalls: string[] = [];
   const server = createAuthHttpServer({
-    dependencies: {
-      database: fakeDatabase(),
-      signingKeyService: {
-        publicJwks: () => ({ keys: [key.publicJwk] }),
-      },
+    dependencies: serverDependencies({
       proxy: {
         env: { apiServiceUrl: input.apiServiceUrl, internalServiceKey: "gateway-key", issuer: ISSUER, audience: AUDIENCE },
         authorization: {
@@ -96,7 +114,7 @@ async function startProxyServer(input: {
           },
         },
       },
-    },
+    }),
     logger: new RecordingAuthLogger(),
   });
   server.setFallback((request, response) => {
