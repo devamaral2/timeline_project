@@ -1,11 +1,11 @@
-import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import type { SqliteDatabase } from "../persistence/sqlite/database";
 import type { JobsEnv } from "../../config/env";
-import { PostgresDatabase } from "../persistence/database/postgres-database";
-import { PostgresTaskRepository } from "../persistence/tasks/repositories/postgres-task.repository";
-import { PostgresJobStore, type Job } from "../persistence/jobs/postgres-job.store";
+import { SqliteTaskRepository } from "../persistence/tasks/repositories/sqlite-task.repository";
+import { SqliteJobStore, type Job } from "../persistence/jobs/sqlite-job.store";
 import { OTHER_USER, USER, agentTask, countRows, selectRows } from "../persistence/testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../persistence/testing/postgres-test-context";
+import { createSqliteTestContext, type SqliteTestContext } from "../persistence/testing/sqlite-test-context";
+import { NOW, sql } from "../persistence/sqlite/sql";
 import { completeCurrentJob, getCurrentJob, type EnqueueJobInput } from "./job-context";
 import { JobsService, RetryableJobError, type JobHandlerContext } from "./jobs.service";
 
@@ -23,23 +23,23 @@ interface JobRow extends Record<string, unknown> {
 }
 
 describe("fila de jobs", () => {
-  let ctx: PostgresTestContext;
-  let database: PostgresDatabase;
-  let store: PostgresJobStore;
-  let tasks: PostgresTaskRepository;
+  let ctx: SqliteTestContext;
+  let database: SqliteDatabase;
+  let store: SqliteJobStore;
+  let tasks: SqliteTaskRepository;
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
-    database = new PostgresDatabase(ctx.pool);
-    store = new PostgresJobStore(database, ENV.AI_JOBS_LEASE_MS, ENV.AI_JOBS_MAX_ATTEMPTS);
-    tasks = new PostgresTaskRepository(ctx.db);
+    ctx = await createSqliteTestContext();
+    database = ctx.database;
+    store = new SqliteJobStore(database, ENV.AI_JOBS_LEASE_MS, ENV.AI_JOBS_MAX_ATTEMPTS);
+    tasks = new SqliteTaskRepository(ctx.db);
     // O efeito de dominio que um handler grava na mesma transacao em que encerra o job.
-    await ctx.pool.query("CREATE TABLE job_effects (job_id text PRIMARY KEY)");
+    database.handle.exec("CREATE TABLE job_effects (job_id TEXT PRIMARY KEY)");
   }, 60000);
 
   beforeEach(async () => {
     await ctx.reset();
-    await ctx.pool.query("TRUNCATE job_effects");
+    database.handle.exec("DELETE FROM job_effects");
   });
 
   afterAll(async () => {
@@ -49,27 +49,35 @@ describe("fila de jobs", () => {
   /** Um worker novo por teste: os handlers sao registrados uma vez por tipo. */
   function worker(overrides: Partial<JobsEnv> = {}): JobsService {
     const env = { ...ENV, ...overrides };
-    return new JobsService(new PostgresJobStore(database, env.AI_JOBS_LEASE_MS, env.AI_JOBS_MAX_ATTEMPTS), env);
+    return new JobsService(new SqliteJobStore(database, env.AI_JOBS_LEASE_MS, env.AI_JOBS_MAX_ATTEMPTS), env);
   }
 
   const enqueue = (overrides: Partial<EnqueueJobInput> = {}) =>
     store.enqueue({ kind: "work", userId: USER, actorId: USER, payload: {}, ...overrides });
 
+  /** SQL de escrita dos testes, com `$1`, `$2`... no lugar dos valores. */
+  const exec = (text: string, params: unknown[] = []) => ctx.db.execute(sql.unsafe(text, params));
+  const hoursFromNow = (hours: number) => new Date(Date.now() + hours * 3_600_000);
+
   async function rowOf(jobId: string): Promise<JobRow> {
-    const [row] = await selectRows<JobRow>(
-      ctx.pool,
+    const [row] = await selectRows(
+      ctx.db,
       `SELECT status, attempts, error, progress, lease_token, lease_until,
-              extract(epoch FROM (available_at - now()))::float AS wait_seconds
+              (julianday(available_at) - julianday('now')) * 86400.0 AS wait_seconds
        FROM jobs WHERE id = $1`,
       [jobId],
     );
-    return row;
+    return {
+      ...row,
+      progress: row.progress === null ? null : JSON.parse(String(row.progress)),
+      lease_until: row.lease_until === null ? null : new Date(String(row.lease_until)),
+    } as JobRow;
   }
 
   const statusOf = async (jobId: string) => (await rowOf(jobId)).status;
-  const makeAvailable = (jobId: string) => ctx.pool.query("UPDATE jobs SET available_at = now() WHERE id = $1", [jobId]);
+  const makeAvailable = (jobId: string) => exec("UPDATE jobs SET available_at = $2 WHERE id = $1", [jobId, new Date()]);
   const expireLease = (jobId: string) =>
-    ctx.pool.query("UPDATE jobs SET lease_until = clock_timestamp() - interval '1 second' WHERE id = $1", [jobId]);
+    exec("UPDATE jobs SET lease_until = $2 WHERE id = $1", [jobId, new Date(Date.now() - 1000)]);
 
   /** Uma passada pela fila, ate os jobs que ela pegou terminarem. */
   async function drain(service: JobsService): Promise<void> {
@@ -93,18 +101,18 @@ describe("fila de jobs", () => {
       expect(await enqueue({ dedupeKey: "artefato-1", userId: OTHER_USER, actorId: OTHER_USER })).not.toBe(first);
       // O job repetido nao troca o payload do que ja estava na fila.
       expect(await store.get(first)).toMatchObject({ payload: { n: 1 }, status: "queued", attempts: 0 });
-      expect(await countRows(ctx.pool, "jobs")).toBe(4);
+      expect(await countRows(ctx.db, "jobs")).toBe(4);
     });
 
     test("sem chave, cada chamada e um job novo", async () => {
       expect(await enqueue()).not.toBe(await enqueue());
-      expect(await countRows(ctx.pool, "jobs")).toBe(2);
+      expect(await countRows(ctx.db, "jobs")).toBe(2);
     });
 
     test("job sem dono nao entra na fila", async () => {
       await expect(enqueue({ userId: "" })).rejects.toThrow(/authenticated ownership/);
       await expect(enqueue({ actorId: "" })).rejects.toThrow(/authenticated ownership/);
-      expect(await countRows(ctx.pool, "jobs")).toBe(0);
+      expect(await countRows(ctx.db, "jobs")).toBe(0);
     });
   });
 
@@ -113,7 +121,7 @@ describe("fila de jobs", () => {
       const [a, b] = [await enqueue(), await enqueue()];
       const other = await enqueue({ kind: "other" });
       const later = await enqueue();
-      await ctx.pool.query("UPDATE jobs SET available_at = now() + interval '1 hour' WHERE id = $1", [later]);
+      await exec("UPDATE jobs SET available_at = $2 WHERE id = $1", [later, hoursFromNow(1)]);
 
       expect(await store.claim([], 10)).toEqual([]);
       expect(await store.claim(["work"], 0)).toEqual([]);
@@ -128,27 +136,21 @@ describe("fila de jobs", () => {
       expect(await statusOf(later)).toBe("queued");
     });
 
-    test("pula o job que outro worker ja travou, sem esperar por ele", async () => {
-      const [locked, free] = [await enqueue(), await enqueue()];
-      const client = await ctx.pool.connect();
-      try {
-        await client.query("BEGIN");
-        await client.query("SELECT id FROM jobs WHERE id = $1 FOR UPDATE", [locked]);
+    test("dois claim concorrentes no mesmo banco nunca pegam o mesmo job", async () => {
+      // O escritor unico serializa cada claim (select e marca do lease numa escrita so).
+      const [a, b] = [await enqueue(), await enqueue()];
 
-        // Sem SKIP LOCKED esta chamada ficaria presa ate o COMMIT abaixo.
-        expect((await store.claim(["work"], 10)).map((job) => job.id)).toEqual([free]);
-      } finally {
-        await client.query("ROLLBACK");
-        client.release();
-      }
+      const [first, second] = await Promise.all([store.claim(["work"], 1), store.claim(["work"], 1)]);
 
-      expect((await store.claim(["work"], 10)).map((job) => job.id)).toEqual([locked]);
+      expect([...first, ...second].map((job) => job.id).sort()).toEqual([a, b].sort());
+      expect(first).toHaveLength(1);
+      expect(second).toHaveLength(1);
     });
 
     test("workers concorrentes nunca pegam o mesmo job", async () => {
       const ids: string[] = [];
       for (let index = 0; index < 12; index += 1) ids.push(await enqueue());
-      const workers = [store, ...[1, 2, 3].map(() => new PostgresJobStore(database, 3000, 3))];
+      const workers = [store, ...[1, 2, 3].map(() => new SqliteJobStore(database, 3000, 3))];
 
       const claimed: Job[] = [];
       for (let round = 0; round < 6 && claimed.length < ids.length; round += 1) {
@@ -157,7 +159,7 @@ describe("fila de jobs", () => {
 
       expect(claimed.map((job) => job.id).sort()).toEqual([...ids].sort());
       expect(new Set(claimed.map((job) => job.leaseToken)).size).toBe(ids.length);
-      expect(await countRows(ctx.pool, "jobs", "attempts <> 1")).toBe(0);
+      expect(await countRows(ctx.db, "jobs", "attempts <> 1")).toBe(0);
     });
 
     test("jobs com a mesma chave de concorrencia saem um por vez, na ordem de criacao", async () => {
@@ -181,12 +183,12 @@ describe("fila de jobs", () => {
     test("o job mais antigo da chave segura os seguintes mesmo enquanto espera o retry", async () => {
       const first = await enqueue({ concurrencyKey: "user-1:chat" });
       const second = await enqueue({ concurrencyKey: "user-1:chat" });
-      await ctx.pool.query("UPDATE jobs SET available_at = now() + interval '1 hour' WHERE id = $1", [first]);
+      await exec("UPDATE jobs SET available_at = $2 WHERE id = $1", [first, hoursFromNow(1)]);
 
       expect(await store.claim(["work"], 10)).toEqual([]);
 
       // Terminado (aqui, cancelado), o primeiro libera a vez.
-      await ctx.pool.query("UPDATE jobs SET status = 'cancelled' WHERE id = $1", [first]);
+      await exec("UPDATE jobs SET status = 'cancelled' WHERE id = $1", [first]);
       expect((await store.claim(["work"], 10)).map((job) => job.id)).toEqual([second]);
     });
   });
@@ -196,6 +198,8 @@ describe("fila de jobs", () => {
       const id = await enqueue();
       const [job] = await store.claim(["work"], 1);
       const before = (await rowOf(id)).lease_until as Date;
+      // O lease tem precisao de milissegundo: sem a espera, o novo valor poderia cair no mesmo instante.
+      await new Promise((resolve) => setTimeout(resolve, 5));
 
       expect(await store.heartbeat(id, job.leaseToken as string)).toBe(true);
       expect(((await rowOf(id)).lease_until as Date).getTime()).toBeGreaterThan(before.getTime());
@@ -206,7 +210,7 @@ describe("fila de jobs", () => {
       const [expired, alive] = [await enqueue(), await enqueue()];
       const claimed = await store.claim(["work"], 10);
       const dead = claimed.find((job) => job.id === expired) as Job;
-      await ctx.pool.query("UPDATE jobs SET progress = '{\"stage\": \"pensando\"}' WHERE id = $1", [expired]);
+      await exec("UPDATE jobs SET progress = '{\"stage\": \"pensando\"}' WHERE id = $1", [expired]);
       await expireLease(expired);
 
       const token = dead.leaseToken as string;
@@ -219,7 +223,7 @@ describe("fila de jobs", () => {
       const row = await rowOf(expired);
       expect(row).toMatchObject({ status: "queued", error: "Worker lease expired", lease_until: null, attempts: 1 });
       expect(row.wait_seconds).toBeGreaterThan(1);
-      expect(row.wait_seconds).toBeLessThanOrEqual(2);
+      expect(row.wait_seconds).toBeLessThanOrEqual(2.1);
       expect(await statusOf(alive)).toBe("running");
 
       // A tentativa seguinte ganha outro token; a antiga continua sem valer.
@@ -232,24 +236,24 @@ describe("fila de jobs", () => {
     });
 
     test("recover tira os jobs terminados que passaram do prazo de retencao", async () => {
-      const age = async (status: Job["status"], interval: string) => {
+      const age = async (status: Job["status"], days: number) => {
         const id = await enqueue();
-        await ctx.pool.query(
-          "UPDATE jobs SET status = $2, updated_at = now() - $3::interval, lease_until = now() + interval '1 hour' WHERE id = $1",
-          [id, status, interval],
+        await exec(
+          "UPDATE jobs SET status = $2, updated_at = $3, lease_until = $4 WHERE id = $1",
+          [id, status, new Date(Date.now() - days * 86_400_000), hoursFromNow(1)],
         );
         return id;
       };
-      await age("succeeded", "8 days");
-      await age("failed", "8 days");
-      await age("cancelled", "8 days");
-      const recent = await age("succeeded", "6 days");
-      const waiting = await age("queued", "30 days");
-      const working = await age("running", "30 days");
+      await age("succeeded", 8);
+      await age("failed", 8);
+      await age("cancelled", 8);
+      const recent = await age("succeeded", 6);
+      const waiting = await age("queued", 30);
+      const working = await age("running", 30);
 
       await store.recover();
 
-      const left = await selectRows(ctx.pool, "SELECT id FROM jobs ORDER BY id");
+      const left = await selectRows(ctx.db, "SELECT id FROM jobs ORDER BY id");
       expect(left.map((row) => row.id)).toEqual([recent, waiting, working].sort());
     });
   });
@@ -308,7 +312,7 @@ describe("fila de jobs", () => {
       // So o codigo seguro e gravado, nunca a mensagem do provedor.
       expect(row).toMatchObject({ status: "queued", attempts: 1, error: "unavailable", lease_until: null });
       expect(row.wait_seconds).toBeGreaterThan(1);
-      expect(row.wait_seconds).toBeLessThanOrEqual(2);
+      expect(row.wait_seconds).toBeLessThanOrEqual(2.1);
       // Durante a espera o job nao e pego.
       await drain(service);
       expect(attempts).toEqual([1]);
@@ -355,7 +359,7 @@ describe("fila de jobs", () => {
       const onFailure = vi.fn(async () => {});
       service.register("work", handler, { onFailure });
       const id = await enqueue();
-      await ctx.pool.query("UPDATE jobs SET attempts = $2 WHERE id = $1", [id, ENV.AI_JOBS_MAX_ATTEMPTS]);
+      await exec("UPDATE jobs SET attempts = $2 WHERE id = $1", [id, ENV.AI_JOBS_MAX_ATTEMPTS]);
 
       await drain(service);
 
@@ -393,7 +397,7 @@ describe("fila de jobs", () => {
       const service = worker();
       const succeed = vi.spyOn(service.store, "succeed");
       service.register("work", async (_payload, context) => {
-        await database.db.transaction(async (tx) => {
+        await database.transaction(async (tx) => {
           await tx.execute(sql`INSERT INTO job_effects VALUES (${context.jobId})`);
           await completeCurrentJob(tx);
         });
@@ -404,7 +408,7 @@ describe("fila de jobs", () => {
       await drain(service);
 
       expect(await rowOf(domain)).toMatchObject({ status: "succeeded", lease_until: null });
-      expect(await selectRows(ctx.pool, "SELECT job_id FROM job_effects")).toEqual([{ job_id: domain }]);
+      expect(await selectRows(ctx.db, "SELECT job_id FROM job_effects")).toEqual([{ job_id: domain }]);
       // So o job cujo handler nao fechou a propria transacao passa pelo encerramento do worker.
       expect(succeed.mock.calls.map(([jobId]) => jobId)).toEqual([plain]);
       expect(await statusOf(plain)).toBe("succeeded");
@@ -413,10 +417,10 @@ describe("fila de jobs", () => {
     test("se o lease foi perdido, a transacao do handler volta e o efeito nao fica", async () => {
       const service = worker();
       service.register("work", async (_payload, context) => {
-        await database.db.transaction(async (tx) => {
+        // Outro worker assumiu o job no meio do caminho.
+        await exec("UPDATE jobs SET lease_token = 'outro-worker' WHERE id = $1", [context.jobId]);
+        await database.transaction(async (tx) => {
           await tx.execute(sql`INSERT INTO job_effects VALUES (${context.jobId})`);
-          // Outro worker assumiu o job no meio do caminho.
-          await ctx.pool.query("UPDATE jobs SET lease_token = 'outro-worker' WHERE id = $1", [context.jobId]);
           await completeCurrentJob(tx);
         });
       });
@@ -424,7 +428,7 @@ describe("fila de jobs", () => {
 
       await drain(service);
 
-      expect(await countRows(ctx.pool, "job_effects")).toBe(0);
+      expect(await countRows(ctx.db, "job_effects")).toBe(0);
       // O job continua sendo do outro worker: este nao o marca como falha.
       expect(await rowOf(id)).toMatchObject({ status: "running", lease_token: "outro-worker", error: null });
     });
@@ -462,7 +466,7 @@ describe("fila de jobs", () => {
       const running = await enqueue({ taskId: runningTask });
       const queued = await enqueue({ taskId: queuedTask });
       const untouched = await enqueue({ taskId: untouchedTask });
-      await ctx.pool.query("UPDATE jobs SET available_at = now() + interval '1 hour' WHERE id = ANY($1)", [[queued, untouched]]);
+      await exec("UPDATE jobs SET available_at = $3 WHERE id IN ($1, $2)", [queued, untouched, hoursFromNow(1)]);
       let started: () => void = () => {};
       const handlerStarted = new Promise<void>((resolve) => {
         started = resolve;
@@ -489,7 +493,7 @@ describe("fila de jobs", () => {
       expect(await statusOf(queued)).toBe("cancelled");
       expect(await statusOf(untouched)).toBe("queued");
       // Cancelado nao volta: nem para a fila, nem pelo recover.
-      await ctx.pool.query("UPDATE jobs SET available_at = now() WHERE id = ANY($1)", [[running, queued]]);
+      await exec("UPDATE jobs SET available_at = $3 WHERE id IN ($1, $2)", [running, queued, new Date()]);
       await service.store.recover();
       expect(await service.store.claim(["work"], 10)).toEqual([]);
     });
@@ -513,15 +517,15 @@ describe("fila de jobs", () => {
       await service.tick();
       // Com as vagas cheias, outra passada nao pega mais nada.
       await service.tick();
-      expect(await countRows(ctx.pool, "jobs", "status = 'running'")).toBe(2);
-      expect(await countRows(ctx.pool, "jobs", "status = 'queued'")).toBe(1);
+      expect(await countRows(ctx.db, "jobs", "status = 'running'")).toBe(2);
+      expect(await countRows(ctx.db, "jobs", "status = 'queued'")).toBe(1);
 
       release();
       await service.idle();
       await drain(service);
 
       expect(peak).toBe(2);
-      expect(await countRows(ctx.pool, "jobs", "status = 'succeeded'")).toBe(3);
+      expect(await countRows(ctx.db, "jobs", "status = 'succeeded'")).toBe(3);
     });
 
     test("jobs com a mesma chave de concorrencia rodam um por vez, na ordem em que foram criados", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { EntityBatchConflictError } from "../../domain";
-import { retryDelay } from "../persistence/jobs/postgres-job.store";
+import { retryDelay } from "../persistence/jobs/sqlite-job.store";
 import { completeCurrentJob, enqueueJobInTransaction, getCurrentJob, jobContext, type CurrentJob } from "./job-context";
 import { RetryableJobError, isRetryableJobError, jobErrorCode } from "./jobs.service";
 

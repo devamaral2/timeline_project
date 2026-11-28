@@ -9,15 +9,16 @@ import { FormatTranscriptionUseCase } from "../../../features/format-transcripti
 import { RequestTranscriptionUseCase } from "../../../features/request-transcription/request-transcription.usecase";
 import { DailyReadingGate } from "../../../api-core/tasks/daily-reading.gate";
 import { TranscriptionWorkerUseCase } from "../../../api-core/transcription/transcription-worker.usecase";
-import { PostgresEntityBatchWriter } from "../agent-batch/postgres-entity-batch-writer";
-import { PostgresWorkoutCatalog } from "../artifacts/postgres-workout.catalog";
-import { PostgresArtifactRepository } from "../artifacts/repositories/postgres-artifact.repository";
-import { PostgresTaskCardQuery } from "../tasks/queries/postgres-task-card.query";
-import { PostgresTaskRelations } from "../tasks/relations/postgres-task-relations";
-import { PostgresTaskRepository } from "../tasks/repositories/postgres-task.repository";
+import { SqliteEntityBatchWriter } from "../agent-batch/sqlite-entity-batch-writer";
+import { SqliteWorkoutCatalog } from "../artifacts/sqlite-workout.catalog";
+import { SqliteArtifactRepository } from "../artifacts/repositories/sqlite-artifact.repository";
+import { SqliteTaskCardQuery } from "../tasks/queries/sqlite-task-card.query";
+import { SqliteTaskRelations } from "../tasks/relations/sqlite-task-relations";
+import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
 import { OTHER_USER, USER, countRows, selectRows } from "../testing/fixtures";
-import { createPostgresTestContext, type PostgresTestContext } from "../testing/postgres-test-context";
-import { PostgresTranscriptionRequests } from "./postgres-transcription-requests";
+import { sql } from "../sqlite/sql";
+import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
+import { SqliteTranscriptionRequests } from "./sqlite-transcription-requests";
 
 // 17/08/2026, 12:00 em Sao Paulo.
 const now = new Date("2026-08-17T15:00:00.000Z");
@@ -32,28 +33,31 @@ const RESULT: TranscriptionResult = {
   comments: [],
 };
 
-describe("servico local de transcricao no Postgres", () => {
-  let ctx: PostgresTestContext;
-  let tasks: PostgresTaskRepository;
-  let artifacts: PostgresArtifactRepository;
+describe("servico local de transcricao no SQLite", () => {
+  let ctx: SqliteTestContext;
+  let tasks: SqliteTaskRepository;
+  let artifacts: SqliteArtifactRepository;
   let request: RequestTranscriptionUseCase;
   let worker: TranscriptionWorkerUseCase;
-  let requestsStore: PostgresTranscriptionRequests;
+  let requestsStore: SqliteTranscriptionRequests;
   let gate: DailyReadingGate;
 
   beforeAll(async () => {
-    ctx = await createPostgresTestContext();
-    tasks = new PostgresTaskRepository(ctx.db);
-    artifacts = new PostgresArtifactRepository(ctx.db);
-    const builder = new ArtifactBuilder(new PostgresWorkoutCatalog(ctx.db));
-    const writer = new PostgresEntityBatchWriter(ctx.db);
+    ctx = await createSqliteTestContext();
+    tasks = new SqliteTaskRepository(ctx.db);
+    artifacts = new SqliteArtifactRepository(ctx.db);
+    const builder = new ArtifactBuilder(new SqliteWorkoutCatalog(ctx.db));
+    const writer = new SqliteEntityBatchWriter(ctx.db);
     const createTask = new CreateTaskUseCase(tasks, artifacts, builder, writer, () => now);
-    gate = new DailyReadingGate(new PostgresTaskCardQuery(ctx.db), artifacts, builder, createTask, writer, undefined, () => now);
-    const requests = new PostgresTranscriptionRequests(ctx.db);
+    gate = new DailyReadingGate(new SqliteTaskCardQuery(ctx.db), artifacts, builder, createTask, writer, undefined, () => now);
+    const requests = new SqliteTranscriptionRequests(ctx.db);
     requestsStore = requests;
-    request = new RequestTranscriptionUseCase(gate, requests, new PostgresTaskRelations());
+    request = new RequestTranscriptionUseCase(gate, requests, new SqliteTaskRelations());
     worker = new TranscriptionWorkerUseCase(gate, writer, requests, () => now);
   }, 60000);
+
+  /** SQL de escrita dos testes, com `$1`, `$2`... no lugar dos valores. */
+  const exec = (text: string, params: unknown[] = []) => ctx.db.execute(sql.unsafe(text, params));
 
   beforeEach(async () => {
     await ctx.reset();
@@ -63,6 +67,11 @@ describe("servico local de transcricao no Postgres", () => {
     await ctx?.stop();
   });
 
+  /** As entradas de tarefa, com o `data` (JSON em texto no SQLite) ja decodificado. */
+  async function entriesOf(text: string, params: unknown[] = []) {
+    return (await selectRows(ctx.db, text, params)).map((row) => ({ ...row, data: JSON.parse(String(row.data)) }));
+  }
+
   async function reserved() {
     const created = await request.execute({ url: VIDEO }, actor);
     const reservation = await worker.reserve(actor);
@@ -71,7 +80,7 @@ describe("servico local de transcricao no Postgres", () => {
   }
 
   test("reserva so o job da transcricao, so o da pessoa, e so um por vez", async () => {
-    await ctx.pool.query(
+    await exec(
       `INSERT INTO jobs (id, kind, user_id, actor_id, payload) VALUES ('01J00000000000000000000000', 'work', $1, $1, '{}')`,
       [USER],
     );
@@ -82,15 +91,15 @@ describe("servico local de transcricao no Postgres", () => {
 
     expect(reservation).toMatchObject({ requestId: mine.requestId, url: "https://www.youtube.com/watch?v=abcdefghijk" });
     expect(await worker.reserve(actor)).toBeUndefined();
-    expect(await selectRows(ctx.pool, "SELECT kind, status FROM jobs WHERE task_id = $1", [other.requestId])).toEqual([
+    expect(await selectRows(ctx.db, "SELECT kind, status FROM jobs WHERE task_id = $1", [other.requestId])).toEqual([
       { kind: TRANSCRIPTION_JOB, status: "queued" },
     ]);
-    expect(await selectRows(ctx.pool, "SELECT status FROM jobs WHERE kind = 'work'")).toEqual([{ status: "queued" }]);
+    expect(await selectRows(ctx.db, "SELECT status FROM jobs WHERE kind = 'work'")).toEqual([{ status: "queued" }]);
   });
 
   test("o lease vencido devolve o job para a fila e o lease velho perde o direito", async () => {
     const { created, reservation } = await reserved();
-    await ctx.pool.query("UPDATE jobs SET lease_until = now() - interval '1 second' WHERE task_id = $1", [created.requestId]);
+    await exec("UPDATE jobs SET lease_until = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 second') WHERE task_id = $1", [created.requestId]);
 
     const again = await worker.reserve(actor);
 
@@ -107,10 +116,10 @@ describe("servico local de transcricao no Postgres", () => {
 
   test("depois da quinta reserva vencida o pedido falha em vez de voltar à fila, e a leitura volta para a fazer", async () => {
     const created = await request.execute({ url: VIDEO }, actor);
-    await ctx.pool.query("UPDATE tasks SET status = 'done', finished_at = now() WHERE id = $1", [created.taskId]);
+    await exec("UPDATE tasks SET status = 'done', finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = $1", [created.taskId]);
     for (let attempt = 1; attempt <= TRANSCRIPTION_MAX_ATTEMPTS; attempt++) {
       expect(await worker.reserve(actor), `reserva ${attempt}`).toMatchObject({ requestId: created.requestId });
-      await ctx.pool.query("UPDATE jobs SET lease_until = now() - interval '1 second' WHERE task_id = $1", [created.requestId]);
+      await exec("UPDATE jobs SET lease_until = strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 second') WHERE task_id = $1", [created.requestId]);
     }
 
     expect(await worker.reserve(actor)).toBeUndefined();
@@ -119,19 +128,19 @@ describe("servico local de transcricao no Postgres", () => {
     const body = (await artifacts.findById(created.artifactId))?.data as { body: string };
     expect(body.body).toContain("Transcrição indisponível: a transcrição falhou.");
     expect(await tasks.findById(created.taskId)).toMatchObject({ status: "todo" });
-    expect(await selectRows(ctx.pool, "SELECT status FROM jobs")).toEqual([{ status: "succeeded" }]);
+    expect(await selectRows(ctx.db, "SELECT status FROM jobs")).toEqual([{ status: "succeeded" }]);
   });
 
   test("cancelar o pedido na fila cancela o job, o documento diz que foi cancelado e a leitura volta para a fazer", async () => {
     const created = await request.execute({ url: VIDEO }, actor);
     const reservation = await worker.reserve(actor);
     if (!reservation) throw new Error("sem reserva");
-    await ctx.pool.query("UPDATE tasks SET status = 'done', finished_at = now() WHERE id = $1", [created.taskId]);
+    await exec("UPDATE tasks SET status = 'done', finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = $1", [created.taskId]);
 
     expect(await new CancelTranscriptionUseCase(gate, requestsStore, { cancelOfTasks: async () => {} }, () => now).execute(created.requestId, actor)).toBe(true);
 
     expect(await tasks.findById(created.requestId)).toMatchObject({ status: "cancelled", data: { errorCode: "cancelled" } });
-    expect(await selectRows(ctx.pool, "SELECT kind, status FROM jobs")).toEqual([{ kind: TRANSCRIPTION_JOB, status: "cancelled" }]);
+    expect(await selectRows(ctx.db, "SELECT kind, status FROM jobs")).toEqual([{ kind: TRANSCRIPTION_JOB, status: "cancelled" }]);
     const body = (await artifacts.findById(created.artifactId))?.data as { body: string };
     expect(body.body).toBe(`Fonte: [YouTube](${VIDEO})\n\nTranscrição cancelada\n`);
     expect(await tasks.findById(created.taskId)).toMatchObject({ status: "todo" });
@@ -150,9 +159,8 @@ describe("servico local de transcricao no Postgres", () => {
     );
 
     expect(Date.parse(renewed.leaseExpiresAt)).toBeGreaterThan(Date.now());
-    expect(await selectRows(ctx.pool, "SELECT progress FROM jobs WHERE task_id = $1", [created.requestId])).toEqual([
-      { progress: { stage: "transcription", percent: 30 } },
-    ]);
+    const [job] = await selectRows(ctx.db, "SELECT progress FROM jobs WHERE task_id = $1", [created.requestId]);
+    expect(JSON.parse(String(job.progress))).toEqual({ stage: "transcription", percent: 30 });
   });
 
   test("a entrega com resultado grava a entrada, leva o pedido a running, fecha o job e enfileira a formatacao", async () => {
@@ -165,10 +173,10 @@ describe("servico local de transcricao no Postgres", () => {
 
     expect(result).toEqual({ requestId: created.requestId, status: "running" });
     expect(await tasks.findById(created.requestId)).toMatchObject({ status: "running" });
-    expect(await selectRows(ctx.pool, "SELECT kind, role, content, data FROM task_entries WHERE task_id = $1", [created.requestId])).toEqual([
+    expect(await entriesOf("SELECT kind, role, content, data FROM task_entries WHERE task_id = $1", [created.requestId])).toEqual([
       { kind: "input", role: null, content: null, data: { type: "transcription", ...RESULT } },
     ]);
-    expect(await selectRows(ctx.pool, "SELECT kind, status, task_id FROM jobs ORDER BY kind")).toEqual([
+    expect(await selectRows(ctx.db, "SELECT kind, status, task_id FROM jobs ORDER BY kind")).toEqual([
       { kind: TRANSCRIPTION_JOB, status: "succeeded", task_id: created.requestId },
       { kind: TRANSCRIPTION_FORMAT_JOB, status: "queued", task_id: created.requestId },
     ]);
@@ -178,7 +186,7 @@ describe("servico local de transcricao no Postgres", () => {
 
   test("a entrega com falha leva o pedido a failed, escreve o motivo no documento e devolve a leitura para a fazer", async () => {
     const { created, reservation } = await reserved();
-    await ctx.pool.query("UPDATE tasks SET status = 'done', finished_at = now() WHERE id = $1", [created.taskId]);
+    await exec("UPDATE tasks SET status = 'done', finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = $1", [created.taskId]);
 
     const result = await worker.deliver(
       { requestId: created.requestId, leaseToken: reservation.leaseToken, outcome: "failed", code: "private" },
@@ -193,7 +201,7 @@ describe("servico local de transcricao no Postgres", () => {
     const reading = await tasks.findById(created.taskId);
     expect(reading).toMatchObject({ status: "todo" });
     expect(reading?.finishedAt).toBeUndefined();
-    expect(await selectRows(ctx.pool, "SELECT status FROM jobs")).toEqual([{ status: "succeeded" }]);
+    expect(await selectRows(ctx.db, "SELECT status FROM jobs")).toEqual([{ status: "succeeded" }]);
   });
 
   test("com o lease de outro, a entrega nao grava nada", async () => {
@@ -207,8 +215,8 @@ describe("servico local de transcricao no Postgres", () => {
     ).rejects.toThrow(/lease/i);
 
     expect(await tasks.findById(created.requestId)).toMatchObject({ status: "awaiting_transcription" });
-    expect(await countRows(ctx.pool, "task_entries")).toBe(0);
-    expect(await selectRows(ctx.pool, "SELECT kind, status FROM jobs")).toEqual([{ kind: TRANSCRIPTION_JOB, status: "running" }]);
+    expect(await countRows(ctx.db, "task_entries")).toBe(0);
+    expect(await selectRows(ctx.db, "SELECT kind, status FROM jobs")).toEqual([{ kind: TRANSCRIPTION_JOB, status: "running" }]);
   });
 
   describe("formatacao do resultado entregue", () => {
@@ -227,7 +235,7 @@ describe("servico local de transcricao no Postgres", () => {
 
     async function deliveredRequest(result: TranscriptionResult = { ...RESULT, comments: [{ author: "ana", text: "Bom", likes: 1, publishedAt: "2026-08-16T10:00:00Z" }] }) {
       const { created, reservation } = await reserved();
-      await ctx.pool.query("UPDATE tasks SET status = 'done', finished_at = now() WHERE id = $1", [created.taskId]);
+      await exec("UPDATE tasks SET status = 'done', finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = $1", [created.taskId]);
       await worker.deliver({ requestId: created.requestId, leaseToken: reservation.leaseToken, outcome: "completed", result }, actor);
       return created;
     }
@@ -247,7 +255,7 @@ describe("servico local de transcricao no Postgres", () => {
       expect(body).toContain("## Comentários\nGostaram.");
       expect(body).toContain("{#t-0} [00:00](https://youtu.be/dQw4w9WgXcQ?t=0) **Ana:** Olá, tudo bem?");
       expect(await tasks.findById(created.taskId)).toMatchObject({ status: "todo" });
-      expect(await countRows(ctx.pool, "task_entries", "kind = 'trace'")).toBe(0);
+      expect(await countRows(ctx.db, "task_entries", "kind = 'trace'")).toBe(0);
     });
 
     test("com o documento apagado antes da formatação, nasce outro e o pedido passa a apontar para ele", async () => {
@@ -261,7 +269,7 @@ describe("servico local de transcricao no Postgres", () => {
       expect(request).toMatchObject({ status: "completed" });
       expect(artifactId).not.toBe(created.artifactId);
       expect(await bodyOf(artifactId)).toContain("## Transcrição");
-      expect(await countRows(ctx.pool, "artifacts", "type = 'text' AND deleted_at IS NULL")).toBe(1);
+      expect(await countRows(ctx.db, "artifacts", "type = 'text' AND deleted_at IS NULL")).toBe(1);
       expect((await tasks.findById(created.taskId))?.artifactLinks.map((link) => link.artifactId)).toContain(artifactId);
     });
 
@@ -272,7 +280,7 @@ describe("servico local de transcricao no Postgres", () => {
 
       expect(await tasks.findById(created.requestId)).toMatchObject({ status: "completed" });
       expect(await bodyOf(created.artifactId)).not.toContain("## Comentários");
-      expect(await selectRows(ctx.pool, "SELECT kind, data FROM task_entries WHERE kind = 'trace'")).toEqual([
+      expect(await entriesOf("SELECT kind, data FROM task_entries WHERE kind = 'trace'")).toEqual([
         { kind: "trace", data: { stage: "comments_summary", status: "failed" } },
       ]);
     });
