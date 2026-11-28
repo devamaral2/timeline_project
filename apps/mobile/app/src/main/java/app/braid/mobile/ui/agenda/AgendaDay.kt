@@ -178,6 +178,7 @@ private fun SkeletonRow(row: Int) {
         targetValue = 1f,
         animationSpec =
             infiniteRepeatable(
+                // fora da escala: laço do esqueleto
                 animation = tween(durationMillis = 600, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse,
                 initialStartOffset = StartOffset(row * 90),

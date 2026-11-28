@@ -5,6 +5,7 @@ import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useViewMode, type ViewModeId, writeViewMode } from "@/lib/tasks/view-mode";
 import { type SectionId, useSectionMenu } from "@/lib/navigation/section-menu";
 import styles from "./section-menu.module.css";
+import { motion } from "@repo/theme";
 
 /** De quem são as tarefas: três listas como as outras, cada uma com o ponto da cor do seu modo. */
 const MODE_LISTS: { id: ViewModeId; name: string; desc: string; notesDesc: string; Icon: LucideIcon }[] = [
@@ -43,7 +44,7 @@ export function SectionMenu({ id, section, title, open, onClose, structuredSetti
   // A configuração só volta ao início depois de a barra fechar, para não trocar de corpo no meio da saída.
   useEffect(() => {
     if (open) return;
-    const timer = window.setTimeout(() => setSettingsOpen(false), 360);
+    const timer = window.setTimeout(() => setSettingsOpen(false), motion.menuSettle);
     return () => window.clearTimeout(timer);
   }, [open]);
 
@@ -53,7 +54,7 @@ export function SectionMenu({ id, section, title, open, onClose, structuredSetti
   function pick(action: () => void) {
     action();
     window.clearTimeout(pickTimer.current);
-    pickTimer.current = window.setTimeout(onClose, 180);
+    pickTimer.current = window.setTimeout(onClose, motion.menuPickClose);
   }
 
   const lower = title.toLocaleLowerCase("pt-BR");

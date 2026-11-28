@@ -23,7 +23,7 @@
 /* O valor que o Hermes acabou de mudar (`useChangeFlash`): um fio verde-água
    passa por baixo dele e apaga. */
 .eyebrow[data-changed="true"], .display[data-changed="true"], .fact dd[data-changed="true"] { position: relative; }
-.eyebrow[data-changed="true"]::after, .display[data-changed="true"]::after, .fact dd[data-changed="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 2px; border-radius: 1px; background: var(--brand); transform-origin: left; animation: sweep 1600ms var(--ease-out) both; }
+.eyebrow[data-changed="true"]::after, .display[data-changed="true"]::after, .fact dd[data-changed="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 2px; border-radius: 1px; background: var(--brand); transform-origin: left; animation: sweep var(--motion-change-flash) var(--ease-out) both; }
 @keyframes sweep {
   0% { transform: scaleX(0); opacity: 1; }
   25%, 70% { transform: scaleX(1); opacity: 1; }
@@ -80,7 +80,7 @@
 .anchor { position: relative; }
 .iconButton { composes: iconButton from "../ui/controls.module.css"; }
 .iconButton svg { width: 20px; height: 20px; }
-.menu { composes: floating from "../ui/controls.module.css"; position: absolute; top: calc(100% + 4px); right: 0; z-index: var(--z-popover); min-width: 220px; padding: 6px; border-radius: 18px; transform-origin: top right; animation: menuIn 200ms var(--ease-out); }
+.menu { composes: floating from "../ui/controls.module.css"; position: absolute; top: calc(100% + 4px); right: 0; z-index: var(--z-popover); min-width: 220px; padding: 6px; border-radius: 18px; transform-origin: top right; animation: menuIn calc(200ms * var(--motion-scale)) var(--ease-out); }
 /* O menu abre a partir do botão que o chamou. */
 @keyframes menuIn { from { opacity: 0; transform: translateY(-6px) scale(.92); } }
 .menu button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--ink); font-size: 14px; text-align: left; cursor: pointer; }
@@ -185,7 +185,7 @@
 .originTitle, .originSub { display: block; }
 .originTitle { font-weight: 600; }
 .originSub { color: var(--muted); font-size: 14px; }
-.originChevron { display: grid; color: var(--muted); transition: transform .16s ease-out; }
+.originChevron { display: grid; color: var(--muted); transition: transform calc(160ms * var(--motion-scale)) ease-out; }
 .originChevron svg { width: 20px; height: 20px; }
 .originHead[aria-expanded="true"] .originChevron { transform: rotate(180deg); }
 .originBody { display: flex; flex-direction: column; gap: 16px; padding-bottom: 16px; }

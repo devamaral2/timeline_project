@@ -10,9 +10,9 @@
   position: fixed; inset: 0; z-index: var(--z-dialog); display: flex; align-items: center; justify-content: center; padding: 24px;
 }
 /* O fundo que apaga a tela de trás é um pseudo-elemento: a opacidade dele anima sem levar a folha junto. */
-.overlay::before { content: ""; position: absolute; inset: 0; background: color-mix(in oklab, var(--background) 74%, transparent); animation: scrimIn 380ms linear both; }
+.overlay::before { content: ""; position: absolute; inset: 0; background: color-mix(in oklab, var(--background) 74%, transparent); animation: scrimIn var(--motion-scrim-open) linear both; }
 .overlay[data-open="false"] { pointer-events: none; }
-.overlay[data-open="false"]::before { animation: scrimOut 220ms linear both; }
+.overlay[data-open="false"]::before { animation: scrimOut var(--motion-scrim-close) linear both; }
 .overlay :focus-visible:not(input, textarea, select) { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 .sheet {
@@ -20,17 +20,17 @@
   overflow: hidden auto; overscroll-behavior: contain;
   border: 1px solid var(--line); border-radius: 24px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-float);
   font-size: 15px; line-height: 20px;
-  animation: riseIn 380ms var(--ease-out) both;
+  animation: riseIn calc(380ms * var(--motion-scale)) var(--ease-out) both;
 }
-.overlay[data-open="false"] .sheet { animation: riseOut 220ms cubic-bezier(.4, 0, .2, 1) both; }
+.overlay[data-open="false"] .sheet { animation: riseOut calc(220ms * var(--motion-scale)) cubic-bezier(.4, 0, .2, 1) both; }
 .handle { display: none; }
 
 /* Os três blocos sobem 18px e aparecem em fila depois que a folha saiu; ao fechar, vão embora com ela. */
-.block { flex: none; min-width: 0; margin: 0; padding: 0; border: 0; animation: blockIn 380ms var(--ease-out) both; }
+.block { flex: none; min-width: 0; margin: 0; padding: 0; border: 0; animation: blockIn var(--motion-sheet-block) var(--ease-out) both; }
 .block + .block { margin-top: 18px; }
-.block[data-block="provider"] { animation-delay: 100ms; }
-.block[data-block="models"] { animation-delay: 160ms; }
-.block[data-block="effort"] { animation-delay: 220ms; }
+.block[data-block="provider"] { animation-delay: var(--motion-sheet-block-delay); }
+.block[data-block="models"] { animation-delay: calc(var(--motion-sheet-block-delay) + var(--motion-sheet-block-step)); }
+.block[data-block="effort"] { animation-delay: calc(var(--motion-sheet-block-delay) + 2 * var(--motion-sheet-block-step)); }
 .overlay[data-open="false"] .block { animation: none; }
 /* O bloco dos modelos é o que cede altura numa tela curta, e a lista encolhe dentro dele. */
 .block[data-block="models"] { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; }
@@ -39,14 +39,14 @@
 .headText { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
 .title { flex: none; margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .tabName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; line-height: 20px; }
-.close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-right: -10px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; transition: background-color var(--duration-fast), transform 90ms; }
+.close { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin-right: -10px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; transition: background-color var(--duration-fast), transform calc(90ms * var(--motion-scale)); }
 .close:hover { background: var(--accent); }
 .close:active { transform: scale(.94); }
 .close svg { width: 22px; height: 22px; stroke-width: 1.8; }
 
 /* Os quadrados: os favoritos (a estrela) e um por provedor, com a marca dele na cor do texto. */
 .tiles { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-.tile { flex: none; display: grid; place-items: center; width: 52px; height: 52px; padding: 0; border: 1px solid var(--line); border-radius: 14px; background: transparent; color: var(--muted); cursor: pointer; transition: border-color var(--duration-fast), background-color var(--duration-fast), color var(--duration-fast), transform 90ms; }
+.tile { flex: none; display: grid; place-items: center; width: 52px; height: 52px; padding: 0; border: 1px solid var(--line); border-radius: 14px; background: transparent; color: var(--muted); cursor: pointer; transition: border-color var(--duration-fast), background-color var(--duration-fast), color var(--duration-fast), transform calc(90ms * var(--motion-scale)); }
 .tile:hover { border-color: var(--input); color: var(--ink); }
 .tile[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--ink); }
 .tile[aria-pressed="true"]:hover { border-color: var(--brand-accent); }
@@ -71,7 +71,7 @@
 .pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 0 6px 0 2px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
 .pick:focus-visible { outline-offset: -2px; }
 .radio { flex: none; position: relative; box-sizing: border-box; width: 18px; height: 18px; border: 2px solid var(--input); border-radius: 50%; transition: border-color var(--duration-fast); }
-.radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand); transform: scale(0); transition: transform 200ms var(--ease-out); }
+.radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand); transform: scale(0); transition: transform var(--motion-sheet-toggle) var(--ease-out); }
 .pick[aria-pressed="true"] > .radio { border-color: var(--brand); }
 .pick[aria-pressed="true"] > .radio::after { transform: scale(1); }
 .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 500; line-height: 20px; transition: color var(--duration-fast); }
@@ -80,7 +80,7 @@
 .via { flex: none; margin-left: auto; font-family: var(--font-mono); font-size: 11px; line-height: 16px; color: var(--muted); }
 .star { flex: none; display: grid; place-items: center; width: 44px; height: 48px; margin-right: -10px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--input); cursor: pointer; }
 .star:focus-visible { outline-offset: -2px; }
-.star svg { width: 20px; height: 20px; stroke-width: 1.6; transform: scale(.88); transition: transform 200ms var(--ease-out), fill var(--duration-fast); }
+.star svg { width: 20px; height: 20px; stroke-width: 1.6; transform: scale(.88); transition: transform var(--motion-sheet-toggle) var(--ease-out), fill var(--duration-fast); }
 .star:hover svg { transform: scale(1); }
 .star[aria-pressed="true"] { color: var(--warning); }
 .star[aria-pressed="true"] svg { fill: var(--warning); transform: scale(1); }
@@ -113,9 +113,9 @@
 .overlay { align-items: flex-end; padding: 0; }
 .overlay[data-keyboard] { inset: var(--vv-top, 0px) 0 var(--vv-bottom, 0px); }
 .overlay[data-keyboard] .block[data-block="effort"] { display: none; }
-.sheet { max-width: var(--app-width); max-height: calc(100% - 28px - env(safe-area-inset-top)); padding-bottom: calc(18px + env(safe-area-inset-bottom)); border-width: 1px 0 0; border-radius: 24px 24px 0 0; animation: sheetIn 480ms var(--ease-out) both; }
+.sheet { max-width: var(--app-width); max-height: calc(100% - 28px - env(safe-area-inset-top)); padding-bottom: calc(18px + env(safe-area-inset-bottom)); border-width: 1px 0 0; border-radius: 24px 24px 0 0; animation: sheetIn var(--motion-sheet-open) var(--ease-out) both; }
 .overlay[data-keyboard] .sheet { padding-bottom: 18px; }
-.overlay[data-open="false"] .sheet { animation: sheetOut 300ms cubic-bezier(.4, 0, .2, 1) both; }
+.overlay[data-open="false"] .sheet { animation: sheetOut var(--motion-sheet-close) cubic-bezier(.4, 0, .2, 1) both; }
 .handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; margin-bottom: 4px; border-radius: 2px; background: var(--input); }
 
 @media (prefers-reduced-motion: reduce) {

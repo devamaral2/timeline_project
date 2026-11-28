@@ -89,7 +89,7 @@
 
 /* O painel de opcoes de uma lista: rotulos em mono, uma linha por escolha (com
    ✓ na atual) e linhas com chave. Quem usa posiciona (`left`/`right`). */
-.menuPanel { composes: floating; position: absolute; top: 52px; left: 0; z-index: var(--z-popover); width: 304px; max-width: calc(100vw - 40px); padding: 4px 18px 6px; border-radius: 20px; text-align: left; transform-origin: var(--menu-origin, top left); animation: menuIn 200ms var(--ease-out); }
+.menuPanel { composes: floating; position: absolute; top: 52px; left: 0; z-index: var(--z-popover); width: 304px; max-width: calc(100vw - 40px); padding: 4px 18px 6px; border-radius: 20px; text-align: left; transform-origin: var(--menu-origin, top left); animation: menuIn calc(200ms * var(--motion-scale)) var(--ease-out); }
 /* O painel abre a partir do botão que o chamou; quem o alinha à direita troca `--menu-origin`. */
 @keyframes menuIn { from { opacity: 0; transform: translateY(-6px) scale(.92); } }
 .menuLabel { margin: 0; padding: 12px 0 4px; font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }

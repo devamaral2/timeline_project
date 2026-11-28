@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./motion.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -155,16 +156,11 @@
   --control-sm: 36px;
   --control-md: 44px;
   --control-lg: 56px;
-  --duration-fast: 150ms;
-  --duration-slow: 240ms;
-  /* Trocar de tela ou abrir uma folha leva mais: 380 para entrar, 280 para
-     voltar. O que entra desacelera (`--ease-out`), o que sai acelera
-     (`--ease-in`); numa lista que chega, cada linha espera `--stagger`. */
-  --duration-screen: 380ms;
-  --duration-screen-back: 280ms;
+  /* Os tempos (`--duration-*`, `--stagger`, `--motion-*` e a escala `--motion-scale`) vem do `motion.css`, gerado de
+     `packages/theme/src/motion.ts`. O que entra desacelera (`--ease-out`), o que sai acelera (`--ease-in`); numa
+     lista que chega, cada linha espera `--stagger`. */
   --ease-out: cubic-bezier(.2, .8, .2, 1);
   --ease-in: cubic-bezier(.4, 0, 1, 1);
-  --stagger: 40ms;
   --z-sticky: 5;
   --z-popover: 20;
   --z-overlay: 30;
@@ -356,13 +352,13 @@ html[data-nav]::view-transition-old(root),
 html[data-nav]::view-transition-new(root) {
   mix-blend-mode: normal;
 }
-html[data-nav="next"]::view-transition-old(root) { animation: nav-out-left 90ms var(--ease-in) both; }
-html[data-nav="next"]::view-transition-new(root) { animation: nav-in-right 300ms var(--ease-out) 90ms both; }
-html[data-nav="prev"]::view-transition-old(root) { animation: nav-out-right 90ms var(--ease-in) both; }
-html[data-nav="prev"]::view-transition-new(root) { animation: nav-in-left 300ms var(--ease-out) 90ms both; }
+html[data-nav="next"]::view-transition-old(root) { animation: nav-out-left calc(90ms * var(--motion-scale)) var(--ease-in) both; }
+html[data-nav="next"]::view-transition-new(root) { animation: nav-in-right calc(300ms * var(--motion-scale)) var(--ease-out) calc(90ms * var(--motion-scale)) both; }
+html[data-nav="prev"]::view-transition-old(root) { animation: nav-out-right calc(90ms * var(--motion-scale)) var(--ease-in) both; }
+html[data-nav="prev"]::view-transition-new(root) { animation: nav-in-left calc(300ms * var(--motion-scale)) var(--ease-out) calc(90ms * var(--motion-scale)) both; }
 html[data-nav="open"]::view-transition-old(root) { animation: nav-recede var(--duration-screen) var(--ease-out) both; }
 html[data-nav="open"]::view-transition-new(root) { animation: nav-grow var(--duration-screen) var(--ease-out) both; }
-html[data-nav="close"]::view-transition-old(root) { z-index: 1; animation: nav-sink 200ms var(--ease-in) both; }
+html[data-nav="close"]::view-transition-old(root) { z-index: 1; animation: nav-sink calc(200ms * var(--motion-scale)) var(--ease-in) both; }
 html[data-nav="close"]::view-transition-new(root) { animation: nav-return var(--duration-screen-back) var(--ease-out) both; }
 
 @keyframes nav-out-left { to { opacity: 0; transform: translateX(-24px); } }

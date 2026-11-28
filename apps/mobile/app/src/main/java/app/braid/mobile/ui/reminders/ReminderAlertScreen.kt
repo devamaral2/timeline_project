@@ -58,6 +58,7 @@ import app.braid.mobile.core.designsystem.BraidDisplayFont
 import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidSansFont
 import app.braid.mobile.core.designsystem.LocalBraidDarkTheme
+import app.braid.mobile.core.designsystem.Motion
 import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.core.designsystem.documentTokens
 import app.braid.mobile.domain.reminder.Reminder
@@ -91,19 +92,19 @@ private const val REMAINING_SIZE = 88f
 private const val UNIT_SIZE = 36f
 private const val RULE_ALPHA = 0.35f
 
-/** A entrada: o campo desce como uma cortina, a folha sobe, e os textos chegam um depois do outro. */
-private const val INTRO_MILLIS = 1_700f
-private const val CURTAIN_DELAY = 100
-private const val CURTAIN_MILLIS = 700
-private const val SHEET_DELAY = 450
-private const val SHEET_MILLIS = 600
-private const val RULE_DELAY = 700
-private const val RULE_MILLIS = 500
-private const val RISE_MILLIS = 550
-private const val CLOCK_DELAY = 550
-private const val REMAINING_DELAY = 800
-private const val NAME_DELAY = 950
-private const val ACTIONS_DELAY = 1_050
+/** A entrada: o campo desce como uma cortina, a folha sobe, e os textos chegam um depois do outro. Os tempos são os de desenho, na escala do Motion (`Motion.ms`). */
+private val INTRO_MILLIS = Motion.ms(1_700).toFloat()
+private val CURTAIN_DELAY = Motion.ms(100)
+private val CURTAIN_MILLIS = Motion.ms(700)
+private val SHEET_DELAY = Motion.ms(450)
+private val SHEET_MILLIS = Motion.ms(600)
+private val RULE_DELAY = Motion.ms(700)
+private val RULE_MILLIS = Motion.ms(500)
+private val RISE_MILLIS = Motion.ms(550)
+private val CLOCK_DELAY = Motion.ms(550)
+private val REMAINING_DELAY = Motion.ms(800)
+private val NAME_DELAY = Motion.ms(950)
+private val ACTIONS_DELAY = Motion.ms(1_050)
 private val RISE_DISTANCE = 14.dp
 private val CurtainEasing = CubicBezierEasing(0.6f, 0f, 0.2f, 1f)
 private val SheetEasing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)

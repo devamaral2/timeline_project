@@ -10,6 +10,7 @@ import { EFFORT_LABELS, providerName } from "@/lib/agent-chat/model-selection";
 import type { ModelSelectionControls } from "@/lib/agent-chat/model-selection-store";
 import styles from "./model-picker.module.css";
 import { ProviderMark } from "./provider-marks";
+import { motion } from "@repo/theme";
 
 /**
  * A escolha do modelo nos campos do Hermes (canvas "Modal de provedor, modelo e esforço", opção A · Folha): uma folha
@@ -85,8 +86,8 @@ export function useModelPicker(
   return { choice, open, mounted: open || present, show, close, panelId, controls };
 }
 
-/** Quanto a folha segue montada depois de fechar: os 300ms da descida (na folha de estilo) e uma folga de quadros. */
-const CLOSE_MS = 340;
+/** Quanto a folha segue montada depois de fechar: a descida (`sheetClose`, a mesma do CSS) e uma folga de quadros. */
+const CLOSE_MS = motion.sheetClose + 40;
 
 const FAVORITES_NAME = "Favoritos";
 

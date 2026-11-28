@@ -35,6 +35,7 @@ jobs:
               - 'packages/timeline/**'
               - 'packages/theme/**'
               - 'scripts/mobile/**'
+              - 'scripts/theme/**'
               # O gerador de fixtures (scripts/mobile) importa funções do web como elas são; o fecho dos imports dele
               # está nestas pastas, e o gerador do tema lê o --faint do globals.css.
               - 'apps/web/src/lib/**'

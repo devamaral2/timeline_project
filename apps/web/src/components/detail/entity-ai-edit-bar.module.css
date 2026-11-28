@@ -70,5 +70,5 @@
 /* O botao do Hermes chega voando da barra inferior (`hermes-flight.ts`): o
    icone de status so aparece no pouso e o resto do campo sobe para o lugar. */
 .bar[data-hermes-flight] [data-hermes-mark] { visibility: hidden; }
-.bar[data-hermes-flight] > :not(.status), .bar[data-hermes-flight] > .status > :not([data-hermes-mark]) { animation: dock 137ms 73ms ease-out backwards; }
+.bar[data-hermes-flight] > :not(.status), .bar[data-hermes-flight] > .status > :not([data-hermes-mark]) { animation: dock var(--motion-flight-land) var(--motion-flight-land-delay) ease-out backwards; }
 .bar::before { content: ""; position: absolute; z-index: -1; left: -16px; right: -16px; top: -72px; bottom: calc(-16px - env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 30%); pointer-events: none; }
