@@ -1,32 +1,19 @@
-import { and, eq } from "drizzle-orm";
 import { ulid } from "ulid";
 import { ProjectNotFoundError } from "../../../domain";
-import * as schema from "../database/schema";
-import { lockUser, type Tx } from "../shared/tx";
+import { PERSONAL_PROJECT_NAME, projects } from "../database/tables";
+import { sql } from "../sqlite/sql";
+import type { Tx } from "../shared/tx";
 
 /**
- * O projeto `diario` do usuario, criado na primeira necessidade. A leitura sem trava resolve quase sempre; so
- * quem nao achou o projeto pega a trava por usuario e confere de novo, para que duas gravacoes ao mesmo tempo
- * criem um so.
+ * O projeto `diario` do usuario, criado na primeira necessidade. A transacao ja tem o lock de escrita do arquivo
+ * (`BEGIN IMMEDIATE`), entao duas gravacoes ao mesmo tempo nao criam dois.
  */
 export async function ensurePersonalProject(tx: Tx, userId: string): Promise<string> {
-  const find = async () => {
-    const [found] = await tx
-      .select({ id: schema.projects.id })
-      .from(schema.projects)
-      .where(and(eq(schema.projects.userId, userId), eq(schema.projects.personal, true)));
-    return found?.id;
-  };
-
-  const existing = await find();
-  if (existing) return existing;
-
-  await lockUser(tx, userId);
-  const again = await find();
-  if (again) return again;
+  const existing = await tx.get<{ id: string }>(sql`SELECT id FROM projects WHERE user_id = ${userId} AND personal`);
+  if (existing) return existing.id;
 
   const id = ulid();
-  await tx.insert(schema.projects).values({ id, userId, name: schema.PERSONAL_PROJECT_NAME, personal: true });
+  await tx.execute(projects.insert({ id, userId, name: PERSONAL_PROJECT_NAME, personal: true }));
   return id;
 }
 
@@ -56,10 +43,8 @@ export type ProjectScope = Omit<ProjectResolutionInput, "userId">;
 
 /** O projeto de uma tarefa do usuario, ou nada quando ela nao existe ou e de outro. */
 async function projectOfTask(tx: Tx, userId: string, taskId: string): Promise<string | undefined> {
-  const [found] = await tx
-    .select({ projectId: schema.tasks.projectId })
-    .from(schema.tasks)
-    .where(and(eq(schema.tasks.id, taskId), eq(schema.tasks.userId, userId)));
+  const found = await tx.get<{ projectId: string }>(sql`
+    SELECT project_id AS "projectId" FROM tasks WHERE id = ${taskId} AND user_id = ${userId}`);
   return found?.projectId;
 }
 
@@ -72,10 +57,8 @@ async function projectOfTask(tx: Tx, userId: string, taskId: string): Promise<st
 export async function resolveProjectId(tx: Tx, input: ProjectResolutionInput): Promise<string> {
   if (input.projectId === null) return ensurePersonalProject(tx, input.userId);
   if (input.projectId) {
-    const [owned] = await tx
-      .select({ id: schema.projects.id })
-      .from(schema.projects)
-      .where(and(eq(schema.projects.id, input.projectId), eq(schema.projects.userId, input.userId)));
+    const owned = await tx.get<{ id: string }>(sql`
+      SELECT id FROM projects WHERE id = ${input.projectId} AND user_id = ${input.userId}`);
     if (!owned) throw new ProjectNotFoundError();
     return owned.id;
   }
@@ -84,12 +67,9 @@ export async function resolveProjectId(tx: Tx, input: ProjectResolutionInput): P
     if (projectId) return projectId;
   }
   if (input.recurrenceId) {
-    const [series] = await tx
-      .select({ projectId: schema.recurrences.projectId })
-      .from(schema.recurrences)
-      .where(eq(schema.recurrences.id, input.recurrenceId));
+    const series = await tx.get<{ projectId: string }>(sql`
+      SELECT project_id AS "projectId" FROM recurrences WHERE id = ${input.recurrenceId}`);
     if (series) return series.projectId;
   }
   return ensurePersonalProject(tx, input.userId);
 }
-
