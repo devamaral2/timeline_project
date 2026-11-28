@@ -14,6 +14,10 @@ ENV_FILE=".env.local"
 WEB_PORT="$(read_env_var "$ENV_FILE" WEB_PORT)"
 API_PORT="$(read_env_var "$ENV_FILE" API_PORT)"
 AUTH_PORT="$(read_env_var "$ENV_FILE" AUTH_PORT)"
+# Na principal o .env.local nao fixa portas: valem os padroes dos apps.
+if [ "$(worktree_root)" = "$(main_worktree_root)" ]; then
+  : "${WEB_PORT:=3000}" "${API_PORT:=3001}" "${AUTH_PORT:=3002}"
+fi
 : "${WEB_PORT:?WEB_PORT ausente em .env.local}" "${API_PORT:?}" "${AUTH_PORT:?}"
 
 listening() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }

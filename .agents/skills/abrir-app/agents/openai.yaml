@@ -1,0 +1,4 @@
+interface:
+  display_name: "Abrir App"
+  short_description: "Open the worktree app already signed in"
+  default_prompt: "Use $abrir-app to run this worktree's app and open it signed in as admin."
