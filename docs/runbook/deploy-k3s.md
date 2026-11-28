@@ -710,8 +710,9 @@ isso pode apagar o banco.
 
 ## 11. Fila de jobs de IA: nada a subir
 
-Os jobs de IA da API ficam na tabela `jobs` do banco `braid`, criada pelas
-migrations do passo 12. O worker roda dentro do próprio pod da API e lê essa
+Os jobs de IA da API ficam na tabela `jobs` do banco da API, um arquivo SQLite
+no volume `api-data` do pod ([ADR 0024](../adr/0024-api-em-sqlite-sem-orm.md)),
+criada pelas migrations que a API aplica ao subir. O worker roda dentro do próprio pod da API e lê essa
 tabela; não há broker, Service, Secret nem variável obrigatória para a fila. Os
 ajustes opcionais (`AI_JOBS_CONCURRENCY`, `AI_JOBS_LEASE_MS`,
 `AI_JOBS_MAX_ATTEMPTS`, `AI_JOBS_POLL_MS`) e as consultas de diagnóstico estão
@@ -741,7 +742,6 @@ cd /opt/braid/src
 export SHA=$(git rev-parse HEAD)
 printf 'export SHA=%q\n' "$SHA" > /opt/braid/release.env
 
-docker build --target builder -f apps/api/Dockerfile -t "braid-api-migrate:$SHA" .
 docker build --target builder -f apps/auth/Dockerfile -t "braid-auth-migrate:$SHA" .
 docker build -f apps/api/Dockerfile -t "braid-api:$SHA" .
 docker build -f apps/auth/Dockerfile -t "braid-auth:$SHA" .
@@ -756,7 +756,12 @@ que o contexto é a raiz do monorepo. Não execute de dentro de `apps/*`.
 O web usa `--no-cache` para que alterações do arquivo montado como secret não
 reutilizem um build com configuração antiga. Isso aumenta o tempo de build.
 
-Agora crie um único comando repetível para migrations:
+A API não tem passo de migração aqui: ela guarda tudo num arquivo SQLite no
+volume do pod e aplica as migrations pendentes ao subir, depois de copiar o
+arquivo ([ADR 0024](../adr/0024-api-em-sqlite-sem-orm.md)). O banco `braid` do
+PostgreSQL, se existir de uma instalação anterior, não é mais lido.
+
+Agora crie um único comando repetível para as migrations do auth:
 
 ```bash
 cat > /opt/braid/bin/migrate.sh <<'EOF'
@@ -770,12 +775,7 @@ PGHOST=$(kubectl -n braid get svc postgres -o jsonpath='{.spec.clusterIP}')
 get_secret() {
   kubectl -n braid get secret postgres-env -o "jsonpath={.data.$1}" | base64 -d
 }
-APP_PW=$(get_secret PG_APP_PASSWORD)
 OWNER_PW=$(get_secret AUTH_OWNER_PASSWORD)
-
-export DATABASE_URL="postgres://braid:${APP_PW}@${PGHOST}:5432/braid"
-docker run --rm --network host -e DATABASE_URL \
-  "braid-api-migrate:$SHA" pnpm db:migrate
 
 export AUTH_DATABASE_MIGRATION_URL="postgres://auth_owner:${OWNER_PW}@${PGHOST}:5432/braid_auth"
 docker run --rm --network host -e AUTH_DATABASE_MIGRATION_URL \
@@ -1327,15 +1327,14 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
   -out "$RESTORE_DIR/bundle.tar.gz"
 tar -xzf "$RESTORE_DIR/bundle.tar.gz" -C "$RESTORE_DIR"
 
-kubectl -n braid exec postgres-0 -- createdb -U postgres restore_check_api
-kubectl -n braid exec -i postgres-0 -- pg_restore -U postgres \
-  --exit-on-error --no-owner --no-privileges -d restore_check_api \
-  < "$RESTORE_DIR/backups/$BACKUP_STAMP/braid.dump"
+# A API e um arquivo SQLite: confira a copia com o `node:sqlite` da imagem da API.
+docker run --rm -v "$RESTORE_DIR/backups/$BACKUP_STAMP:/restore:ro" "braid-api:$SHA" node -e '
+  const db = new (process.getBuiltinModule("node:sqlite").DatabaseSync)("/restore/api.sqlite", { readOnly: true });
+  console.log(db.prepare("PRAGMA integrity_check").get(), db.prepare("SELECT count(*) AS tabelas FROM sqlite_schema WHERE type = '"'"'table'"'"'").get());'
 kubectl -n braid exec postgres-0 -- createdb -U postgres restore_check_auth
 kubectl -n braid exec -i postgres-0 -- pg_restore -U postgres \
   --exit-on-error --no-owner --no-privileges -d restore_check_auth \
   < "$RESTORE_DIR/backups/$BACKUP_STAMP/braid_auth.dump"
-kubectl -n braid exec postgres-0 -- psql -U postgres -d restore_check_api -c '\dt'
 kubectl -n braid exec postgres-0 -- psql -U postgres -d restore_check_auth -c '\dt'
 ```
 
@@ -1344,7 +1343,6 @@ substituídos. Se os nomes `restore_check_*` já existirem, inspecione o ensaio
 anterior; não sobreponha. Depois do sucesso, remova **somente os bancos de ensaio**:
 
 ```bash
-kubectl -n braid exec postgres-0 -- dropdb -U postgres restore_check_api
 kubectl -n braid exec postgres-0 -- dropdb -U postgres restore_check_auth
 ```
 
