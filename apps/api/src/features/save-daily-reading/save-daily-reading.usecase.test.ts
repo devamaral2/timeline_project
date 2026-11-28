@@ -286,3 +286,25 @@ test("só o nome inteiro é a leitura diária", () => {
   expect(isDailyReadingName("Leitura diária de ontem")).toBe(false);
   expect(isDailyReadingName("Leitura")).toBe(false);
 });
+
+test("a página de um vídeo do YouTube vira o pedido de transcrição, não uma nota com o texto da página", async () => {
+  const kit = setup();
+  const asked: string[] = [];
+  const transcribe = {
+    execute: async (input: { url: string }) => {
+      asked.push(input.url);
+      return { requestId: "r1", taskId: "leitura", artifactId: "video-doc", created: true };
+    },
+  };
+  const useCase = new SaveDailyReadingUseCase(
+    { place: () => Promise.reject(new Error("não grava página")), now: () => now },
+    kit.relations,
+    transcribe,
+  );
+
+  const result = await useCase.execute({ ...page, url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", markdown: "descrição" }, actor);
+
+  expect(asked).toEqual(["https://www.youtube.com/watch?v=dQw4w9WgXcQ"]);
+  expect(result).toEqual({ taskId: "leitura", artifactId: "video-doc", taskCreated: false, artifactCreated: true });
+  expect(kit.batchWriter.commits).toEqual([]);
+});

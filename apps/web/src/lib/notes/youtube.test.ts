@@ -44,8 +44,8 @@ test("o que não é vídeo do YouTube não vira player", () => {
 });
 
 test("o player usa o domínio sem cookies e respeita o início", () => {
-  expect(youtubeEmbedUrl({ id: "dQw4w9WgXcQ" })).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
-  expect(youtubeEmbedUrl({ id: "dQw4w9WgXcQ", startSeconds: 90 })).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=90");
+  expect(youtubeEmbedUrl({ id: "dQw4w9WgXcQ" })).toBe("https://www.youtube.com/embed/dQw4w9WgXcQ");
+  expect(youtubeEmbedUrl({ id: "dQw4w9WgXcQ", startSeconds: 90 })).toBe("https://www.youtube.com/embed/dQw4w9WgXcQ?start=90");
 });
 
 test("a mensagem que é só um link de vídeo devolve o endereço; texto em volta, outro site ou canal não", () => {

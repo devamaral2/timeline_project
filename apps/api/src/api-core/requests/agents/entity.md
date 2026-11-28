@@ -92,6 +92,7 @@ Datas e horas sempre em ISO-8601 com fuso -03:00, calculadas a partir de `Agora`
 
 - `name`: título curto e substantivo ("Ideia do app", "Lista de compras", "Pauta da reunião").
 - `content`: o texto, como o usuário disse.
+- Guardar um vídeo do YouTube ("salva esse vídeo", "guarda esse link do YouTube", "transcreve esse vídeo"): um artefato com o link do vídeo como `content`, sem resumo nem transcrição. O servidor pede a transcrição e monta o documento.
 - `taskIndex`: a posição (a partir de 0), em `tasks` desta resposta, da tarefa NOVA de que o texto trata ("reunião com a Ana às 15h, pauta: orçamento e contratação": a pauta tem `taskIndex` 0). `null` se o artefato fica solto ou se liga a uma tarefa que já existe.
 - `taskId`: o `id` do candidato de `tasks` de que o texto trata, quando a tarefa já existe. `null` nos demais casos. Nunca preencha `taskIndex` e `taskId` juntos.
 - O que foi comido ou bebido NUNCA é artefato de texto: é uma tarefa `meal` com `foods`.

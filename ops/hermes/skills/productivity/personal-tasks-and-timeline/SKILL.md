@@ -77,16 +77,46 @@ decision.
 `create_artifact` takes `type`, `name`, `body` (markdown), `tags`, `taskIds` and
 `idempotencyKey`. It creates only free-text types:
 
-| `type` | What it is | Who says how to write it |
+| `type` | What it is | How to write it |
 |---|---|---|
 | `text` | A plain note (default) | free markdown |
-| `news` | A round-up of news | skill `news-briefing` |
-| `email_summary` | A summary of the inbox | skill `email-inbox-triage` |
-| `youtube_transcript` | A video transcript | skill `youtube-content` |
+| `news` | A round-up of news | the card format below |
+| `email_summary` | A summary of the inbox | the card format below |
+| `youtube_transcript` | A YouTube video | only the video link: the app transcribes it |
 
-For the last three the app draws the text as cards when it has headings, so
-follow the format in the matching skill. Choose the type that says what the text
-is; the type cannot be changed by `update_artifact`.
+**YouTube videos.** To save, transcribe or summarize a YouTube video, call
+`create_artifact` with `type: "youtube_transcript"` and the video link as the
+whole `body`. Do not fetch subtitles or write the transcript yourself (not even
+with `youtube-content`): the app downloads the video, transcribes it, names the
+speakers and builds the document with the official YouTube player in the day's
+"Leitura diária". Tell the user the transcription is on its way.
+
+**News and e-mail summaries** are drawn as cards and a body without `##`
+headings is refused. Gather the content with `news-briefing` or
+`email-inbox-triage`, but write the body in this format:
+
+```markdown
+One opening paragraph: the overview.
+
+## Group (news: the section, like Economia; e-mail: Pedem resposta, Para saber, Sem ação)
+
+### Item title (one card each)
+De: Sender name · 09:12
+The text of the item.
+Prazo: hoje, 18h
+Fontes: [Site](https://…) · [Other site](https://…)
+
+[Responder](https://…)
+
+## Group of one-line items
+
+- **Sender:** what it says.
+- [Title](https://…): what it says.
+```
+
+`De:`, `Prazo:` and `Fontes:` are optional lines; a paragraph made only of links
+becomes the card's buttons. Choose the type that says what the text is; the type
+cannot be changed by `update_artifact`.
 
 ## Procedure
 

@@ -382,12 +382,10 @@ private fun TableRow(
 private val TABLE_CELL_WIDTH = 132.dp
 
 private const val VIDEO_RADIUS = 10
-private const val PLAY_BUTTON = 44
 
 /**
- * O vídeo de um link do YouTube sozinho no parágrafo. No app não há player embutido nem miniatura: abrir o artefato
- * não faz requisição nenhuma, e "Assistir no YouTube" entrega o endereço original ao YouTube (ou ao navegador). Sob o
- * cartão fica o link, como no web.
+ * O vídeo de um link do YouTube sozinho no parágrafo: o player oficial do YouTube, como no web, com o link (e o canal,
+ * quando quem chama o conhece) na legenda.
  */
 @Composable
 internal fun VideoBlock(
@@ -395,29 +393,18 @@ internal fun VideoBlock(
     /** O canal do vídeo, quando quem chama o conhece: vai depois do link, na legenda. */
     byline: String? = null,
 ) {
-    val context = LocalContext.current
-    val ink = MaterialTheme.colorScheme.onBackground
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val shape = RoundedCornerShape(VIDEO_RADIUS.dp)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(
+        YouTubeEmbed(
+            link.video,
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(VIDEO_ASPECT)
                 .clip(shape)
-                .background(ink.copy(alpha = WASH_ALPHA), shape)
                 .border(0.5.dp, MaterialTheme.colorScheme.outline, shape)
-                .clickable(role = Role.Button, onClickLabel = WATCH_ON_YOUTUBE) { openOutside(context, link.href) }
-                .semantics { contentDescription = WATCH_ON_YOUTUBE },
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.size(PLAY_BUTTON.dp).background(ink, RoundedCornerShape(50)), contentAlignment = Alignment.Center) {
-                    SvgIcon(BraidIcons.play, size = 18.dp, color = MaterialTheme.colorScheme.background)
-                }
-                Text(WATCH_ON_YOUTUBE, color = ink, style = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium))
-            }
-        }
+                .semantics { contentDescription = link.title ?: "Vídeo do YouTube" },
+        )
         val caption =
             buildAnnotatedString {
                 withLink(LinkAnnotation.Url(link.href, TextLinkStyles(SpanStyle(textDecoration = TextDecoration.Underline)))) {
@@ -430,7 +417,6 @@ internal fun VideoBlock(
 }
 
 private const val VIDEO_ASPECT = 16f / 9f
-private const val WATCH_ON_YOUTUBE = "Assistir no YouTube"
 
 internal fun openOutside(
     context: Context,

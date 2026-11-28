@@ -15,6 +15,20 @@ muda: quem decide é `summaryCardsTypeOf`.
 Nada novo é guardado: as fichas são uma leitura do texto. Quem escreve é o agente, pelo MCP
 (`create_artifact`, `update_artifact`), e a descrição do campo `body` traz este formato.
 
+## Como cada resumo nasce em fichas
+
+- **Vídeo do YouTube**: o documento só sai do pedido de transcrição
+  (`apps/api/src/features/request-transcription`), que o monta por código com o player e os trechos.
+  Todo caminho que "guarda um vídeo" vira esse pedido: a extensão e o "Adicionar vídeo"; o link sozinho
+  no chat; a página de um vídeo mandada a `POST /api/tasks/daily-reading`; e um artefato novo que é só o
+  link de um vídeo (`youtube_transcript` sem trechos marcados, ou `text` com o link e no máximo uma linha
+  em volta), venha da API, do Hermes pelo MCP ou do agente do chat. A regra é `youtubeSaveOf`
+  (`apps/api/src/api-core/transcription/youtube-save.ts`). Enquanto a transcrição não chega, o documento
+  diz "Transcrição na fila" (ou "cancelada", "indisponível") e segue como nota.
+- **Notícias e resumo de e-mail**: quem escreve é o Hermes. O MCP recusa o texto sem títulos `##`
+  (`assertCardBody`, `apps/mcp/src/tools.ts`), e o skill `personal-tasks-and-timeline` traz o formato. A
+  edição por IA (`artifact-edit.md`) mantém a estrutura.
+
 ## Formato
 
 ```markdown
@@ -90,7 +104,8 @@ O que o público achou.
 {#t-190} [03:10](https://youtu.be/ID?t=190) **Paula:** O músculo se refaz dormindo.
 ```
 
-- A linha `Fonte:` de um vídeo do YouTube vira o player, com o canal embaixo.
+- A linha `Fonte:` de um vídeo do YouTube vira o player oficial do YouTube (`youtube.com/embed`; no Android, o
+  mesmo iframe num `WebView`), com o canal embaixo.
 - Uma lista em que toda linha abre com um intervalo (`12:40–13:05`) ganha a linha do vídeo com cada
   intervalo no lugar. O documento traz só os intervalos, não a curva de audiência.
 - O grupo que tem trechos marcados (`{#t-…}`) é a transcrição: fica recolhido atrás de "Ler a

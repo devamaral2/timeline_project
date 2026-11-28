@@ -106,6 +106,12 @@ data class VideoLink(
 
 const val OPEN_ON_YOUTUBE = "Abrir no YouTube"
 
+/** O endereço do player oficial do YouTube (`youtube.com/embed`), o mesmo do `youtubeEmbedUrl` do web. */
+fun youtubeEmbedUrl(video: YouTubeVideo): String {
+    val start = video.startSeconds?.let { "?start=$it" } ?: ""
+    return "https://www.youtube.com/embed/${video.id}$start"
+}
+
 fun soleYouTubeLink(paragraph: MarkdownBlock.Paragraph): VideoLink? {
     val children = paragraph.content.filterNot { it is MarkdownInline.Text && it.text.isBlank() }
     val link = children.singleOrNull() as? MarkdownInline.Link ?: return null

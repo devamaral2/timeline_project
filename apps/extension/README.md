@@ -50,8 +50,8 @@ Nada é baixado nem enviado como arquivo: imagens e vídeos entram no markdown c
 - **Imagem**: `![texto alternativo](endereço)`, apontando para o original. O app só busca as
   imagens de um documento quando a pessoa toca em "Mostrar imagens", e sem `Referer`. Abrir um
   documento não avisa o servidor da imagem. Pixels de rastreio e imagens embutidas (`data:`) ficam de fora.
-- **Vídeo do YouTube incorporado**: um link sozinho na linha. No web ele vira o player
-  (`youtube-nocookie.com`); no Android, um cartão que abre o YouTube.
+- **Vídeo do YouTube incorporado**: um link sozinho na linha, que vira o player oficial do
+  YouTube (`youtube.com/embed`) no web e no Android.
 - **Outros vídeos, áudios e molduras**: um link com o nome do que é ("Vídeo", "Áudio", "Vídeo no Vimeo").
 
 Se o site tirar a imagem do ar, ela some do documento: o texto fica, a imagem não.

@@ -183,7 +183,6 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
     const createProject = new CreateProjectUseCase(projectRepository);
 
     const listArtifacts = new ListArtifactsUseCase(artifactRepository, artifactTaskLinkQuery);
-    const createArtifact = new CreateArtifactUseCase(artifactBuilder, taskRepository, entityBatchWriter);
     const getArtifact = new GetArtifactUseCase(artifactRepository, artifactTaskLinkQuery);
     const updateArtifact = new UpdateArtifactUseCase(
       artifactRepository,
@@ -218,8 +217,9 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
     const cancelTranscription = new CancelTranscriptionUseCase(dailyReading, transcriptionRequests, jobs);
     // A Leitura diaria e o servico local compartilham a porta da leitura e as
     // relacoes de tarefa montadas uma vez aqui.
-    const saveDailyReading = new SaveDailyReadingUseCase(dailyReading, taskRelations);
     const requestTranscription = new RequestTranscriptionUseCase(dailyReading, transcriptionRequests, taskRelations);
+    const saveDailyReading = new SaveDailyReadingUseCase(dailyReading, taskRelations, requestTranscription);
+    const createArtifact = new CreateArtifactUseCase(artifactBuilder, taskRepository, entityBatchWriter, undefined, requestTranscription);
     const transcriptionWorker = new TranscriptionWorkerUseCase(dailyReading, entityBatchWriter, transcriptionRequests);
 
     const food = new GenerateFoodUseCase(artifactRepository, new OpenRouterFoodParsingGateway());
@@ -237,6 +237,7 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
       files: agentFiles,
       food,
       env: serverEnv,
+      transcribe: requestTranscription,
     });
 
     // Estaticas antes das parametrizadas: `/api/requests/model/options` nao pode cair em `:requestId`, e
