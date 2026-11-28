@@ -1,8 +1,8 @@
 /*
  * O campo do Hermes (um só desenho): a linha de status com o círculo num dos
  * cinco estados, o cartão com o contexto (o registro aberto), o texto que
- * quebra em linhas, a onda que liga a transcrição e a seta de enviar. No
- * desktop fecha a coluna do conteúdo; no celular fica preso ao pé da tela.
+ * quebra em linhas, a onda que liga a transcrição e a seta de enviar. Fica
+ * preso ao pé da tela.
  * Os tokens (--card, --line, --ink, --muted) são os do shell.
  */
 .bar { display: flex; flex-direction: column; gap: 10px; width: 100%; isolation: isolate; }
@@ -65,12 +65,10 @@
 @keyframes dock { from { opacity: 0; transform: translateY(14px); } }
 @media (prefers-reduced-motion: reduce) { .bar [data-spin] { animation: none; } }
 
-@media (max-width: 720px) {
-  /* Preso ao pé da tela; atrás dele o conteúdo se apaga no chão. */
-  .bar { position: fixed; z-index: var(--z-sticky); left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); width: auto; }
-  /* O botao do Hermes chega voando da barra inferior (`hermes-flight.ts`): o
-     icone de status so aparece no pouso e o resto do campo sobe para o lugar. */
-  .bar[data-hermes-flight] [data-hermes-mark] { visibility: hidden; }
-  .bar[data-hermes-flight] > :not(.status), .bar[data-hermes-flight] > .status > :not([data-hermes-mark]) { animation: dock 137ms 73ms ease-out backwards; }
-  .bar::before { content: ""; position: absolute; z-index: -1; left: -16px; right: -16px; top: -72px; bottom: calc(-16px - env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 30%); pointer-events: none; }
-}
+/* Preso ao pé da tela; atrás dele o conteúdo se apaga no chão. */
+.bar { position: fixed; z-index: var(--z-sticky); left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); width: auto; max-width: calc(var(--app-width) - 32px); margin-inline: auto; }
+/* O botao do Hermes chega voando da barra inferior (`hermes-flight.ts`): o
+   icone de status so aparece no pouso e o resto do campo sobe para o lugar. */
+.bar[data-hermes-flight] [data-hermes-mark] { visibility: hidden; }
+.bar[data-hermes-flight] > :not(.status), .bar[data-hermes-flight] > .status > :not([data-hermes-mark]) { animation: dock 137ms 73ms ease-out backwards; }
+.bar::before { content: ""; position: absolute; z-index: -1; left: -16px; right: -16px; top: -72px; bottom: calc(-16px - env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 30%); pointer-events: none; }

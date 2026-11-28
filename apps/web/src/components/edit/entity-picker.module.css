@@ -1,6 +1,6 @@
 /*
- * O modal de seleção de entidade (`EntityPickerDialog`): folha que sobe do pé no
- * celular, diálogo centrado no desktop. É montado no <body>, fora do shell, então
+ * O modal de seleção de entidade (`EntityPickerDialog`): folha que sobe do pé,
+ * na largura do app. É montado no <body>, fora do shell, então
  * traz os próprios apelidos de token e o próprio anel de foco. Cor só por token.
  */
 
@@ -56,12 +56,10 @@
 @keyframes rise { from { opacity: 0; transform: translateY(16px); } }
 @keyframes sheet { from { transform: translateY(100%); } }
 
-@media (max-width: 720px) {
-  .overlay { align-items: flex-end; padding: 0; }
-  .panel { max-width: none; height: min(78dvh, 640px); padding: 8px 20px env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 28px 28px 0 0; }
-  .handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; border-radius: 2px; background: var(--line); }
-  .panel { animation-name: sheet; }
-}
+.overlay { align-items: flex-end; padding: 0; }
+.panel { max-width: var(--app-width); height: min(78dvh, 640px); padding: 8px 20px env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 28px 28px 0 0; }
+.handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; border-radius: 2px; background: var(--line); }
+.panel { animation-name: sheet; }
 
 @media (prefers-reduced-motion: reduce) {
   .overlay, .panel { animation: none; }

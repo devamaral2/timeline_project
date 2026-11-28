@@ -269,11 +269,17 @@ test("avisa quando o artefato não carrega por outro motivo", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar o artefato.");
 });
 
+/** Editar e Excluir moram no menu "Mais ações" do topo. */
+async function chooseAction(name: string) {
+  fireEvent.click(await screen.findByRole("button", { name: "Mais ações" }));
+  fireEvent.click(screen.getByRole("menuitem", { name }));
+}
+
 test("uma nota de texto própria tem Editar, que abre o formulário de edição", async () => {
   install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias", data: { body: "Ideias" } })] });
   renderArtifact("art-1");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Editar" }));
+  await chooseAction("Editar");
   expect(push).toHaveBeenCalledWith("/user-1/notas/art-1/editar");
 });
 
@@ -281,7 +287,7 @@ test("Excluir pede confirmação, apaga a nota e volta para a lista", async () =
   install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias", data: { body: "Ideias" } })] });
   renderArtifact("art-1");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Excluir" }));
+  await chooseAction("Excluir");
   const dialog = await screen.findByRole("alertdialog");
   expect(within(dialog).getByText(/“Ideias” será excluída/)).toBeInTheDocument();
   fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }));
@@ -294,7 +300,7 @@ test("Cancelar na confirmação mantém a nota e não apaga nada", async () => {
   install({ artifacts: [artifactFixture({ id: "art-1", name: "Ideias", data: { body: "Ideias" } })] });
   renderArtifact("art-1");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Excluir" }));
+  await chooseAction("Excluir");
   fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancelar" }));
 
   expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
@@ -332,7 +338,7 @@ test.each(["news", "email_summary", "youtube_transcript"] as const)("um artefato
   install({ artifacts: [artifactFixture({ id: "art-livre", name: "Resumo do dia", type, data: { body: "Resumo" } })] });
   renderArtifact("art-livre");
 
-  fireEvent.click(await screen.findByRole("button", { name: "Editar" }));
+  await chooseAction("Editar");
   expect(push).toHaveBeenCalledWith("/user-1/notas/art-livre/editar");
 
   fireEvent.change(screen.getByRole("textbox", { name: "Pedir à IA para editar esta nota" }), { target: { value: "encurte" } });
@@ -344,7 +350,7 @@ test.each(["news", "email_summary", "youtube_transcript"] as const)("um artefato
     entityId: "art-livre",
   }));
 
-  fireEvent.click(screen.getByRole("button", { name: "Excluir" }));
+  await chooseAction("Excluir");
   const dialog = await screen.findByRole("alertdialog");
   fireEvent.click(within(dialog).getByRole("button", { name: "Excluir" }));
   await waitFor(() => expect(replace).toHaveBeenCalledWith("/user-1/notas"));

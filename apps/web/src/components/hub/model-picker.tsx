@@ -13,7 +13,7 @@ import { ProviderMark } from "./provider-marks";
 
 /**
  * A escolha do modelo nos campos do Hermes (canvas "Modal de provedor, modelo e esforço", opção A · Folha): uma folha
- * por cima da tela, que sobe do pé no celular e é um diálogo centrado no desktop. O campo não mostra o modelo (canvas
+ * por cima da tela, que sobe do pé. O campo não mostra o modelo (canvas
  * "Input do detalhe da entidade"): a folha abre quando se envia `/model` (`isModelCommand`). `useModelPicker` guarda
  * se está aberta e o `HermesComposer` a monta.
  */

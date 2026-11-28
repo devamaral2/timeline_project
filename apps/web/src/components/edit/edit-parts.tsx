@@ -121,7 +121,7 @@ export function EditSelect<T extends string>({ id, label, value, options, pill =
         </span>
       </button>
       {open ? (
-        <Popover anchor={buttonRef} label={label} matchWidth onClose={() => setOpen(false)}>
+        <Popover anchor={buttonRef} label={label} onClose={() => setOpen(false)}>
           <OptionList
             label={label}
             options={options}

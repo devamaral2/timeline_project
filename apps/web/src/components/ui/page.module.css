@@ -11,8 +11,7 @@
 .container { width: 100%; max-width: calc(var(--page-width, 1040px) + 2 * clamp(16px, 4vw, 56px)); margin: 0 auto; padding: 32px clamp(16px, 4vw, 56px) 48px; }
 .page { composes: container; display: flex; flex-direction: column; gap: 24px; font-size: var(--font-size-md); line-height: 1.5; }
 
-/* Cabecalho: o titulo de pagina (serifa, 44 no desktop e 32 no celular, peso
-   500) e, ao lado, as acoes da tela */
+/* Cabecalho: o titulo de pagina (serifa, peso 500) e, ao lado, as acoes da tela */
 .pageHead { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
 .titleBlock { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .title { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: clamp(2rem, 1.4rem + 2vw, 2.75rem); line-height: 1.1; letter-spacing: -.015em; }
@@ -33,10 +32,9 @@
 .emptyText { max-width: 44ch; margin: 0; color: var(--muted); }
 
 /*
- * O molde do redesenho: duas colunas numa moldura de 1184 px. A da esquerda
- * (400 px) leva o que situa — a data, o calendario, o resumo do registro — e a
- * da direita, o conteudo. Abaixo de 720 px viram uma coluna so, com a folga da
- * barra inferior flutuante.
+ * O molde do redesenho, numa coluna: em cima (`lead`) o que situa — a data, o
+ * calendario, o resumo do registro — e embaixo (`body`) o conteudo, com a folga
+ * da barra inferior flutuante.
  */
 .frame { width: 100%; max-width: 1184px; margin: 0 auto; padding: 64px min(32px, 5%) 96px; display: flex; flex-wrap: wrap; align-items: flex-start; column-gap: 96px; row-gap: 48px; font-size: var(--font-size-sm); line-height: 1.45; }
 .lead { flex: 0 1 400px; min-width: 0; display: flex; flex-direction: column; gap: 36px; }
@@ -50,12 +48,10 @@
 /* O titulo serifado de um registro e de uma lista. */
 .display { margin: 0; font-family: var(--font-display); font-size: 44px; font-weight: 400; line-height: 48px; letter-spacing: -.015em; text-wrap: balance; }
 
-@media (max-width: 720px) {
-  .container { padding: 22px 16px 120px; }
-  .page { gap: 20px; }
-  .frame { flex-direction: column; flex-wrap: nowrap; align-items: stretch; row-gap: 20px; padding: 14px 20px calc(120px + env(safe-area-inset-bottom)); }
-  .lead { flex: none; gap: 14px; }
-  .body { flex: none; }
-  .eyebrow { letter-spacing: .08em; }
-  .display { font-size: 32px; line-height: 36px; }
-}
+.container { padding: 22px 16px 120px; }
+.page { gap: 20px; }
+.frame { flex-direction: column; flex-wrap: nowrap; align-items: stretch; row-gap: 20px; padding: 14px 20px calc(120px + env(safe-area-inset-bottom)); }
+.lead { flex: none; gap: 14px; }
+.body { flex: none; }
+.eyebrow { letter-spacing: .08em; }
+.display { font-size: 32px; line-height: 36px; }

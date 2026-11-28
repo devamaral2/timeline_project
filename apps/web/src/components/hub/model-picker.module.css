@@ -1,6 +1,6 @@
 /* A folha da escolha do modelo dos campos do Hermes (canvas "Modal de provedor, modelo e esforço", opção A · Folha),
    aberta pelo `/model`. É montada no <body>, por cima de tudo, então traz os próprios apelidos de token e o próprio
-   anel de foco: sobe do pé no celular e é um diálogo centrado no desktop. O provedor e o esforço nunca rolam nem
+   anel de foco: sobe do pé, na largura do app. O provedor e o esforço nunca rolam nem
    são cortados; quem cede altura é a lista de modelos. Cor só por token. */
 
 .overlay {
@@ -108,17 +108,15 @@
 @keyframes sheetOut { to { transform: translateY(100%); } }
 @keyframes blockIn { from { opacity: 0; transform: translateY(18px); } }
 
-@media (max-width: 720px) {
-  /* No celular a folha encosta no pé e ocupa a largura. Com o teclado aberto (a busca), a folha fica na parte
-     visível da tela, acima dele, e o esforço sai para os resultados da busca aparecerem. */
-  .overlay { align-items: flex-end; padding: 0; }
-  .overlay[data-keyboard] { inset: var(--vv-top, 0px) 0 var(--vv-bottom, 0px); }
-  .overlay[data-keyboard] .block[data-block="effort"] { display: none; }
-  .sheet { max-width: none; max-height: calc(100% - 28px - env(safe-area-inset-top)); padding-bottom: calc(18px + env(safe-area-inset-bottom)); border-width: 1px 0 0; border-radius: 24px 24px 0 0; animation: sheetIn 480ms var(--ease-out) both; }
-  .overlay[data-keyboard] .sheet { padding-bottom: 18px; }
-  .overlay[data-open="false"] .sheet { animation: sheetOut 300ms cubic-bezier(.4, 0, .2, 1) both; }
-  .handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; margin-bottom: 4px; border-radius: 2px; background: var(--input); }
-}
+/* No celular a folha encosta no pé e ocupa a largura. Com o teclado aberto (a busca), a folha fica na parte
+   visível da tela, acima dele, e o esforço sai para os resultados da busca aparecerem. */
+.overlay { align-items: flex-end; padding: 0; }
+.overlay[data-keyboard] { inset: var(--vv-top, 0px) 0 var(--vv-bottom, 0px); }
+.overlay[data-keyboard] .block[data-block="effort"] { display: none; }
+.sheet { max-width: var(--app-width); max-height: calc(100% - 28px - env(safe-area-inset-top)); padding-bottom: calc(18px + env(safe-area-inset-bottom)); border-width: 1px 0 0; border-radius: 24px 24px 0 0; animation: sheetIn 480ms var(--ease-out) both; }
+.overlay[data-keyboard] .sheet { padding-bottom: 18px; }
+.overlay[data-open="false"] .sheet { animation: sheetOut 300ms cubic-bezier(.4, 0, .2, 1) both; }
+.handle { display: block; flex: none; align-self: center; width: 36px; height: 4px; margin-bottom: 4px; border-radius: 2px; background: var(--input); }
 
 @media (prefers-reduced-motion: reduce) {
   .overlay::before, .overlay[data-open="false"]::before, .sheet, .overlay[data-open="false"] .sheet, .block { animation: none; }

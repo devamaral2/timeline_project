@@ -140,9 +140,11 @@
   /* As escalas. Um CSS module escolhe um degrau daqui em vez de inventar um
      valor: texto em sete tamanhos (12 e o minimo), controles em tres alturas
      (44 e o alvo de toque), movimento em dois tempos e as camadas do que
-     flutua. Os raios ja estao no @theme acima (5, 8, 10, 14, 18, 22). A unica
-     quebra de layout e 720 px — media query nao le custom property, entao ela
-     fica escrita por extenso: `@media (max-width: 720px)`. */
+     flutua. Os raios ja estao no @theme acima (5, 8, 10, 14, 18, 22). Nao ha
+     layout de desktop: o app e a coluna do celular, que cresce ate
+     `--app-width` e dai fica centrada. O que e fixo na tela (a barra inferior,
+     as folhas, a gaveta, os avisos) tambem para nessa largura. */
+  --app-width: 560px;
   --font-size-xs: 12px;
   --font-size-sm: 14px;
   --font-size-md: 16px;
@@ -192,10 +194,8 @@
   --on-primary-brand: var(--strand-destaque);
 }
 
-@media (max-width: 720px) {
-  :root {
-    --fixed-bottom-offset: max(calc(90px + env(safe-area-inset-bottom, 0px)), calc(var(--execution-clearance, 0px) + 12px));
-  }
+:root {
+  --fixed-bottom-offset: max(calc(90px + env(safe-area-inset-bottom, 0px)), calc(var(--execution-clearance, 0px) + 12px));
 }
 
 .dark {

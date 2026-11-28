@@ -29,6 +29,9 @@ beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
     this.setAttribute("open", "");
   };
+  HTMLDialogElement.prototype.show = function show(this: HTMLDialogElement) {
+    this.setAttribute("open", "");
+  };
   HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
     this.removeAttribute("open");
     this.dispatchEvent(new Event("close"));
@@ -38,30 +41,29 @@ beforeAll(() => {
 
 afterEach(cleanup);
 
-/** O campo do cabecalho, e nao o botao da barra inferior, que tem o mesmo nome. */
-function headerTrigger(): HTMLElement {
-  const trigger = screen.getAllByRole("button", { name: "Buscar e criar" }).find((button) => button.hasAttribute("aria-keyshortcuts"));
-  if (!trigger) throw new Error("header hub trigger not found");
-  return trigger;
-}
-
 // A barra inferior tem o botão do Hermes, que controla o painel do chat. Há outros diálogos (o menu de modos),
 // então o painel é achado por esse vínculo, e não pelo papel "dialog".
-const hubDialog = () => {
+function hubButton(): HTMLElement {
   const controller = screen.getAllByRole("button", { hidden: true, name: /Buscar e criar|Fechar chat com IA/ }).find((button) => button.hasAttribute("aria-controls"));
-  const dialog = controller ? document.getElementById(controller.getAttribute("aria-controls") ?? "") : null;
+  if (!controller) throw new Error("hub button not found");
+  return controller;
+}
+
+const hubDialog = () => {
+  const controller = hubButton();
+  const dialog = document.getElementById(controller.getAttribute("aria-controls") ?? "");
   if (!(dialog instanceof HTMLDialogElement)) throw new Error("hub dialog not found");
   return dialog;
 };
 
-test("the header field opens the Buscar e criar panel and reports it as expanded", async () => {
+test("the Hermes button on the bar opens the Buscar e criar panel and reports it as expanded", async () => {
   render(<AppShell>conteúdo</AppShell>);
-  expect(headerTrigger().getAttribute("aria-expanded")).toBe("false");
+  expect(hubButton().getAttribute("aria-expanded")).toBe("false");
 
-  fireEvent.click(headerTrigger());
+  fireEvent.click(hubButton());
 
   expect(hubDialog().hasAttribute("open")).toBe(true);
-  await waitFor(() => expect(headerTrigger().getAttribute("aria-expanded")).toBe("true"));
+  await waitFor(() => expect(hubButton().getAttribute("aria-expanded")).toBe("true"));
 });
 
 test("Ctrl+K and ⌘K toggle the panel from anywhere on the page", async () => {
@@ -69,11 +71,11 @@ test("Ctrl+K and ⌘K toggle the panel from anywhere on the page", async () => {
 
   fireEvent.keyDown(window, { key: "k", ctrlKey: true });
   expect(hubDialog().hasAttribute("open")).toBe(true);
-  await waitFor(() => expect(headerTrigger().getAttribute("aria-expanded")).toBe("true"));
+  await waitFor(() => expect(hubButton().getAttribute("aria-expanded")).toBe("true"));
 
   fireEvent.keyDown(window, { key: "K", metaKey: true });
   expect(hubDialog().hasAttribute("open")).toBe(false);
-  await waitFor(() => expect(headerTrigger().getAttribute("aria-expanded")).toBe("false"));
+  await waitFor(() => expect(hubButton().getAttribute("aria-expanded")).toBe("false"));
 });
 
 test("a plain K, or K with another modifier, is left to the page", () => {
@@ -90,7 +92,7 @@ const chatField = () => screen.getByRole("textbox", { name: "Mensagem para a IA"
 test("opening the chat puts the cursor on the field and asks it to listen; coming back from a command does not", () => {
   render(<AppShell>conteúdo</AppShell>);
 
-  fireEvent.click(headerTrigger());
+  fireEvent.click(hubButton());
   expect(chatField()).toHaveFocus();
   expect(chatField().dataset.listen).toBe("true");
 
@@ -112,10 +114,10 @@ test("a free window from the agenda opens the chat listening too", () => {
 test("closing the chat ends the listening request: the next opening asks again", async () => {
   render(<AppShell>conteúdo</AppShell>);
 
-  fireEvent.click(headerTrigger());
+  fireEvent.click(hubButton());
   fireEvent.keyDown(window, { key: "k", ctrlKey: true });
   expect(hubDialog().hasAttribute("open")).toBe(false);
 
-  fireEvent.click(headerTrigger());
+  fireEvent.click(hubButton());
   expect(chatField().dataset.listen).toBe("true");
 });

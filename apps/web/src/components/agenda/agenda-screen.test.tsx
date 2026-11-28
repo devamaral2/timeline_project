@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
 vi.mock("@/lib/session/use-session", () => ({
@@ -8,7 +8,22 @@ vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a>,
 }));
 
-const { AgendaScreen, daySummary } = await import("./agenda-screen");
+const { AgendaScreen } = await import("./agenda-screen");
+const { SectionMenu } = await import("@/components/shell/section-menu");
+
+/** A agenda com o menu da barra inferior aberto: o modo e o tempo livre moram na engrenagem dele. */
+function renderWithMenu() {
+  render(
+    <>
+      <AgendaScreen />
+      <SectionMenu id="menu-agenda" section="agenda" title="Agenda" open onClose={() => {}} />
+    </>,
+  );
+}
+const menu = () => within(screen.getByRole("region", { name: "Opções de agenda" }));
+function openSettings() {
+  fireEvent.click(menu().getByRole("button", { name: "Configurar agenda" }));
+}
 
 const dayCount = () => document.querySelectorAll("[data-agenda-day]").length;
 
@@ -21,25 +36,25 @@ test("the list never offers the old load-more buttons", () => {
 });
 
 function chooseMode(name: string) {
-  fireEvent.click(screen.getByRole("button", { name }));
+  fireEvent.click(menu().getByRole("button", { name }));
 }
 
-test("day mode keeps the week selector and the day summary, with today's date as the title", () => {
+test("day mode keeps the week selector, with today's date as the title", () => {
   render(<AgendaScreen />);
   expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
   expect(document.querySelector('button[aria-current="date"]')).not.toBeNull();
   expect(document.querySelector('[data-agenda-day] h2')).toBeNull();
-  expect(screen.getByText("5 tarefas · 3 h 50 planejadas")).toBeInTheDocument();
 });
 
 test("the sequence mode hides the week and extends at the edge", () => {
-  render(<AgendaScreen />);
+  renderWithMenu();
+  openSettings();
   const initialCount = dayCount();
   fireEvent.wheel(window, { deltaY: 40 });
   expect(dayCount()).toBe(initialCount);
 
   chooseMode("Em sequência");
-  expect(screen.getByRole("button", { name: "Em sequência" })).toHaveAttribute("aria-pressed", "true");
+  expect(menu().getByRole("button", { name: "Em sequência" })).toHaveAttribute("aria-pressed", "true");
   expect(document.querySelector('button[aria-current="date"]')).toBeNull();
   expect(document.querySelector('[data-agenda-day] h2')).not.toBeNull();
   const initialInfiniteCount = dayCount();
@@ -58,17 +73,17 @@ test("the sequence mode hides the week and extends at the edge", () => {
   expect(dayCount()).toBe(initialCount);
 });
 
-test("the view options switch turns the free windows on, off by default, and remembers it", () => {
+test("the Tempo livre switch turns the free windows on, off by default, and remembers it", () => {
   const stored = new Map<string, string>();
   Object.defineProperty(window, "localStorage", {
     configurable: true,
     value: { getItem: (key: string) => stored.get(key) ?? null, setItem: (key: string, value: string) => { stored.set(key, value); } },
   });
-  render(<AgendaScreen />);
+  renderWithMenu();
   expect(document.querySelectorAll("[data-free-time]")).toHaveLength(0);
 
-  fireEvent.click(screen.getAllByRole("button", { name: "Opções de visualização" })[0]);
-  fireEvent.click(screen.getByRole("switch", { name: /Tempo livre/ }));
+  openSettings();
+  fireEvent.click(menu().getByRole("switch", { name: /Tempo livre/ }));
 
   expect(document.querySelectorAll("[data-free-time]").length).toBeGreaterThan(0);
   expect(stored.get("braid-agenda-free-time")).toBe("on");
@@ -84,12 +99,4 @@ test("the month card moves between months and jumps back to today", () => {
   fireEvent.click(screen.getByRole("button", { name: "Hoje" }));
   expect(screen.queryByRole("button", { name: "Próximo mês" })).not.toBeInTheDocument();
   expect(document.querySelector('button[aria-current="date"]')).toHaveAccessibleName(/14 de setembro.*hoje/i);
-});
-
-test("the day summary adds up the planned time", () => {
-  const task = (minutes: number) => ({ name: "x", type: "common", time: "", minutes, duration: "" });
-  expect(daySummary([])).toBe("Nenhuma tarefa");
-  expect(daySummary([task(45)])).toBe("1 tarefa · 45 min planejados");
-  expect(daySummary([task(60)])).toBe("1 tarefa · 1 h planejada");
-  expect(daySummary([task(60), task(65)])).toBe("2 tarefas · 2 h 05 planejadas");
 });

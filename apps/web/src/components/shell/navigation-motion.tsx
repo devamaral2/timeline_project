@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
-import { canTransition, isPhone, navigationSettled, navKind, pathOf, startNavigationTransition } from "@/lib/motion/view-transition";
+import { canTransition, navigationSettled, navKind, pathOf, startNavigationTransition } from "@/lib/motion/view-transition";
 
 /** Rotas que não são telas do app: quem responde é o servidor. */
 const SERVER_PATH = /^\/(api|auth)\//;
@@ -32,7 +32,7 @@ export function NavigationMotion() {
       const url = new URL(anchor.href, window.location.href);
       if (url.origin !== window.location.origin || url.pathname === window.location.pathname || SERVER_PATH.test(url.pathname)) return;
       event.preventDefault();
-      const kind = navKind(window.location.pathname, url.pathname, isPhone());
+      const kind = navKind(window.location.pathname, url.pathname);
       startNavigationTransition(kind, () => router.push(`${url.pathname}${url.search}${url.hash}`), anchor.closest("li") ?? anchor);
     }
     // Na captura: antes do `Link`, que desiste da navegação ao ver o clique já tratado.
@@ -47,7 +47,7 @@ export function NavigationMotion() {
 export function useMotionRouter() {
   const router = useRouter();
   return useMemo(() => {
-    const kindTo = (href: string) => navKind(window.location.pathname, pathOf(href), isPhone());
+    const kindTo = (href: string) => navKind(window.location.pathname, pathOf(href));
     return {
       push: (href: string) => startNavigationTransition(kindTo(href), () => router.push(href)),
       replace: (href: string) => startNavigationTransition(kindTo(href), () => router.replace(href)),

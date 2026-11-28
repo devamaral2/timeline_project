@@ -121,7 +121,7 @@ export function AgendaDay({ dayKey, now, trackings, missedTasks, onSelectTask, o
                     <h3>{task.href || userId ? <Link href={task.href ?? `/${userId}/tarefas/${task.id}`} className={styles.rowLink}>{task.name}</Link> : <button type="button" className={styles.rowTitleButton} onClick={() => onSelectTask({ task, dayKey })}>{task.name}</button>}</h3>
                     <p className={styles.rowMeta}>
                       <span>{task.time}</span>
-                      {tags.length > 0 ? <><i aria-hidden>·</i>{tags.map((tag) => <span key={tag} style={tagAccentStyle(tag)}>#{tag}</span>)}</> : null}
+                      {tags.map((tag) => <span key={tag} style={tagAccentStyle(tag)}>#{tag}</span>)}
                       {missed ? <span className={styles.missed}>Não realizado</span> : null}
                     </p>
                   </div>

@@ -58,29 +58,25 @@ function placeOf(pathname: string): { section: string; depth: number } {
   return { section: "agenda", depth: rest.length };
 }
 
-/** A ordem das seções na tela: a do cabeçalho no desktop e a da barra inferior no celular. */
-const SECTION_ORDER = { desktop: ["agenda", "tarefas", "notas"], phone: ["tarefas", "agenda", "notas"] } as const;
+/** A ordem das seções na tela: a da barra inferior. */
+const SECTION_ORDER = ["tarefas", "agenda", "notas"] as const;
 
 /**
  * O sentido de uma navegação: para dentro de um registro (`open`), de volta
  * (`close`) ou para o lado, entre as seções (`next`, `prev`).
  */
-export function navKind(from: string, to: string, phone = false): NavKind {
+export function navKind(from: string, to: string): NavKind {
   const source = placeOf(from);
   const target = placeOf(to);
   if (target.depth > source.depth) return "open";
   if (target.depth < source.depth) return "close";
-  const order: readonly string[] = phone ? SECTION_ORDER.phone : SECTION_ORDER.desktop;
+  const order: readonly string[] = SECTION_ORDER;
   return order.indexOf(target.section) < order.indexOf(source.section) ? "prev" : "next";
 }
 
 /** O caminho de um destino, sem busca nem âncora. */
 export function pathOf(href: string): string {
   return href.split(/[?#]/)[0] ?? href;
-}
-
-export function isPhone(): boolean {
-  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(max-width: 720px)").matches;
 }
 
 let settle: (() => void) | null = null;

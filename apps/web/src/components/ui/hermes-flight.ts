@@ -50,10 +50,10 @@ export function flightKeyframes(button: Box, mark: Box, forward: boolean): Keyfr
   return forward ? frames : frames.reverse();
 }
 
-/** O voo só existe na barra inferior (celular) e para quem não pediu menos movimento. */
+/** O voo só existe para quem não pediu menos movimento. */
 export function canFly(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
-  return !window.matchMedia("(min-width: 721px)").matches && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 /** Um campo do Hermes fora do painel (o dos detalhes) avisa que chegou ou que saiu. */

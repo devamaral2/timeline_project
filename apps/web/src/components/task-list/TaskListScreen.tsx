@@ -24,7 +24,6 @@ import { nestSubtasks, oneRowPerSeries, showsSeriesRule } from "@/lib/tasks/task
 import { drawerOf, drawersOf, listedCards, toNowLabel, type ListDrawerKey } from "@/lib/tasks/task-drawers";
 import { useMotionRouter } from "@/components/shell/navigation-motion";
 import { SubtaskDrawer } from "./subtask-drawer";
-import { TaskFilters } from "./TaskFilters";
 import styles from "./tasks.module.css";
 
 function toggleIn<T>(list: readonly T[], value: T): T[] {
@@ -211,7 +210,6 @@ export function TaskListScreen({ userId }: { userId: string }) {
   const onlyAgentWork = (cards ?? []).some((card) => drawerOf(card) === "execution");
   const toNow = drawers.find((drawer) => drawer.key === "now")?.cards.length ?? 0;
   const tags = useMemo(() => tagsByUse(facets ?? []), [facets]);
-  const hasTasks = (facets?.length ?? 0) > 0;
 
   // O menu da barra inferior: uma lista por tag, a busca e, na engrenagem, a prioridade.
   const tagCounts = new Map<string, number>();
@@ -241,27 +239,12 @@ export function TaskListScreen({ userId }: { userId: string }) {
     onClear: clearFilters,
   });
 
-  const filterControls = (
-    <TaskFilters
-      tags={tags}
-      tag={tag}
-      onTagToggle={(name) => setTag((current) => (current === name ? null : name))}
-      priorities={priorities}
-      onPriorityToggle={(level) => setPriorities((current) => toggleIn(current, level))}
-      query={typed}
-      onQueryChange={setTyped}
-      activeFilters={activeFilters}
-      onClear={clearFilters}
-    />
-  );
-
   return (
     <main id="conteudo" className={page.frame}>
       <section className={`${page.lead} ${styles.lead}`} aria-label="Resumo das tarefas">
         <div className={styles.headRow}>
           <h1 className={page.eyebrow}>{cards && now ? toNowLabel(toNow) : "Tarefas"}</h1>
         </div>
-        {hasTasks ? <div className={styles.leadFilters}>{filterControls}</div> : null}
       </section>
 
       <section className={`${page.body} ${styles.body}`} aria-label="Lista de tarefas">

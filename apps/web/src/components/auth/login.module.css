@@ -1,6 +1,6 @@
 /*
- * A tela de entrar: a assinatura grande na serifa de um lado, o formulário do
- * outro; no celular, os dois descem para o pé da tela. Fica fora do shell, por
+ * A tela de entrar: a assinatura grande na serifa e, abaixo, o formulário, no
+ * pé da tela e na largura do app (`--app-width`). Fica fora do shell, por
  * isso lê os tokens globais (--foreground, --muted-foreground, --border).
  */
 .screen { min-height: 100svh; display: flex; align-items: center; background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: var(--font-size-sm); line-height: 1.45; -webkit-font-smoothing: antialiased; }
@@ -24,11 +24,9 @@
 @keyframes enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .frame { animation: none; } }
 
-@media (max-width: 720px) {
-  .screen { align-items: flex-end; }
-  .frame { flex-direction: column; flex-wrap: nowrap; align-items: stretch; row-gap: 40px; padding: 32px 20px calc(32px + env(safe-area-inset-bottom)); }
-  .brand { flex: none; gap: 16px; }
-  .brand h1 { font-size: 48px; line-height: 48px; }
-  .brand p { font-size: var(--font-size-md); line-height: 25px; }
-  .access { flex: none; }
-}
+.screen { align-items: flex-end; }
+.frame { max-width: var(--app-width); flex-direction: column; flex-wrap: nowrap; align-items: stretch; row-gap: 40px; padding: 32px 20px calc(32px + env(safe-area-inset-bottom)); }
+.brand { flex: none; gap: 16px; }
+.brand h1 { font-size: 48px; line-height: 48px; }
+.brand p { font-size: var(--font-size-md); line-height: 25px; }
+.access { flex: none; }

@@ -11,6 +11,8 @@
   --control-border: var(--input);
   --control-shadow: none;
   min-height: 100svh;
+  max-width: var(--app-width);
+  margin-inline: auto;
   background: var(--background);
   color: var(--ink);
   font-family: var(--font-sans);
@@ -19,11 +21,10 @@
 }
 
 .dark .monthPicker { background: transparent; }
-.dark .accountPopover { border-color: var(--line); }
 .dark .creationToggle button { background: transparent; }
 .dark .viewModes, .dark .taskDialog { border-color: var(--line); }
 .dark .quickCreate input, .dark .quickCreate select, .dark .creationToggle [aria-pressed="true"] { background: var(--accent); color: var(--ink); }
-.dark .monthPicker button, .dark .accountPopover button, .dark .sectionMenuHeading button { color: var(--ink); }
+.dark .monthPicker button, .dark .sectionMenuHeading button { color: var(--ink); }
 
 .shell * { box-sizing: border-box; }
 .shell button, .shell a { -webkit-tap-highlight-color: transparent; }
@@ -36,35 +37,9 @@
 .shell svg { flex-shrink: 0; width: 20px; height: 20px; stroke-width: 1.65; }
 /* Os campos de digitar ficam de fora: o foco deles é o fio de 1 px do globals.css. */
 .shell :focus-visible:not(input, textarea, select) { outline: 2px solid var(--ring); outline-offset: 2px; }
-.skipLink { position: fixed; top: -80px; left: 20px; padding: 12px 20px; background: var(--card); z-index: 50; }
+.skipLink { position: fixed; top: -80px; left: max(20px, calc((100% - var(--app-width)) / 2 + 20px)); padding: 12px 20px; background: var(--card); z-index: 50; }
 .skipLink:focus { top: 12px; }
 
-.header { border-bottom: 1px solid var(--line); }
-.headerInner { max-width: 1184px; margin: 0 auto; padding: 14px min(32px, 5%); display: flex; flex-wrap: wrap; align-items: center; column-gap: 40px; row-gap: 8px; }
-.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); }
-.wordmark { font-family: var(--font-display); font-size: 27px; font-weight: 400; letter-spacing: -.01em; line-height: 44px; }
-/* A navegacao e so texto: a tela atual ganha peso e o ponto da marca. */
-.primaryNav { display: flex; align-items: center; gap: 4px; margin-right: auto; }
-.primaryNav a { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; color: var(--muted); border-radius: 8px; font-size: 14px; font-weight: 500; }
-.primaryNav a:hover { color: var(--ink); }
-.primaryNav .navActive { color: var(--ink); font-weight: 600; }
-.primaryNav .navActive::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--brand); }
-.headerActions { display: flex; align-items: center; gap: 6px; }
-/* O campo "Buscar e criar" do cabecalho abre o painel no desktop (Ctrl/⌘ K);
-   no celular quem abre e a barra inferior. `.shell .hubTrigger` vence o
-   `font: inherit` e o `cursor: default` que o shell da a todo botao. */
-.shell .hubTrigger { display: flex; align-items: center; gap: 10px; width: 248px; height: 44px; padding: 0 8px 0 7px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); font-size: 13px; text-align: left; cursor: pointer; transition: border-color 140ms, box-shadow 140ms, background 140ms; }
-.shell .hubTrigger:hover { border-color: var(--muted); }
-.shell .hubTrigger[aria-expanded="true"] { border-color: var(--ring); box-shadow: 0 0 0 1px var(--ring); }
-.hubMark { composes: hermesMark from "../ui/controls.module.css"; }
-.hubTrigger > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hubTrigger kbd { padding: 4px 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-family: var(--font-mono); font-size: 12px; line-height: 1; white-space: nowrap; }
-.accountMenu { position: relative; }
-.accountMenu > summary { list-style: none; }
-.accountMenu > summary::-webkit-details-marker { display: none; }
-.accountPopover { composes: floating from "../ui/controls.module.css"; position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; display: grid; min-width: 150px; gap: 4px; padding: 7px; }
-.accountPopover button { padding: 9px 10px; color: var(--ink); text-align: left; border-radius: 8px; cursor: pointer; white-space: nowrap; }
-.accountPopover button:hover { background: var(--soft); }
 .iconButton { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; color: var(--muted); border-radius: 50%; cursor: pointer; }
 .iconButton:hover { background: var(--soft); color: var(--ink); }
 .iconButton svg { width: 20px; height: 20px; stroke-width: 1.75; }
@@ -94,7 +69,7 @@
 .settingsView svg { width: 18px; height: 18px; color: var(--muted); }
 .notificationEmpty { margin: 0; padding: 14px 8px; color: var(--muted); font-size: 14px; }
 .notificationToast a { color: var(--ink); }
-.notificationToasts { position: fixed; top: 20px; right: 20px; z-index: 40; display: grid; gap: 8px; width: min(320px, calc(100% - 40px)); }
+.notificationToasts { position: fixed; top: 20px; right: max(20px, calc((100% - var(--app-width)) / 2 + 20px)); z-index: 40; display: grid; gap: 8px; width: min(320px, calc(100% - 40px)); }
 .notificationToast { composes: floating from "../ui/controls.module.css"; display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; font-size: 14px; }
 .notificationToast button { margin-left: auto; color: var(--muted); cursor: pointer; }
 .dark .notificationToast { border-color: var(--line); color: var(--ink); }
@@ -241,14 +216,6 @@
 .taskAnnotation p { margin-top: 9px; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .taskDemoNote { margin-top: 22px; font-size: 12px; color: var(--muted); }
 
-@media (max-width: 1000px) {
-  .headerInner { column-gap: 16px; }
-  .primaryNav { gap: 2px; }
-  /* Sem espaco para o campo: fica so o circulo do Hermes, no tamanho dos vizinhos. */
-  .shell .hubTrigger { justify-content: center; width: 44px; height: 44px; padding: 0; border-color: transparent; background: transparent; }
-  .shell .hubTrigger:hover { border-color: transparent; background: var(--soft); }
-  .hubTrigger > span, .hubTrigger kbd { display: none; }
-}
 
 /* Os formularios de criar e editar (tarefa e nota), no redesenho: o
    nome na serifa ao lado do quadrado do tipo, linhas com fio para o horario,
@@ -362,82 +329,75 @@
 .newTaskPage .pickerHeader h1 { margin: 0; font-family: var(--font-mono); font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .formError { margin: 0; color: var(--destructive); font-size: 13px; }
 
-@media (max-width: 720px) {
-  .brand { gap: 7px; }
-  .task { padding: 16px; }
-  .headerActions { margin-left: auto; gap: 0; }
-  .primaryNav, .shell .hubTrigger { display: none; }
-  /* Sem cabeçalho no celular: a barra inferior e o chat levam tudo. O sino segue montado só para entregar os avisos (toasts). */
-  .header { border: 0; }
-  .headerInner { height: 0; padding: 0; overflow: hidden; }
-  .brand, .headerActions .iconButton, .accountMenu { display: none; }
-  .eyebrow { display: none; }
-  .toolbar { margin-bottom: 27px; }
-  .filters { gap: 5px; }
-  .filters button { padding: 7px 17px; font-size: 12px; }
-  .toolbar > .iconButton { width: 30px; }
-  .dayGroup + .dayGroup { margin-top: 30px; }
-  /* A barra inferior flutua em duas pecas: a dock com as tres telas e, separado
-     por um respiro de 10 px, o circulo do chat (58 px, a altura da dock). Atras
-     da barra o conteudo se apaga no chao. */
-  .bottomFade { display: block; position: fixed; z-index: 19; left: 0; right: 0; bottom: 0; height: calc(132px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 58%); pointer-events: none; }
-  .bottomNav { display: block; position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); --nav-pill: var(--primary); --nav-pill-ink: var(--primary-foreground); }
-  .navDock { margin-right: 68px; border: 1px solid var(--line); border-radius: 29px; background: var(--card); transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms, border-radius 300ms cubic-bezier(.5,0,.2,1) 50ms, box-shadow 300ms; }
-  /* Com o menu de opcoes aberto a dock cresce para cima (`section-menu.tsx`),
-     passa a flutuar e avanca por baixo do circulo do chat, para o menu ter a
-     largura toda. As abas nao saem do lugar: o que a dock ganha a direita, elas
-     devolvem em margem, no mesmo tempo e na mesma curva. */
-  .bottomNav[data-menu-open] .navDock { margin-right: 0; border-radius: 27px; box-shadow: var(--shadow-float); transition: margin-right 500ms cubic-bezier(.22,1,.36,1), border-radius 500ms cubic-bezier(.22,1,.36,1), box-shadow 400ms; }
-  .navScrim { display: block; position: fixed; z-index: 19; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: var(--scrim); opacity: 0; pointer-events: none; cursor: default; transition: opacity 220ms ease-in; }
-  .navScrim[data-open] { opacity: 1; pointer-events: auto; transition: opacity 340ms ease-out; }
-  .navTabs { position: relative; display: flex; align-items: center; gap: 4px; padding: 5px; transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms; }
-  .bottomNav[data-menu-open] .navTabs { margin-right: 68px; transition: margin-right 500ms cubic-bezier(.22,1,.36,1); }
-  /* A pilula da tela atual e uma so e desliza ate a secao escolhida
-     (`--nav-index`, 0 a 2). A dock menos os respiros (18 ao todo) se divide em
-     3,8 partes: a aba atual leva 1,8 (ela mostra o titulo) e as outras uma cada.
-     Ao trocar, a borda do lado do destino sai na frente (`data-dir`) e a
-     pilula estica ate la. */
-  .navTabs::before { content: ""; position: absolute; top: 5px; bottom: 5px; left: calc(5px + var(--nav-index, 1) * ((100% - 18px) / 3.8 + 4px)); right: calc(5px + (2 - var(--nav-index, 1)) * ((100% - 18px) / 3.8 + 4px)); border-radius: 23px; background: var(--nav-pill); transition: left 420ms var(--ease-out), right 420ms var(--ease-out), background-color 300ms, opacity 200ms; }
-  .bottomNav[data-dir="r"] .navTabs::before { transition: right 260ms var(--ease-out), left 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
-  .bottomNav[data-dir="l"] .navTabs::before { transition: left 260ms var(--ease-out), right 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
-  /* Icone em todas as abas; o titulo so na atual, que cresce para abrigá-lo. */
-  .navTabs > button, .navTabs > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; height: 46px; border-radius: 23px; color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: flex-grow 420ms var(--ease-out), color 250ms; }
-  .navTabs > [aria-current="page"] { flex-grow: 1.8; color: var(--nav-pill-ink); }
-  .navGlyph { position: relative; display: block; flex: none; width: 24px; height: 24px; }
-  .navTabs svg { display: block; width: 24px; height: 24px; stroke-width: 1.75; }
-  .navTabs .navGlyph > svg { transform: scale(.9); transition: transform 500ms cubic-bezier(.34,1.56,.64,1); }
-  .navTabs > [aria-current="page"] .navGlyph > svg { transform: none; }
-  .navTabs > :active .navGlyph > svg { transform: scale(.8); transition-duration: 100ms; }
-  .bottomNav[data-menu-open] .navTabs > [aria-current="page"] .navGlyph > svg { transform: scale(.9); }
-  /* O titulo: fechado nas outras abas, abre ao lado do icone na atual. */
-  .navLabel { display: block; max-width: 0; margin-left: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: max-width 420ms var(--ease-out), margin-left 420ms var(--ease-out), opacity 200ms linear; }
-  .navTabs > [aria-current="page"] .navLabel { max-width: 96px; margin-left: 8px; opacity: 1; transition-delay: 0s, 0s, 110ms; }
-  /* O ponto: ha busca ou filtro ativo na tela atual. */
-  .navDot { position: absolute; top: -5px; left: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 0 2px var(--nav-pill); transform: scale(0); transition: transform 350ms cubic-bezier(.34,1.56,.64,1); }
-  .navTabs > [aria-current="page"] .navDot[data-on] { transform: none; }
-  /* O circulo do chat: um aro da cor da dock em volta do robo. Com o menu
-     aberto a dock passa por baixo dele e o aro some. */
-  .commandButton { position: absolute; z-index: 1; right: 0; bottom: 0; display: grid; place-items: center; width: 58px; height: 58px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--card); cursor: pointer; transition: border-color 300ms, background-color 300ms; }
-  .bottomNav[data-menu-open] .commandButton { border-color: transparent; background: transparent; }
-  .commandCore { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; color: var(--ink); transition: transform 200ms var(--ease-out); }
-  .commandButton:active .commandCore { transform: scale(.92); }
-  .commandCore > svg { width: 24px; height: 24px; stroke-width: 1.75; }
-  /* O círculo de 46 px do robô vem do componente, pelo `font-size`
-     (`hermes-bot.tsx`). */
-  .commandBot { font-size: 46px; }
-  /* O robo do botao e so o desenho, na cor dos outros icones da barra, dentro do aro neutro, sobre o fundo da dock: sem o disco cheio. O erro segue vermelho. */
-  .commandButton .commandBot, .hermesFlyer .flyerBot { background: transparent; color: var(--muted-foreground); }
-  .commandButton .commandBot[data-state="error"], .hermesFlyer .flyerBot[data-state="error"] { background: var(--destructive); color: var(--destructive-foreground); }
-  /* A cor do modo de visualização pinta a pílula da aba atual, nas três telas
-     (`data-list-mode` vem do `useViewMode`). As cores e as
-     tintas do texto são tokens do web (`globals.css`). */
-  .bottomNav[data-list-mode="human"] { --nav-pill: var(--mode-human); }
-  .bottomNav[data-list-mode="agent"] { --nav-pill: var(--mode-agent); --nav-pill-ink: var(--mode-agent-ink); }
-  .bottomNav[data-list-mode="all"] { --nav-pill: var(--mode-all); --nav-pill-ink: var(--mode-all-ink); }
-}
+.task { padding: 16px; }
+/* Sem cabeçalho: o sino segue montado só para entregar os avisos (toasts). */
+.notificationHost { height: 0; overflow: hidden; }
+.notificationHost .iconButton { display: none; }
+.eyebrow { display: none; }
+.toolbar { margin-bottom: 27px; }
+.filters { gap: 5px; }
+.filters button { padding: 7px 17px; font-size: 12px; }
+.toolbar > .iconButton { width: 30px; }
+.dayGroup + .dayGroup { margin-top: 30px; }
+/* A barra inferior flutua em duas pecas: a dock com as tres telas e, separado
+   por um respiro de 10 px, o circulo do chat (58 px, a altura da dock). Atras
+   da barra o conteudo se apaga no chao. */
+.bottomFade { display: block; position: fixed; z-index: 19; left: 0; right: 0; bottom: 0; max-width: var(--app-width); margin-inline: auto; height: calc(132px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--background) 58%); pointer-events: none; }
+.bottomNav { display: block; position: fixed; z-index: 20; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: calc(var(--app-width) - 32px); margin-inline: auto; --nav-pill: var(--primary); --nav-pill-ink: var(--primary-foreground); }
+.navDock { margin-right: 68px; border: 1px solid var(--line); border-radius: 29px; background: var(--card); transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms, border-radius 300ms cubic-bezier(.5,0,.2,1) 50ms, box-shadow 300ms; }
+/* Com o menu de opcoes aberto a dock cresce para cima (`section-menu.tsx`),
+   passa a flutuar e avanca por baixo do circulo do chat, para o menu ter a
+   largura toda. As abas nao saem do lugar: o que a dock ganha a direita, elas
+   devolvem em margem, no mesmo tempo e na mesma curva. */
+.bottomNav[data-menu-open] .navDock { margin-right: 0; border-radius: 27px; box-shadow: var(--shadow-float); transition: margin-right 500ms cubic-bezier(.22,1,.36,1), border-radius 500ms cubic-bezier(.22,1,.36,1), box-shadow 400ms; }
+.navScrim { display: block; position: fixed; z-index: 19; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: var(--scrim); opacity: 0; pointer-events: none; cursor: default; transition: opacity 220ms ease-in; }
+.navScrim[data-open] { opacity: 1; pointer-events: auto; transition: opacity 340ms ease-out; }
+.navTabs { position: relative; display: flex; align-items: center; gap: 4px; padding: 5px; transition: margin-right 300ms cubic-bezier(.5,0,.2,1) 50ms; }
+.bottomNav[data-menu-open] .navTabs { margin-right: 68px; transition: margin-right 500ms cubic-bezier(.22,1,.36,1); }
+/* A pilula da tela atual e uma so e desliza ate a secao escolhida
+   (`--nav-index`, 0 a 2). A dock menos os respiros (18 ao todo) se divide em
+   3,8 partes: a aba atual leva 1,8 (ela mostra o titulo) e as outras uma cada.
+   Ao trocar, a borda do lado do destino sai na frente (`data-dir`) e a
+   pilula estica ate la. */
+.navTabs::before { content: ""; position: absolute; top: 5px; bottom: 5px; left: calc(5px + var(--nav-index, 1) * ((100% - 18px) / 3.8 + 4px)); right: calc(5px + (2 - var(--nav-index, 1)) * ((100% - 18px) / 3.8 + 4px)); border-radius: 23px; background: var(--nav-pill); transition: left 420ms var(--ease-out), right 420ms var(--ease-out), background-color 300ms, opacity 200ms; }
+.bottomNav[data-dir="r"] .navTabs::before { transition: right 260ms var(--ease-out), left 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
+.bottomNav[data-dir="l"] .navTabs::before { transition: left 260ms var(--ease-out), right 460ms var(--ease-out), background-color 300ms, opacity 200ms; }
+/* Icone em todas as abas; o titulo so na atual, que cresce para abrigá-lo. */
+.navTabs > button, .navTabs > a { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; min-width: 0; height: 46px; border-radius: 23px; color: var(--muted); font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: flex-grow 420ms var(--ease-out), color 250ms; }
+.navTabs > [aria-current="page"] { flex-grow: 1.8; color: var(--nav-pill-ink); }
+.navGlyph { position: relative; display: block; flex: none; width: 24px; height: 24px; }
+.navTabs svg { display: block; width: 24px; height: 24px; stroke-width: 1.75; }
+.navTabs .navGlyph > svg { transform: scale(.9); transition: transform 500ms cubic-bezier(.34,1.56,.64,1); }
+.navTabs > [aria-current="page"] .navGlyph > svg { transform: none; }
+.navTabs > :active .navGlyph > svg { transform: scale(.8); transition-duration: 100ms; }
+.bottomNav[data-menu-open] .navTabs > [aria-current="page"] .navGlyph > svg { transform: scale(.9); }
+/* O titulo: fechado nas outras abas, abre ao lado do icone na atual. */
+.navLabel { display: block; max-width: 0; margin-left: 0; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: max-width 420ms var(--ease-out), margin-left 420ms var(--ease-out), opacity 200ms linear; }
+.navTabs > [aria-current="page"] .navLabel { max-width: 96px; margin-left: 8px; opacity: 1; transition-delay: 0s, 0s, 110ms; }
+/* O ponto: ha busca ou filtro ativo na tela atual. */
+.navDot { position: absolute; top: -5px; left: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--brand-accent); box-shadow: 0 0 0 2px var(--nav-pill); transform: scale(0); transition: transform 350ms cubic-bezier(.34,1.56,.64,1); }
+.navTabs > [aria-current="page"] .navDot[data-on] { transform: none; }
+/* O circulo do chat: um aro da cor da dock em volta do robo. Com o menu
+   aberto a dock passa por baixo dele e o aro some. */
+.commandButton { position: absolute; z-index: 1; right: 0; bottom: 0; display: grid; place-items: center; width: 58px; height: 58px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--card); cursor: pointer; transition: border-color 300ms, background-color 300ms; }
+.bottomNav[data-menu-open] .commandButton { border-color: transparent; background: transparent; }
+.commandCore { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; color: var(--ink); transition: transform 200ms var(--ease-out); }
+.commandButton:active .commandCore { transform: scale(.92); }
+.commandCore > svg { width: 24px; height: 24px; stroke-width: 1.75; }
+/* O círculo de 46 px do robô vem do componente, pelo `font-size`
+   (`hermes-bot.tsx`). */
+.commandBot { font-size: 46px; }
+/* O robo do botao e so o desenho, na cor dos outros icones da barra, dentro do aro neutro, sobre o fundo da dock: sem o disco cheio. O erro segue vermelho. */
+.commandButton .commandBot, .hermesFlyer .flyerBot { background: transparent; color: var(--muted-foreground); }
+.commandButton .commandBot[data-state="error"], .hermesFlyer .flyerBot[data-state="error"] { background: var(--destructive); color: var(--destructive-foreground); }
+/* A cor do modo de visualização pinta a pílula da aba atual, nas três telas
+   (`data-list-mode` vem do `useViewMode`). As cores e as
+   tintas do texto são tokens do web (`globals.css`). */
+.bottomNav[data-list-mode="human"] { --nav-pill: var(--mode-human); }
+.bottomNav[data-list-mode="agent"] { --nav-pill: var(--mode-agent); --nav-pill-ink: var(--mode-agent-ink); }
+.bottomNav[data-list-mode="all"] { --nav-pill: var(--mode-all); --nav-pill-ink: var(--mode-all-ink); }
 
-/* O painel "Buscar e criar" (chat, criar, pesquisar): o conteudo e o mesmo no
-   celular e no desktop; so a moldura muda, nos dois blocos logo abaixo. */
+/* O painel "Buscar e criar" (chat, criar, pesquisar). */
 :global(body):has(.sectionMenu[open]) { overflow: hidden; }
 .sectionMenu[open] { display: flex; flex-direction: column; }
 .sectionMenuHeading { display: flex; justify-content: space-between; align-items: center; padding-left: 12px; margin-bottom: 3px; }
@@ -477,8 +437,7 @@
 .chatIconButton:hover:not(:disabled) { color: var(--ink); }
 [data-chat-view="list"] .chatIconButton { color: var(--ink); }
 .chatIconButton:disabled { opacity: .4; }
-/* As duas vistas do chat: a conversa e o processo da IA. No painel estreito uma toma o lugar da outra; com
-   largura (o chat expandido no desktop) o processo abre ao lado, em paralelo. */
+/* As duas vistas do chat: a conversa e o processo da IA. Uma toma o lugar da outra. */
 .assistantPanel { container: chat / inline-size; }
 .chatPanes { flex-shrink: 0; display: flex; gap: 20px; min-width: 0; margin: 0 -8px; padding: 0 12px; border: 0; border-bottom: 1px solid var(--hairline); }
 .chatPanes button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
@@ -489,11 +448,6 @@
 .chatSplit { flex: 1; min-height: 0; min-width: 0; display: flex; }
 .chatProcess { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .chatSplit[data-pane="process"] > .chatBody { display: none; }
-@container chat (min-width: 860px) {
-  .chatSplit[data-pane="process"] { gap: 24px; }
-  .chatSplit[data-pane="process"] > .chatBody { display: flex; flex: 1 1 0; }
-  .chatSplit[data-pane="process"] > .chatProcess { flex: 1 1 0; padding-left: 24px; border-left: 1px solid var(--line); }
-}
 /* Os botoes do inicio so aparecem depois que a marca termina de se trancar. */
 /* A margem lateral deixa o realce dos comandos sair 12px do texto sem rolar de lado. */
 .chatBody { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 -12px; padding: 0 12px; overflow: hidden auto; min-width: 0; overscroll-behavior: contain; }
@@ -586,108 +540,90 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
 }
 
 /* No celular o painel e uma folha presa acima da barra inferior. */
-@media (max-width: 720px) {
-  .shell:has(.sectionMenu[open]) .header, .shell:has(.sectionMenu[open]) .main { filter: blur(2px); }
-  .sectionMenu { position: fixed; inset: auto 0 calc(90px + env(safe-area-inset-bottom)); margin: 0; width: 100%; max-width: none; max-height: calc(100dvh - 114px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 10px 26px 15px; background: var(--card); color: var(--ink); border: 0; border-radius: 24px 24px 0 0; animation: menuEnter 200ms cubic-bezier(.2,.7,.2,1); }
-  .sectionMenu::backdrop { background: linear-gradient(to bottom, var(--scrim) calc(100% - 90px - env(safe-area-inset-bottom)), transparent 0); animation: backdropEnter 160ms ease-out; }
-  .sheetHandle { width: 30px; height: 3px; margin: 0 auto 7px; border-radius: 4px; background: var(--line); }
-  /* O painel do hub: compacto no inicio do chat, alto na conversa, na lista e nos
-     comandos, e a tela toda (acima da barra) quando expandido. */
-  .sectionMenu[data-hub-view] { height: min(400px, calc(100dvh - 114px - env(safe-area-inset-bottom))); max-height: none; overflow: hidden; padding: 10px 20px 24px; }
-  .sectionMenu[data-hub-view]:has([data-chat-view="conversation"], [data-chat-view="list"]) { height: calc(100dvh - 186px - env(safe-area-inset-bottom)); }
-  /* Criar e buscar acompanham o conteudo; so rolam se passarem da tela. */
-  .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"], .sectionMenu[data-hub-view="notifications"], .sectionMenu[data-hub-view="settings"] { height: auto; max-height: calc(100dvh - 186px - env(safe-area-inset-bottom)); overflow-y: auto; }
-  .sectionMenu[data-expanded="true"] { inset: 0 0 calc(90px + env(safe-area-inset-bottom)); height: auto; border-radius: 0; background: var(--background); }
-  .sectionMenu[data-expanded="true"] .sheetHandle { visibility: hidden; }
-  .sectionMenu[data-hub-view] .sheetHandle { width: 36px; height: 4px; margin: 0 auto 2px; background: var(--input); }
+.shell:has(.sectionMenu[open]) .main { filter: blur(2px); }
+.sectionMenu { position: fixed; inset: auto 0 calc(90px + env(safe-area-inset-bottom)); margin: 0 auto; width: 100%; max-width: var(--app-width); max-height: calc(100dvh - 114px - env(safe-area-inset-bottom)); overflow-y: auto; overscroll-behavior: contain; padding: 10px 26px 15px; background: var(--card); color: var(--ink); border: 0; border-radius: 24px 24px 0 0; animation: menuEnter 200ms cubic-bezier(.2,.7,.2,1); }
+.sectionMenu::backdrop { background: linear-gradient(to bottom, var(--scrim) calc(100% - 90px - env(safe-area-inset-bottom)), transparent 0); animation: backdropEnter 160ms ease-out; }
+.sheetHandle { width: 30px; height: 3px; margin: 0 auto 7px; border-radius: 4px; background: var(--line); }
+/* O painel do hub: compacto no inicio do chat, alto na conversa, na lista e nos
+   comandos, e a tela toda (acima da barra) quando expandido. */
+.sectionMenu[data-hub-view] { height: min(400px, calc(100dvh - 114px - env(safe-area-inset-bottom))); max-height: none; overflow: hidden; padding: 10px 20px 24px; }
+.sectionMenu[data-hub-view]:has([data-chat-view="conversation"], [data-chat-view="list"]) { height: calc(100dvh - 186px - env(safe-area-inset-bottom)); }
+/* Criar e buscar acompanham o conteudo; so rolam se passarem da tela. */
+.sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"], .sectionMenu[data-hub-view="notifications"], .sectionMenu[data-hub-view="settings"] { height: auto; max-height: calc(100dvh - 186px - env(safe-area-inset-bottom)); overflow-y: auto; }
+.sectionMenu[data-expanded="true"] { inset: 0 0 calc(90px + env(safe-area-inset-bottom)); height: auto; border-radius: 0; background: var(--background); }
+.sectionMenu[data-expanded="true"] .sheetHandle { visibility: hidden; }
+.sectionMenu[data-hub-view] .sheetHandle { width: 36px; height: 4px; margin: 0 auto 2px; background: var(--input); }
 
-  /* O painel do Hermes (chat, criar, pesquisar) ocupa a tela, por baixo da
-     barra: sem alca, sem veu. A barra troca o botao do Hermes (que vira o icone
-     de status do campo) pelos tres destinos com nome, e contorna o de onde a
-     pessoa veio. */
-  .sectionMenu.sectionMenu[data-hub-view] { z-index: 19; inset: 0; height: auto; max-height: none; padding: 0 16px calc(90px + env(safe-area-inset-bottom)); border-radius: 0; background: var(--background); animation: none; }
-  .sectionMenu.sectionMenu[data-hub-view="chat"] { overflow: hidden; }
-  /* Com o teclado aberto o painel cabe na parte visivel da tela
-     (`use-keyboard-viewport.ts`): a barra fica atras do teclado e o campo
-     encosta logo acima dele. */
-  .sectionMenu.sectionMenu[data-hub-view][data-keyboard] { inset: var(--vv-top, 0px) 0 var(--vv-bottom, 0px); padding-bottom: 12px; }
-  .sectionMenu[data-hub-view] .sheetHandle { display: none; }
-  .sectionMenu[data-hub-view="chat"] .chatField form, .sectionMenu[data-hub-view="chat"] .chatBubble[data-role="user"] { background: var(--card); }
-  .sectionMenu[data-hub-view="chat"] [data-chat-control] { display: none; }
-  .sectionMenu[data-hub-view="chat"] .assistantWelcome h2 { font-size: 38px; line-height: 42px; }
-  .shell:has(.sectionMenu[open]) .bottomFade { display: none; }
-  .bottomNav[data-hub-open] .navTabs > a, .bottomNav[data-hub-open] .navTabs > button { border: 1px solid transparent; }
-  .bottomNav[data-hub-open] .navDot { display: none; }
-  /* Com o chat aberto nenhuma secao e preenchida: a pilula se apaga e a de onde se veio fica so contornada. */
-  .bottomNav[data-hub-open] .navTabs::before { opacity: 0; }
-  .bottomNav[data-hub-open] .navTabs > [aria-current="page"] { border-color: var(--input); color: var(--ink); }
-  .bottomNav[data-hub-open] .navTabs svg { width: 20px; height: 20px; }
-  .bottomNav[data-hub-open] .navTabs .navGlyph { width: 20px; height: 20px; }
-  /* Com o chat aberto, o lugar do robo e do X que fecha o painel (`.commandCore`), dentro do mesmo aro. */
+/* O painel do Hermes (chat, criar, pesquisar) ocupa a tela, por baixo da
+   barra: sem alca, sem veu. A barra troca o botao do Hermes (que vira o icone
+   de status do campo) pelos tres destinos com nome, e contorna o de onde a
+   pessoa veio. */
+.sectionMenu.sectionMenu[data-hub-view] { z-index: 19; inset: 0; height: auto; max-height: none; padding: 0 16px calc(90px + env(safe-area-inset-bottom)); border-radius: 0; background: var(--background); animation: none; }
+.sectionMenu.sectionMenu[data-hub-view="chat"] { overflow: hidden; }
+/* Com o teclado aberto o painel cabe na parte visivel da tela
+   (`use-keyboard-viewport.ts`): a barra fica atras do teclado e o campo
+   encosta logo acima dele. */
+.sectionMenu.sectionMenu[data-hub-view][data-keyboard] { inset: var(--vv-top, 0px) 0 var(--vv-bottom, 0px); padding-bottom: 12px; }
+.sectionMenu[data-hub-view] .sheetHandle { display: none; }
+.sectionMenu[data-hub-view="chat"] .chatField form, .sectionMenu[data-hub-view="chat"] .chatBubble[data-role="user"] { background: var(--card); }
+.sectionMenu[data-hub-view="chat"] [data-chat-control] { display: none; }
+.sectionMenu[data-hub-view="chat"] .assistantWelcome h2 { font-size: 38px; line-height: 42px; }
+.shell:has(.sectionMenu[open]) .bottomFade { display: none; }
+.bottomNav[data-hub-open] .navTabs > a, .bottomNav[data-hub-open] .navTabs > button { border: 1px solid transparent; }
+.bottomNav[data-hub-open] .navDot { display: none; }
+/* Com o chat aberto nenhuma secao e preenchida: a pilula se apaga e a de onde se veio fica so contornada. */
+.bottomNav[data-hub-open] .navTabs::before { opacity: 0; }
+.bottomNav[data-hub-open] .navTabs > [aria-current="page"] { border-color: var(--input); color: var(--ink); }
+.bottomNav[data-hub-open] .navTabs svg { width: 20px; height: 20px; }
+.bottomNav[data-hub-open] .navTabs .navGlyph { width: 20px; height: 20px; }
+/* Com o chat aberto, o lugar do robo e do X que fecha o painel (`.commandCore`), dentro do mesmo aro. */
 
-  /* O voo do botao do Hermes (`hermes-flight.ts`): o circulo sai da barra e
-     pousa como o icone de status do campo, que so aparece no pouso; o painel
-     entra por baixo dele e o X surge no lugar que o botao deixou. Na volta, o
-     painel se apaga, o X some e o circulo retorna para a barra. */
-  .bottomNav[data-flight] .navTabs > a, .bottomNav[data-flight] .navTabs > button { transition: background-color 200ms, color 200ms, border-color 200ms; }
-  .bottomNav[data-flight="out"] .navTabs > a, .bottomNav[data-flight="out"] .navTabs > button { transition-duration: 100ms; }
-  .bottomNav[data-flight="out"] .commandCore { animation: closeEnter 120ms 70ms cubic-bezier(.2,.7,.2,1) backwards; }
-  .bottomNav[data-flight="back"] .commandCore { animation: flightAway 200ms forwards; }
-  .sectionMenu.sectionMenu[data-hub-view][data-flight="out"] { animation: flightCome 137ms 73ms backwards; }
-  .sectionMenu.sectionMenu[data-hub-view][data-flight="back"] { animation: flightAway 234ms forwards; }
-  .sectionMenu[data-flight] .chatStatus [data-hermes-mark] { visibility: hidden; }
-  .sectionMenu[data-flight="out"] .chatField > form, .sectionMenu[data-flight="out"] .chatStatus > span:not([data-hermes-mark]) { animation: flightRise 137ms 73ms ease-out backwards; }
-  /* Entrar num detalhe: a barra se apaga enquanto o botao voa para o campo do
-     registro; ao sair, ela volta e o botao pousa de novo na ponta. */
-  .bottomNav[data-flight="dock"] { animation: flightAway 126ms forwards; pointer-events: none; }
-  .bottomNav[data-flight="undock"] { animation: flightCome 216ms 144ms backwards; }
-  .bottomNav[data-flight="dock"] .commandCore, .bottomNav[data-flight="undock"] .commandCore { visibility: hidden; }
+/* O voo do botao do Hermes (`hermes-flight.ts`): o circulo sai da barra e
+   pousa como o icone de status do campo, que so aparece no pouso; o painel
+   entra por baixo dele e o X surge no lugar que o botao deixou. Na volta, o
+   painel se apaga, o X some e o circulo retorna para a barra. */
+.bottomNav[data-flight] .navTabs > a, .bottomNav[data-flight] .navTabs > button { transition: background-color 200ms, color 200ms, border-color 200ms; }
+.bottomNav[data-flight="out"] .navTabs > a, .bottomNav[data-flight="out"] .navTabs > button { transition-duration: 100ms; }
+.bottomNav[data-flight="out"] .commandCore { animation: closeEnter 120ms 70ms cubic-bezier(.2,.7,.2,1) backwards; }
+.bottomNav[data-flight="back"] .commandCore { animation: flightAway 200ms forwards; }
+.sectionMenu.sectionMenu[data-hub-view][data-flight="out"] { animation: flightCome 137ms 73ms backwards; }
+.sectionMenu.sectionMenu[data-hub-view][data-flight="back"] { animation: flightAway 234ms forwards; }
+.sectionMenu[data-flight] .chatStatus [data-hermes-mark] { visibility: hidden; }
+.sectionMenu[data-flight="out"] .chatField > form, .sectionMenu[data-flight="out"] .chatStatus > span:not([data-hermes-mark]) { animation: flightRise 137ms 73ms ease-out backwards; }
+/* Entrar num detalhe: a barra se apaga enquanto o botao voa para o campo do
+   registro; ao sair, ela volta e o botao pousa de novo na ponta. */
+.bottomNav[data-flight="dock"] { animation: flightAway 126ms forwards; pointer-events: none; }
+.bottomNav[data-flight="undock"] { animation: flightCome 216ms 144ms backwards; }
+.bottomNav[data-flight="dock"] .commandCore, .bottomNav[data-flight="undock"] .commandCore { visibility: hidden; }
 
-  .shell:has(:is(.detailMain, [data-detail])) .header, .shell:has(:is(.detailMain, [data-detail])) .bottomNav:not([data-flight="dock"]), .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }
-  .detailMain { padding: 20px 25px 36px; }
-  .detailNavigation { margin-bottom: 35px; }
-  .detailNavigation .backLink { width: 40px; height: 40px; }
-  .detailNavigation .backLink > span { display: none; }
-  .detailBrand { display: flex; align-items: center; gap: 6px; color: var(--ink); }
-  .detailBrand .wordmark { font-size: 28px; }
-  .detailHeading h1 { font-size: 28px; letter-spacing: -.02em; margin-top: 12px; }
-  .detailHeading > p { font-size: 12px; }
-  .detailMeta { display: grid; gap: 12px; margin-top: 22px; }
-  .detailInfo { margin-top: 27px; padding: 22px 18px; gap: 23px; border-radius: 14px; }
-  .detailInfo > div { gap: 13px; }
-  .detailInfo p { font-size: 14px; }
-  .detailInfo h2 { font-size: 12px; }
-  .nutrition { margin-top: 29px; }
-  .nutritionGrid { margin-top: 20px; }
-  .nutritionGrid > div { padding-left: 12px; }
-  .nutritionGrid p { font-size: 23px; }
-  .nutritionGrid p > span { font-size: 12px; margin-left: 3px; }
-  .nutritionGrid h3 { font-size: 12px; }
-  .detailFooter { margin-top: 29px; }
-  .missedCheckbox { font-size: 12px; gap: 8px; }
-  .editButton { padding: 12px 14px; font-size: 12px; gap: 7px; }
-  .detailPrototypeNote { margin-top: 21px; }
-}
-
-/* No desktop o mesmo painel e um dialogo centrado, aberto pelo campo "Buscar e
-   criar" do cabecalho (ou Ctrl/⌘ K): 640 de largura, veu atras e Esc fecha. */
-@media (min-width: 721px) {
-  .sectionMenu { position: fixed; inset: 0; margin: auto; width: min(640px, calc(100vw - 48px)); max-width: none; height: min(700px, calc(100dvh - 96px)); max-height: none; overflow: hidden; padding: 12px 24px 20px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); color: var(--ink); box-shadow: var(--shadow-float); animation: hubEnter 200ms cubic-bezier(.2,.7,.2,1); }
-  .sectionMenu::backdrop { background: var(--scrim); animation: backdropEnter 160ms ease-out; }
-  /* Criar e pesquisar acompanham o conteudo. `fit-content`, e nao `auto`: com
-     `inset: 0` um dialogo de altura automatica estica ate o limite. */
-  .sectionMenu[data-hub-view="create"], .sectionMenu[data-hub-view="search"], .sectionMenu[data-hub-view="notifications"], .sectionMenu[data-hub-view="settings"] { height: fit-content; max-height: calc(100dvh - 96px); overflow-y: auto; }
-  .sectionMenu[data-expanded="true"] { width: min(960px, calc(100vw - 48px)); height: calc(100dvh - 48px); }
-  .sheetHandle { display: none; }
-  /* O chat e um painel de 480 px encostado a direita, com a tela a vista atras. */
-  .sectionMenu.sectionMenu[data-hub-view="chat"] { inset: 24px 24px 24px auto; margin: 0; width: min(480px, calc(100vw - 48px)); height: auto; padding: 8px 16px 16px; border-radius: 24px; }
-  .sectionMenu.sectionMenu[data-hub-view="chat"][data-expanded="true"] { inset: 24px; width: auto; }
-}
+.shell:has(:is(.detailMain, [data-detail])) .bottomNav:not([data-flight="dock"]), .shell:has(:is(.detailMain, [data-detail])) .bottomFade { display: none; }
+.detailMain { padding: 20px 25px 36px; }
+.detailNavigation { margin-bottom: 35px; }
+.detailNavigation .backLink { width: 40px; height: 40px; }
+.detailNavigation .backLink > span { display: none; }
+.detailBrand { display: flex; align-items: center; gap: 6px; color: var(--ink); }
+.detailBrand .wordmark { font-size: 28px; }
+.detailHeading h1 { font-size: 28px; letter-spacing: -.02em; margin-top: 12px; }
+.detailHeading > p { font-size: 12px; }
+.detailMeta { display: grid; gap: 12px; margin-top: 22px; }
+.detailInfo { margin-top: 27px; padding: 22px 18px; gap: 23px; border-radius: 14px; }
+.detailInfo > div { gap: 13px; }
+.detailInfo p { font-size: 14px; }
+.detailInfo h2 { font-size: 12px; }
+.nutrition { margin-top: 29px; }
+.nutritionGrid { margin-top: 20px; }
+.nutritionGrid > div { padding-left: 12px; }
+.nutritionGrid p { font-size: 23px; }
+.nutritionGrid p > span { font-size: 12px; margin-left: 3px; }
+.nutritionGrid h3 { font-size: 12px; }
+.detailFooter { margin-top: 29px; }
+.missedCheckbox { font-size: 12px; gap: 8px; }
+.editButton { padding: 12px 14px; font-size: 12px; gap: 7px; }
+.detailPrototypeNote { margin-top: 21px; }
 
 
 @media (max-width: 360px) {
   .monthToggle { font-size: 12px; }
-  .headerInner { padding-left: 20px; }
   .filters button { padding-inline: 13px; }
   .detailMain { padding-inline: 20px; }
   .nutritionGrid > div { padding-left: 8px; }
@@ -754,11 +690,5 @@ a.chatEntityRow:hover .chatEntityName { text-decoration: underline; text-underli
  * nome proprio e por isso fica parado enquanto o conteudo se move (a pilula da
  * barra desliza por conta propria, ver `.navTabs::before`). Os nomes so
  * existem durante a troca, para nao criar camadas no resto do tempo.
- */
-@media (min-width: 721px) {
-  :global(html[data-nav]) .header { view-transition-name: shell-header; }
-}
-@media (max-width: 720px) {
-  :global(html[data-nav]) .bottomFade { view-transition-name: shell-fade; }
-  :global(html[data-nav]) .bottomNav { view-transition-name: shell-nav; }
-}
+ */:global(html[data-nav]) .bottomFade { view-transition-name: shell-fade; }
+:global(html[data-nav]) .bottomNav { view-transition-name: shell-nav; }

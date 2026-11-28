@@ -21,6 +21,7 @@ vi.mock("next/link", () => ({
 }));
 
 const { AgendaScreen } = await import("./agenda-screen");
+const { SectionMenu } = await import("@/components/shell/section-menu");
 
 const TODAY = "2026-09-14";
 
@@ -344,8 +345,10 @@ test("em sequência não há o puxão: lá o topo da lista já traz os dias ante
   installApi();
   // Trocar de modo volta a página ao topo, e o jsdom não rola.
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
-  render(<><PullToRefresh /><AgendaScreen userId="user-1" todayKey={TODAY} /></>);
+  render(<><PullToRefresh /><AgendaScreen userId="user-1" todayKey={TODAY} /><SectionMenu id="menu-agenda" section="agenda" title="Agenda" open onClose={() => {}} /></>);
   await waitFor(() => expect(within(dayOf(TODAY)).getAllByRole("link")).toHaveLength(5));
+  // O modo mora na engrenagem do menu da barra inferior.
+  fireEvent.click(screen.getByRole("button", { name: "Configurar agenda" }));
   fireEvent.click(screen.getByRole("button", { name: "Em sequência" }));
   await waitFor(() => expect(screen.getByRole("region", { name: "Agenda em lista contínua" })).toBeInTheDocument());
 

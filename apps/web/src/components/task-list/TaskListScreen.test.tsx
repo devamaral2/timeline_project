@@ -17,6 +17,25 @@ vi.mock("@/lib/api/authed-fetch", async (original) => ({
 }));
 
 const { TaskListScreen } = await import("./TaskListScreen");
+const { SectionMenu } = await import("@/components/shell/section-menu");
+
+/** A lista com o menu da barra inferior aberto: os filtros (tag, busca e prioridade) moram nele. */
+function renderWithMenu() {
+  render(
+    <>
+      <TaskListScreen userId="user-1" />
+      <SectionMenu id="menu-tarefas" section="tasks" title="Tarefas" open onClose={() => {}} />
+    </>,
+  );
+}
+const menu = () => within(screen.getByRole("region", { name: "Opções de tarefas" }));
+/** A prioridade fica na configuração, atrás da engrenagem; a busca, fora dela. */
+function openSettings() {
+  fireEvent.click(menu().getByRole("button", { name: "Configurar tarefas" }));
+}
+function closeSettings() {
+  fireEvent.click(menu().getByRole("button", { name: "Fechar configuração" }));
+}
 
 /** Liga a tela à API falsa com estes tarefas e devolve a API, para conferir a rede. */
 function serve(tasks: TaskDto[]) {
@@ -482,16 +501,16 @@ test("a tag filtra pela consulta, e as outras tags continuam como opções", asy
     taskFixture({ id: "luz", name: "Pagar conta de luz", status: "todo", tags: ["casa"] }),
     taskFixture({ id: "treino", name: "Treino de força", status: "todo", tags: ["saude"] }),
   ]);
-  render(<TaskListScreen userId="user-1" />);
+  renderWithMenu();
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
 
-  fireEvent.click(screen.getByRole("button", { name: "#casa" }));
+  fireEvent.click(await menu().findByRole("button", { name: /#casa/ }));
 
   await waitFor(() => expect(lastTrackedQuery(api)).toMatchObject({ tag: "casa" }));
   await waitFor(() => expect(screen.queryByRole("link", { name: /Treino de força/ })).not.toBeInTheDocument());
   expect(screen.getByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "#casa" })).toHaveAttribute("aria-pressed", "true");
-  expect(screen.getByRole("button", { name: "#saude" })).toBeInTheDocument();
+  expect(menu().getByRole("button", { name: /#casa/ })).toHaveAttribute("aria-pressed", "true");
+  expect(menu().getByRole("button", { name: /#saude/ })).toBeInTheDocument();
 });
 
 test("prioridade aceita mais de um nível e os manda juntos, na ordem da escala", async () => {
@@ -500,25 +519,26 @@ test("prioridade aceita mais de um nível e os manda juntos, na ordem da escala"
     taskFixture({ id: "b", name: "Baixa do dia", status: "todo", priority: "low" }),
     taskFixture({ id: "c", name: "Média do dia", status: "todo", priority: "medium" }),
   ]);
-  render(<TaskListScreen userId="user-1" />);
+  renderWithMenu();
   await screen.findByRole("link", { name: /Média do dia/ });
 
-  fireEvent.click(screen.getByRole("button", { name: "Baixa" }));
-  fireEvent.click(screen.getByRole("button", { name: "Urgente" }));
+  openSettings();
+  fireEvent.click(menu().getByRole("button", { name: "Baixa" }));
+  fireEvent.click(menu().getByRole("button", { name: "Urgente" }));
 
   await waitFor(() => expect(lastTrackedQuery(api)).toMatchObject({ priority: "urgent,low" }));
   await waitFor(() => expect(screen.queryByRole("link", { name: /Média do dia/ })).not.toBeInTheDocument());
   expect(screen.getByRole("link", { name: /Urgente da casa/ })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Baixa do dia/ })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Alta" })).toHaveAttribute("aria-pressed", "false");
+  expect(menu().getByRole("button", { name: "Alta" })).toHaveAttribute("aria-pressed", "false");
 });
 
 test("a busca por texto espera a digitação parar, tira os espaços das pontas e manda q", async () => {
   const api = serve(tasks);
-  render(<TaskListScreen userId="user-1" />);
+  renderWithMenu();
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
 
-  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar tarefas" }), { target: { value: "  viagem " } });
+  fireEvent.change(menu().getByRole("searchbox", { name: "Buscar nas tarefas" }), { target: { value: "  viagem " } });
 
   await waitFor(() => expect(lastTrackedQuery(api)).toMatchObject({ q: "viagem" }));
   // Sem data cai em Para depois, que vem fechada.
@@ -529,27 +549,29 @@ test("a busca por texto espera a digitação parar, tira os espaços das pontas 
 
 test("Limpar filtros manda a consulta sem filtro e volta à lista inteira", async () => {
   const api = serve(tasks);
-  render(<TaskListScreen userId="user-1" />);
+  renderWithMenu();
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
 
-  fireEvent.click(screen.getByRole("button", { name: "Média" }));
-  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar tarefas" }), { target: { value: "viagem" } });
+  fireEvent.change(menu().getByRole("searchbox", { name: "Buscar nas tarefas" }), { target: { value: "viagem" } });
+  openSettings();
+  fireEvent.click(menu().getByRole("button", { name: "Média" }));
   await waitFor(() => expect(lastTrackedQuery(api)).toMatchObject({ priority: "medium", q: "viagem" }));
 
-  fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
+  fireEvent.click(menu().getByRole("button", { name: "Limpar filtros" }));
 
   await waitFor(() => expect(lastTrackedQuery(api)).toEqual({}));
-  expect(screen.getByRole("searchbox", { name: "Buscar tarefas" })).toHaveValue("");
-  expect(screen.getByRole("button", { name: "Média" })).toHaveAttribute("aria-pressed", "false");
+  expect(menu().getByRole("button", { name: "Média" })).toHaveAttribute("aria-pressed", "false");
+  closeSettings();
+  expect(menu().getByRole("searchbox", { name: "Buscar nas tarefas" })).toHaveValue("");
   expect(await screen.findByRole("link", { name: /Pagar conta de luz/ })).toBeInTheDocument();
 });
 
 test("com filtro ativo e nada encontrado, diz que nenhuma tarefa passou no filtro", async () => {
   serve(tasks);
-  render(<TaskListScreen userId="user-1" />);
+  renderWithMenu();
   await screen.findByRole("link", { name: /Pagar conta de luz/ });
 
-  fireEvent.change(screen.getByRole("searchbox", { name: "Buscar tarefas" }), { target: { value: "inexistente" } });
+  fireEvent.change(menu().getByRole("searchbox", { name: "Buscar nas tarefas" }), { target: { value: "inexistente" } });
 
   expect(await screen.findByRole("heading", { name: "Nenhuma tarefa passou no filtro" })).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Nenhuma tarefa por aqui" })).not.toBeInTheDocument();

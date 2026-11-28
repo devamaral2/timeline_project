@@ -68,8 +68,6 @@
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips span { padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; line-height: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-@media (max-width: 720px) {
-  .bigNumberValue { font-size: 48px; line-height: 48px; }
-  .macros { gap: 8px; }
-  .macroValue { font-size: 22px; }
-}
+.bigNumberValue { font-size: 48px; line-height: 48px; }
+.macros { gap: 8px; }
+.macroValue { font-size: 22px; }
