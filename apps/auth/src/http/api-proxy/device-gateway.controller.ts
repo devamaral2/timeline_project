@@ -1,6 +1,6 @@
 import { All, Body, Controller, Inject, Req, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
-import { DeviceKeyAuthGuard, type DeviceKeyRequest } from "../../auth-core/security/device-key-auth.guard";
+import { DeviceKeyAuthGuard, type DeviceKeyRequest } from "../../nest/device-key-auth.guard";
 import type { RuntimeEnv } from "../../config/env";
 import { RUNTIME_ENV } from "../../config/tokens";
 import { DEVICE_PERMISSIONS_HEADER } from "@repo/contracts/device-key";

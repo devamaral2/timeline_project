@@ -136,10 +136,13 @@ export function configureApiDocumentation(app: INestApplication): void {
     use(path: string, handler: (request: Request, response: Response) => void): void;
   };
   express.get("/openapi.json", (_request, response) => response.json(document));
-  express.use("/docs", apiReference({
+  // O Scalar declara o retorno como uniao Express/Fastify; o Fastify passou a
+  // resolver no workspace quando o Auth o adotou, e a API continua no Express.
+  const reference = apiReference({
     pageTitle: "Braid API",
     theme: "purple",
     darkMode: false,
     spec: { content: document },
-  }) as unknown as (request: Request, response: Response) => void);
+  }) as (request: Request, response: Response) => void;
+  express.use("/docs", reference);
 }

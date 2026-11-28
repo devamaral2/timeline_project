@@ -1,16 +1,13 @@
 import { Controller, Get, HttpException, HttpStatus, Param, Req, type INestApplication } from "@nestjs/common";
-import { Test } from "@nestjs/testing";
+import type { Server } from "node:http";
 import type { Request } from "express";
 import { randomBytes } from "node:crypto";
-import { AppModule } from "../app.module";
+import { startAuth } from "../composition-root";
 import { AccessDeniedError, AuthenticationFailedError, ConflictError, NotFoundError, RateLimitedError, RequiredDependencyUnavailableError, SemanticInputError } from "../common/errors";
 import { RecordingAuthLogger } from "../common/logger";
 import { getRuntimeEnv, type EnvSource } from "../config/env";
-import { HttpPwnedPasswordsGateway } from "../auth-core/password/http-pwned-passwords.gateway";
 import type { PwnedPasswordsGateway } from "../auth-core/password/pwned-passwords.gateway";
-import { PostgresDeviceKeyRepository, type DeviceKeyRepository } from "../auth-core/persistence/postgres-device-key.repository";
-import { configureHttpShell } from "../http/request-context.middleware";
-import { configureApiDocumentation } from "../http/openapi";
+import type { DeviceKeyRepository } from "../auth-core/persistence/postgres-device-key.repository";
 
 /** O segredo que os testes de redacao procuram na resposta. */
 export const LEAK_PROBE = "leak-probe-9d3f";
@@ -49,6 +46,8 @@ class TestContextController {
 export interface TestApp {
   url: string;
   app: INestApplication;
+  /** O socket do Fastify, usado pelos testes de upgrade e teardown. */
+  server: Server;
   logger: RecordingAuthLogger;
   close(): Promise<void>;
 }
@@ -63,6 +62,11 @@ export interface TestAppOptions {
   pwnedPasswords?: PwnedPasswordsGateway;
   /** Troca o repositorio de chaves de dispositivo, que iria ao Postgres. */
   deviceKeys?: DeviceKeyRepository;
+  /**
+   * Espelha o bootstrap real, que garante a chave ativa antes do listen. O
+   * teste de startup desliga para observar o processo ainda sem chave.
+   */
+  ensureSigningKey?: boolean;
 }
 
 function testEnv(overrides: EnvSource = {}) {
@@ -78,29 +82,31 @@ function testEnv(overrides: EnvSource = {}) {
   });
 }
 
+/**
+ * Sobe o processo real de coexistência (Fastify na frente, Nest atrás) numa
+ * porta efêmera. O logger do filtro guarda o evento em memória em vez de
+ * imprimir: o Logger do Nest escapa do `silent` do Vitest e sujaria a saída que
+ * o `test:ai` promete manter limpa.
+ */
 export async function createTestApp(overrides: EnvSource = {}, options: TestAppOptions = {}): Promise<TestApp> {
-  const builder = Test.createTestingModule({
-    imports: [AppModule.forRoot(testEnv(overrides))],
-    controllers: [TestContextController],
-  })
-    .overrideProvider(HttpPwnedPasswordsGateway)
-    .useValue(options.pwnedPasswords ?? { isCompromised: async () => false });
-  if (options.deviceKeys) builder.overrideProvider(PostgresDeviceKeyRepository).useValue(options.deviceKeys);
-  const module = await builder.compile();
-  const app = module.createNestApplication({ bodyParser: false });
-  // O logger do filtro guarda o evento em memoria em vez de imprimir: o Logger
-  // do Nest escapa do `silent` do Vitest e sujaria a saida do `test:ai`.
   const logger = new RecordingAuthLogger();
-  configureHttpShell(app, logger);
-  configureApiDocumentation(app);
-  await app.listen(0, "127.0.0.1");
-  const address = app.getHttpServer().address();
-  if (!address || typeof address === "string") throw new Error("Test server did not expose a TCP address");
+  const runtime = await startAuth(testEnv(overrides), {
+    port: 0,
+    host: "127.0.0.1",
+    ensureSigningKey: options.ensureSigningKey ?? false,
+    overrides: {
+      pwnedPasswords: options.pwnedPasswords ?? { isCompromised: async () => false },
+      deviceKeys: options.deviceKeys,
+    },
+    logger,
+    controllers: [TestContextController],
+  });
 
   return {
-    url: `http://127.0.0.1:${address.port}`,
-    app,
+    url: runtime.url,
+    app: runtime.nestApp,
+    server: runtime.http.server,
     logger,
-    close: () => app.close(),
+    close: () => runtime.close(),
   };
 }

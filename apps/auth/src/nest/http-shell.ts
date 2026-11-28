@@ -1,10 +1,10 @@
 import { Injectable, type INestApplication, type NestMiddleware } from "@nestjs/common";
 import { json, type NextFunction, type Request, type Response } from "express";
-import { ulid } from "ulid";
 import type { RequestContext } from "../common/request-context";
+import { resolveRequestContext } from "../common/request-context";
 import { SECURITY_POLICY } from "../config/security-policy";
-import { AuthExceptionFilter } from "./auth-exception.filter";
 import { ConsoleAuthLogger, type AuthLogger } from "../common/logger";
+import { AuthExceptionFilter } from "./auth-exception.filter";
 
 declare global {
   namespace Express {
@@ -14,24 +14,20 @@ declare global {
   }
 }
 
-const correlationIdPattern = /^[A-Za-z0-9._-]{1,128}$/;
-
+/**
+ * Adaptador temporario do Nest/Express. A montagem do contexto vive em
+ * `common/request-context.ts` e nao conhece transporte.
+ */
 @Injectable()
 export class RequestContextMiddleware implements NestMiddleware {
   use(request: Request, response: Response, next: NextFunction): void {
-    const receivedCorrelationId = request.header("x-correlation-id");
-    const correlationId =
-      receivedCorrelationId && correlationIdPattern.test(receivedCorrelationId)
-        ? receivedCorrelationId
-        : ulid();
-    const userAgent = request.header("user-agent");
-
-    request.context = Object.freeze({
-      correlationId,
+    const context = resolveRequestContext({
+      receivedCorrelationId: request.header("x-correlation-id"),
       ipAddress: request.socket.remoteAddress ?? null,
-      userAgent: userAgent || null,
+      userAgent: request.header("user-agent"),
     });
-    response.setHeader("X-Correlation-Id", correlationId);
+    request.context = context;
+    response.setHeader("X-Correlation-Id", context.correlationId);
     next();
   }
 }
