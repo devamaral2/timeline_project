@@ -165,7 +165,16 @@ pnpm --filter @repo/mobile run test        # gera as fixtures e roda testDebugUn
 pnpm --filter @repo/mobile run lint        # ktlintCheck lintDebug
 pnpm --filter @repo/mobile run generate:theme
 pnpm dev:mobile                            # adb reverse + instala e abre no aparelho
+pnpm dev:mobile:all                        # API + Auth (sem web) + emulador + dev:mobile
 ```
+
+`pnpm dev:mobile:all` reaproveita o que já estiver no ar: só sobe a API e o
+Auth se as portas estiverem livres e só abre o emulador (o primeiro AVD, ou
+`BRAID_AVD=<nome>`) se nenhum aparelho estiver conectado. Se o aparelho tiver
+PIN e ainda não foi desbloqueado desde o boot, ele espera o desbloqueio (antes
+disso o Android responde que a `MainActivity` não existe). Fica em primeiro
+plano; Ctrl+C encerra só o que ele subiu. Não entra no `pnpm dev`, que as
+worktrees rodam em segundo plano.
 
 `ktlintFormat` (`cd apps/mobile && ./gradlew ktlintFormat`) corrige o estilo.
 Mudou `packages/contracts`, `packages/theme` ou `packages/timeline`? Rode o
