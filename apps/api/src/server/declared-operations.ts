@@ -13,14 +13,19 @@ import { getRecurrenceOperation } from "../features/get-recurrence/get-recurrenc
 import { getRequestOperation } from "../features/get-request/get-request.route";
 import { getTaskOperation } from "../features/get-task/get-task.route";
 import { listAgendaTasksOperation } from "../features/list-agenda-tasks/list-agenda-tasks.route";
+import { listAgentFileBackupsOperation } from "../features/list-agent-file-backups/list-agent-file-backups.route";
+import { listAgentFilesOperation } from "../features/list-agent-files/list-agent-files.route";
 import { listArtifactsOperation } from "../features/list-artifacts/list-artifacts.route";
 import { listProjectsOperation } from "../features/list-projects/list-projects.route";
 import { listRecurrencesOperation } from "../features/list-recurrences/list-recurrences.route";
 import { listRequestsOperation } from "../features/list-requests/list-requests.route";
 import { listTrackedTasksOperation } from "../features/list-tracked-tasks/list-tracked-tasks.route";
+import { readAgentFileOperation } from "../features/read-agent-file/read-agent-file.route";
 import { renewTranscriptionLeaseOperation } from "../features/renew-transcription-lease/renew-transcription-lease.route";
+import { requestAgentFileEditOperation } from "../features/request-agent-file-edit/request-agent-file-edit.route";
 import { requestTranscriptionOperation } from "../features/request-transcription/request-transcription.route";
 import { reserveTranscriptionOperation } from "../features/reserve-transcription/reserve-transcription.route";
+import { restoreAgentFileOperation } from "../features/restore-agent-file/restore-agent-file.route";
 import { saveDailyReadingOperation } from "../features/save-daily-reading/save-daily-reading.route";
 import { setTaskSituationOperation } from "../features/set-task-situation/set-task-situation.route";
 import { startEditRequestOperation } from "../features/start-edit-request/start-edit-request.route";
@@ -73,6 +78,11 @@ export const DECLARED_API_OPERATIONS: readonly ApiRouteOperation[] = [
   startVoiceRequestOperation,
   getRequestOperation,
   cancelRequestOperation,
+  listAgentFilesOperation,
+  readAgentFileOperation,
+  listAgentFileBackupsOperation,
+  restoreAgentFileOperation,
+  requestAgentFileEditOperation,
 ];
 
 /** O caminho na forma do documento OpenAPI (`/api/tasks/:taskId` -> `/api/tasks/{taskId}`). */

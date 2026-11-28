@@ -1,10 +1,5 @@
 import { Module, type DynamicModule } from "@nestjs/common";
 import { APP_INTERCEPTOR } from "@nestjs/core";
-import { ListAgentFileBackupsModule } from "./features/list-agent-file-backups/list-agent-file-backups.module";
-import { ListAgentFilesModule } from "./features/list-agent-files/list-agent-files.module";
-import { ReadAgentFileModule } from "./features/read-agent-file/read-agent-file.module";
-import { RequestAgentFileEditModule } from "./features/request-agent-file-edit/request-agent-file-edit.controller";
-import { RestoreAgentFileModule } from "./features/restore-agent-file/restore-agent-file.module";
 import { SearchPlacesModule } from "./features/search-places/search-places.controller";
 import { SuggestTagsModule } from "./features/suggest-tags/suggest-tags.controller";
 import { IdempotencyInterceptor } from "./http/idempotency/idempotency.interceptor";
@@ -28,11 +23,6 @@ export class AppModule {
         ApiCoreModule.forRoot(),
         SuggestTagsModule,
         SearchPlacesModule,
-        ListAgentFilesModule,
-        ReadAgentFileModule,
-        RequestAgentFileEditModule,
-        ListAgentFileBackupsModule,
-        RestoreAgentFileModule,
       ],
       providers: [{ provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor }],
     };

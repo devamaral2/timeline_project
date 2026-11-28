@@ -30,8 +30,8 @@ import {
 } from "@repo/contracts/schemas";
 import { z } from "zod";
 import { ACTORS, AGENDA_KINDS, ARTIFACT_TYPES, TASK_STATUSES, PRIORITIES } from "../domain";
-import { editRequestBody } from "../features/request-agent-file-edit/request-agent-file-edit.controller";
-import { restoreBody } from "../features/restore-agent-file/restore-agent-file.controller";
+import { editRequestBody } from "../features/request-agent-file-edit/request-agent-file-edit.route";
+import { restoreBody } from "../features/restore-agent-file/restore-agent-file.route";
 import {
   startEditRequestBody,
   startHermesRequestBody,
