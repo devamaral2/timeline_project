@@ -18,8 +18,8 @@ export function headerReader(headers: Readonly<Record<string, HeaderValue>>) {
 
 /**
  * Confere que a requisicao veio do gateway Auth interno e devolve a identidade
- * encaminhada. Independente do transporte: o guard do Nest e o hook do Fastify
- * chamam a mesma regra e recebem o mesmo erro.
+ * encaminhada. Independente do transporte: o registrador declarativo do Fastify
+ * chama esta regra e recebe o mesmo erro.
  */
 export function authenticateGateway(
   headers: Readonly<Record<string, HeaderValue>>,

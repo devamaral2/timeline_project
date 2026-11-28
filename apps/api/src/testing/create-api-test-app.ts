@@ -1,28 +1,7 @@
-import "reflect-metadata";
-import type { LoggerService } from "@nestjs/common";
-import type { NestExpressApplication } from "@nestjs/platform-express";
-import { Test } from "@nestjs/testing";
-import { API_BODY_LIMIT_BYTES } from "../config/body-limits";
-import { isLoopbackHost } from "../config/env";
-import { AppModule } from "../app.module";
-import { DomainExceptionFilter } from "../nest/domain-exception.filter";
-import { configureApiDocumentation } from "../nest/openapi";
 import { createApiRuntime, type ApiRuntime } from "../server/composition-root";
-import { delegateToFastify } from "../server/coexistence";
-
-/** O Logger do filtro escreveria direto no stdout e escaparia do `silent` do Vitest. */
-const silentLogger: LoggerService = {
-  log() {},
-  error() {},
-  warn() {},
-  debug() {},
-  verbose() {},
-  fatal() {},
-};
 
 export interface ApiTestApp {
   url: string;
-  app: NestExpressApplication;
   runtime: ApiRuntime;
   close(): Promise<void>;
 }
@@ -30,10 +9,9 @@ export interface ApiTestApp {
 export type ApiTestEnv = Record<string, string>;
 
 /**
- * Sobe a API como o `main.ts` sobe: o mesmo parser de corpo com o teto da maior
- * rota, o mesmo filtro global de erros, a mesma documentacao e o mesmo Fastify
- * em coexistencia com as rotas Nest restantes. O unico ajuste e o logger
- * silencioso, para a saida do Vitest ficar limpa.
+ * Sobe a API como o `main.ts` sobe: o runtime do composition root e o mesmo
+ * Fastify, com o parser de corpo, o error handler, a documentacao e o CORS
+ * decididos pelo ambiente. A unica diferenca e a porta efemera no loopback.
  */
 export async function createApiTestApp(env: ApiTestEnv): Promise<ApiTestApp> {
   const previous = new Map<string, string | undefined>();
@@ -57,25 +35,12 @@ export async function createApiTestApp(env: ApiTestEnv): Promise<ApiTestApp> {
       logger: { warn() {}, error() {} },
     });
     await runtime.start();
-
-    const module = await Test.createTestingModule({ imports: [AppModule.forRoot(runtime)] }).compile();
-    const app = module.createNestApplication<NestExpressApplication>({ bodyParser: false, logger: false });
-    if (!isLoopbackHost(env.API_HOST ?? "127.0.0.1")) app.enableCors();
-    delegateToFastify(app.getHttpAdapter().getInstance(), runtime.fastify, runtime.routes);
-    app.useBodyParser("json", { limit: API_BODY_LIMIT_BYTES });
-    app.useGlobalFilters(new DomainExceptionFilter(silentLogger));
-    configureApiDocumentation(app);
-    await app.listen(0, "127.0.0.1");
-
-    const address = app.getHttpServer().address();
-    if (!address || typeof address === "string") throw new Error("O servidor de teste não expôs uma porta TCP");
+    const url = await runtime.fastify.listen({ port: 0, host: "127.0.0.1" });
 
     return {
-      url: `http://127.0.0.1:${address.port}`,
-      app,
+      url,
       runtime,
       close: async () => {
-        await app.close();
         await runtime?.close();
         restoreEnv();
       },

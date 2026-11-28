@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 
-# Imagem da API (NestJS).
+# Imagem da API (Fastify).
 #
-# O contexto de build e a raiz do monorepo, nao apps/api: o Nest importa
+# O contexto de build e a raiz do monorepo, nao apps/api: a API importa
 # @repo/contracts e @repo/timeline, que sao workspaces irmaos.
 #
 #   docker build -f apps/api/Dockerfile -t timeline-api .

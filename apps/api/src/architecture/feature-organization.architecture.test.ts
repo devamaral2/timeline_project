@@ -13,7 +13,7 @@ function filesUnder(directory: string): string[] {
   });
 }
 
-/** Operacoes que ja respondem pelo Fastify, com a rota declarativa no lugar do controller Nest. */
+/** Cada operacao declara a rota no Fastify, sem controller. */
 const MIGRATED = [
   "create-task",
   "get-task",
@@ -53,10 +53,6 @@ const MIGRATED = [
   "list-agent-file-backups",
   "restore-agent-file",
   "request-agent-file-edit",
-];
-
-/** Operacoes que ainda respondem pelo Nest durante a coexistencia. */
-const STILL_NEST = [
   "suggest-tags",
   "search-places",
 ];
@@ -82,13 +78,10 @@ test("has one folder per operation on tasks, artifacts and recurrences, and none
   for (const name of MIGRATED) {
     expect(folders, name).toContain(name);
   }
-  for (const name of STILL_NEST) {
-    expect(folders, name).toContain(name);
-    expect(filesUnder(join(features, name)).some((path) => path.endsWith(".controller.ts")), name).toBe(true);
-  }
+  expect(folders.filter((name) => filesUnder(join(features, name)).some((path) => path.endsWith(".controller.ts")))).toEqual([]);
 });
 
-test("each migrated feature declares its route without Nest, and no longer keeps a controller", () => {
+test("cada feature declara a sua rota sem Nest e sem Fastify, e nao guarda controller", () => {
   for (const name of MIGRATED) {
     const files = filesUnder(join(features, name));
     const routes = files.filter((path) => path.endsWith(".route.ts"));
@@ -100,15 +93,7 @@ test("each migrated feature declares its route without Nest, and no longer keeps
   }
 });
 
-test("each Nest controller source declares one public route operation", () => {
-  const controllers = filesUnder(features).filter((path) => path.endsWith(".controller.ts"));
-  expect(controllers.length).toBeGreaterThan(0);
-  for (const path of controllers) {
-    const source = readFileSync(path, "utf8");
-    const routeDecorators = source.match(/@(Get|Post|Put|Patch|Delete)\s*(?:\([^)]*\))?/g) ?? [];
-    expect(routeDecorators, path).toHaveLength(1);
-  }
-});
+
 
 test("features do not import another feature and transport stays outside features", () => {
   const featureFiles = filesUnder(features).filter((path) => path.endsWith(".ts"));

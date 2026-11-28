@@ -8,14 +8,13 @@ import { createPostgresTestContext, type PostgresTestContext } from "../infrastr
 import { type ApiTestApp, createApiTestApp } from "../testing/create-api-test-app";
 
 /**
- * A costura da coexistencia: as operacoes de tarefas, projetos e situacoes sao
- * servidas pelo Fastify dentro do mesmo processo/porta que ainda hospeda as
- * rotas Nest. O comportamento externo e o mesmo da linha de base.
+ * A compatibilidade HTTP do servidor Fastify: trailing slash, HEAD, CORS,
+ * metodos e rotas desconhecidas respondem como na linha de base do Express.
  */
 
-const GATEWAY_KEY = "coexistence-gateway-key-with-32-chars";
+const GATEWAY_KEY = "compatibility-gateway-key-with-32-ch";
 const ORIGIN = "https://app.example.com";
-const OWNER = "coexistence-owner";
+const OWNER = "compatibility-owner";
 
 let ctx: PostgresTestContext;
 let app: ApiTestApp;
@@ -49,11 +48,11 @@ async function call(method: string, path: string, options: { headers?: Record<st
   return { status: response.status, headers: response.headers, text, json };
 }
 
-const newUser = () => `coexistence-user-${randomUUID()}`;
+const newUser = () => `compatibility-user-${randomUUID()}`;
 
 beforeAll(async () => {
   ctx = await createPostgresTestContext();
-  agentFilesDir = await mkdtemp(join(tmpdir(), "api-coexistence-"));
+  agentFilesDir = await mkdtemp(join(tmpdir(), "api-compatibility-"));
   await mkdir(join(agentFilesDir, "hermes/skills/foo"), { recursive: true });
   await writeFile(join(agentFilesDir, "hermes/skills/foo/SKILL.md"), "---\ndescription: foo\n---\n\n# foo\n");
   await mkdir(join(agentFilesDir, ".backups/hermes/skills/foo/SKILL.md"), { recursive: true });
@@ -82,8 +81,8 @@ afterAll(async () => {
   await ctx?.stop();
 });
 
-describe("coexistencia", () => {
-  test("as operacoes migradas respondem pelo Fastify e as restantes continuam no Nest", async () => {
+describe("servidor Fastify", () => {
+  test("as operacoes de tarefas, projetos, tags e locais respondem pelo mesmo servidor", async () => {
     const user = newUser();
 
     const agenda = await call("GET", "/api/tasks", { headers: session(user) });
@@ -104,7 +103,7 @@ describe("coexistencia", () => {
       project.json,
     ]);
 
-    // Ainda no Nest: tags e um metodo que nenhuma rota migrada declarou.
+    // Tags tambem e uma rota declarada; e um metodo que nenhuma rota declarou.
     const tags = await call("GET", "/api/tags?query=cas", { headers: session(user) });
     expect(tags.status).toBe(200);
 
@@ -113,7 +112,7 @@ describe("coexistencia", () => {
     expect(unknownMethod.json).toEqual({ error: "Cannot PUT /api/tasks" });
   });
 
-  test("o trailing slash e o CORS seguem a linha de base nas duas bordas", async () => {
+  test("o trailing slash, o HEAD e o CORS seguem a linha de base", async () => {
     const user = newUser();
 
     const slash = await call("GET", "/api/tasks/", { headers: session(user) });
@@ -133,8 +132,8 @@ describe("coexistencia", () => {
     const migrated = await call("GET", "/api/tasks", { headers: { ...session(user), origin: ORIGIN } });
     expect(migrated.headers.get("access-control-allow-origin")).toBe("*");
 
-    const nest = await call("GET", "/api/tags?query=cas", { headers: { ...session(user), origin: ORIGIN } });
-    expect(nest.headers.get("access-control-allow-origin")).toBe("*");
+    const tags = await call("GET", "/api/tags?query=cas", { headers: { ...session(user), origin: ORIGIN } });
+    expect(tags.headers.get("access-control-allow-origin")).toBe("*");
   });
 });
 
@@ -170,7 +169,7 @@ describe("arquivos do agente (skills e agentes)", () => {
     // Com a automacao desligada, a edicao por IA responde 404 sem abrir pedido.
     const edit = await call("POST", "/api/ai/config/edit-request", {
       headers: owner,
-      body: { path: SKILL, request: "mais curto", clientMessageId: "coexistence-edit-1" },
+      body: { path: SKILL, request: "mais curto", clientMessageId: "compatibility-edit-1" },
     });
     expect(edit.status).toBe(404);
     expect(edit.json).toEqual({ error: "Not Found" });

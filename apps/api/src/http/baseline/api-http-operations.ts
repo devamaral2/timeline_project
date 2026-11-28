@@ -2,9 +2,8 @@
  * A matriz HTTP da API: uma entrada por operação, com o status de sucesso, o
  * formato da resposta e a identidade que a rota exige.
  *
- * Ela não depende do Nest nem de metadata de decorators: é a mesma lista que a
- * linha de base executa hoje contra o Nest e que os testes do servidor Fastify
- * vão reexecutar depois da migração. Se uma operação sair daqui ou mudar de
+ * Ela não depende de metadata de decorators: é a mesma lista que a linha de
+ * base executa contra o servidor Fastify. Se uma operação sair daqui ou mudar de
  * contrato, os dois lados acusam.
  */
 
