@@ -1,4 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { idempotencyRequestHash } from "../http/idempotency/idempotency-key";
 import { createPostgresTestContext, type PostgresTestContext } from "../infrastructure/persistence/testing/postgres-test-context";
@@ -12,9 +15,11 @@ import { type ApiTestApp, createApiTestApp } from "../testing/create-api-test-ap
 
 const GATEWAY_KEY = "coexistence-gateway-key-with-32-chars";
 const ORIGIN = "https://app.example.com";
+const OWNER = "coexistence-owner";
 
 let ctx: PostgresTestContext;
 let app: ApiTestApp;
+let agentFilesDir: string;
 
 const session = (userId: string): Record<string, string> => ({
   "x-auth-gateway-key": GATEWAY_KEY,
@@ -48,12 +53,23 @@ const newUser = () => `coexistence-user-${randomUUID()}`;
 
 beforeAll(async () => {
   ctx = await createPostgresTestContext();
+  agentFilesDir = await mkdtemp(join(tmpdir(), "api-coexistence-"));
+  await mkdir(join(agentFilesDir, "hermes/skills/foo"), { recursive: true });
+  await writeFile(join(agentFilesDir, "hermes/skills/foo/SKILL.md"), "---\ndescription: foo\n---\n\n# foo\n");
+  await mkdir(join(agentFilesDir, ".backups/hermes/skills/foo/SKILL.md"), { recursive: true });
+  await writeFile(
+    join(agentFilesDir, ".backups/hermes/skills/foo/SKILL.md/20260101T000000000Z.bak"),
+    "---\ndescription: old\n---\n\n# old\n",
+  );
+
   app = await createApiTestApp({
     DATABASE_URL: ctx.connectionString,
     AUTH_INTERNAL_SERVICE_KEY: GATEWAY_KEY,
     // Fora do loopback o CORS liga, como no main.ts.
     API_HOST: "0.0.0.0",
     AI_AUTOMATION: "off",
+    AGENT_CONFIG_OWNER_USER_ID: OWNER,
+    AGENT_FILES_DIR: agentFilesDir,
     AI_JOBS_POLL_MS: "60000",
     OPENROUTER_API_KEY: "",
     ANTHROPIC_API_KEY: "",
@@ -119,6 +135,53 @@ describe("coexistencia", () => {
 
     const nest = await call("GET", "/api/tags?query=cas", { headers: { ...session(user), origin: ORIGIN } });
     expect(nest.headers.get("access-control-allow-origin")).toBe("*");
+  });
+});
+
+describe("arquivos do agente (skills e agentes)", () => {
+  const SKILL = "hermes/skills/foo/SKILL.md";
+
+  test("o dono lista, le, ve backups e restaura pelo Fastify; o resto do fluxo e o mesmo", async () => {
+    const owner = session(OWNER);
+
+    const list = await call("GET", "/api/ai/config", { headers: owner });
+    expect(list.status).toBe(200);
+    expect(list.json).toEqual({
+      files: [expect.objectContaining({ path: SKILL, kind: "skill", description: "foo", missing: false })],
+    });
+
+    const text = await call("GET", `/api/ai/config/file?path=${SKILL}`, { headers: owner });
+    expect(text.status).toBe(200);
+    expect(text.json).toEqual({ path: SKILL, text: "---\ndescription: foo\n---\n\n# foo\n" });
+
+    const backups = await call("GET", `/api/ai/config/backups?path=${SKILL}`, { headers: owner });
+    expect(backups.status).toBe(200);
+    expect((backups.json as { backups: Array<{ id: string }> }).backups.map((backup) => backup.id)).toContain(
+      "20260101T000000000Z.bak",
+    );
+
+    const restored = await call("POST", "/api/ai/config/restore", {
+      headers: owner,
+      body: { path: SKILL, backupId: "20260101T000000000Z.bak" },
+    });
+    expect(restored.status).toBe(201);
+    expect(restored.json).toEqual({ files: [expect.objectContaining({ path: SKILL, description: "old" })] });
+
+    // Com a automacao desligada, a edicao por IA responde 404 sem abrir pedido.
+    const edit = await call("POST", "/api/ai/config/edit-request", {
+      headers: owner,
+      body: { path: SKILL, request: "mais curto", clientMessageId: "coexistence-edit-1" },
+    });
+    expect(edit.status).toBe(404);
+    expect(edit.json).toEqual({ error: "Not Found" });
+
+    // So o dono configurado passa (ADR 0004).
+    const stranger = await call("GET", "/api/ai/config", { headers: session(newUser()) });
+    expect(stranger.status).toBe(403);
+    expect(stranger.json).toEqual({ error: "Só o dono altera a configuração do agente." });
+
+    const missing = await call("GET", "/api/ai/config/file?path=hermes/skills/nada/SKILL.md", { headers: owner });
+    expect(missing.status).toBe(404);
   });
 });
 
