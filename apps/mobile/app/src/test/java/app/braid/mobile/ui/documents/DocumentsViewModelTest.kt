@@ -144,6 +144,60 @@ class DocumentsViewModelTest {
             assertEquals(1, reads())
         }
 
+    private fun DocumentsViewModel.openDrawers(): List<ArtifactType> = state.value.run { drawers.filter { isExpanded(it) }.map { it.type } }
+
+    private fun DocumentsViewModel.drawer(type: ArtifactType) = state.value.drawers.single { it.type == type }
+
+    @Test
+    fun `only the text drawer starts open, and a tap opens and closes a drawer without reading again`() =
+        runTest {
+            backend.route("GET", path, fixture("documents-list"))
+            val viewModel = newViewModel()
+            viewModel.loaded()
+
+            assertEquals(
+                ArtifactType.known,
+                viewModel.state.value.drawers
+                    .map { it.type },
+            )
+            assertEquals(listOf(ArtifactType.Text), viewModel.openDrawers())
+
+            viewModel.toggleDrawer(viewModel.drawer(ArtifactType.Skill))
+            assertEquals(listOf(ArtifactType.Text, ArtifactType.Skill), viewModel.openDrawers())
+
+            viewModel.toggleDrawer(viewModel.drawer(ArtifactType.Text))
+            assertEquals(listOf(ArtifactType.Skill), viewModel.openDrawers())
+            assertEquals(1, reads())
+        }
+
+    @Test
+    fun `a search opens what it found, and clearing it brings back what was open`() =
+        runTest {
+            backend.route("GET", path) { request ->
+                if (request.requestUrl!!.queryParameter("q") == null) fixture("documents-list") else fixture("documents-list-unknown")
+            }
+            val viewModel = newViewModel()
+            viewModel.loaded()
+            viewModel.toggleDrawer(viewModel.drawer(ArtifactType.Skill))
+
+            viewModel.search("futuro")
+            advanceTimeBy(SEARCH_DEBOUNCE_MS + 1)
+            viewModel.state.first { it.search == "futuro" && it.drawers.any { drawer -> drawer.type == ArtifactType.Unknown } }
+
+            assertEquals(
+                viewModel.state.value.drawers
+                    .map { it.type },
+                viewModel.openDrawers(),
+            )
+            viewModel.toggleDrawer(viewModel.drawer(ArtifactType.Unknown))
+            assertFalse(ArtifactType.Unknown in viewModel.openDrawers())
+
+            viewModel.clearFilters()
+            viewModel.state.first { it.search.isEmpty() && it.drawers.size == ArtifactType.known.size }
+
+            assertEquals(listOf(ArtifactType.Text, ArtifactType.Skill), viewModel.openDrawers())
+        }
+
     private val newTypes = listOf(ArtifactType.News, ArtifactType.EmailSummary, ArtifactType.YoutubeTranscript)
 
     @Test

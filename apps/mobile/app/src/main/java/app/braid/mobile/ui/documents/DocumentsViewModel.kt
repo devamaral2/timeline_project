@@ -3,10 +3,14 @@ package app.braid.mobile.ui.documents
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.braid.mobile.domain.artifact.Artifact
+import app.braid.mobile.domain.artifact.ArtifactDrawer
 import app.braid.mobile.domain.artifact.ArtifactFilters
 import app.braid.mobile.domain.artifact.ArtifactRepository
+import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.artifact.artifactActor
 import app.braid.mobile.domain.artifact.artifactCountLabel
+import app.braid.mobile.domain.artifact.artifactDrawerStartsOpen
+import app.braid.mobile.domain.artifact.artifactDrawersOf
 import app.braid.mobile.domain.executor.ViewMode
 import app.braid.mobile.domain.executor.ViewModeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,9 +48,34 @@ data class DocumentsUiState(
     val refreshing: Boolean = false,
     /** O aviso do puxar que falhou, com a lista mantida; some na próxima leitura que dá certo. */
     val notice: String? = null,
+    /** O que a pessoa abriu ou fechou na lista inteira. */
+    val browsedDrawers: Map<ArtifactType, Boolean> = emptyMap(),
+    /** O que ela abriu ou fechou com a busca [narrowedSearch]; outra busca começa do zero. */
+    val narrowedDrawers: Map<ArtifactType, Boolean> = emptyMap(),
+    val narrowedSearch: String = "",
 ) {
     val shown: List<Artifact>? =
         artifacts?.let { all -> viewMode.actor?.let { actor -> all.filter { artifactActor(it.type) == actor } } ?: all }
+
+    /** Uma gaveta por tipo do que está à vista. */
+    val drawers: List<ArtifactDrawer> = artifactDrawersOf(shown.orEmpty())
+
+    private val drawerChoices: Map<ArtifactType, Boolean>
+        get() =
+            when (search) {
+                "" -> browsedDrawers
+                narrowedSearch -> narrowedDrawers
+                else -> emptyMap()
+            }
+
+    fun isExpanded(drawer: ArtifactDrawer): Boolean =
+        drawerChoices[drawer.type] ?: artifactDrawerStartsOpen(drawer.type, drawers.size, filtered)
+
+    /** Abre a gaveta fechada e fecha a aberta. */
+    fun toggled(drawer: ArtifactDrawer): DocumentsUiState {
+        val choices = drawerChoices + (drawer.type to !isExpanded(drawer))
+        return if (search.isEmpty()) copy(browsedDrawers = choices) else copy(narrowedDrawers = choices, narrowedSearch = search)
+    }
 
     /** A legenda no topo: "Artefatos" até a lista chegar, depois a contagem. */
     val caption: String get() = shown?.let { artifactCountLabel(it.size) } ?: "Artefatos"
@@ -106,6 +135,8 @@ class DocumentsViewModel
             mutableState.update { it.copy(query = "", search = "") }
             if (hadSearch) load(silent = true)
         }
+
+        fun toggleDrawer(drawer: ArtifactDrawer) = mutableState.update { it.toggled(drawer) }
 
         fun retry() = load(silent = false)
 

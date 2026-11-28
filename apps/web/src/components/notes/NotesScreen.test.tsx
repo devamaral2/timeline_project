@@ -54,6 +54,21 @@ function listedIds(): string[] {
     .map((link) => link.getAttribute("href")?.split("/").pop() ?? "");
 }
 
+/** Os cabeçalhos das gavetas, na ordem da tela. */
+function drawerHeads(): HTMLElement[] {
+  return within(screen.getByRole("region", { name: "Lista de artefatos" }))
+    .queryAllByRole("heading", { level: 2 })
+    .map((heading) => within(heading).getByRole("button"));
+}
+
+/** Abre as gavetas que começam fechadas, para a lista inteira ficar na tela. */
+function openDrawers() {
+  for (const head of drawerHeads()) if (head.getAttribute("aria-expanded") === "false") fireEvent.click(head);
+}
+
+/** O cabeçalho de uma gaveta, pelo título e a contagem colados. */
+const drawerHead = (title: string) => within(screen.getByRole("region", { name: "Lista de artefatos" })).getByRole("button", { name: new RegExp(`^${title}\\s*\\d`) });
+
 /** A base de testes: três artefatos do usuário e uma cópia derivada que não pode aparecer. */
 function seeded(): Seed {
   return {
@@ -106,22 +121,57 @@ beforeEach(() => {
 });
 
 describe("lista", () => {
-  test("lista os artefatos do usuário do mais recente para o mais antigo, sem as cópias derivadas", async () => {
+  test("lista uma gaveta por tipo, cada uma do mais recente para o mais antigo, sem as cópias derivadas", async () => {
     render(<NotesScreen userId="user-1" />);
 
     await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
-    expect(listedIds()).toEqual(["art-nova", "art-texto", "art-antiga", "art-sono"]);
+    openDrawers();
+    expect(drawerHeads().map((head) => head.textContent)).toEqual(["Notas2", "Refeições1", "Sono1"]);
+    expect(listedIds()).toEqual(["art-texto", "art-antiga", "art-nova", "art-sono"]);
     expect(screen.queryByText("Arroz (cópia)")).not.toBeInTheDocument();
     expect(api.calls[0]).toMatchObject({ method: "GET", pathname: "/api/artifacts" });
   });
 
-  test("cada item mostra o nome, o tipo e as tags, e leva à rota de nota", async () => {
+  test("só Notas começa aberta; tocar no cabeçalho abre e fecha a gaveta", async () => {
     render(<NotesScreen userId="user-1" />);
     await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
 
+    expect(drawerHeads().map((head) => head.getAttribute("aria-expanded"))).toEqual(["true", "false", "false"]);
+    expect(listedIds()).toEqual(["art-texto", "art-antiga"]);
+
+    fireEvent.click(drawerHead("Refeições"));
+    expect(listedIds()).toEqual(["art-texto", "art-antiga", "art-nova"]);
+
+    fireEvent.click(drawerHead("Notas"));
+    expect(listedIds()).toEqual(["art-nova"]);
+  });
+
+  test("a busca abre o que achou, e limpar volta ao que estava aberto na lista inteira", async () => {
+    renderWithMenu();
+    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    fireEvent.click(drawerHead("Sono"));
+
+    fireEvent.change(searchbox(), { target: { value: "o" } });
+    await waitFor(() => expect(lastQuery()).toEqual({ q: "o" }));
+    await waitFor(() => expect(drawerHeads().every((head) => head.getAttribute("aria-expanded") === "true")).toBe(true));
+    fireEvent.click(drawerHeads()[0] as HTMLElement);
+    expect(drawerHeads()[0]).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.change(searchbox(), { target: { value: "" } });
+    await waitFor(() => expect(lastQuery()).toEqual({}));
+    await waitFor(() => expect(listedIds()).toEqual(["art-texto", "art-antiga", "art-sono"]));
+  });
+
+  test("cada item mostra o nome, a linha de apoio e as tags, e leva à rota de nota", async () => {
+    render(<NotesScreen userId="user-1" />);
+    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    openDrawers();
+
     const almoco = within(screen.getByRole("region", { name: "Lista de artefatos" })).getByRole("link", { name: /Almoço/ });
     expect(almoco).toHaveAttribute("href", "/user-1/notas/art-nova");
-    expect(within(almoco).getByText("Refeição")).toBeInTheDocument();
+    // O tipo saiu da linha: quem o diz é a gaveta.
+    expect(within(almoco).queryByText("Refeição")).not.toBeInTheDocument();
+    expect(within(almoco).getByText(/^12 set/)).toBeInTheDocument();
     expect(within(almoco).getByText("#casa")).toBeInTheDocument();
   });
 });
@@ -146,7 +196,9 @@ describe("busca", () => {
     expect(await screen.findByRole("heading", { name: "Nenhum artefato encontrado" })).toBeInTheDocument();
     fireEvent.click(within(screen.getByRole("region", { name: "Lista de artefatos" })).getByRole("button", { name: "Limpar filtros" }));
     await waitFor(() => expect(lastQuery()).toEqual({}));
-    expect(listedIds()).toEqual(["art-nova", "art-texto", "art-antiga", "art-sono"]);
+    await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+    openDrawers();
+    expect(listedIds()).toEqual(["art-texto", "art-antiga", "art-nova", "art-sono"]);
     expect(searchbox()).toHaveValue("");
   });
 });
@@ -201,21 +253,22 @@ describe("notícias, resumo de e-mail e transcrição", () => {
     return within(screen.getByRole("region", { name: "Lista de artefatos" })).getByRole("link", { name });
   }
 
-  test("cada um aparece com o rótulo e o ícone do tipo, e leva ao detalhe", async () => {
+  test("cada um tem a própria gaveta, com o ícone do tipo na linha, e leva ao detalhe", async () => {
     install(seededWithFreeText());
     render(<NotesScreen userId="user-1" />);
     await screen.findByRole("heading", { level: 1, name: "5 artefatos" });
+    openDrawers();
 
-    expect(listedIds()).toEqual(["art-noticias", "art-email", "art-video", "art-nota", "art-sono"]);
-    for (const [name, label, glyph, id] of [
-      [/Notícias da manhã/, "Notícias", "lucide-newspaper", "art-noticias"],
-      [/Resumo da caixa de entrada/, "Resumo de e-mail", "lucide-letter", "art-email"],
-      [/Aula de jardinagem/, "Transcrição", "lucide-youtube", "art-video"],
+    expect(drawerHeads().map((head) => head.textContent)).toEqual(["Notas1", "Notícias1", "Resumos de e-mail1", "Transcrições1", "Sono1"]);
+    expect(listedIds()).toEqual(["art-nota", "art-noticias", "art-email", "art-video", "art-sono"]);
+    for (const [name, glyph, id] of [
+      [/Notícias da manhã/, "lucide-newspaper", "art-noticias"],
+      [/Resumo da caixa de entrada/, "lucide-letter", "art-email"],
+      [/Aula de jardinagem/, "lucide-youtube", "art-video"],
     ] as const) {
       const link = row(name);
       expect(link).toHaveAttribute("href", `/user-1/notas/${id}`);
-      expect(within(link).getByText(label)).toBeInTheDocument();
-      expect(link.querySelector(`.${glyph}`), label).not.toBeNull();
+      expect(link.querySelector(`.${glyph}`), glyph).not.toBeNull();
     }
     // A nota continua com a letra, não com um desses desenhos.
     expect(row(/Lista de compras/).querySelector('[data-glyph="letter"]')).not.toBeNull();
@@ -254,6 +307,8 @@ describe("puxar para recarregar", () => {
   test("o puxão que falha mantém a lista na tela e avisa", async () => {
     render(<><PullToRefresh /><NotesScreen userId="user-1" /></>);
     await screen.findByRole("heading", { level: 1, name: "4 artefatos" });
+
+    openDrawers();
 
     api.failNext("GET", "/api/artifacts", 500);
     pullDown();

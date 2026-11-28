@@ -12,6 +12,7 @@ import { ARTIFACT_TYPE_ORDER, artifactCountLabel, artifactTypeLabel, artifactVis
 import { noteMarkdownOf, whenLabel } from "../../../apps/web/src/lib/notes/notes-model";
 import { dateLineOf, formatDecimal, formatMinutes, formatPace, groupSetsByExercise, minutesBetween, pluralize } from "../../../apps/web/src/lib/tasks/task-detail-format";
 import { failedMealMessage, pendingMealMessage } from "../../../apps/web/src/lib/notes/meal-generation";
+import { artifactDrawersOf, artifactDrawerStartsOpen, artifactRowFacts } from "../../../apps/web/src/lib/artifacts/artifact-drawers";
 
 /** Cópia literal de `macroShares` em `components/notes/NoteBody.tsx`. */
 function macroShares(totals: { totalProteinGrams: number; totalCarbohydrateGrams: number; totalFatGrams: number }): [number, number, number] {
@@ -163,10 +164,46 @@ const MARKDOWNS = [
   { name: "Ideias", body: "Antes\n# Ideias\ndepois" },
 ];
 
+/**
+ * A lista que confere as gavetas por tipo e a linha de cada uma: um de cada tipo, mais os casos que mudam a linha
+ * (refeição calculando, com falha e sem calorias, sono sem duração, treino vazio, arquivo sem descrição) e um tipo
+ * desconhecido. A refeição que o agente calcula usa a gaveta das refeições.
+ */
+const DRAWER_ARTIFACTS = [
+  ...documents,
+  { ...futureWithBody },
+  food("doc-food-calculating", "Prato novo", {}, pendingData),
+  food("doc-food-broken", "Prato que falhou", {}, { ...pendingData, generation: { status: "failed" } }),
+  food("doc-food-thousand", "Banquete", { updatedAt: "2026-09-13T15:00:00.000Z" }, { totals: { ...foodTotals, totalCaloriesKcal: 1240.5 } }),
+  food("doc-food-empty", "Copo de água", { updatedAt: "2025-12-31T23:30:00.000Z" }, { totals: { ...foodTotals, totalCaloriesKcal: 0.4 } }),
+  artifact({ id: "doc-sleep-empty", name: "Cochilo sem registro", type: "sleep", data: { trackedSleepTime: 0, score: 0 } }),
+  artifact({ id: "doc-training-empty", name: "Treino vazio", type: "training", data: { caloriesBurned: 0, workouts: [] } }),
+  artifact({ id: "doc-skill-bare", name: "Sem descrição", type: "skill", tags: ["x"], data: { path: "hermes/skills/x/SKILL.md", hash: "abc", missing: false } }),
+];
+
+function drawerCases(now: Date): unknown {
+  return {
+    now: now.toISOString(),
+    artifacts: DRAWER_ARTIFACTS,
+    drawers: artifactDrawersOf(DRAWER_ARTIFACTS as never).map((drawer) => ({
+      key: drawer.key,
+      title: drawer.title,
+      ids: drawer.artifacts.map((item) => item.id),
+    })),
+    rows: DRAWER_ARTIFACTS.map((item) => ({ id: item.id, facts: artifactRowFacts(item as never, now) })),
+    startsOpen: (["text", "food", "other"] as const).flatMap((key) =>
+      [1, 3].flatMap((drawerCount) =>
+        [false, true].map((narrowed) => ({ key, drawerCount, narrowed, result: artifactDrawerStartsOpen(key, drawerCount, narrowed) })),
+      ),
+    ),
+  };
+}
+
 export function documentsFixtures(): Record<string, unknown> {
   const now = new Date(DOCUMENTS_NOW);
   const withTasks = { ...documents[0], tasks: DETAIL_TASKS };
   return {
+    "documents-drawers": drawerCases(now),
     "documents-list": documents,
     "documents-list-empty": [],
     "documents-list-filtered": [documents[0]],
