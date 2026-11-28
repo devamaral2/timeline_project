@@ -12,7 +12,7 @@ package app.braid.mobile.domain.markdown
  */
 
 private val ANCHOR_ID = Regex("^t-\\d+$")
-private val ANCHOR_MARK = Regex("^\\{#(t-\\d+)}[ \\t]*")
+private val ANCHOR_MARK = Regex("^\\{#(t-\\d+)\\}[ \\t]*")
 
 /** A âncora que abre o texto de um parágrafo e o texto sem a marca, ou `null`. */
 internal fun splitAnchorMark(text: String): Pair<String, String>? =
