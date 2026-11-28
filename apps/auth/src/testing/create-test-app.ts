@@ -9,8 +9,8 @@ import { getRuntimeEnv, type EnvSource } from "../config/env";
 import { HttpPwnedPasswordsGateway } from "../auth-core/password/http-pwned-passwords.gateway";
 import type { PwnedPasswordsGateway } from "../auth-core/password/pwned-passwords.gateway";
 import { PostgresDeviceKeyRepository, type DeviceKeyRepository } from "../auth-core/persistence/postgres-device-key.repository";
-import { configureHttpShell } from "../http/request-context.middleware";
-import { configureApiDocumentation } from "../http/openapi";
+import { configureHttpShell } from "../nest/http-shell";
+import { configureApiDocumentation } from "../nest/api-documentation";
 
 /** O segredo que os testes de redacao procuram na resposta. */
 export const LEAK_PROBE = "leak-probe-9d3f";

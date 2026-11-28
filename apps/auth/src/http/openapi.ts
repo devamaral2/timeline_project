@@ -1,7 +1,3 @@
-import type { INestApplication } from "@nestjs/common";
-import { apiReference } from "@scalar/nestjs-api-reference";
-import type { Request, Response } from "express";
-
 type OpenApiSchema = Record<string, unknown>;
 type OpenApiOperation = {
   summary: string;
@@ -114,19 +110,4 @@ export const authOpenApiDocument = {
 
 function object(properties: Record<string, OpenApiSchema>, required = Object.keys(properties)): OpenApiSchema {
   return { type: "object", additionalProperties: false, required, properties };
-}
-
-/** Registra a referência interativa e o contrato OpenAPI consumível por ferramentas. */
-export function configureApiDocumentation(app: INestApplication): void {
-  const express = app.getHttpAdapter().getInstance() as {
-    get(path: string, handler: (request: Request, response: Response) => void): void;
-    use(path: string, handler: (request: Request, response: Response) => void): void;
-  };
-  express.get("/openapi.json", (_request, response) => response.json(authOpenApiDocument));
-  express.use("/docs", apiReference({
-    pageTitle: "Braid Auth API",
-    theme: "purple",
-    darkMode: false,
-    spec: { content: authOpenApiDocument },
-  }));
 }

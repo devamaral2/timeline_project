@@ -4,10 +4,10 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { getRuntimeEnv } from './config/env';
 import { findMonorepoRoot, loadRootEnv } from './config/load-env';
-import { configureHttpShell } from './http/request-context.middleware';
-import { configureApiDocumentation } from './http/openapi';
+import { configureHttpShell } from './nest/http-shell';
+import { configureApiDocumentation } from './nest/api-documentation';
 import { SigningKeyService } from './auth-core/security/signing-key.service';
-import { ANONYMOUS_CONTEXT } from './common/request-context';
+import { ensureSigningKeyActive } from './bootstrap/signing-key-startup';
 
 async function bootstrap(): Promise<void> {
   const env = getRuntimeEnv(
@@ -18,18 +18,7 @@ async function bootstrap(): Promise<void> {
   });
   configureHttpShell(app);
   configureApiDocumentation(app);
-  await app.get(SigningKeyService).ensureActive(new Date(), {
-    correlationId: 'startup',
-    actorUserId: null,
-    action: 'key.created',
-    targetType: 'signing_key',
-    targetId: null,
-    result: 'succeeded',
-    reason: null,
-    metadata: {},
-    context: ANONYMOUS_CONTEXT,
-    occurredAt: new Date(),
-  });
+  await ensureSigningKeyActive(app.get(SigningKeyService));
   await app.listen(env.port, env.host);
   Logger.log(`Auth listening on http://${env.host}:${env.port}`, 'Bootstrap');
 }
