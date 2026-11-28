@@ -97,12 +97,13 @@ class Connection {
 
   query<T>(query: SqlFragment, decoder?: RowDecoder<T>): QueryResult<T> {
     const statement = this.prepare(query.text);
-    if (statement.columns().length === 0) {
+    const columns = statement.columns();
+    if (columns.length === 0) {
       const { changes } = statement.run(...query.params);
       return { rows: [], rowCount: Number(changes) };
     }
     const raw = statement.all(...query.params) as Row[];
-    const rows = decoder ? raw.map((row) => decoder.decode(row)) : (raw as T[]);
+    const rows = decoder ? raw.map((row) => decoder.decode(row, columns)) : (raw as T[]);
     return { rows, rowCount: rows.length };
   }
 

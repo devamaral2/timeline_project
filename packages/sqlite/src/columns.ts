@@ -125,8 +125,14 @@ export const c = {
 export type ColumnMap = Record<string, Column<any>>;
 export type RowOf<C extends ColumnMap> = { [K in keyof C]: C[K] extends Column<infer T> ? T : never };
 
+/** O nome e o tipo declarado (no `CREATE TABLE`) de uma coluna do resultado; nulo quando ela e uma expressao. */
+export interface ColumnInfo {
+  readonly name: string;
+  readonly type: string | null;
+}
+
 export interface RowDecoder<T> {
-  decode(row: Record<string, unknown>): T;
+  decode(row: Record<string, unknown>, columns?: readonly ColumnInfo[]): T;
 }
 
 /** O decodificador de uma linha cujas chaves sao os apelidos (`AS "chave"`) da consulta. */

@@ -40,17 +40,13 @@ export async function lockActiveSigningKey(
   tx: AuthTransaction,
   now: Date,
 ): Promise<SigningKeyForSigning> {
-  await tx.query(
-    "SELECT pg_advisory_xact_lock_shared(hashtextextended('timeline-auth:signing-key', 0))",
-  );
-  const result = await tx.query(
-    "SELECT * FROM signing_keys WHERE status = 'active' FOR KEY SHARE",
-  );
+  // A transacao do chamador ja tem o lock de escrita (BEGIN IMMEDIATE): uma rotacao de chave nao corre no meio.
+  const result = await tx.query("SELECT * FROM signing_keys WHERE status = 'active'");
   const row = result.rows[0] as Record<string, unknown> | undefined;
   if (!row || typeof row.encrypted_private_key !== 'string')
     throw new NoActiveSigningKeyError();
   await tx.query(
-    'UPDATE signing_keys SET last_used_at = GREATEST(COALESCE(last_used_at, $2), $2) WHERE kid = $1',
+    'UPDATE signing_keys SET last_used_at = max(COALESCE(last_used_at, $2), $2) WHERE kid = $1',
     [row.kid, now],
   );
   return {
@@ -88,12 +84,7 @@ export class PostgresSigningKeyRepository {
     rotate: boolean,
   ): Promise<StoredSigningKey> {
     return this.db.transaction(async (tx) => {
-      await tx.query(
-        "SELECT pg_advisory_xact_lock(hashtextextended('timeline-auth:signing-key', 0))",
-      );
-      const active = await tx.query(
-        "SELECT * FROM signing_keys WHERE status = 'active' FOR UPDATE",
-      );
+      const active = await tx.query("SELECT * FROM signing_keys WHERE status = 'active'");
       const existing = active.rows[0] as Record<string, unknown> | undefined;
       if (existing && !rotate) return rowToKey(existing);
       if (existing) {

@@ -10,12 +10,12 @@ import { resolveUserPermissions } from "../../domain/rbac/resolve-user-permissio
  * `AuthDatabase`, entao nao da para reusa-lo de dentro de um commit.
  *
  * Existe para que toda escrita que assina um token, ou que precisa saber quem
- * ainda e admin, leia as permissoes de agora e sob os mesmos locks.
+ * ainda e admin, leia as permissoes de agora, dentro da mesma transacao.
  */
 export async function resolveAccessInTransaction(tx: AuthTransaction, userId: string): Promise<ResolvedAccess> {
   const roleKeys = (await tx.query<{ role_key: string }>("SELECT role_key FROM user_roles WHERE user_id = $1 ORDER BY role_key", [userId])).rows.map((row) => row.role_key);
   const rolePermissions = roleKeys.length
-    ? (await tx.query<{ permission: Permission }>("SELECT DISTINCT permission FROM role_permissions WHERE role_key = ANY($1)", [roleKeys])).rows.map((row) => row.permission)
+    ? (await tx.query<{ permission: Permission }>("SELECT DISTINCT permission FROM role_permissions WHERE role_key IN (SELECT value FROM json_each($1))", [roleKeys])).rows.map((row) => row.permission)
     : [];
   const directPermissions = (await tx.query<DirectPermission>("SELECT permission, effect FROM user_permissions WHERE user_id = $1 ORDER BY permission", [userId])).rows;
   return resolveUserPermissions(roleKeys, { rolePermissions, directPermissions });

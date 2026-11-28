@@ -1,3 +1,6 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Controller, Get, HttpException, HttpStatus, Param, Req, type INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import type { Request } from "express";
@@ -68,7 +71,8 @@ export interface TestAppOptions {
 function testEnv(overrides: EnvSource = {}) {
   return getRuntimeEnv({
     NODE_ENV: "test",
-    AUTH_DATABASE_URL: "postgres://runtime",
+    // Um arquivo SQLite proprio por app de teste: o padrao (`.data/auth.sqlite`) e o banco de desenvolvimento.
+    AUTH_DATABASE_PATH: join(mkdtempSync(join(tmpdir(), "auth-app-")), "auth.sqlite"),
     AUTH_ISSUER: "https://auth.example.test",
     AUTH_PUBLIC_URL: "https://auth.example.test",
     AUTH_WEB_APP_URL: "https://web.example.test",

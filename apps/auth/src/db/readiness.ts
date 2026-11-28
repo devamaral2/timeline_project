@@ -25,8 +25,9 @@ export async function checkReadiness(
 
 /**
  * A versao que as migracoes deixam gravada em `auth_schema_meta`. Vive aqui
- * porque e ela que o `/health/ready` compara: um deploy que sobe o codigo novo
- * antes de rodar `db:migrate` precisa falhar no readiness em vez de atender
- * pela metade. Cada migracao nova sobe este numero junto com o seu `UPDATE`.
+ * porque e ela que o `/health/ready` compara: um banco que nao passou pelas
+ * migrations deste build precisa falhar no readiness em vez de atender pela
+ * metade. Cada migracao nova sobe este numero junto com o seu `UPDATE`. A 9 e
+ * a primeira em SQLite (ADR 0025); ate a 8 foi o Postgres.
  */
-export const AUTH_SCHEMA_VERSION = 8;
+export const AUTH_SCHEMA_VERSION = 9;

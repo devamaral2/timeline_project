@@ -1,30 +1,30 @@
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { Client } from "pg";
 import { createTestUserForFile } from "../../../testing/test-user";
 import { ANONYMOUS_CONTEXT } from "../../../common/request-context";
 import { SigningKeyService } from "../../../auth-core/security/signing-key.service";
 import { ScryptPasswordHasher } from "../../../auth-core/password/scrypt-password-hasher";
 import { createTestApp, type TestApp } from "../../../testing/create-test-app";
-import { createPostgresTestDatabase, type PostgresTestDatabase } from "../../../testing/postgres-test-database";
+import { createAuthTestDatabase, type AuthTestDatabase } from "../../../testing/sqlite-test-database";
+import type { AuthDatabase } from "../../../db/client";
 
 const user = createTestUserForFile(__filename);
 const password = "Integration-password-42!";
 
 describe("password login HTTP flow", () => {
-  let database: PostgresTestDatabase;
+  let database: AuthTestDatabase;
   let app: TestApp;
-  let admin: Client;
+  let admin: AuthDatabase;
 
   beforeAll(async () => {
-    database = await createPostgresTestDatabase();
-    admin = new Client({ connectionString: database.adminUrl });
-    await admin.connect();
+    database = await createAuthTestDatabase();
+    admin = database.open();
     const hash = await new ScryptPasswordHasher().hash(password);
+    const now = new Date();
     await admin.query(
-      "INSERT INTO users (id,email,name,password_hash,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'active',now(),now())",
-      [user.id, user.email, user.name, hash],
+      "INSERT INTO users (id,email,name,password_hash,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'active',$5,$5)",
+      [user.id, user.email, user.name, hash, now],
     );
-    app = await createTestApp({ AUTH_DATABASE_URL: database.runtimeUrl });
+    app = await createTestApp({ AUTH_DATABASE_PATH: database.path });
     await app.app.get(SigningKeyService).ensureActive(new Date(), {
       correlationId: "login-flow-test", actorUserId: null, action: "key.created",
       targetType: "signing_key", targetId: null, result: "succeeded",
@@ -34,7 +34,6 @@ describe("password login HTTP flow", () => {
 
   afterAll(async () => {
     await app?.close();
-    await admin?.end();
     await database?.close();
   });
 
