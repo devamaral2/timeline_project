@@ -4,22 +4,22 @@ import { CryptoSecretGenerator, SecretGenerator } from '../common/secret-generat
 import type { RuntimeEnv } from '../config/env';
 import { RUNTIME_ENV } from '../config/tokens';
 import { AUTH_DATABASE } from '../db/tokens';
-import { DbModule } from '../db/db.module';
+import { DatabaseModule } from '../nest/database.module';
 import type { AuthDatabase } from '../db/client';
 import { HttpPwnedPasswordsGateway } from './password/http-pwned-passwords.gateway';
 import { PreparePassword } from './password/prepare-password';
 import { ScryptPasswordHasher } from './password/scrypt-password-hasher';
 import { PostgresDeviceKeyRepository } from './persistence/postgres-device-key.repository';
 import { AuthenticateDeviceKeyUseCase } from '../features/device-keys/usecases/authenticate-device-key.usecase';
-import { DeviceKeyAuthGuard } from './security/device-key-auth.guard';
+import { DeviceKeyAuthGuard } from '../nest/device-key-auth.guard';
 import { PostgresInviteRepository } from './persistence/postgres-invite.repository';
 import { PostgresRbacRepository } from './persistence/postgres-rbac.repository';
 import { PostgresSessionRepository } from './persistence/postgres-session.repository';
 import { PostgresUserRepository } from './persistence/postgres-user.repository';
 import { AuthorizationService } from './security/authorization.service';
-import { BearerAuthGuard } from './security/bearer-auth.guard';
+import { BearerAuthGuard } from '../nest/bearer-auth.guard';
 import { PostgresSigningKeyRepository } from './security/postgres-signing-key.repository';
-import { RequireSuperAdminGuard } from './security/require-super-admin.guard';
+import { RequireSuperAdminGuard } from '../nest/require-super-admin.guard';
 import { SigningKeyService } from './security/signing-key.service';
 
 @Module({})
@@ -27,7 +27,7 @@ export class AuthCoreModule {
   static forRoot(env: RuntimeEnv): DynamicModule {
     const providers = [
       { provide: RUNTIME_ENV, useValue: env },
-      ...DbModule.providers(RUNTIME_ENV),
+      ...DatabaseModule.providers(RUNTIME_ENV),
       { provide: Clock, useClass: SystemClock },
       { provide: SecretGenerator, useClass: CryptoSecretGenerator },
       { provide: ScryptPasswordHasher, useClass: ScryptPasswordHasher },
@@ -96,7 +96,7 @@ export class AuthCoreModule {
     return {
       global: true,
       module: AuthCoreModule,
-      imports: [DbModule],
+      imports: [DatabaseModule],
       providers,
       exports: [
         RUNTIME_ENV,

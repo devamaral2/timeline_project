@@ -1,23 +1,28 @@
 import { request as httpRequest, type IncomingMessage, type Server } from "node:http";
 import { request as httpsRequest } from "node:https";
 import type { Duplex } from "node:stream";
-import { Logger, type BeforeApplicationShutdown, type OnApplicationBootstrap } from "@nestjs/common";
 
-/** Encaminha upgrades do chat para a API sem expor a API ao browser. */
-export class ApiGatewayProxy implements OnApplicationBootstrap, BeforeApplicationShutdown {
-  private readonly logger = new Logger(ApiGatewayProxy.name);
+export interface UpgradeProxyLogger {
+  warn(message: string): void;
+}
 
+/**
+ * Encaminha upgrades do chat para a API sem expor a API ao browser. O ciclo de
+ * vida (attach/detach) e explicito para que o composition root o controle sem
+ * depender de hooks do Nest.
+ */
+export class ApiUpgradeProxy {
   constructor(
-    private readonly server: () => Server,
     private readonly apiServiceUrl: string,
+    private readonly logger: UpgradeProxyLogger = { warn: (message) => console.warn(message) },
   ) {}
 
-  onApplicationBootstrap(): void {
-    this.server().on("upgrade", this.onUpgrade);
+  attach(server: Server): void {
+    server.on("upgrade", this.onUpgrade);
   }
 
-  beforeApplicationShutdown(): void {
-    this.server().off("upgrade", this.onUpgrade);
+  detach(server: Server): void {
+    server.off("upgrade", this.onUpgrade);
   }
 
   private readonly onUpgrade = (request: IncomingMessage, socket: Duplex, head: Buffer): void => {

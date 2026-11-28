@@ -1,11 +1,11 @@
 import type { ExecutionContext } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
-import { AuthenticationFailedError } from "../../common/errors";
-import type { RuntimeEnv } from "../../config/env";
-import { generateSigningKey, privateKeyFromPem } from "../../domain/crypto/signing-key";
+import { AuthenticationFailedError } from "../common/errors";
+import type { RuntimeEnv } from "../config/env";
+import { generateSigningKey, privateKeyFromPem } from "../domain/crypto/signing-key";
 import { BearerAuthGuard } from "./bearer-auth.guard";
-import { signJwt, type AccessTokenClaims } from "./jwt";
-import type { SigningKeyService } from "./signing-key.service";
+import { signJwt, type AccessTokenClaims } from "../auth-core/security/jwt";
+import type { SigningKeyService } from "../auth-core/security/signing-key.service";
 
 const key = generateSigningKey();
 const privateKey = privateKeyFromPem(key.privateKeyPem);
