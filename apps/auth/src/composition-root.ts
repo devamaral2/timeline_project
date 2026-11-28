@@ -143,7 +143,16 @@ export async function startAuth(
   const logger = options.logger ?? new ConsoleAuthLogger();
 
   const http = createAuthHttpServer({
-    dependencies: core,
+    dependencies: {
+      database: core.database,
+      signingKeyService: core.signingKeyService,
+      proxy: {
+        env: core.env,
+        authorization: core.authorizationService,
+        signingKeyService: core.signingKeyService,
+        deviceKeyAuthenticator: core.authenticateDeviceKey,
+      },
+    },
     logger,
     routes: options.routes,
   });

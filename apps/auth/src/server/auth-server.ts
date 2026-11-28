@@ -7,6 +7,7 @@ import { toAuthErrorResponse } from "../http/auth-error-response";
 import { documentationRoutes } from "./documentation.routes";
 import { healthRoutes, type HealthRouteDependencies } from "./health.routes";
 import { jwksRoutes, type JwksRouteDependencies } from "./jwks.routes";
+import { apiProxyRoutes, type ApiProxyDependencies } from "./proxy.routes";
 import { registerAuthRoutes, type AuthRoute } from "./routes";
 
 export type { AuthRoute } from "./routes";
@@ -18,7 +19,11 @@ declare module "fastify" {
 }
 
 /** O que as rotas do servidor precisam: banco para readiness, chave para JWKS. */
-export type AuthHttpServerDependencies = HealthRouteDependencies & JwksRouteDependencies;
+export type AuthHttpServerDependencies = HealthRouteDependencies &
+  JwksRouteDependencies & {
+    /** Quando presente, o próprio Fastify serve o proxy Auth -> API. */
+    readonly proxy?: ApiProxyDependencies;
+  };
 
 export interface AuthHttpServerOptions {
   readonly dependencies: AuthHttpServerDependencies;
@@ -44,6 +49,52 @@ export interface AuthHttpServer {
 const firstHeader = (value: string | string[] | undefined): string | undefined =>
   Array.isArray(value) ? value[0] : value;
 
+function badRequest(message: string): Error {
+  return Object.assign(new Error(message), { statusCode: 400 });
+}
+
+/**
+ * O parser das rotas do proxy reproduz o `json()` do Express: corpo vazio vira
+ * `{}`, só objeto/array é aceito e JSON malformado é 400 antes da autenticação.
+ * O `parseAs: "buffer"` entrega o corpo cru ao leitor; o limite vem da rota.
+ */
+function parseProxyJsonBody(
+  _request: FastifyRequest,
+  body: Buffer,
+  done: (error: Error | null, result?: unknown) => void,
+): void {
+  const text = body.toString("utf8");
+  if (text.length === 0) {
+    done(null, {});
+    return;
+  }
+  try {
+    const value = JSON.parse(text) as unknown;
+    if (value === null || typeof value !== "object") {
+      done(badRequest("invalid JSON body"), undefined);
+      return;
+    }
+    done(null, value);
+  } catch {
+    done(badRequest("invalid JSON body"), undefined);
+  }
+}
+
+/**
+ * Os parsers vivem num escopo filho, só das rotas do proxy. O handler de
+ * coexistência (404) continua no escopo raiz, que não tem parser, e por isso
+ * recebe o corpo cru intacto para o Nest/Express consumir.
+ */
+function registerProxyRoutes(fastify: FastifyInstance, proxy: ApiProxyDependencies): void {
+  void fastify.register(async (scope) => {
+    scope.addContentTypeParser("application/json", { parseAs: "buffer" }, parseProxyJsonBody);
+    scope.addContentTypeParser("*", { parseAs: "buffer" }, (_request, _body, done) => {
+      done(null, undefined);
+    });
+    registerAuthRoutes(scope, apiProxyRoutes(proxy));
+  });
+}
+
 function statusOf(error: unknown): number | undefined {
   if (typeof error !== "object" || error === null || !("statusCode" in error)) return undefined;
   const status = (error as { statusCode?: unknown }).statusCode;
@@ -55,9 +106,10 @@ function statusOf(error: unknown): number | undefined {
  * resto ao handler em coexistência (hoje o Express do Nest), preservando os
  * contratos que ainda vivem lá.
  *
- * Os parsers de corpo do Fastify são removidos de propósito nesta etapa: as
- * rotas migradas não têm corpo, e assim o corpo cru chega intacto à rota em
- * coexistência, que mantém seus limites de 32 KB, Leitura diária e entrega.
+ * Os parsers de corpo do escopo raiz continuam removidos de propósito: assim o
+ * corpo cru chega intacto à rota em coexistência, que mantém seus limites de
+ * 32 KB, Leitura diária e entrega. As rotas do proxy têm parsers próprios num
+ * escopo filho, com o limite declarado em cada rota.
  */
 export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpServer {
   const logger = options.logger ?? new ConsoleAuthLogger();
@@ -102,6 +154,8 @@ export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpSe
     ...documentationRoutes(),
     ...(options.routes ?? []),
   ]);
+
+  if (options.dependencies.proxy) registerProxyRoutes(fastify, options.dependencies.proxy);
 
   return {
     fastify,

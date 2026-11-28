@@ -2,7 +2,6 @@ import { Module, type DynamicModule, type Type } from '@nestjs/common';
 import type { RuntimeEnv } from './config/env';
 import type { AuthCore } from './composition-root';
 import { AuthCoreModule } from './auth-core/auth-core.module';
-import { ApiProxyModule } from './http/api-proxy/api-proxy.module';
 import { LoginWithPasswordModule } from './features/login-with-password/login-with-password.module';
 import { RefreshTokenModule } from './features/refresh-token/refresh-token.module';
 import { LogoutModule } from './features/logout/logout.module';
@@ -28,7 +27,6 @@ export class AppModule {
       module: AppModule,
       imports: [
         AuthCoreModule.forRoot(env, core),
-        ApiProxyModule,
         LoginWithPasswordModule,
         RefreshTokenModule,
         LogoutModule,
