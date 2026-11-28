@@ -37,9 +37,22 @@ function fakeDatabase(schemaVersion = AUTH_SCHEMA_VERSION): AuthHttpServerDepend
 function dependencies(overrides: Partial<AuthHttpServerDependencies> = {}): AuthHttpServerDependencies {
   return {
     database: fakeDatabase(),
-    signingKeyService: { publicJwks: () => ({ keys: [publicJwk] }) },
+    signingKeyService: {
+      publicJwks: () => ({ keys: [publicJwk] }),
+      publicKeyFor: async () => null,
+    },
+    env: { issuer: "https://auth.example.test", audience: "braid-api" },
+    authorizationService: { currentUser: async () => { throw new Error("unexpected currentUser"); } },
+    loginWithPassword: { execute: async () => { throw new Error("unexpected login"); } },
+    refresh: { execute: async () => { throw new Error("unexpected refresh"); } },
+    logout: { execute: async () => { throw new Error("unexpected logout"); } },
+    logoutAll: { execute: async () => { throw new Error("unexpected logoutAll"); } },
+    currentUser: { execute: async () => { throw new Error("unexpected currentUser usecase"); } },
+    inspectInvite: { execute: async () => { throw new Error("unexpected inspectInvite"); } },
+    acceptInvite: { execute: async () => { throw new Error("unexpected acceptInvite"); } },
+    createInvite: { execute: async () => { throw new Error("unexpected createInvite"); } },
     ...overrides,
-  };
+  } as AuthHttpServerDependencies;
 }
 
 describe("Auth Fastify server", () => {

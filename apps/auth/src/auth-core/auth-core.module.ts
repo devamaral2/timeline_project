@@ -18,7 +18,6 @@ import { PostgresUserRepository } from './persistence/postgres-user.repository';
 import { AuthorizationService } from './security/authorization.service';
 import { BearerAuthGuard } from '../nest/bearer-auth.guard';
 import { PostgresSigningKeyRepository } from './security/postgres-signing-key.repository';
-import { RequireSuperAdminGuard } from '../nest/require-super-admin.guard';
 import { SigningKeyService } from './security/signing-key.service';
 
 /**
@@ -48,7 +47,6 @@ export class AuthCoreModule {
       { provide: AuthorizationService, useValue: core.authorizationService },
       { provide: DeviceKeyAuthGuard, useClass: DeviceKeyAuthGuard },
       { provide: BearerAuthGuard, useClass: BearerAuthGuard },
-      { provide: RequireSuperAdminGuard, useClass: RequireSuperAdminGuard },
     ];
 
     return {
@@ -74,7 +72,6 @@ export class AuthCoreModule {
         AuthorizationService,
         DeviceKeyAuthGuard,
         BearerAuthGuard,
-        RequireSuperAdminGuard,
       ],
     };
   }
