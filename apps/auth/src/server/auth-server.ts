@@ -8,9 +8,10 @@ import type { AuthenticatedActor } from "../domain/users/user";
 import { toAuthErrorResponse } from "../http/auth-error-response";
 import { documentationRoutes } from "./documentation.routes";
 import { authFeatureRoutes, type AuthFeatureDependencies } from "./feature.routes";
-import { createAuthGuards, type AuthGuardDependencies } from "./guards";
+import { createAuthGuards, type AuthGuardDependencies, type AuthGuards } from "./guards";
 import { healthRoutes, type HealthRouteDependencies } from "./health.routes";
 import { jwksRoutes, type JwksRouteDependencies } from "./jwks.routes";
+import { apiProxyRoutes, type ApiProxyDependencies } from "./proxy.routes";
 import { registerAuthRoutes, type AuthRoute } from "./routes";
 
 export type { AuthRoute } from "./routes";
@@ -25,12 +26,16 @@ declare module "fastify" {
 
 /**
  * O que as rotas do servidor precisam: banco para readiness, chave para JWKS,
- * guards de sessão e os use cases das features já migradas.
+ * guards de sessão, os use cases das features já migradas e, quando ligado, o
+ * proxy Auth -> API.
  */
 export type AuthHttpServerDependencies = HealthRouteDependencies &
   JwksRouteDependencies &
   AuthGuardDependencies &
-  AuthFeatureDependencies;
+  AuthFeatureDependencies & {
+    /** Quando presente, o próprio Fastify serve o proxy Auth -> API. */
+    readonly proxy?: ApiProxyDependencies;
+  };
 
 export interface AuthHttpServerOptions {
   readonly dependencies: AuthHttpServerDependencies;
@@ -55,6 +60,56 @@ export interface AuthHttpServer {
 
 const firstHeader = (value: string | string[] | undefined): string | undefined =>
   Array.isArray(value) ? value[0] : value;
+
+function badRequest(message: string): Error {
+  return Object.assign(new Error(message), { statusCode: 400 });
+}
+
+/**
+ * O parser das rotas do proxy reproduz o `json()` do Express: corpo vazio vira
+ * `{}`, só objeto/array é aceito e JSON malformado é 400 antes da autenticação.
+ * O `parseAs: "buffer"` entrega o corpo cru ao leitor; o limite vem da rota.
+ */
+function parseProxyJsonBody(
+  _request: FastifyRequest,
+  body: Buffer,
+  done: (error: Error | null, result?: unknown) => void,
+): void {
+  const text = body.toString("utf8");
+  if (text.length === 0) {
+    done(null, {});
+    return;
+  }
+  try {
+    const value = JSON.parse(text) as unknown;
+    if (value === null || typeof value !== "object") {
+      done(badRequest("invalid JSON body"), undefined);
+      return;
+    }
+    done(null, value);
+  } catch {
+    done(badRequest("invalid JSON body"), undefined);
+  }
+}
+
+/**
+ * Os parsers do proxy vivem num escopo filho próprio. O escopo raiz continua
+ * sem parser, e o handler de coexistência (404) recebe o corpo cru intacto para
+ * o Nest/Express consumir. O limite de cada rota vem declarado nela.
+ */
+function registerProxyRoutes(
+  fastify: FastifyInstance,
+  proxy: ApiProxyDependencies,
+  guards: AuthGuards,
+): void {
+  void fastify.register(async (scope) => {
+    scope.addContentTypeParser("application/json", { parseAs: "buffer" }, parseProxyJsonBody);
+    scope.addContentTypeParser("*", { parseAs: "buffer" }, (_request, _body, done) => {
+      done(null, undefined);
+    });
+    registerAuthRoutes(scope, apiProxyRoutes(proxy), guards);
+  });
+}
 
 function statusOf(error: unknown): number | undefined {
   if (typeof error !== "object" || error === null || !("statusCode" in error)) return undefined;
@@ -93,9 +148,11 @@ function addMigratedBodyParsers(fastify: FastifyInstance): void {
  * ao handler em coexistência (hoje o Express do Nest), preservando os
  * contratos que ainda vivem lá.
  *
- * O parser de corpo das operações migradas vive no escopo filho: assim os
- * requests do proxy continuam chegando crus ao Express, que mantém seus
- * limites de 32 KB, Leitura diária e entrega.
+ * O escopo raiz continua sem parsers de propósito: assim o corpo cru chega
+ * intacto à rota em coexistência, que mantém seus limites de 32 KB, Leitura
+ * diária e entrega. Cada família migrada ganha um escopo filho com os seus
+ * parsers: as features com o JSON comum e o proxy com o `json()` do Express e o
+ * limite declarado em cada rota.
  */
 export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpServer {
   const logger = options.logger ?? new ConsoleAuthLogger();
@@ -150,6 +207,8 @@ export function createAuthHttpServer(options: AuthHttpServerOptions): AuthHttpSe
     addMigratedBodyParsers(scope);
     registerAuthRoutes(scope, authFeatureRoutes(options.dependencies), guards);
   });
+
+  if (options.dependencies.proxy) registerProxyRoutes(fastify, options.dependencies.proxy, guards);
 
   return {
     fastify,

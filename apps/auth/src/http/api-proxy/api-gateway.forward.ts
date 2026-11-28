@@ -1,17 +1,20 @@
-import type { Request, Response } from "express";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import type { RuntimeEnv } from "../../config/env";
 
 const DROPPED_HEADERS = ["host", "content-length", "authorization", "transfer-encoding", "connection"];
 
 /**
- * Encaminha a requisicao para a API com a identidade que o gateway validou.
- * Todo `x-auth-*` que o cliente mandou e descartado: so o gateway fala por si.
+ * Encaminha a requisição para a API com a identidade que o gateway validou.
+ * Todo `x-auth-*` que o cliente mandou é descartado: só o gateway fala por si.
+ *
+ * O corpo chega aqui já validado e limitado pelo parser da rota; a API recebe
+ * o mesmo JSON compacto que o Express reenviava, e a resposta volta com status,
+ * headers e bytes do upstream.
  */
 export async function forwardToApi(
   env: Pick<RuntimeEnv, "apiServiceUrl" | "internalServiceKey">,
-  request: Request,
-  response: Response,
-  body: unknown,
+  request: FastifyRequest,
+  reply: FastifyReply,
   identity: Readonly<Record<string, string>>,
 ): Promise<void> {
   const headers = new Headers();
@@ -25,15 +28,15 @@ export async function forwardToApi(
   headers.set("x-auth-gateway-key", gatewayKey);
   for (const [name, value] of Object.entries(identity)) headers.set(name, value);
 
-  const upstreamUrl = new URL(request.originalUrl, env.apiServiceUrl);
+  const upstreamUrl = new URL(request.url, env.apiServiceUrl);
   const upstream = await fetch(upstreamUrl, {
     method: request.method,
     headers,
-    body: request.method === "GET" || request.method === "HEAD" ? undefined : JSON.stringify(body ?? {}),
+    body: request.method === "GET" || request.method === "HEAD" ? undefined : JSON.stringify(request.body ?? {}),
   });
-  response.status(upstream.status);
+  reply.code(upstream.status);
   upstream.headers.forEach((value, name) => {
-    if (name !== "content-length" && name !== "transfer-encoding") response.setHeader(name, value);
+    if (name !== "content-length" && name !== "transfer-encoding") reply.header(name, value);
   });
-  response.send(Buffer.from(await upstream.arrayBuffer()));
+  reply.send(Buffer.from(await upstream.arrayBuffer()));
 }

@@ -110,6 +110,9 @@ describe("auth core without Nest", () => {
       "src/features/inspect-invite/inspect-invite.module.ts",
       "src/features/accept-invite/accept-invite.module.ts",
       "src/features/create-invite/create-invite.module.ts",
+      "src/http/api-proxy/api-proxy.module.ts",
+      "src/http/api-proxy/api-gateway.controller.ts",
+      "src/http/api-proxy/device-gateway.controller.ts",
     ];
 
     for (const file of removed) {

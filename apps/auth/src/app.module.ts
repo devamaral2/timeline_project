@@ -2,7 +2,6 @@ import { Module, type DynamicModule, type Type } from '@nestjs/common';
 import type { RuntimeEnv } from './config/env';
 import type { AuthCore } from './composition-root';
 import { AuthCoreModule } from './auth-core/auth-core.module';
-import { ApiProxyModule } from './http/api-proxy/api-proxy.module';
 
 export interface AppModuleOptions {
   /** Controllers só de teste, montados junto com o Nest temporário. */
@@ -10,8 +9,9 @@ export interface AppModuleOptions {
 }
 
 /**
- * O que ainda vive no Nest: o proxy Auth -> API e a chave de dispositivo. As
- * sessões, convites e a administração já são servidos pelo Fastify.
+ * O que ainda vive no Nest: só o núcleo compartilhado e os controllers de teste
+ * que as sondas de contrato montam. Sessões, convites, administração e o proxy
+ * Auth -> API já são servidos pelo Fastify.
  */
 @Module({})
 export class AppModule {
@@ -22,7 +22,7 @@ export class AppModule {
   ): DynamicModule {
     return {
       module: AppModule,
-      imports: [AuthCoreModule.forRoot(env, core), ApiProxyModule],
+      imports: [AuthCoreModule.forRoot(env, core)],
       ...(options.controllers?.length ? { controllers: [...options.controllers] } : {}),
     };
   }

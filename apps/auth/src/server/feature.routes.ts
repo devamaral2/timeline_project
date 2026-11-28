@@ -28,8 +28,8 @@ export type AuthFeatureDependencies = LoginWithPasswordRouteDependencies &
 
 /**
  * A tabela das rotas de feature, montada a partir das declarações de cada
- * feature. O proxy e a chave de dispositivo continuam no servidor em
- * coexistência até a migração deles.
+ * feature. O proxy e a chave de dispositivo têm escopo próprio no servidor
+ * Fastify (`proxy.routes.ts`).
  */
 export function authFeatureRoutes(dependencies: AuthFeatureDependencies): AuthRoute[] {
   return [
