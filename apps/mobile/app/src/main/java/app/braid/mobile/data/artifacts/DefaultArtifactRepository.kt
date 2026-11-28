@@ -44,6 +44,7 @@ class DefaultArtifactRepository
         override suspend fun create(
             draft: ArtifactDraft,
             idempotencyKey: String,
+            taskIds: List<String>?,
         ): String {
             val body =
                 when (draft) {
@@ -53,11 +54,13 @@ class DefaultArtifactRepository
                             draft.content.name?.let { put("name", it) }
                             put("tags", draft.content.tags.toJsonArray())
                             put("data", buildJsonObject { put("body", draft.content.body) })
+                            taskIds?.let { put("taskIds", it.toJsonArray()) }
                         }
                     is ArtifactDraft.Meal ->
                         buildJsonObject {
                             put("type", "food")
                             put("data", buildJsonObject { put("inputText", draft.description) })
+                            taskIds?.let { put("taskIds", it.toJsonArray()) }
                         }
                 }
             return api.create(idempotencyKey, body).artifactId
@@ -68,6 +71,7 @@ class DefaultArtifactRepository
             revision: Int,
             text: TextContent,
             type: ArtifactType,
+            taskIds: List<String>?,
         ) {
             val body =
                 buildJsonObject {
@@ -76,6 +80,7 @@ class DefaultArtifactRepository
                     put("tags", text.tags.toJsonArray())
                     put("type", type.code)
                     put("data", buildJsonObject { put("body", text.body) })
+                    taskIds?.let { put("taskIds", it.toJsonArray()) }
                 }
             try {
                 api.update(id, body)

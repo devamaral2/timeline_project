@@ -1,0 +1,9 @@
+{
+  "taskIds": [
+    "task-10"
+  ],
+  "type": "food",
+  "data": {
+    "inputText": "Arroz e feijão"
+  }
+}

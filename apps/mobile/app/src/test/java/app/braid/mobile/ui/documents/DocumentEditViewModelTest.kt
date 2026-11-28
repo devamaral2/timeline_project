@@ -3,13 +3,24 @@ package app.braid.mobile.ui.documents
 import androidx.lifecycle.SavedStateHandle
 import app.braid.mobile.data.artifacts.ArtifactsApi
 import app.braid.mobile.data.artifacts.DefaultArtifactRepository
+import app.braid.mobile.data.tasks.DefaultHumanTaskSearch
+import app.braid.mobile.data.tasks.DefaultTaskEditRepository
+import app.braid.mobile.data.tasks.DefaultTaskRepository
+import app.braid.mobile.data.tasks.TaskDetailApi
+import app.braid.mobile.data.tasks.TaskEditApi
+import app.braid.mobile.data.tasks.TaskPickerApi
+import app.braid.mobile.data.tasks.TasksApi
+import app.braid.mobile.domain.artifact.ArtifactType
 import app.braid.mobile.domain.chat.ChatCommand
+import app.braid.mobile.domain.task.TaskKind
+import app.braid.mobile.domain.time.AppClock
 import app.braid.mobile.support.Fixtures
 import app.braid.mobile.support.TestBackend
 import app.braid.mobile.support.TestBackend.Companion.fixture
 import app.braid.mobile.support.TestBackend.Companion.status
 import app.braid.mobile.support.TestGraph
 import app.braid.mobile.support.stopAndJoin
+import app.braid.mobile.ui.picker.PickerSearchStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -21,6 +32,8 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.mockwebserver.MockResponse
@@ -33,6 +46,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DocumentEditViewModelTest {
@@ -54,6 +68,8 @@ class DocumentEditViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private val clock = AppClock { Instant.parse("2026-09-14T15:30:00Z") }
+
     private fun newViewModel(
         documentId: String? = null,
         name: String? = null,
@@ -61,7 +77,34 @@ class DocumentEditViewModelTest {
         DocumentEditViewModel(
             SavedStateHandle(listOfNotNull(documentId?.let { "documentId" to it }, name?.let { "name" to it }).toMap()),
             DefaultArtifactRepository(graph.apis.create(ArtifactsApi::class.java)),
+            DefaultHumanTaskSearch(
+                graph.apis.create(TaskPickerApi::class.java),
+                DefaultTaskRepository(graph.apis.create(TasksApi::class.java)),
+                clock,
+            ),
+            DefaultTaskEditRepository(graph.apis.create(TaskEditApi::class.java), graph.apis.create(TaskDetailApi::class.java)),
+            clock,
         ).also(created::add)
+
+    /** A lista de tarefas de pessoa e a agenda em volta de hoje que a folha "Tarefas" lê. */
+    private fun routeHumanTasks() {
+        backend.route("GET", "/api/tasks/tracked") { request ->
+            if (request.requestUrl?.queryParameter("q") == null) {
+                fixture("document-edit-human-tracked")
+            } else {
+                fixture("document-edit-human-tracked-filtered")
+            }
+        }
+        backend.route("GET", "/api/tasks", fixture("document-edit-human-agenda"))
+    }
+
+    private suspend fun DocumentEditViewModel.pickerReady(query: String = ""): List<String> =
+        (
+            state.first { state ->
+                val picker = (state as? DocumentEditUiState.Form)?.taskPicker
+                picker?.status == PickerSearchStatus.Ready && picker.query == query
+            } as DocumentEditUiState.Form
+        ).taskPicker!!.results.map { it.id }
 
     private suspend fun DocumentEditViewModel.settled(): DocumentEditUiState = state.first { it !is DocumentEditUiState.Loading }
 
@@ -502,5 +545,217 @@ class DocumentEditViewModelTest {
             assertEquals("Não foi possível salvar a nota. Tente novamente.", failed.error)
             assertEquals("Texto novo", failed.body)
             assertNull(failed.savedId)
+        }
+
+    // Tarefas ligadas
+
+    @Test
+    fun `editing lists the person tasks linked to the document, with the saved relation`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-text", fixture("documents-detail-text"))
+
+            val form = newViewModel("doc-text").settled() as DocumentEditUiState.Form
+
+            assertEquals(listOf("task-1", "task-3"), form.tasks.map { it.taskId })
+            assertEquals(listOf("creates", "uses"), form.tasks.map { it.relation })
+            assertEquals("Reunião de planejamento", form.tasks.first().name)
+            assertEquals(TaskKind.Common, form.tasks.first().kind)
+        }
+
+    @Test
+    fun `the task sheet offers person tasks from the list and then from the agenda around today, without repeats or linked ones`() =
+        runTest {
+            routeHumanTasks()
+            backend.route("GET", "/api/artifacts/doc-text", fixture("documents-detail-text"))
+            val viewModel = newViewModel("doc-text")
+            viewModel.settled()
+
+            viewModel.openTaskPicker()
+
+            assertEquals(listOf("task-9", "task-10", "task-11"), viewModel.pickerReady())
+            val tracked = backend.requestsTo("GET", "/api/tasks/tracked").single().requestUrl!!
+            assertEquals("human", tracked.queryParameter("actor"))
+            assertEquals("50", tracked.queryParameter("limit"))
+            assertNull(tracked.queryParameter("q"))
+            val agenda = backend.requestsTo("GET", "/api/tasks").single().requestUrl!!
+            assertEquals("human", agenda.queryParameter("actor"))
+            assertEquals("2026-08-31T03:00:00.000Z", agenda.queryParameter("from"))
+            assertEquals("2026-09-29T02:59:59.999Z", agenda.queryParameter("to"))
+        }
+
+    @Test
+    fun `searching the task sheet filters the agenda by name, ignoring accents, and reuses the agenda already read`() =
+        runTest {
+            routeHumanTasks()
+            val viewModel = newViewModel()
+            viewModel.openTaskPicker()
+            viewModel.pickerReady()
+
+            viewModel.typeTaskSearch("almoco")
+
+            assertEquals(listOf("task-10"), viewModel.pickerReady("almoco"))
+            assertEquals(
+                "almoco",
+                backend
+                    .requestsTo("GET", "/api/tasks/tracked")
+                    .last()
+                    .requestUrl
+                    ?.queryParameter("q"),
+            )
+            assertEquals(1, backend.requestsTo("GET", "/api/tasks").size)
+        }
+
+    @Test
+    fun `a failed agenda still answers with the task list, and a failed list says the search failed`() =
+        runTest {
+            backend.route("GET", "/api/tasks/tracked", fixture("document-edit-human-tracked"), status(500))
+            backend.route("GET", "/api/tasks", status(500))
+            val viewModel = newViewModel()
+
+            viewModel.openTaskPicker()
+            assertEquals(listOf("task-1", "task-9"), viewModel.pickerReady())
+
+            viewModel.typeTaskSearch("x")
+            val failed =
+                viewModel.state.first {
+                    (it as? DocumentEditUiState.Form)?.taskPicker?.status == PickerSearchStatus.Failed
+                } as DocumentEditUiState.Form
+            assertEquals("x", failed.taskPicker?.query)
+        }
+
+    @Test
+    fun `a new text document goes with the tasks picked in the sheet`() =
+        runTest {
+            routeHumanTasks()
+            backend.route("POST", "/api/artifacts", fixture("document-edit-create-response", 201))
+            val viewModel = newViewModel()
+            viewModel.setBody("Lista de presentes")
+            viewModel.openTaskPicker()
+            viewModel.pickerReady()
+            val choices = viewModel.form().taskPicker!!.results
+
+            viewModel.pickTask(choices.first { it.id == "task-9" })
+            assertNull(viewModel.form().taskPicker)
+            viewModel.openTaskPicker()
+            assertEquals(listOf("task-1", "task-10", "task-11"), viewModel.pickerReady())
+            viewModel.pickTask(
+                viewModel
+                    .form()
+                    .taskPicker!!
+                    .results
+                    .first { it.id == "task-10" },
+            )
+            viewModel.save()
+
+            assertEquals("doc-new", viewModel.awaitSaved())
+            assertEquals(Fixtures.json("document-edit-create-note-with-tasks-request"), body(posts().single()))
+        }
+
+    @Test
+    fun `a new food goes with its tasks too`() =
+        runTest {
+            routeHumanTasks()
+            backend.route("POST", "/api/artifacts", fixture("document-edit-create-response", 201))
+            val viewModel = newViewModel()
+            viewModel.selectKind(NewDocumentKind.Meal)
+            viewModel.setMeal("Arroz e feijão")
+            viewModel.openTaskPicker()
+            viewModel.pickerReady()
+            viewModel.pickTask(
+                viewModel
+                    .form()
+                    .taskPicker!!
+                    .results
+                    .first { it.id == "task-10" },
+            )
+            viewModel.save()
+            viewModel.awaitSaved()
+
+            assertEquals(Fixtures.json("document-edit-create-food-with-tasks-request"), body(posts().single()))
+        }
+
+    @Test
+    fun `unlinking and linking tasks in an edit sends the new list, and closing the sheet links nothing`() =
+        runTest {
+            routeHumanTasks()
+            backend.route("GET", "/api/artifacts/doc-text", fixture("documents-detail-text"))
+            backend.route("PATCH", "/api/artifacts/doc-text", MockResponse().setResponseCode(204))
+            val viewModel = newViewModel("doc-text")
+            viewModel.settled()
+
+            viewModel.openTaskPicker()
+            viewModel.pickerReady()
+            viewModel.closeTaskPicker()
+            assertNull(viewModel.form().taskPicker)
+            viewModel.unlinkTask("task-3")
+            viewModel.openTaskPicker()
+            viewModel.pickerReady()
+            viewModel.pickTask(
+                viewModel
+                    .form()
+                    .taskPicker!!
+                    .results
+                    .first { it.id == "task-10" },
+            )
+            viewModel.save()
+            viewModel.awaitSaved()
+
+            val sent = body(patches().single()).jsonObject
+            assertEquals(JsonArray(listOf(JsonPrimitive("task-1"), JsonPrimitive("task-10"))), sent["taskIds"])
+            assertEquals(1, sent["expectedRevision"]?.jsonPrimitive?.content?.toInt())
+        }
+
+    @Test
+    fun `unlinking every task sends an empty list`() =
+        runTest {
+            routeHumanTasks()
+            backend.route("GET", "/api/artifacts/doc-text", fixture("documents-detail-text"))
+            backend.route("PATCH", "/api/artifacts/doc-text", MockResponse().setResponseCode(204))
+            val viewModel = newViewModel("doc-text")
+            viewModel.settled()
+
+            viewModel.unlinkTask("task-1")
+            viewModel.unlinkTask("task-3")
+            assertTrue(viewModel.form().tasks.isEmpty())
+            viewModel.save()
+            viewModel.awaitSaved()
+
+            assertEquals(JsonArray(emptyList()), body(patches().single()).jsonObject["taskIds"])
+        }
+
+    // Sugestões de tags e tipo
+
+    @Test
+    fun `tag suggestions come from the API after typing, keeping names that start with the text, and picking one adds it`() =
+        runTest {
+            backend.route("GET", "/api/tags", fixture("task-edit-tag-suggestions"))
+            val viewModel = newViewModel()
+
+            viewModel.setTagText("t")
+            viewModel.setTagText("  Trab")
+            val form = viewModel.state.first { (it as DocumentEditUiState.Form).tagSuggestions.isNotEmpty() } as DocumentEditUiState.Form
+
+            assertEquals(listOf("trabalho", "trabalho-novo"), form.tagSuggestions)
+            val request = backend.requestsTo("GET", "/api/tags").single()
+            assertEquals("trab", request.requestUrl?.queryParameter("query"))
+            assertEquals("6", request.requestUrl?.queryParameter("limit"))
+
+            viewModel.pickTagSuggestion("trabalho-novo")
+            assertEquals(listOf("trabalho-novo"), viewModel.form().tags)
+            assertEquals("", viewModel.form().tagText)
+            assertTrue(viewModel.form().tagSuggestions.isEmpty())
+        }
+
+    @Test
+    fun `the summary shows the type code of the choice when creating and of the document when editing`() =
+        runTest {
+            backend.route("GET", "/api/artifacts/doc-news", fixture("documents-detail-news"))
+            val creating = newViewModel()
+            assertEquals(ArtifactType.Text to "text", creating.form().shownType to creating.form().shownTypeCode)
+            creating.selectKind(NewDocumentKind.Meal)
+            assertEquals(ArtifactType.Food to "food", creating.form().shownType to creating.form().shownTypeCode)
+
+            val editing = newViewModel("doc-news").settled() as DocumentEditUiState.Form
+            assertEquals(ArtifactType.News to "news", editing.shownType to editing.shownTypeCode)
         }
 }

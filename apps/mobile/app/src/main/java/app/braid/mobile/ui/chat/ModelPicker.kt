@@ -93,6 +93,7 @@ import app.braid.mobile.core.designsystem.svgCircle
 import app.braid.mobile.domain.chat.ModelPicker
 import app.braid.mobile.domain.chat.ModelRow
 import app.braid.mobile.domain.chat.ModelTab
+import app.braid.mobile.domain.chat.emptyModelListMessage
 import app.braid.mobile.domain.chat.modelFooter
 import app.braid.mobile.domain.chat.modelRows
 import app.braid.mobile.domain.request.ModelEffort
@@ -127,8 +128,6 @@ private const val RADIO_MS = 200
 private const val SCRIM_ALPHA = 0.5f
 private const val HAIRLINE_ALPHA = 0.7f
 private const val STAR_OFF_SCALE = 0.88f
-private const val EMPTY_FAVORITES = "Nenhum favorito ainda. Toque na estrela de um modelo para guardá-lo aqui."
-private const val EMPTY_SEARCH = "Nenhum modelo com esse nome."
 
 /** O atraso de cada um dos três blocos da folha ao abrir. */
 private val BlockDelays = listOf(100, 160, 220)
@@ -490,11 +489,6 @@ private fun ModelBlock(
     val scheme = MaterialTheme.colorScheme
     val reduced = rememberPickerReducedMotion()
     val rows = remember(picker, tab, query) { modelRows(picker.options, picker.favorites, picker.selection, tab, query) }
-    // Sem nada guardado (ou oferecido) a aba dos favoritos diz isso, e não "sem resultado" de uma busca.
-    val nothingSaved =
-        remember(picker, tab) {
-            tab == ModelTab.Favorites && modelRows(picker.options, picker.favorites, picker.selection, tab, "").isEmpty()
-        }
     val list = rememberLazyListState()
     // A aba abre com o modelo escolhido à vista (numa lista longa, como a do OpenRouter); uma busca volta ao topo.
     LaunchedEffect(tab, query) { list.scrollToItem(if (query.isEmpty()) max(0, rows.indexOfFirst { it.selected }) else 0) }
@@ -514,7 +508,7 @@ private fun ModelBlock(
             if (rows.isEmpty()) {
                 item {
                     Text(
-                        text = if (nothingSaved) EMPTY_FAVORITES else EMPTY_SEARCH,
+                        text = emptyModelListMessage(tab, query),
                         modifier = Modifier.padding(start = 2.dp, end = SheetSide / 2, top = 14.dp, bottom = 14.dp),
                         color = scheme.onSurfaceVariant,
                         fontSize = 14.sp,

@@ -1,0 +1,46 @@
+[
+  {
+    "id": "task-1",
+    "actor": "human",
+    "kind": "common",
+    "status": "todo",
+    "priority": "medium",
+    "name": "Reunião de planejamento",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "diario",
+      "personal": true
+    },
+    "startedAt": "2026-09-14T12:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  },
+  {
+    "id": "task-9",
+    "actor": "human",
+    "kind": "common",
+    "status": "todo",
+    "priority": "medium",
+    "name": "Comprar presentes",
+    "description": "",
+    "project": {
+      "id": "project-personal",
+      "name": "diario",
+      "personal": true
+    },
+    "startedAt": "2026-09-16T12:00:00.000Z",
+    "longRunning": false,
+    "notifyOffsetsMinutes": [],
+    "tags": [],
+    "artifactTypes": [],
+    "revision": 1,
+    "createdAt": "2026-09-01T12:00:00.000Z",
+    "updatedAt": "2026-09-01T12:00:00.000Z"
+  }
+]

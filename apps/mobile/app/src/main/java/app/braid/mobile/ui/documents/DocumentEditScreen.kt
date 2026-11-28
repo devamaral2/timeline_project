@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -28,12 +29,17 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,7 +67,16 @@ import app.braid.mobile.core.designsystem.BraidMonoFont
 import app.braid.mobile.core.designsystem.BraidPill
 import app.braid.mobile.core.designsystem.SvgIcon
 import app.braid.mobile.core.designsystem.braidBrand
+import app.braid.mobile.core.designsystem.braidTokens
 import app.braid.mobile.core.designsystem.tagColors
+import app.braid.mobile.domain.artifact.ArtifactType
+import app.braid.mobile.domain.artifact.whenLabel
+import app.braid.mobile.domain.task.TaskCard
+import app.braid.mobile.ui.picker.EntityPickerSheet
+import app.braid.mobile.ui.taskedit.AddButton
+import app.braid.mobile.ui.taskedit.TaskChoice
+import app.braid.mobile.ui.tasks.TaskKindMark
+import java.time.Instant
 
 /**
  * O formulário do artefato: criação (o `/nota` do chat, com o nome já digitado) e edição da nota de texto própria.
@@ -144,6 +159,18 @@ interface DocumentEditActions {
 
     fun removeTag(tag: String)
 
+    fun pickTagSuggestion(name: String)
+
+    fun openTaskPicker()
+
+    fun typeTaskSearch(text: String)
+
+    fun closeTaskPicker()
+
+    fun pickTask(card: TaskCard)
+
+    fun unlinkTask(taskId: String)
+
     fun save()
 }
 
@@ -168,9 +195,11 @@ private fun FormBody(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (form.existing) {
-            TypeMark()
+            Box(Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape).padding(horizontal = 14.dp, vertical = 10.dp)) {
+                TypeMark(form.shownType, form.shownTypeCode)
+            }
         } else {
-            KindSwitch(form.kind, enabled = !form.saving, onSelect = actions::selectKind)
+            KindSelect(form, enabled = !form.saving, onSelect = actions::selectKind)
         }
         if (!form.isMeal) {
             TextBox(
@@ -190,6 +219,7 @@ private fun FormBody(
         ContentSection(form, actions)
         TagsSection(form, actions)
     }
+    TasksSection(form, actions)
     form.error?.let {
         Text(
             text = it,
@@ -201,33 +231,78 @@ private fun FormBody(
     }
 }
 
+/** O ícone do tipo e o código dele em mono (`text`, `news`, `food`), em cinza, como o `typeMark` do web. */
 @Composable
-private fun TypeMark() {
-    Text(
-        text = "TEXT",
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontFamily = BraidMonoFont,
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.1.em,
-    )
+private fun TypeMark(
+    type: ArtifactType,
+    code: String,
+) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        SvgIcon(DocumentIcons.glyph(type), size = 16.dp, color = muted, modifier = Modifier.clearAndSetSemantics {})
+        Text(text = code, color = muted, fontFamily = BraidMonoFont, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 1)
+    }
 }
 
-/** Nota ou Alimento (só na criação): dois botões de pílula, o escolhido preenchido. */
+/** "Tipo" (só na criação): a pílula com o ícone, o código e a seta, que abre a lista Nota e Alimento, como o web. */
 @Composable
-private fun KindSwitch(
-    selected: NewDocumentKind,
+private fun KindSelect(
+    form: DocumentEditUiState.Form,
     enabled: Boolean,
     onSelect: (NewDocumentKind) -> Unit,
 ) {
-    Row(
-        Modifier
-            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-            .padding(2.dp)
-            .semantics { contentDescription = "Tipo" },
-    ) {
-        NewDocumentKind.entries.forEach { kind ->
-            ModeButton(kind.label, selected = kind == selected, enabled = enabled) { onSelect(kind) }
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier
+                .defaultMinSize(minHeight = 44.dp)
+                .clip(CircleShape)
+                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                .clickable(enabled = enabled, role = Role.DropdownList) { open = true }
+                .padding(horizontal = 14.dp)
+                .semantics { contentDescription = "Tipo: ${form.kind.label}" },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TypeMark(form.shownType, form.shownTypeCode)
+            SvgIcon(
+                BraidIcons.chevronDown,
+                size = 14.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            NewDocumentKind.entries.forEach { kind ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            kind.label,
+                            fontSize = 14.sp,
+                            fontWeight = if (kind == form.kind) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    },
+                    leadingIcon = {
+                        SvgIcon(
+                            DocumentIcons.glyph(kind.type),
+                            size = 16.dp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.clearAndSetSemantics {},
+                        )
+                    },
+                    trailingIcon =
+                        if (kind == form.kind) {
+                            { SvgIcon(BraidIcons.check, size = 16.dp, color = MaterialTheme.colorScheme.onBackground) }
+                        } else {
+                            null
+                        },
+                    modifier = Modifier.semantics { selected = kind == form.kind },
+                    onClick = {
+                        open = false
+                        onSelect(kind)
+                    },
+                )
+            }
         }
     }
 }
@@ -385,6 +460,138 @@ private fun TagsSection(
                 }
             }
             TagField(form.tagText, enabled = !form.saving, onChange = actions::setTagText, onCommit = actions::commitTag)
+        }
+        val shown = form.tagSuggestions.filter { it !in form.tags }
+        if (form.tagText.isNotBlank() && shown.isNotEmpty()) {
+            Column(Modifier.padding(top = 8.dp).semantics { contentDescription = "Sugestões de tags" }) {
+                shown.forEach { name ->
+                    Text(
+                        text = "#$name",
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = 48.dp)
+                                .clickable(role = Role.Button) { actions.pickTagSuggestion(name) }
+                                .padding(horizontal = 4.dp, vertical = 12.dp),
+                        color = tagColors(name).color,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * "Tarefas": as tarefas de pessoa ligadas ao artefato (nome, tipo e quando, a relação gravada à direita e o "x" que
+ * desliga) e o "+" que abre a folha de seleção, como o formulário do web. A gravação fica para o Salvar.
+ */
+@Composable
+private fun TasksSection(
+    form: DocumentEditUiState.Form,
+    actions: DocumentEditActions,
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionLabel("Tarefas")
+            if (form.tasks.isNotEmpty()) {
+                Text(
+                    form.tasks.size.toString(),
+                    modifier = Modifier.padding(bottom = 10.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = BraidMonoFont,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                )
+            }
+        }
+        if (form.tasks.isNotEmpty()) {
+            Column(Modifier.semantics { contentDescription = "Tarefas ligadas" }) {
+                form.tasks.forEach { task ->
+                    LinkedTaskRow(task, form.now, enabled = !form.saving) { actions.unlinkTask(task.taskId) }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                }
+            }
+        }
+        Row(
+            Modifier.padding(top = if (form.tasks.isEmpty()) 0.dp else 10.dp).defaultMinSize(minHeight = 44.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AddButton("Adicionar tarefa", actions::openTaskPicker)
+            if (form.tasks.isEmpty()) {
+                Text("nenhuma tarefa", color = braidTokens().faint, fontSize = 14.sp, lineHeight = 20.sp)
+            }
+        }
+    }
+    form.taskPicker?.let { picker ->
+        EntityPickerSheet(
+            title = "Tarefas",
+            searchLabel = "Buscar tarefa para ligar",
+            state = picker,
+            failedMessage = TASK_LINK_SEARCH_FAILED,
+            keyOf = { it.id },
+            nameOf = { it.name },
+            onType = actions::typeTaskSearch,
+            onPick = actions::pickTask,
+            onClose = actions::closeTaskPicker,
+        ) { card -> TaskChoice(card, form.now) }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LinkedTaskRow(
+    task: LinkedTask,
+    now: Instant,
+    enabled: Boolean,
+    onRemove: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text(
+                task.name,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 15.sp,
+                lineHeight = 24.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                TaskKindMark(task.kind)
+                task.startedAt?.let {
+                    Text(whenLabel(it, now), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp, lineHeight = 20.sp)
+                }
+            }
+        }
+        task.relation?.let {
+            Text(
+                it,
+                modifier = Modifier.padding(top = 10.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontFamily = BraidMonoFont,
+                fontSize = 12.sp,
+                lineHeight = 24.sp,
+            )
+        }
+        Box(
+            Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onRemove)
+                .semantics { contentDescription = "Desligar da tarefa “${task.name}”" },
+            contentAlignment = Alignment.Center,
+        ) {
+            SvgIcon(
+                BraidIcons.close,
+                size = 16.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
         }
     }
 }

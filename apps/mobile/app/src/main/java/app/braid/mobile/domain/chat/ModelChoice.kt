@@ -165,6 +165,20 @@ sealed interface ModelTab {
     ) : ModelTab
 }
 
+/**
+ * O aviso da lista vazia da folha, como o web: com busca, "sem resultado"; sem busca, nos favoritos, que nada foi guardado
+ * e, num provedor, que ele não oferece modelo.
+ */
+fun emptyModelListMessage(
+    tab: ModelTab,
+    query: String,
+): String =
+    when {
+        query.isNotBlank() -> "Nenhum modelo com esse nome."
+        tab == ModelTab.Favorites -> "Nenhum favorito ainda. Toque na estrela de um modelo para guardá-lo aqui."
+        else -> "Nenhum modelo neste provedor."
+    }
+
 /** Uma linha da lista de modelos da folha. */
 data class ModelRow(
     val provider: ModelProvider,
