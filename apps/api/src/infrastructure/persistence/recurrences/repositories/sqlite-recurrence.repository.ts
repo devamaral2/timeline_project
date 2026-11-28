@@ -1,4 +1,3 @@
-import { and, asc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import {
   SUBTASK_RELATION,
   RecurrenceNotFoundError,
@@ -9,12 +8,13 @@ import {
   type Recurrence,
 } from "../../../../domain";
 import type { RecurrenceRepository } from "../../../../domain/ports";
-import * as schema from "../../database/schema";
-import { writeArtifacts } from "../../artifacts/repositories/postgres-artifact.repository";
+import { recurrenceExceptions, recurrences, taskTaskRelation } from "../../database/tables";
+import { sql } from "../../sqlite/sql";
+import { writeArtifacts } from "../../artifacts/repositories/sqlite-artifact.repository";
 import { resolveProjectId, type ProjectScope } from "../../projects/resolve-project";
-import { insertTaskAggregate } from "../../tasks/repositories/postgres-task.repository";
+import { insertTaskAggregate } from "../../tasks/repositories/sqlite-task.repository";
 import { classifyUpdateFailure } from "../../shared/classify-update-failure";
-import { lockUser, type Db, type Tx } from "../../shared/tx";
+import type { Db, Tx } from "../../shared/tx";
 import { mapRecurrenceRow, recurrenceColumnsOf } from "../mappers/recurrence-row.mapper";
 
 const errors = {
@@ -36,7 +36,7 @@ function projectOfTemplate(recurrence: Recurrence): string | undefined {
 export async function insertRecurrenceAggregate(tx: Tx, recurrence: Recurrence, scope?: ProjectScope): Promise<void> {
   // O projeto que o modelo escolheu vale antes das regras do pedido (`scope`); sem escolha, valem elas e depois `diario`.
   const projectId = await resolveProjectId(tx, { ...scope, userId: recurrence.userId, projectId: projectOfTemplate(recurrence) });
-  await tx.insert(schema.recurrences).values({ ...recurrenceColumnsOf(recurrence), projectId });
+  await tx.execute(recurrences.insert({ ...recurrenceColumnsOf(recurrence), projectId }));
 }
 
 /**
@@ -59,23 +59,15 @@ export async function updateRecurrenceAggregate(
   // ter nascido no projeto de um pedido, que o modelo nao guarda); para voltar a `diario`, o modelo leva o id dele.
   const chosen = projectOfTemplate(recurrence);
   const projectId = chosen === undefined ? undefined : await resolveProjectId(tx, { userId: actorUserId, projectId: chosen });
-  const updated = await tx
-    .update(schema.recurrences)
-    .set(projectId === undefined ? columns : { ...columns, projectId })
-    .where(
-      and(
-        eq(schema.recurrences.id, recurrence.id),
-        eq(schema.recurrences.userId, actorUserId),
-        eq(schema.recurrences.revision, expectedRevision),
-      ),
-    )
-    .returning({ id: schema.recurrences.id });
+  const updated = await tx.execute(sql`
+    UPDATE recurrences
+    SET ${recurrences.set(projectId === undefined ? columns : { ...columns, projectId })}
+    WHERE id = ${recurrence.id} AND user_id = ${actorUserId} AND revision = ${expectedRevision}
+    RETURNING id`);
 
-  if (updated.length === 0) {
-    const [existing] = await tx
-      .select({ userId: schema.recurrences.userId, revision: schema.recurrences.revision })
-      .from(schema.recurrences)
-      .where(eq(schema.recurrences.id, recurrence.id));
+  if (updated.rows.length === 0) {
+    const existing = await tx.get<{ userId: string; revision: number }>(sql`
+      SELECT user_id AS "userId", revision FROM recurrences WHERE id = ${recurrence.id}`);
     classifyUpdateFailure(existing, actorUserId, expectedRevision, {
       notFound: errors.notFound(recurrence.id),
       ownership: errors.ownership,
@@ -98,22 +90,21 @@ export async function deleteRecurrenceAggregate(
 
   // A relacao herdada da serie vira da propria ocorrencia: a serie some, o artefato fica.
   await tx.execute(sql`
-    UPDATE task_artifact_relation SET from_recurrence = false
+    UPDATE task_artifact_relation SET from_recurrence = 0
     WHERE task_id IN (SELECT id FROM tasks WHERE recurrence_id = ${recurrenceId})
   `);
 
   // O `set null` da chave estrangeira so soltaria `recurrence_id`; o dia tambem deixa de querer dizer
   // alguma coisa, entao os tres saem juntos, numa linha so: o check `tasks_occurrence_requires_day`
   // nao aceita um sem o outro.
-  await tx
-    .update(schema.tasks)
-    .set({ recurrenceId: null, occurrenceOn: null, recurrenceDetached: false })
-    .where(eq(schema.tasks.recurrenceId, recurrenceId));
+  await tx.execute(sql`
+    UPDATE tasks SET recurrence_id = NULL, occurrence_on = NULL, recurrence_detached = 0
+    WHERE recurrence_id = ${recurrenceId}`);
 
-  await tx.delete(schema.recurrences).where(eq(schema.recurrences.id, recurrenceId));
+  await tx.execute(sql`DELETE FROM recurrences WHERE id = ${recurrenceId}`);
 }
 
-export class PostgresRecurrenceRepository implements RecurrenceRepository {
+export class SqliteRecurrenceRepository implements RecurrenceRepository {
   constructor(private readonly db: Db) {}
 
   async save(recurrence: Recurrence, artifacts?: ArtifactWrites): Promise<void> {
@@ -143,73 +134,54 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
   }
 
   async findById(recurrenceId: string): Promise<Recurrence | null> {
-    const [row] = await this.db.select().from(schema.recurrences).where(eq(schema.recurrences.id, recurrenceId));
+    const row = await this.db.get(sql`SELECT ${recurrences.select()} FROM recurrences WHERE id = ${recurrenceId}`, recurrences);
     return row ? mapRecurrenceRow(row) : null;
   }
 
   async findNextOccurrenceId(recurrenceId: string, fromDay: string): Promise<string | null> {
-    const [row] = await this.db
-      .select({ id: schema.tasks.id })
-      .from(schema.tasks)
-      .where(
-        and(
-          eq(schema.tasks.recurrenceId, recurrenceId),
-          gte(schema.tasks.occurrenceOn, fromDay),
-          eq(schema.tasks.recurrenceDetached, false),
-          isNull(schema.tasks.deletedAt),
-        ),
-      )
-      .orderBy(asc(schema.tasks.occurrenceOn))
-      .limit(1);
+    const row = await this.db.get<{ id: string }>(sql`
+      SELECT id FROM tasks
+      WHERE recurrence_id = ${recurrenceId} AND occurrence_on >= ${fromDay}
+        AND recurrence_detached = 0 AND deleted_at IS NULL
+      ORDER BY occurrence_on
+      LIMIT 1`);
     return row?.id ?? null;
   }
 
   async listByUserId(userId: string): Promise<Recurrence[]> {
-    const rows = await this.db
-      .select()
-      .from(schema.recurrences)
-      .where(eq(schema.recurrences.userId, userId))
-      .orderBy(asc(schema.recurrences.startsOn), asc(schema.recurrences.id));
+    const rows = await this.db.all(
+      sql`SELECT ${recurrences.select()} FROM recurrences WHERE user_id = ${userId} ORDER BY starts_on, id`,
+      recurrences,
+    );
     return rows.map(mapRecurrenceRow);
   }
 
   async listPendingMaterialization(userId: string, horizon: string): Promise<Recurrence[]> {
-    const { recurrences: table } = schema;
-    const rows = await this.db
-      .select()
-      .from(table)
-      .where(
-        and(
-          eq(table.userId, userId),
-          or(isNull(table.materializedThrough), lt(table.materializedThrough, horizon)),
-          // Uma serie que ja foi gerada ate o ultimo dia dela nao tem mais nada a fazer.
-          or(isNull(table.endsOn), isNull(table.materializedThrough), lt(table.materializedThrough, table.endsOn)),
-        ),
-      );
+    const rows = await this.db.all(
+      sql`SELECT ${recurrences.select()} FROM recurrences
+          WHERE user_id = ${userId}
+            AND (materialized_through IS NULL OR materialized_through < ${horizon})
+            -- Uma serie que ja foi gerada ate o ultimo dia dela nao tem mais nada a fazer.
+            AND (ends_on IS NULL OR materialized_through IS NULL OR materialized_through < ends_on)`,
+      recurrences,
+    );
     return rows.map(mapRecurrenceRow);
   }
 
   async listExceptions(recurrenceId: string): Promise<string[]> {
-    const rows = await this.db
-      .select({ day: schema.recurrenceExceptions.occurrenceOn })
-      .from(schema.recurrenceExceptions)
-      .where(eq(schema.recurrenceExceptions.recurrenceId, recurrenceId));
+    const rows = await this.db.all<{ day: string }>(sql`
+      SELECT occurrence_on AS "day" FROM recurrence_exceptions WHERE recurrence_id = ${recurrenceId}`);
     return rows.map((row) => row.day);
   }
 
   async addException(recurrenceId: string, dayKey: string): Promise<void> {
-    await this.db
-      .insert(schema.recurrenceExceptions)
-      .values({ recurrenceId, occurrenceOn: dayKey })
-      .onConflictDoNothing();
+    await this.db.execute(sql`${recurrenceExceptions.insert({ recurrenceId, occurrenceOn: dayKey })} ON CONFLICT DO NOTHING`);
   }
 
   async materialize(recurrence: Recurrence, occurrences: Task[], parentId?: string): Promise<void> {
     await this.db.transaction(async (tx) => {
-      // Duas abas lendo a agenda ao mesmo tempo esperam uma pela outra; o
-      // indice unico por dia continua sendo a garantia, isto so poupa trabalho.
-      await lockUser(tx, recurrence.userId);
-
+      // O escritor unico faz duas abas lendo a agenda ao mesmo tempo esperarem uma pela outra; o indice unico
+      // por dia continua sendo a garantia.
       // Com o soft delete a principal continua na tabela e a chave estrangeira aceitaria a
       // ocorrencia, que ficaria visivel como subtarefa de uma tarefa escondida.
       const parents = parentId ? await liveTasks(tx, recurrence.userId, [parentId]) : [];
@@ -219,19 +191,18 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
         if (!(await insertTaskAggregate(tx, occurrence))) continue;
         if (!parentId) continue;
         // A relacao faz parte da criacao da ocorrencia: nao conta como edicao da principal.
-        await tx
-          .insert(schema.taskTaskRelation)
-          .values({ fromTaskId: parentId, toTaskId: occurrence.id, relation: SUBTASK_RELATION });
+        await tx.execute(
+          taskTaskRelation.insert({ fromTaskId: parentId, toTaskId: occurrence.id, relation: SUBTASK_RELATION }),
+        );
       }
 
       // So avanca a marca d'agua se ninguem editou a regra no meio do caminho:
       // senao estas ocorrencias sao da regra velha, e a transacao volta inteira.
-      const advanced = await tx
-        .update(schema.recurrences)
-        .set({ materializedThrough: recurrence.materializedThrough ?? null })
-        .where(and(eq(schema.recurrences.id, recurrence.id), eq(schema.recurrences.revision, recurrence.revision)))
-        .returning({ id: schema.recurrences.id });
-      if (advanced.length === 0) {
+      const advanced = await tx.execute(sql`
+        UPDATE recurrences SET materialized_through = ${recurrence.materializedThrough ?? null}
+        WHERE id = ${recurrence.id} AND revision = ${recurrence.revision}
+        RETURNING id`);
+      if (advanced.rows.length === 0) {
         throw new RecurrenceRevisionConflictError(`Recurrence ${recurrence.id} changed while materializing`);
       }
     });
@@ -239,32 +210,23 @@ export class PostgresRecurrenceRepository implements RecurrenceRepository {
 }
 
 async function assertOwned(tx: Tx, recurrenceId: string, actorUserId: string): Promise<void> {
-  const [existing] = await tx
-    .select({ userId: schema.recurrences.userId })
-    .from(schema.recurrences)
-    .where(eq(schema.recurrences.id, recurrenceId));
+  const existing = await tx.get<{ userId: string }>(sql`SELECT user_id AS "userId" FROM recurrences WHERE id = ${recurrenceId}`);
   if (!existing) throw errors.notFound(recurrenceId)();
   if (existing.userId !== actorUserId) throw errors.ownership();
 }
 
 async function liveTasks(tx: Tx, userId: string, ids: readonly string[]): Promise<string[]> {
   if (ids.length === 0) return [];
-  const found = await tx.execute<{ id: string }>(sql`
+  const found = await tx.all<{ id: string }>(sql`
     SELECT id FROM tasks
-    WHERE id IN ${[...ids]} AND user_id = ${userId} AND deleted_at IS NULL
+    WHERE id IN ${sql.in(ids)} AND user_id = ${userId} AND deleted_at IS NULL
   `);
-  return found.rows.map((row) => row.id);
+  return found.map((row) => row.id);
 }
 
 /** As ocorrencias de `fromDay` em diante que ninguem mexeu a mao. As relacoes delas saem em cascata. */
 async function deleteUpcomingOccurrences(tx: Tx, recurrenceId: string, fromDay: string): Promise<void> {
-  await tx
-    .delete(schema.tasks)
-    .where(
-      and(
-        eq(schema.tasks.recurrenceId, recurrenceId),
-        gte(schema.tasks.occurrenceOn, fromDay),
-        eq(schema.tasks.recurrenceDetached, false),
-      ),
-    );
+  await tx.execute(sql`
+    DELETE FROM tasks
+    WHERE recurrence_id = ${recurrenceId} AND occurrence_on >= ${fromDay} AND recurrence_detached = 0`);
 }

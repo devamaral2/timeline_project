@@ -1,4 +1,3 @@
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   Artifact,
   ArtifactNotFoundError,
@@ -13,8 +12,9 @@ import type {
   FoodGenerationPayload,
   FoodGenerationRepository,
 } from "../../../../domain/ports";
-import * as schema from "../../database/schema";
+import { artifactArtifactRelation, artifacts, artifactTags } from "../../database/tables";
 import { sqlList } from "../../database/schema/sets";
+import { NOW, sql, type SqlFragment } from "../../sqlite/sql";
 import { agentStatusesBefore, REVIEW_SITUATION_ON_CLOSE } from "../../../../domain/agent-status";
 import { completeCurrentJob } from "../../../jobs/job-context";
 import { appendEntry } from "../../requests/request-rows";
@@ -25,18 +25,20 @@ import { mapArtifactRow, type ArtifactRow } from "../mappers/artifact-row.mapper
 import { startFoodGeneration } from "./food-generation";
 
 export async function insertArtifact(tx: Tx, artifact: Artifact): Promise<void> {
-  await tx.insert(schema.artifacts).values({
-    id: artifact.id,
-    revision: artifact.revision,
-    userId: artifact.userId ?? null,
-    name: artifact.name,
-    type: artifact.type as ArtifactRow["type"],
-    schemaVersion: artifact.schemaVersion,
-    data: artifact.data,
-    derived: artifact.derived,
-    createdAt: artifact.createdAt,
-    updatedAt: artifact.updatedAt,
-  });
+  await tx.execute(
+    artifacts.insert({
+      id: artifact.id,
+      revision: artifact.revision,
+      userId: artifact.userId ?? null,
+      name: artifact.name,
+      type: artifact.type as ArtifactRow["type"],
+      schemaVersion: artifact.schemaVersion,
+      data: artifact.data,
+      derived: artifact.derived,
+      createdAt: artifact.createdAt,
+      updatedAt: artifact.updatedAt,
+    }),
+  );
   await insertArtifactTags(tx, artifact);
   await startFoodGeneration(tx, artifact);
 }
@@ -45,7 +47,7 @@ async function insertArtifactTags(tx: Tx, artifact: Artifact): Promise<void> {
   if (artifact.tags.length === 0 || !artifact.userId) return;
 
   const tagIds = await upsertTagIds(tx, artifact.userId, artifact.tags);
-  await tx.insert(schema.artifactTags).values(tagIds.map((tagId) => ({ artifactId: artifact.id, tagId })));
+  await tx.execute(artifactTags.insert(tagIds.map((tagId) => ({ artifactId: artifact.id, tagId }))));
 }
 
 /** Artefato apagado conta como inexistente; artefato global nao e de ninguem, entao ninguem o edita. */
@@ -60,9 +62,9 @@ export async function updateArtifactAggregate(
     SET name = ${artifact.name},
         type = ${artifact.type},
         schema_version = ${artifact.schemaVersion},
-        data = ${JSON.stringify(artifact.data)}::jsonb,
+        data = ${sql.json(artifact.data)},
         revision = ${artifact.revision},
-        updated_at = now()
+        updated_at = ${NOW}
     WHERE id = ${artifact.id}
       AND user_id = ${actorUserId}
       AND revision = ${expectedRevision}
@@ -71,15 +73,13 @@ export async function updateArtifactAggregate(
   `);
 
   if (result.rows.length > 0) {
-    await tx.delete(schema.artifactTags).where(eq(schema.artifactTags.artifactId, artifact.id));
+    await tx.execute(sql`DELETE FROM artifact_tags WHERE artifact_id = ${artifact.id}`);
     await insertArtifactTags(tx, artifact);
     return;
   }
 
-  const [existing] = await tx
-    .select({ userId: schema.artifacts.userId, revision: schema.artifacts.revision })
-    .from(schema.artifacts)
-    .where(and(eq(schema.artifacts.id, artifact.id), isNull(schema.artifacts.deletedAt)));
+  const existing = await tx.get<{ userId: string | null; revision: number }>(sql`
+    SELECT user_id AS "userId", revision FROM artifacts WHERE id = ${artifact.id} AND deleted_at IS NULL`);
 
   classifyUpdateFailure(existing ? { userId: existing.userId ?? "", revision: existing.revision } : undefined, actorUserId, expectedRevision, {
     notFound: () => new ArtifactNotFoundError(`Artifact not found: ${artifact.id}`),
@@ -108,12 +108,14 @@ export async function insertDerivations(
   derivations: readonly { originalId: string; copyId: string }[],
 ): Promise<void> {
   if (derivations.length === 0) return;
-  await tx.insert(schema.artifactArtifactRelation).values(
-    derivations.map(({ originalId, copyId }) => ({
-      fromArtifactId: originalId,
-      toArtifactId: copyId,
-      relation: "derives" as const,
-    })),
+  await tx.execute(
+    artifactArtifactRelation.insert(
+      derivations.map(({ originalId, copyId }) => ({
+        fromArtifactId: originalId,
+        toArtifactId: copyId,
+        relation: "derives" as const,
+      })),
+    ),
   );
 }
 
@@ -122,21 +124,16 @@ export async function insertDerivations(
  * Apagar uma tarefa nao apaga os artefatos dela; so solta a relacao.
  */
 export async function softDeleteArtifact(tx: Tx, artifactId: string, actorUserId: string): Promise<void> {
-  const [existing] = await tx
-    .select({ userId: schema.artifacts.userId })
-    .from(schema.artifacts)
-    .where(and(eq(schema.artifacts.id, artifactId), isNull(schema.artifacts.deletedAt)));
+  const existing = await tx.get<{ userId: string | null }>(sql`
+    SELECT user_id AS "userId" FROM artifacts WHERE id = ${artifactId} AND deleted_at IS NULL`);
 
   if (!existing) throw new ArtifactNotFoundError(`Artifact not found: ${artifactId}`);
   if (existing.userId !== actorUserId) throw new ArtifactOwnershipError();
 
-  await tx
-    .update(schema.artifacts)
-    .set({ deletedAt: sql`now()`, updatedAt: sql`now()` })
-    .where(eq(schema.artifacts.id, artifactId));
+  await tx.execute(sql`UPDATE artifacts SET deleted_at = ${NOW}, updated_at = ${NOW} WHERE id = ${artifactId}`);
 }
 
-export class PostgresArtifactRepository implements ArtifactRepository, FoodGenerationRepository {
+export class SqliteArtifactRepository implements ArtifactRepository, FoodGenerationRepository {
   constructor(private readonly db: Db) {}
 
   async finishFoodGeneration(
@@ -149,9 +146,9 @@ export class PostgresArtifactRepository implements ArtifactRepository, FoodGener
       if (data) {
         const updated = await tx.execute(sql`
           UPDATE artifacts
-          SET data = ${JSON.stringify(data)}::jsonb,
+          SET data = ${sql.json(data)},
               revision = revision + 1,
-              updated_at = now()
+              updated_at = ${NOW}
           WHERE id = ${payload.artifactId}
             AND user_id = ${payload.userId}
             AND revision = ${payload.expectedRevision}
@@ -169,14 +166,14 @@ export class PostgresArtifactRepository implements ArtifactRepository, FoodGener
       // O pedido de construcao que altera este alimento termina junto com a escrita, so de onde a tabela deixa.
       const closing = final === "failed" ? "failed" : "completed";
       const requests = await tx.execute<{ id: string }>(sql`
-        UPDATE tasks e
+        UPDATE tasks AS e
         SET status = ${closing}, situation = ${REVIEW_SITUATION_ON_CLOSE},
-            finished_at = now(), updated_at = now()
+            finished_at = ${NOW}, updated_at = ${NOW}
         FROM task_artifact_relation r
         WHERE r.artifact_id = ${payload.artifactId} AND r.task_id = e.id
           AND e.actor = 'agent' AND e.kind = 'build_request' AND e.status IN (${sqlList(agentStatusesBefore(closing))})
           AND e.data->>'route' = 'food'
-        RETURNING e.id
+        RETURNING id
       `);
       for (const request of requests.rows) {
         await appendEntry(tx, {
@@ -217,53 +214,41 @@ export class PostgresArtifactRepository implements ArtifactRepository, FoodGener
   async findByIds(artifactIds: readonly string[]): Promise<Artifact[]> {
     if (artifactIds.length === 0) return [];
 
-    const rows = await this.db
-      .select()
-      .from(schema.artifacts)
-      .where(and(inArray(schema.artifacts.id, [...artifactIds]), isNull(schema.artifacts.deletedAt)));
+    const rows = await this.db.all(
+      sql`SELECT ${artifacts.select()} FROM artifacts WHERE id IN ${sql.in(artifactIds)} AND deleted_at IS NULL`,
+      artifacts,
+    );
     return this.hydrate(rows);
   }
 
   async listByUserId(userId: string, filter?: { types?: readonly string[] }): Promise<Artifact[]> {
-    const types = filter?.types?.length ? (filter.types as ArtifactRow["type"][]) : undefined;
-    const rows = await this.db
-      .select()
-      .from(schema.artifacts)
-      .where(
-        and(
-          eq(schema.artifacts.userId, userId),
-          isNull(schema.artifacts.deletedAt),
-          eq(schema.artifacts.derived, false),
-          types ? inArray(schema.artifacts.type, types) : undefined,
-        ),
-      )
-      .orderBy(desc(schema.artifacts.updatedAt), desc(schema.artifacts.id));
+    const types: SqlFragment = filter?.types?.length ? sql`AND type IN ${sql.in(filter.types)}` : sql.empty;
+    const rows = await this.db.all(
+      sql`SELECT ${artifacts.select()} FROM artifacts
+          WHERE user_id = ${userId} AND deleted_at IS NULL AND NOT derived ${types}
+          ORDER BY updated_at DESC, id DESC`,
+      artifacts,
+    );
     return this.hydrate(rows);
   }
 
   async listGlobal(type: string): Promise<Artifact[]> {
-    const rows = await this.db
-      .select()
-      .from(schema.artifacts)
-      .where(
-        and(
-          isNull(schema.artifacts.userId),
-          isNull(schema.artifacts.deletedAt),
-          eq(schema.artifacts.type, type as ArtifactRow["type"]),
-        ),
-      )
-      .orderBy(asc(schema.artifacts.name));
+    const rows = await this.db.all(
+      sql`SELECT ${artifacts.select()} FROM artifacts
+          WHERE user_id IS NULL AND deleted_at IS NULL AND type = ${type}
+          ORDER BY name`,
+      artifacts,
+    );
     return this.hydrate(rows);
   }
 
   private async hydrate(rows: readonly ArtifactRow[]): Promise<Artifact[]> {
     if (rows.length === 0) return [];
 
-    const tagRows = await this.db
-      .select({ artifactId: schema.artifactTags.artifactId, name: schema.tags.name })
-      .from(schema.artifactTags)
-      .innerJoin(schema.tags, eq(schema.artifactTags.tagId, schema.tags.id))
-      .where(inArray(schema.artifactTags.artifactId, rows.map((row) => row.id)));
+    const tagRows = await this.db.all<{ artifactId: string; name: string }>(sql`
+      SELECT atg.artifact_id AS "artifactId", t.name AS "name"
+      FROM artifact_tags atg JOIN tags t ON t.id = atg.tag_id
+      WHERE atg.artifact_id IN ${sql.in(rows.map((row) => row.id))}`);
     const tagsByArtifact = new Map<string, string[]>();
     for (const { artifactId, name } of tagRows) {
       tagsByArtifact.set(artifactId, [...(tagsByArtifact.get(artifactId) ?? []), name]);
