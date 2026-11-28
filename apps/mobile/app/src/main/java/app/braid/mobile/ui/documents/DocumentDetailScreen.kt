@@ -350,7 +350,7 @@ private fun ReadyContent(
             if (artifact.global) FactRow("Origem", "Catálogo global")
         }
     }
-    ArtifactContent(artifact)
+    ArtifactContent(artifact, cards = true)
     if (state.showsTasks) TasksSection(artifact, state.now, onOpenTask)
     RecordSection(artifact, state.now)
 }
@@ -371,7 +371,7 @@ private fun FactBlock(
 }
 
 @Composable
-private fun SectionLabel(
+internal fun SectionLabel(
     title: String,
     count: Int? = null,
 ) {

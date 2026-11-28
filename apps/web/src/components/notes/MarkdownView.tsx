@@ -72,9 +72,10 @@ function soleYouTubeLink(node: ExtraProps["node"]): { href: string; label: strin
 /**
  * O player vai só ao YouTube, um destino fixo: diferente de uma imagem, o
  * endereço não leva nada a um servidor qualquer. Carrega quando chega perto da
- * tela e fica isolado na moldura; o link original segue embaixo.
+ * tela e fica isolado na moldura; o link original segue embaixo, com o canal
+ * (`byline`) quando quem chama o conhece.
  */
-function YouTubePlayer({ href, label, video }: { href: string; label: string; video: YouTubeVideo }) {
+export function YouTubePlayer({ href, label, video, byline }: { href: string; label: string; video: YouTubeVideo; byline?: string | null }) {
   // Um link automático tem o próprio endereço como texto: repeti-lo como legenda seria ruído.
   const titled = label && !isRemote(label) && !label.startsWith("www.");
   return (
@@ -91,6 +92,7 @@ function YouTubePlayer({ href, label, video }: { href: string; label: string; vi
       />
       <figcaption>
         <ExternalLink href={href}>{titled ? label : "Abrir no YouTube"}</ExternalLink>
+        {byline ? ` · ${byline}` : null}
       </figcaption>
     </figure>
   );

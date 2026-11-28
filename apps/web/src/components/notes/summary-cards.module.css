@@ -1,0 +1,97 @@
+/*
+ * As fichas de notícias, de resumo de e-mail e de transcrição (`SummaryCards`): os números no topo e
+ * um cartão por item, sobre o plano. Cartão é uma linha de 1 px, sem sombra; a única ação preenchida
+ * da tela é a primeira "Responder" ou "Ler a transcrição". Usa os tokens base e os apelidos do shell
+ * (`--faint`, `--hairline`): a tela só existe dentro dele.
+ */
+.cards { display: flex; flex-direction: column; gap: 12px; min-width: 0; max-width: 62ch; overflow-wrap: anywhere; }
+.block { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.block:not(:first-child) { margin-top: 12px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* O vídeo da linha da fonte e, sem vídeo, a própria linha. */
+.player { --md-wash: color-mix(in oklab, var(--foreground) 7%, transparent); }
+.player a, .source a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--border); }
+.source { margin: 0; color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
+
+/* Os números do topo: até três, na serifa. */
+.score { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.score li { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 14px 14px 12px; }
+.score li + li { border-left: 1px solid var(--border); }
+.score b { font-family: var(--font-display); font-size: 28px; font-weight: 400; line-height: 28px; font-variant-numeric: tabular-nums; color: var(--foreground); }
+.score span { color: var(--muted-foreground); font-size: var(--font-size-xs); line-height: 16px; }
+
+/* O rótulo do grupo: o mesmo das seções do detalhe. */
+.group { composes: sectionLabel from "../ui/page.module.css"; }
+.group h2 { margin: 0; font: inherit; letter-spacing: inherit; color: var(--muted-foreground); }
+.group span { font-variant-numeric: tabular-nums; }
+.intro { color: var(--muted-foreground); font-size: 14px; line-height: 22px; }
+
+.card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.main { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px 16px; }
+.main[data-clipped] { max-height: 168px; overflow: hidden; }
+.kicker { margin: 0; color: var(--faint); font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; letter-spacing: .08em; text-transform: uppercase; }
+.from { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 999px; background: var(--secondary); color: var(--muted-foreground); font-size: 13px; font-weight: 600; line-height: 1; }
+.sender { flex: 1; min-width: 0; color: var(--foreground); font-size: 15px; font-weight: 600; line-height: 20px; }
+.when { flex: none; color: var(--faint); font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; font-variant-numeric: tabular-nums; }
+.title { margin: 0; color: var(--foreground); font-size: 16px; font-weight: 600; line-height: 22px; text-wrap: balance; }
+.kicker + .title { font-size: 17px; line-height: 23px; }
+.title[data-size="lg"] { font-family: var(--font-display); font-size: 24px; font-weight: 500; line-height: 30px; letter-spacing: -.01em; }
+.text { max-width: none; font-size: 15px; line-height: 23px; }
+.text blockquote { padding: 0; border: 0; font-family: var(--font-display); font-size: 20px; line-height: 28px; text-wrap: pretty; }
+
+/* O pé da ficha: o prazo e as fontes de um lado, as ações do outro. */
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; min-height: 56px; padding: 6px 6px 6px 16px; border-top: 1px solid var(--border); }
+.footFacts { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: 0 12px; min-width: 0; }
+.due { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 13px; font-weight: 500; line-height: 18px; }
+.due svg { flex: none; width: 16px; height: 16px; }
+.due[data-tone="late"] { color: var(--destructive); }
+.due[data-tone="soon"] { color: var(--warning); }
+.due[data-tone="calm"] { color: var(--muted-foreground); }
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; margin: 0; padding: 0; list-style: none; min-width: 0; }
+.chips li { display: flex; align-items: center; min-height: 44px; }
+.chipLink { display: flex; align-items: center; min-height: 44px; text-decoration: none; }
+.chip { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 8px; border-radius: var(--radius-xs); background: var(--secondary); color: var(--muted-foreground); font-size: var(--font-size-xs); line-height: 16px; }
+.chipLink:hover .chip { color: var(--foreground); }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
+.button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--input); border-radius: 999px; color: var(--foreground); font-size: 14px; font-weight: 600; line-height: 18px; text-decoration: none; }
+.button:hover { background: var(--accent); }
+.primary, .primary:hover { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
+.go { display: grid; place-items: center; flex: none; width: 44px; height: 44px; margin-left: auto; border-radius: 999px; color: var(--muted-foreground); }
+.go:hover { background: var(--accent); color: var(--foreground); }
+.go svg { width: 18px; height: 18px; }
+
+/* As linhas de uma lista: a minutagem em mono, o título e o texto de apoio. */
+.rows { margin: 0; padding: 0; list-style: none; }
+.rows li + li { border-top: 1px solid var(--border); }
+.row { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 16px; color: inherit; text-decoration: none; }
+a.row:hover { background: var(--accent); }
+.rowText { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.rowText b { color: var(--foreground); font-size: 15px; font-weight: 600; line-height: 20px; }
+.rowText span { color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
+.rowText span:only-child { color: var(--foreground); font-size: 15px; line-height: 22px; }
+.time { display: inline-grid; place-items: center; flex: none; min-width: 48px; min-height: 24px; padding: 2px 6px; border-radius: var(--radius-xs); background: var(--secondary); color: var(--muted-foreground); font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Os mais assistidos na linha do vídeo. */
+.trackBox { display: flex; flex-direction: column; gap: 8px; padding: 16px 16px 8px; }
+.track { position: relative; height: 8px; border-radius: 4px; background: var(--secondary); }
+.track i { position: absolute; top: 0; bottom: 0; border-radius: 4px; background: var(--foreground); }
+.axis { display: flex; justify-content: space-between; color: var(--faint); font-family: var(--font-mono); font-size: var(--font-size-xs); line-height: 16px; font-variant-numeric: tabular-nums; }
+
+.fold { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 16px; border: 0; border-top: 1px solid var(--border); background: none; color: var(--foreground); font: inherit; font-size: 14px; font-weight: 600; line-height: 20px; text-align: left; cursor: pointer; }
+.fold:hover { background: var(--accent); }
+.fold span { flex: 1; min-width: 0; }
+.fold svg { flex: none; width: 18px; height: 18px; color: var(--muted-foreground); transition: transform .16s ease; }
+.fold[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+.wide { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; padding: 0 16px; border: 1px solid var(--input); border-radius: 999px; background: none; color: var(--foreground); font: inherit; font-size: 14px; font-weight: 600; line-height: 18px; cursor: pointer; }
+.wide:hover { background: var(--accent); }
+.wide.primary, .wide.primary:hover { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
+
+.button:focus-visible, .go:focus-visible, .chipLink:focus-visible, a.row:focus-visible, .fold:focus-visible, .wide:focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
+a.row:focus-visible, .fold:focus-visible { outline-offset: -2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fold svg { transition: none; }
+}

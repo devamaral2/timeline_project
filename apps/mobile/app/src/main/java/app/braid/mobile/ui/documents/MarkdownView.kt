@@ -30,12 +30,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,6 +94,9 @@ import kotlinx.coroutines.launch
 fun MarkdownView(
     source: String,
     modifier: Modifier = Modifier,
+    /** Um link `#t-125` tocado fora deste leitor (a linha de uma ficha): o leitor rola até o trecho e avisa. */
+    follow: String? = null,
+    onFollowed: () -> Unit = {},
 ) {
     val blocks = remember(source) { parseMarkdown(source, images = true) }
     // As imagens do artefato aparecem todas juntas, quando a pessoa pede; o estado é desta leitura, não é guardado.
@@ -100,6 +105,13 @@ fun MarkdownView(
     // Os trechos com âncora (`{#t-125}`) sabem rolar até si; tocar num link `#t-125` pede a rolagem ao trecho do artefato.
     val scope = rememberCoroutineScope()
     val anchors = remember(blocks, scope) { Anchors(blocks, scope) }
+    LaunchedEffect(follow, anchors) {
+        if (follow == null) return@LaunchedEffect
+        // O trecho pode ter acabado de entrar na tela: espera o desenho antes de rolar.
+        withFrameNanos { }
+        anchors.follow(follow)
+        onFollowed()
+    }
     CompositionLocalProvider(LocalImages provides images, LocalAnchors provides anchors) { MarkdownBlocks(blocks, modifier) }
 }
 
@@ -378,7 +390,11 @@ private const val PLAY_BUTTON = 44
  * cartão fica o link, como no web.
  */
 @Composable
-private fun VideoBlock(link: VideoLink) {
+internal fun VideoBlock(
+    link: VideoLink,
+    /** O canal do vídeo, quando quem chama o conhece: vai depois do link, na legenda. */
+    byline: String? = null,
+) {
     val context = LocalContext.current
     val ink = MaterialTheme.colorScheme.onBackground
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
@@ -407,6 +423,7 @@ private fun VideoBlock(link: VideoLink) {
                 withLink(LinkAnnotation.Url(link.href, TextLinkStyles(SpanStyle(textDecoration = TextDecoration.Underline)))) {
                     append(link.caption)
                 }
+                byline?.let { append(" · $it") }
             }
         Text(caption, color = muted, style = TextStyle(fontSize = 13.sp, lineHeight = 18.sp))
     }
@@ -415,7 +432,7 @@ private fun VideoBlock(link: VideoLink) {
 private const val VIDEO_ASPECT = 16f / 9f
 private const val WATCH_ON_YOUTUBE = "Assistir no YouTube"
 
-private fun openOutside(
+internal fun openOutside(
     context: Context,
     href: String,
 ) {

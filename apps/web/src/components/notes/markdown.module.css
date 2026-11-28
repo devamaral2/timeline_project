@@ -51,9 +51,9 @@
 .markdown th { color: var(--md-strong); font-weight: 600; background: var(--md-wash); }
 
 /* O player de um link do YouTube sozinho na linha, com o link original embaixo. */
-.markdown .video { display: flex; flex-direction: column; gap: 6px; margin: 0; }
-.markdown .video iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; background: var(--md-wash); }
-.markdown .video figcaption { color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
+.video { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+.video iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 10px; background: var(--md-wash); }
+.video figcaption { color: var(--muted-foreground); font-size: 13px; line-height: 18px; }
 
 /* A imagem só é buscada quando a pessoa pede; até lá, o texto alternativo no lugar dela. */
 .markdown img { display: block; max-width: 100%; height: auto; border-radius: 10px; }

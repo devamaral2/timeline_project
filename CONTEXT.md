@@ -82,6 +82,10 @@ _Avoid_: nota (como entidade; fica só como rótulo de tela do artefato de texto
 Três tipos de artefato com o mesmo dado da nota: um texto em markdown. Notícias (`news`) é um apanhado de notícias; Resumo de e-mail (`email_summary`) é o resumo de uma caixa de e-mail; Transcrição (`youtube_transcript`) é o texto de um vídeo do YouTube. Quem os cria é o agente; a pessoa os lê e edita como nota. Junto com a nota, são os **tipos de texto livre**.
 _Avoid_: nota de notícias, nota de e-mail (são tipos próprios, não notas com tag)
 
+**Fichas**:
+O jeito como o detalhe mostra Notícias, Resumo de e-mail, Transcrição e a nota que a Leitura diária guarda de um vídeo, quando o texto tem títulos: os números no topo e um cartão por item (o remetente, o prazo, as fontes e as ações de cada um), em vez do texto corrido. São uma leitura do markdown, que continua sendo o único dado; o formato está em `docs/summary-cards.md`.
+_Avoid_: cards, resumo estruturado (nada novo é guardado)
+
 **Relação**:
 Ligação com sentido entre tarefas e artefatos. Vai de quem produz para o que foi produzido: a tarefa de origem cria o artefato ou gera a tarefa de destino. Entre tarefa e artefato, parte sempre da tarefa, que cria, altera, usa ou apaga o artefato.
 _Avoid_: vínculo, link, pai e filho

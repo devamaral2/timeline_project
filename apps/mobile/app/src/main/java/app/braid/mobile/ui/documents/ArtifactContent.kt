@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -70,6 +71,7 @@ import app.braid.mobile.domain.artifact.macroShares
 import app.braid.mobile.domain.artifact.markdownBodyOf
 import app.braid.mobile.domain.artifact.pluralize
 import app.braid.mobile.domain.artifact.sleepAgendaOfArtifact
+import app.braid.mobile.domain.markdown.summaryCardsFor
 import app.braid.mobile.domain.time.MINUTES_PER_HOUR
 import app.braid.mobile.ui.agentfile.AgentFileSection
 import kotlin.math.floor
@@ -84,16 +86,26 @@ const val MODEL_ESTIMATE_MESSAGE = "Estimativa nutricional gerada por IA."
  * (sem o título repetido na primeira linha), alimento, treino e sono com o número principal na serifa, exercício do
  * catálogo com categoria e situação. É o mesmo componente do detalhe do artefato e do da tarefa. Skill e agente
  * são o arquivo do Hermes (`AgentFileSection`).
+ *
+ * Com [cards] (o detalhe do artefato), notícias, resumo de e-mail e transcrição saem em fichas quando o texto tem
+ * títulos (`docs/summary-cards.md`); a nota que é a transcrição de um vídeo da Leitura diária também. Dentro da tarefa
+ * o artefato já é um cartão: fica o markdown.
  */
 @Composable
 fun ArtifactContent(
     artifact: Artifact,
     modifier: Modifier = Modifier,
+    cards: Boolean = false,
 ) {
     when (val data = artifact.data) {
         is TextData -> {
             val body = markdownBodyOf(artifact)
-            if (body.isNotEmpty()) MarkdownView(body, modifier)
+            val summary = remember(cards, artifact.type, body) { if (cards) summaryCardsFor(artifact.type, body) else null }
+            if (summary != null) {
+                SummaryCardsView(summary, modifier)
+            } else if (body.isNotEmpty()) {
+                MarkdownView(body, modifier)
+            }
         }
         is FoodData -> MealContent(data, modifier)
         is TrainingData -> TrainingContent(data, modifier)
