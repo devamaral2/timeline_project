@@ -173,6 +173,8 @@ test("defines minimal production scopes without requiring mobile or test variabl
   // A fila de jobs de IA e uma tabela do SQLite da API: so ajustes opcionais, nenhum broker.
   assert.ok(scopeKeys("api-runtime").optional.includes("AI_JOBS_POLL_MS"));
   assert.ok(scopeKeys("auth-runtime").required.includes("AUTH_KEY_ENCRYPTION_KEY"));
+  // O auth guarda tudo num arquivo SQLite (ADR 0025): a URL do Postgres nao e mais segredo de execucao.
+  assert.ok(!scopeKeys("auth-runtime").required.includes("AUTH_DATABASE_URL"));
   assert.deepEqual(scopeKeys("web-build").required, ["BACKEND_URL", "AUTH_SERVICE_URL"]);
   assert.deepEqual(scopeKeys("hermes-runtime").required, ["HERMES_API_KEY", "OPENROUTER_API_KEY", "MCP_TOKEN"]);
   assert.deepEqual(scopeKeys("mcp-runtime").required, ["MCP_TOKEN", "AUTH_INTERNAL_SERVICE_KEY", "MCP_OWNER_USER_ID"]);
