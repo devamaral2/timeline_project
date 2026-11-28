@@ -16,24 +16,24 @@ const base: RequestDto = {
 };
 
 /** A resposta é um item da conversa: precisa da lista em volta. */
-function renderAnswer(props: Omit<ComponentProps<typeof ProcessAnswer>, "name">) {
-  return render(<ol><ProcessAnswer name="Assistente" {...props} /></ol>);
+function renderAnswer(props: ComponentProps<typeof ProcessAnswer>) {
+  return render(<ol><ProcessAnswer {...props} /></ol>);
 }
 
 test("enquanto o pedido roda, a conversa não mostra nada dele: nem título, nem passos, nem cancelar", () => {
   const { rerender } = renderAnswer({ request: null });
   expect(screen.queryByRole("listitem")).toBeNull();
 
-  rerender(<ol><ProcessAnswer name="Assistente" request={base} /></ol>);
+  rerender(<ol><ProcessAnswer request={base} /></ol>);
   expect(screen.queryByRole("listitem")).toBeNull();
   expect(screen.queryByText("Criando tarefas")).toBeNull();
   expect(screen.queryByRole("button", { name: "Cancelar pedido" })).toBeNull();
 });
 
-test("a resposta aparece quando o pedido termina bem, sob o nome de quem responde e sem a lista de passos", () => {
+test("a resposta aparece quando o pedido termina bem, só o texto: sem o nome de quem responde e sem a lista de passos", () => {
   renderAnswer({ request: { ...base, status: "completed", message: "Criei duas tarefas." } });
   expect(screen.getByText("Criei duas tarefas.")).toBeTruthy();
-  expect(screen.getByText("Assistente")).toBeTruthy();
+  expect(screen.queryByText("Assistente")).toBeNull();
   expect(screen.queryByText("Realizando processos:")).toBeNull();
   expect(screen.queryByText("Criando tarefas")).toBeNull();
 });

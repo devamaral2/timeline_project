@@ -94,14 +94,31 @@ test("sends the message as a request for the session user, from the agenda", asy
   expect(requestAgendaRefresh).not.toHaveBeenCalled();
 });
 
-test("the conversation header says who answers, a new conversation clears it and the close button closes the chat", async () => {
-  const onClose = vi.fn();
-  render(<Harness onClose={onClose} />);
+test("in the conversation the status line sits right below the last message, not above the field", async () => {
+  render(<Harness />);
+  // No início não há mensagem: a linha fica em cima do campo.
+  expect(screen.getByRole("status")).toHaveTextContent("Esperando o seu pedido");
   ask("o que tenho hoje?");
   await answer(1, finished);
 
-  const header = screen.getByRole("heading", { name: "Conversa" }).parentElement;
-  expect(header).toHaveTextContent("Assistente");
+  const log = screen.getByRole("log");
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Esperando o seu pedido"));
+  const status = screen.getByRole("status");
+  expect(log.nextElementSibling).toBe(status);
+  expect(status.parentElement).toBe(log.parentElement);
+});
+
+test("the header has the new conversation button and the name of who answers, centered; the close button closes the chat", async () => {
+  const onClose = vi.fn();
+  render(<Harness onClose={onClose} />);
+  expect(screen.getByRole("heading", { level: 2, name: "Assistente" })).toBeInTheDocument();
+  // Sem conversa, não há o que recomeçar.
+  expect(screen.getByRole("button", { name: "Nova conversa" })).toBeDisabled();
+  ask("o que tenho hoje?");
+  await answer(1, finished);
+
+  // Nem "Conversa" nem "Nova conversa" escritos: o topo é o "+" e o título.
+  expect(screen.queryByText("Conversa", { selector: "h2" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Fechar o chat" }));
   expect(onClose).toHaveBeenCalledTimes(1);
 
@@ -313,17 +330,16 @@ test("com o Hermes ligado, /hermes manda a mensagem a ele: a linha de status diz
   const log = screen.getByRole("log");
   expect(within(log).queryByText("Executou um comando")).not.toBeInTheDocument();
   expect(within(log).getAllByRole("listitem")).toHaveLength(1);
-  expect(screen.queryByRole("button", { name: "Copiar a resposta" })).not.toBeInTheDocument();
 
   advanceRequest(api, id, { status: "completed", message: "São 18h." });
   await waitFor(() => expect(within(log).getByText("São 18h.")).toBeInTheDocument());
   expect(screen.getByRole("status")).toHaveTextContent("Esperando o seu pedido");
-  expect(screen.getByText("Hermes", { selector: "span" })).toBeInTheDocument();
-  // A fala leva o nome de quem responde, e a última resposta ganha copiar e o atalho para os passos.
-  expect(within(log).getByText("Hermes")).toBeInTheDocument();
-  expect(within(log).getByRole("button", { name: "Copiar a resposta" })).toBeInTheDocument();
+  expect(screen.getByText("Hermes", { selector: "h2" })).toBeInTheDocument();
+  // A fala é só o texto: sem o robô e o nome sobre ela, sem copiar e sem o atalho dos passos.
+  expect(within(log).queryByText("Hermes")).not.toBeInTheDocument();
+  expect(within(log).queryByRole("button")).not.toBeInTheDocument();
 
-  fireEvent.click(within(log).getByRole("button", { name: "1 passo" }));
+  fireEvent.click(screen.getByRole("button", { name: /Processo/ }));
   const trace = within(screen.getByRole("region", { name: "Processo da IA" }));
   expect(trace.getByRole("button", { name: /Executou um comando/ })).toBeInTheDocument();
 });
@@ -336,10 +352,9 @@ test("com o Hermes desligado, /hermes avisa e o chat volta ao assistente da agen
   await waitFor(() => expect(screen.getByText(/O Hermes está desligado/)).toBeInTheDocument());
   expect(hermesPosts()).toHaveLength(1);
   expect(requestPosts()).toHaveLength(0);
-  // O topo do chat e o nome sobre o aviso voltam a dizer "Assistente".
-  expect(screen.getByText("Assistente", { selector: "span" })).toBeInTheDocument();
-  expect(within(screen.getByRole("log")).getByText("Assistente")).toBeInTheDocument();
-  expect(screen.queryByText("Hermes", { selector: "span" })).not.toBeInTheDocument();
+  // O topo do chat volta a dizer "Assistente".
+  expect(screen.getByText("Assistente", { selector: "h2" })).toBeInTheDocument();
+  expect(screen.queryByText("Hermes", { selector: "h2" })).not.toBeInTheDocument();
 });
 
 /** O microfone do navegador, de mentira: guarda as sessões abertas e deixa o teste dizer o que foi ouvido. */

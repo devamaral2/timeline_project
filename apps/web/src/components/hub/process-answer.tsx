@@ -2,15 +2,12 @@ import type { RequestDto } from "@repo/contracts";
 import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { isSuccessAgentStatus } from "@repo/contracts";
 import { isOpenRequest } from "@/lib/tasks/agent-request-model";
-import { ChatReply } from "./chat-reply";
 import { EntityRows, requestEntityRef } from "./entity-rows";
 import styles from "@/components/shell/shell.module.css";
 
 interface ProcessAnswerProps {
   /** `null` até o servidor responder o primeiro estado. */
   request: RequestDto | null;
-  /** Quem responde: vai sobre a fala, ao lado do robô. */
-  name: string;
   /** Para onde leva cada registro criado ou alterado; sem ela, as linhas sao so texto. */
   entityHref?: (entity: AgentChatEntityRef) => string | undefined;
   onOpenEntity?: () => void;
@@ -22,7 +19,7 @@ interface ProcessAnswerProps {
  * resposta em texto solto, com as linhas da consulta quando houve uma, e a prévia de cada registro criado ou alterado.
  * Um pedido que falhou ou foi cancelado deixa só o que gravou antes de parar; o aviso é a mensagem de erro da conversa.
  */
-export function ProcessAnswer({ request, name, entityHref, onOpenEntity }: ProcessAnswerProps) {
+export function ProcessAnswer({ request, entityHref, onOpenEntity }: ProcessAnswerProps) {
   if (!request || isOpenRequest(request.status)) return null;
   const result = request.steps.find((step) => step.result)?.result;
   const text = isSuccessAgentStatus(request.status) ? request.message : undefined;
@@ -31,7 +28,7 @@ export function ProcessAnswer({ request, name, entityHref, onOpenEntity }: Proce
   return (
     <li className={styles.chatBubble} data-role="assistant">
       {(text || result) && (
-        <ChatReply name={name}>
+        <>
           {text && <p>{text}</p>}
           {result && (
             <section className={styles.processRows} aria-label="Resultado da consulta">
@@ -54,7 +51,7 @@ export function ProcessAnswer({ request, name, entityHref, onOpenEntity }: Proce
               {result.truncated && <p>Mostrando só as primeiras linhas.</p>}
             </section>
           )}
-        </ChatReply>
+        </>
       )}
       <EntityRows entities={entities} entityHref={entityHref} onOpenEntity={onOpenEntity} />
     </li>

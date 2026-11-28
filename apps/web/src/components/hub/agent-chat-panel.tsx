@@ -25,7 +25,6 @@ import { briefDate } from "@/lib/dates/day-labels";
 import { modelFooter } from "@/lib/agent-chat/model-selection";
 import { pendingStepLabel } from "@/lib/agent-chat/pending-step";
 import { type AgentChatMessage, useAgentChat } from "@/lib/agent-chat/use-agent-chat";
-import { isSuccessAgentStatus } from "@repo/contracts";
 import type { ModelOptionsDto, RequestScreenContext } from "@repo/contracts";
 import type { AgentChatEntityRef } from "@/lib/agent-chat/use-agent-chat";
 import { useSessionState } from "@/lib/session/use-session";
@@ -34,7 +33,6 @@ import { requestAgendaRefresh } from "@/components/agenda/agenda-refresh";
 import type { FreeWindow } from "./hub-open";
 import { AgentTrace } from "./agent-trace";
 import { ChatAnswer } from "./chat-answer";
-import { ChatActions, ChatReply } from "./chat-reply";
 import { ModelFooter, useModelPicker } from "./model-picker";
 import { CHANGE_LABELS, EntityRows } from "./entity-rows";
 import { ProcessAnswer } from "./process-answer";
@@ -206,12 +204,6 @@ export function AgentChatPanel({
   const lastMessage = chat.messages.at(-1);
   const lastMessageId = lastMessage?.id;
   const progressLabel = chat.pending ? pendingStepLabel(chat.messages, chat.pending) : undefined;
-  // A última fala do assistente, quando é ela que fecha a conversa: é dela que se copia o texto.
-  const lastAnswer = lastMessage?.role === "assistant" ? lastMessage.text
-    : lastMessage?.role === "process" && lastMessage.request && isSuccessAgentStatus(lastMessage.request.status) ? lastMessage.request.message ?? ""
-    : "";
-  // O nome sobre cada fala é o de quem responde agora, o mesmo do topo do chat.
-  const agentName = chat.agentMode ? AGENT_NAMES[chat.agentMode] : "Assistente";
   // Rola ate o fim a cada mensagem nova ou passo de progresso.
   useEffect(() => {
     void lastMessageId;
@@ -237,6 +229,15 @@ export function AgentChatPanel({
   // Os comandos da barra "/" moram na conversa: enquanto ha comandos a escolher, e ela que aparece.
   const shownPane = view === "conversation" && commandMatches.length === 0 ? pane : "chat";
   const traceSteps = chat.traces.at(-1)?.trace?.entries.length ?? 0;
+  // Com a conversa à vista, a linha de status fica logo abaixo da última mensagem; no início, nos comandos e na
+  // aba "Processo" ela volta para cima do campo.
+  const statusInLog = view === "conversation" && commandMatches.length === 0 && shownPane === "chat";
+  const statusLine = (
+    <p className={`${field.status} ${styles.chatStatus}`} data-state={state} role="status" aria-live="polite">
+      <HermesMark state={state} plain />
+      <span className={chat.pending && !listening ? styles.chatStep : undefined}>{statusText}</span>
+    </p>
+  );
 
   function updatePrompt(value: string) {
     setPrompt(value);
@@ -332,30 +333,31 @@ export function AgentChatPanel({
 
   return (
     <div className={styles.assistantPanel} data-chat-view={view}>
+      {/* O topo: o "+" da conversa nova à esquerda e o nome de quem responde no centro, como o "Tarefa" do detalhe.
+          Expandir e fechar só existem na largura do computador (no celular o painel ocupa a tela e fecha pela barra). */}
       <div className={styles.chatHeader}>
         <button
           type="button"
-          className={styles.chatIconButton}
+          className={`${styles.chatIconButton} ${styles.chatNew}`}
           onClick={chat.startNewConversation}
           disabled={view === "home" || Boolean(chat.pending)}
           aria-label="Nova conversa"
         >
           <Plus aria-hidden />
         </button>
-        <div className={styles.chatTitle}>
-          <span className={styles.chatLive}>{chat.agentMode ? AGENT_NAMES[chat.agentMode] : "Assistente"}</span>
-          {view === "conversation" ? <h2>Conversa</h2> : <p>Nova conversa</p>}
+        <h2 className={styles.chatLive}>{chat.agentMode ? AGENT_NAMES[chat.agentMode] : "Assistente"}</h2>
+        <div className={styles.chatHeaderActions}>
+          {onToggleExpanded ? (
+            <button type="button" className={styles.chatIconButton} data-chat-control onClick={onToggleExpanded} aria-label={expanded ? "Recolher para o painel" : "Expandir para tela inteira"}>
+              {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+            </button>
+          ) : null}
+          {onClose ? (
+            <button type="button" className={styles.chatIconButton} data-chat-control onClick={onClose} aria-label="Fechar o chat">
+              <X aria-hidden />
+            </button>
+          ) : null}
         </div>
-        {onToggleExpanded ? (
-          <button type="button" className={styles.chatIconButton} data-chat-control onClick={onToggleExpanded} aria-label={expanded ? "Recolher para o painel" : "Expandir para tela inteira"}>
-            {expanded ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
-          </button>
-        ) : null}
-        {onClose ? (
-          <button type="button" className={styles.chatIconButton} data-chat-control onClick={onClose} aria-label="Fechar o chat">
-            <X aria-hidden />
-          </button>
-        ) : null}
       </div>
 
       {view === "conversation" ? (
@@ -424,13 +426,10 @@ export function AgentChatPanel({
                   entityHref={entityHref}
                   onOpenEntity={onClose}
                   modelOptions={chat.model.options}
-                  name={agentName}
                 />
               ))}
-              {!chat.pending && lastAnswer.trim() ? (
-                <ChatActions text={lastAnswer} steps={traceSteps} onOpenProcess={() => setPane("process")} />
-              ) : null}
             </ol>
+            {statusInLog ? statusLine : null}
             <div ref={endRef} />
           </>
         )}
@@ -444,10 +443,7 @@ export function AgentChatPanel({
 
       <div className={styles.chatField}>
         {voiceError && !quietVoice && <p className={styles.hubComposerHint}>{voiceError}</p>}
-        <p className={field.status} data-state={state} role="status" aria-live="polite">
-          <HermesMark state={state} plain />
-          <span className={chat.pending && !listening ? styles.chatStep : undefined}>{statusText}</span>
-        </p>
+        {statusInLog ? null : statusLine}
         <HermesComposer
           model={picker}
           onSubmit={submit}
@@ -504,15 +500,14 @@ interface ChatBubbleProps {
   onOpenEntity?: () => void;
   /** O que o servidor oferece ao modo modelo: dá o nome do modelo no rodapé da resposta. */
   modelOptions?: ModelOptionsDto | null;
-  /** Quem responde ("Assistente", "Hermes", "Modelo"): vai sobre cada fala, ao lado do robô. */
-  name: string;
 }
 
 /**
- * Uma fala da conversa (canvas "Chat com o Hermes — conversa limpa", opção B). Os passos do Hermes e do modelo
+ * Uma fala da conversa (canvas "Chat com o Hermes — conversa limpa", opção B). A fala do assistente é só o texto: sem o
+ * robô e o nome sobre ela, sem copiar e sem o atalho dos passos embaixo. Os passos do Hermes e do modelo
  * (`hermes-steps`) e o andamento de um pedido por passos não entram aqui: ficam na aba "Processo".
  */
-function ChatBubble({ message, onRetry, onChoose, entityHref, onOpenEntity, modelOptions = null, name }: ChatBubbleProps) {
+function ChatBubble({ message, onRetry, onChoose, entityHref, onOpenEntity, modelOptions = null }: ChatBubbleProps) {
   if (message.role === "user") {
     return (
       <li className={styles.chatBubble} data-role="user">
@@ -524,9 +519,7 @@ function ChatBubble({ message, onRetry, onChoose, entityHref, onOpenEntity, mode
   if (message.role === "assistant") {
     return (
       <li className={styles.chatBubble} data-role="assistant">
-        <ChatReply name={name}>
-          <ChatAnswer text={message.text} onChoose={onChoose} />
-        </ChatReply>
+        <ChatAnswer text={message.text} onChoose={onChoose} />
         <EntityRows entities={message.entities} entityHref={entityHref} onOpenEntity={onOpenEntity} />
         {message.model ? <ModelFooter text={modelFooter(modelOptions, message.model)} /> : null}
       </li>
@@ -534,7 +527,7 @@ function ChatBubble({ message, onRetry, onChoose, entityHref, onOpenEntity, mode
   }
 
   if (message.role === "process") {
-    return <ProcessAnswer request={message.request} name={name} entityHref={entityHref} onOpenEntity={onOpenEntity} />;
+    return <ProcessAnswer request={message.request} entityHref={entityHref} onOpenEntity={onOpenEntity} />;
   }
 
   if (message.role === "hermes-steps") return null;
