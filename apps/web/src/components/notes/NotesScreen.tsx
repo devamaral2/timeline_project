@@ -1,32 +1,64 @@
 "use client";
 
 import type { ArtifactDto } from "@repo/contracts";
-import { FileText } from "lucide-react";
+import { ChevronDown, FileText } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import page from "@/components/ui/page.module.css";
 import { ListSkeleton } from "@/components/ui/list-skeleton";
+import { AgentStatusIcon } from "@/components/tasks/agent-status-icon";
+import { agentStatusNames } from "@/components/tasks/agent-status-names";
 import { agendaRefreshEvent } from "@/components/agenda/agenda-refresh";
 import { type ArtifactFilters, listArtifacts } from "@/lib/api/artifacts";
-import {
-  artifactActor,
-  artifactCountLabel,
-  artifactTypeLabel,
-  artifactVisualType,
-} from "@/lib/artifacts/artifact-model";
+import { type ArtifactDrawerKey, artifactDrawersOf, artifactDrawerStartsOpen, artifactRowFacts } from "@/lib/artifacts/artifact-drawers";
+import { artifactActor, artifactCountLabel, artifactVisualType } from "@/lib/artifacts/artifact-model";
 import { useViewMode } from "@/lib/tasks/view-mode";
 import { usePullRefresh } from "@/lib/navigation/pull-refresh";
 import { usePublishSectionMenu } from "@/lib/navigation/section-menu";
 import { tagAccentStyle } from "@/lib/tags/tag-color";
-import { NoteSheet } from "./NoteSheet";
+import { TypeGlyph } from "./NoteSheet";
 import styles from "./notes.module.css";
 
 /** Espera depois da última tecla antes de consultar a API pelo texto. */
 const SEARCH_DEBOUNCE_MS = 250;
 const REFRESH_FAILURE_MESSAGE = "Não foi possível atualizar os artefatos. Tente novamente.";
 
+/** O que a pessoa abriu ou fechou, por gaveta. */
+type DrawerChoices = Partial<Record<ArtifactDrawerKey, boolean>>;
+
+function ArtifactRow({ artifact, userId, now }: { artifact: ArtifactDto; userId: string; now: Date }) {
+  const visual = artifactVisualType(artifact.type);
+  const { support, tags, figure, agentStatus } = artifactRowFacts(artifact, now);
+  return (
+    <li>
+      <Link href={`/${userId}/notas/${artifact.id}`} className={styles.row} data-note-type={visual}>
+        <TypeGlyph type={visual} className={styles.glyph} />
+        <span className={styles.rowText}>
+          <span className={styles.rowTitle}>{artifact.name}</span>
+          <span className={styles.rowMeta}>
+            {support.map((part) => (
+              <span key={part.text} data-part={part.style}>{part.text}</span>
+            ))}
+            {tags.map((tag) => (
+              <span key={tag} style={tagAccentStyle(tag)}>#{tag}</span>
+            ))}
+          </span>
+        </span>
+        {agentStatus ? (
+          <span className={styles.rowStatus} data-status={agentStatus}>
+            <span aria-hidden="true">{agentStatusNames[agentStatus]}</span>
+            <AgentStatusIcon status={agentStatus} />
+          </span>
+        ) : figure ? (
+          <span className={styles.rowEnd}>{figure}</span>
+        ) : null}
+      </Link>
+    </li>
+  );
+}
+
 /**
- * Os artefatos do usuário, do mais recente para o mais antigo. O texto buscado
+ * Os artefatos do usuário, em uma gaveta por tipo e, dentro dela, do mais recente para o mais antigo. O texto buscado
  * é parâmetro da consulta à API: a tela não filtra na mão. Os filtros moram no
  * menu de opções da barra inferior (tocar na aba Artefatos já selecionada):
  * Todos, Você e Agentes, e a busca.
@@ -99,6 +131,15 @@ export function NotesScreen({ userId }: { userId: string }) {
   const activeFilters = search ? 1 : 0;
   const hasArtifacts = (facets?.length ?? 0) > 0;
 
+  // O que se abre e fecha na lista inteira fica; com busca, vale só para aquela busca.
+  const [browsed, setBrowsed] = useState<DrawerChoices>({});
+  const [narrowed, setNarrowed] = useState<{ search: string; open: DrawerChoices }>({ search: "", open: {} });
+  const choices = search === "" ? browsed : narrowed.search === search ? narrowed.open : {};
+  function setDrawerOpen(drawer: ArtifactDrawerKey, open: boolean) {
+    if (search === "") setBrowsed((current) => ({ ...current, [drawer]: open }));
+    else setNarrowed({ search, open: { ...choices, [drawer]: open } });
+  }
+
   function clearFilters() {
     setQuery("");
     setSearch("");
@@ -107,6 +148,8 @@ export function NotesScreen({ userId }: { userId: string }) {
   // O menu da barra inferior: as listas Todos, Você e Agentes (o mesmo modo da agenda e das tarefas) e a busca.
   // A rota não filtra por dono, então o modo separa aqui os arquivos do Hermes das notas da pessoa.
   const shown = artifacts && viewMode.actor ? artifacts.filter((artifact) => artifactActor(artifact.type) === viewMode.actor) : artifacts;
+  const drawers = artifactDrawersOf(shown ?? []);
+  const now = new Date();
   usePublishSectionMenu("notes", {
     count: shown?.length,
     lists: [],
@@ -145,27 +188,28 @@ export function NotesScreen({ userId }: { userId: string }) {
             </div>
           )
         ) : (
-          <ul className={styles.noteList}>
-            {shown.map((artifact) => {
-              const visual = artifactVisualType(artifact.type);
+          <div className={styles.groups}>
+            {drawers.map((drawer) => {
+              const labelId = `artefatos-${drawer.key}`;
+              const isOpen = choices[drawer.key] ?? artifactDrawerStartsOpen(drawer.key, drawers.length, activeFilters > 0);
               return (
-                <li key={artifact.id}>
-                  <Link href={`/${userId}/notas/${artifact.id}`} className={styles.row} data-note-type={visual}>
-                    <NoteSheet type={visual} className={styles.sheet} />
-                    <span className={styles.rowText}>
-                      <span className={styles.rowTitle}>{artifact.name}</span>
-                      <span className={styles.rowMeta}>
-                        <span>{artifactTypeLabel(artifact.type)}</span>
-                        {artifact.tags.map((tag) => (
-                          <span key={tag} style={tagAccentStyle(tag)}>#{tag}</span>
-                        ))}
-                      </span>
-                    </span>
-                  </Link>
-                </li>
+                <section key={drawer.key} aria-labelledby={`${labelId}-titulo`}>
+                  <h2 id={`${labelId}-titulo`} className={styles.groupHead}>
+                    <button type="button" className={styles.groupToggle} aria-expanded={isOpen} onClick={() => setDrawerOpen(drawer.key, !isOpen)}>
+                      <ChevronDown aria-hidden className={styles.chevron} />{drawer.title}<span>{drawer.artifacts.length}</span>
+                    </button>
+                  </h2>
+                  {isOpen ? (
+                    <ul className={styles.noteList}>
+                      {drawer.artifacts.map((artifact) => (
+                        <ArtifactRow key={artifact.id} artifact={artifact} userId={userId} now={now} />
+                      ))}
+                    </ul>
+                  ) : null}
+                </section>
               );
             })}
-          </ul>
+          </div>
         )}
       </section>
     </main>

@@ -1,0 +1,1037 @@
+{
+  "now": "2026-09-14T15:00:00.000Z",
+  "artifacts": [
+    {
+      "id": "doc-text",
+      "name": "Ideias para o projeto",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [
+        "trabalho",
+        "ideias"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "text",
+      "data": {
+        "body": "# Ideias para o projeto\n\nUm **parágrafo** com _ênfase_, `código` e um [link](https://example.com/a).\n\n- Primeiro\n- Segundo\n\n1. Um\n2. Dois\n\n- [x] Feito\n- [ ] A fazer\n\n> Citação\n\n```ts\nconst a = 1;\n```\n"
+      }
+    },
+    {
+      "id": "doc-news",
+      "name": "Notícias da manhã",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [
+        "leitura"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "news",
+      "data": {
+        "body": "# Notícias da manhã\n\n- [Chuva no fim de semana](https://example.com/chuva)"
+      }
+    },
+    {
+      "id": "doc-email",
+      "name": "Resumo da caixa de entrada",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "email_summary",
+      "data": {
+        "body": "Três mensagens pedem resposta.\n\n- A fatura vence amanhã"
+      }
+    },
+    {
+      "id": "doc-youtube",
+      "name": "Aula de jardinagem",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "youtube_transcript",
+      "data": {
+        "body": "# Aula de jardinagem\n\n00:00 Como podar roseiras"
+      }
+    },
+    {
+      "id": "doc-food",
+      "name": "Almoço de ontem",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tasks": [
+        {
+          "taskId": "task-2",
+          "relation": "creates",
+          "name": "Almoço",
+          "actor": "human",
+          "kind": "meal",
+          "startedAt": "2026-09-13T15:00:00.000Z"
+        }
+      ],
+      "tags": [
+        "casa"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "food",
+      "data": {
+        "description": "Arroz, feijão e frango grelhado",
+        "items": [
+          {
+            "id": "item-1",
+            "name": "Arroz",
+            "portion": "4 colheres",
+            "approximateWeightGrams": 120,
+            "caloriesKcal": 156,
+            "macronutrients": {
+              "carbohydratesGrams": 34,
+              "proteinsGrams": 3,
+              "totalFatGrams": 0.5,
+              "fiberGrams": 1
+            }
+          },
+          {
+            "id": "item-2",
+            "name": "Frango grelhado",
+            "portion": "",
+            "approximateWeightGrams": 150,
+            "caloriesKcal": 247.5,
+            "macronutrients": {
+              "carbohydratesGrams": 0,
+              "proteinsGrams": 33,
+              "totalFatGrams": 12,
+              "fiberGrams": 0
+            }
+          }
+        ],
+        "totals": {
+          "totalCaloriesKcal": 612.5,
+          "totalProteinGrams": 38.2,
+          "totalCarbohydrateGrams": 64.05,
+          "totalFatGrams": 21.15,
+          "totalFiberGrams": 9
+        },
+        "recipe": {
+          "source": "model",
+          "servings": 2,
+          "prepTimeMinutes": 75,
+          "ingredients": [
+            {
+              "name": "Arroz",
+              "quantity": "300 g"
+            },
+            {
+              "name": "Sal",
+              "quantity": "a gosto"
+            },
+            {
+              "name": "Sal",
+              "quantity": "1 pitada"
+            }
+          ],
+          "steps": [
+            "Lave o arroz.",
+            "Refogue o alho.",
+            "Cozinhe por 20 minutos."
+          ]
+        },
+        "nutritionSource": "model-estimate"
+      }
+    },
+    {
+      "id": "doc-sleep",
+      "name": "Noite de sono",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tasks": [
+        {
+          "taskId": "task-6",
+          "relation": "creates",
+          "name": "Dormir",
+          "actor": "human",
+          "kind": "sleep",
+          "startedAt": "2026-09-15T01:00:00.000Z",
+          "estimatedFinishAt": "2026-09-15T09:00:00.000Z"
+        }
+      ],
+      "tags": [
+        "saúde"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "sleep",
+      "data": {
+        "trackedSleepTime": 450,
+        "score": 87
+      }
+    },
+    {
+      "id": "doc-training",
+      "name": "Treino de peito",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "training",
+      "data": {
+        "workouts": [
+          {
+            "id": "w1",
+            "workoutCode": "running",
+            "workoutName": "Corrida",
+            "calories": 320,
+            "duration": 30,
+            "pace": 6.25,
+            "distance": 4.8
+          },
+          {
+            "id": "w2",
+            "workoutCode": "weightlifting",
+            "workoutName": "Musculação",
+            "calories": 280,
+            "duration": 45,
+            "sets": [
+              {
+                "id": "s1",
+                "exercise": "Supino",
+                "repetitions": 10,
+                "weight": 60
+              },
+              {
+                "id": "s2",
+                "exercise": "Supino",
+                "repetitions": 8,
+                "weight": 62.5
+              },
+              {
+                "id": "s3",
+                "exercise": "Crucifixo",
+                "repetitions": 12,
+                "weight": 14
+              }
+            ]
+          },
+          {
+            "id": "w3",
+            "workoutCode": "free",
+            "workoutName": "Alongamento",
+            "calories": 40,
+            "duration": 15
+          }
+        ],
+        "caloriesBurned": 640
+      }
+    },
+    {
+      "id": "doc-workout",
+      "name": "Corrida",
+      "schemaVersion": 1,
+      "global": true,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "workout",
+      "data": {
+        "code": "running",
+        "category": "cardio",
+        "active": true
+      }
+    },
+    {
+      "id": "doc-skill",
+      "name": "Pesquisar",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "skill",
+      "data": {
+        "path": "hermes/skills/pesquisar/SKILL.md",
+        "hash": "abc",
+        "missing": false,
+        "description": "Pesquisa na web"
+      }
+    },
+    {
+      "id": "doc-agent",
+      "name": "Planejador",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "agent",
+      "data": {
+        "path": "hermes/agents/planejador.md",
+        "hash": "def",
+        "missing": true
+      }
+    },
+    {
+      "id": "doc-router",
+      "name": "Roteador",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "router",
+      "data": {
+        "body": "Roteia pedidos"
+      }
+    },
+    {
+      "id": "doc-future",
+      "name": "Mapa do futuro",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [
+        "novo"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "hologram",
+      "data": {
+        "body": "# Mapa do futuro\n\nTexto de um tipo que este app não conhece."
+      }
+    },
+    {
+      "id": "doc-food-calculating",
+      "name": "Prato novo",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [
+        "casa"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "food",
+      "data": {
+        "description": "Arroz, feijão e frango grelhado",
+        "items": [],
+        "totals": {
+          "totalCaloriesKcal": 0,
+          "totalProteinGrams": 0,
+          "totalCarbohydrateGrams": 0,
+          "totalFatGrams": 0,
+          "totalFiberGrams": 0
+        },
+        "generation": {
+          "status": "pending"
+        }
+      }
+    },
+    {
+      "id": "doc-food-broken",
+      "name": "Prato que falhou",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [
+        "casa"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "food",
+      "data": {
+        "description": "Arroz, feijão e frango grelhado",
+        "items": [],
+        "totals": {
+          "totalCaloriesKcal": 0,
+          "totalProteinGrams": 0,
+          "totalCarbohydrateGrams": 0,
+          "totalFatGrams": 0,
+          "totalFiberGrams": 0
+        },
+        "generation": {
+          "status": "failed"
+        }
+      }
+    },
+    {
+      "id": "doc-food-thousand",
+      "name": "Banquete",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [
+        "casa"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-13T15:00:00.000Z",
+      "type": "food",
+      "data": {
+        "description": "Arroz, feijão e frango grelhado",
+        "items": [
+          {
+            "id": "item-1",
+            "name": "Arroz",
+            "portion": "4 colheres",
+            "approximateWeightGrams": 120,
+            "caloriesKcal": 156,
+            "macronutrients": {
+              "carbohydratesGrams": 34,
+              "proteinsGrams": 3,
+              "totalFatGrams": 0.5,
+              "fiberGrams": 1
+            }
+          },
+          {
+            "id": "item-2",
+            "name": "Frango grelhado",
+            "portion": "",
+            "approximateWeightGrams": 150,
+            "caloriesKcal": 247.5,
+            "macronutrients": {
+              "carbohydratesGrams": 0,
+              "proteinsGrams": 33,
+              "totalFatGrams": 12,
+              "fiberGrams": 0
+            }
+          }
+        ],
+        "totals": {
+          "totalCaloriesKcal": 1240.5,
+          "totalProteinGrams": 38.2,
+          "totalCarbohydrateGrams": 64.05,
+          "totalFatGrams": 21.15,
+          "totalFiberGrams": 9
+        },
+        "recipe": {
+          "source": "model",
+          "servings": 2,
+          "prepTimeMinutes": 75,
+          "ingredients": [
+            {
+              "name": "Arroz",
+              "quantity": "300 g"
+            },
+            {
+              "name": "Sal",
+              "quantity": "a gosto"
+            },
+            {
+              "name": "Sal",
+              "quantity": "1 pitada"
+            }
+          ],
+          "steps": [
+            "Lave o arroz.",
+            "Refogue o alho.",
+            "Cozinhe por 20 minutos."
+          ]
+        },
+        "nutritionSource": "model-estimate"
+      }
+    },
+    {
+      "id": "doc-food-empty",
+      "name": "Copo de água",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [
+        "casa"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2025-12-31T23:30:00.000Z",
+      "type": "food",
+      "data": {
+        "description": "Arroz, feijão e frango grelhado",
+        "items": [
+          {
+            "id": "item-1",
+            "name": "Arroz",
+            "portion": "4 colheres",
+            "approximateWeightGrams": 120,
+            "caloriesKcal": 156,
+            "macronutrients": {
+              "carbohydratesGrams": 34,
+              "proteinsGrams": 3,
+              "totalFatGrams": 0.5,
+              "fiberGrams": 1
+            }
+          },
+          {
+            "id": "item-2",
+            "name": "Frango grelhado",
+            "portion": "",
+            "approximateWeightGrams": 150,
+            "caloriesKcal": 247.5,
+            "macronutrients": {
+              "carbohydratesGrams": 0,
+              "proteinsGrams": 33,
+              "totalFatGrams": 12,
+              "fiberGrams": 0
+            }
+          }
+        ],
+        "totals": {
+          "totalCaloriesKcal": 0.4,
+          "totalProteinGrams": 38.2,
+          "totalCarbohydrateGrams": 64.05,
+          "totalFatGrams": 21.15,
+          "totalFiberGrams": 9
+        },
+        "recipe": {
+          "source": "model",
+          "servings": 2,
+          "prepTimeMinutes": 75,
+          "ingredients": [
+            {
+              "name": "Arroz",
+              "quantity": "300 g"
+            },
+            {
+              "name": "Sal",
+              "quantity": "a gosto"
+            },
+            {
+              "name": "Sal",
+              "quantity": "1 pitada"
+            }
+          ],
+          "steps": [
+            "Lave o arroz.",
+            "Refogue o alho.",
+            "Cozinhe por 20 minutos."
+          ]
+        },
+        "nutritionSource": "model-estimate"
+      }
+    },
+    {
+      "id": "doc-sleep-empty",
+      "name": "Cochilo sem registro",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "sleep",
+      "data": {
+        "trackedSleepTime": 0,
+        "score": 0
+      }
+    },
+    {
+      "id": "doc-training-empty",
+      "name": "Treino vazio",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "training",
+      "data": {
+        "workouts": [],
+        "caloriesBurned": 0
+      }
+    },
+    {
+      "id": "doc-skill-bare",
+      "name": "Sem descrição",
+      "schemaVersion": 1,
+      "global": false,
+      "derived": false,
+      "tags": [
+        "x"
+      ],
+      "revision": 1,
+      "createdAt": "2026-09-10T12:00:00.000Z",
+      "updatedAt": "2026-09-14T12:12:00.000Z",
+      "type": "skill",
+      "data": {
+        "path": "hermes/skills/x/SKILL.md",
+        "hash": "abc",
+        "missing": false
+      }
+    }
+  ],
+  "drawers": [
+    {
+      "key": "text",
+      "title": "Notas",
+      "ids": [
+        "doc-text"
+      ]
+    },
+    {
+      "key": "news",
+      "title": "Notícias",
+      "ids": [
+        "doc-news"
+      ]
+    },
+    {
+      "key": "email_summary",
+      "title": "Resumos de e-mail",
+      "ids": [
+        "doc-email"
+      ]
+    },
+    {
+      "key": "youtube_transcript",
+      "title": "Transcrições",
+      "ids": [
+        "doc-youtube"
+      ]
+    },
+    {
+      "key": "food",
+      "title": "Refeições",
+      "ids": [
+        "doc-food",
+        "doc-food-calculating",
+        "doc-food-broken",
+        "doc-food-thousand",
+        "doc-food-empty"
+      ]
+    },
+    {
+      "key": "sleep",
+      "title": "Sono",
+      "ids": [
+        "doc-sleep",
+        "doc-sleep-empty"
+      ]
+    },
+    {
+      "key": "training",
+      "title": "Treinos",
+      "ids": [
+        "doc-training",
+        "doc-training-empty"
+      ]
+    },
+    {
+      "key": "workout",
+      "title": "Exercícios",
+      "ids": [
+        "doc-workout"
+      ]
+    },
+    {
+      "key": "skill",
+      "title": "Skills",
+      "ids": [
+        "doc-skill",
+        "doc-skill-bare"
+      ]
+    },
+    {
+      "key": "agent",
+      "title": "Agentes",
+      "ids": [
+        "doc-agent"
+      ]
+    },
+    {
+      "key": "router",
+      "title": "Roteadores",
+      "ids": [
+        "doc-router"
+      ]
+    },
+    {
+      "key": "other",
+      "title": "Outros",
+      "ids": [
+        "doc-future"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "id": "doc-text",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [
+          "trabalho",
+          "ideias"
+        ],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-news",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [
+          "leitura"
+        ],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-email",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-youtube",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-food",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [
+          "casa"
+        ],
+        "figure": "613 kcal",
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-sleep",
+      "facts": {
+        "support": [
+          {
+            "text": "7 h 30",
+            "style": "mono"
+          },
+          {
+            "text": "Pontuação 87"
+          }
+        ],
+        "tags": [
+          "saúde"
+        ],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-training",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          },
+          {
+            "text": "Corrida, Musculação, Alongamento",
+            "style": "fill"
+          }
+        ],
+        "tags": [],
+        "figure": "1 h 30",
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-workout",
+      "facts": {
+        "support": [
+          {
+            "text": "cardio",
+            "style": "mono"
+          }
+        ],
+        "tags": [],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-skill",
+      "facts": {
+        "support": [
+          {
+            "text": "Pesquisa na web",
+            "style": "fill"
+          }
+        ],
+        "tags": [],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-agent",
+      "facts": {
+        "support": [
+          {
+            "text": "O arquivo não está mais na pasta.",
+            "style": "alert"
+          }
+        ],
+        "tags": [],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-router",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-future",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [
+          "novo"
+        ],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-food-calculating",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [
+          "casa"
+        ],
+        "figure": null,
+        "agentStatus": "running"
+      }
+    },
+    {
+      "id": "doc-food-broken",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [
+          "casa"
+        ],
+        "figure": null,
+        "agentStatus": "failed"
+      }
+    },
+    {
+      "id": "doc-food-thousand",
+      "facts": {
+        "support": [
+          {
+            "text": "Ontem, 12:00"
+          }
+        ],
+        "tags": [
+          "casa"
+        ],
+        "figure": "1.241 kcal",
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-food-empty",
+      "facts": {
+        "support": [
+          {
+            "text": "31 dez. 2025, 20:30"
+          }
+        ],
+        "tags": [
+          "casa"
+        ],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-sleep-empty",
+      "facts": {
+        "support": [
+          {
+            "text": "Pontuação 0"
+          }
+        ],
+        "tags": [],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-training-empty",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [],
+        "figure": null,
+        "agentStatus": null
+      }
+    },
+    {
+      "id": "doc-skill-bare",
+      "facts": {
+        "support": [
+          {
+            "text": "Hoje, 09:12"
+          }
+        ],
+        "tags": [],
+        "figure": null,
+        "agentStatus": null
+      }
+    }
+  ],
+  "startsOpen": [
+    {
+      "key": "text",
+      "drawerCount": 1,
+      "narrowed": false,
+      "result": true
+    },
+    {
+      "key": "text",
+      "drawerCount": 1,
+      "narrowed": true,
+      "result": true
+    },
+    {
+      "key": "text",
+      "drawerCount": 3,
+      "narrowed": false,
+      "result": true
+    },
+    {
+      "key": "text",
+      "drawerCount": 3,
+      "narrowed": true,
+      "result": true
+    },
+    {
+      "key": "food",
+      "drawerCount": 1,
+      "narrowed": false,
+      "result": true
+    },
+    {
+      "key": "food",
+      "drawerCount": 1,
+      "narrowed": true,
+      "result": true
+    },
+    {
+      "key": "food",
+      "drawerCount": 3,
+      "narrowed": false,
+      "result": false
+    },
+    {
+      "key": "food",
+      "drawerCount": 3,
+      "narrowed": true,
+      "result": true
+    },
+    {
+      "key": "other",
+      "drawerCount": 1,
+      "narrowed": false,
+      "result": true
+    },
+    {
+      "key": "other",
+      "drawerCount": 1,
+      "narrowed": true,
+      "result": true
+    },
+    {
+      "key": "other",
+      "drawerCount": 3,
+      "narrowed": false,
+      "result": false
+    },
+    {
+      "key": "other",
+      "drawerCount": 3,
+      "narrowed": true,
+      "result": true
+    }
+  ]
+}

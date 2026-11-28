@@ -45,21 +45,26 @@ const SHEETS = {
 } as const;
 
 /** A letra A da nota de texto, desenhada a traço na grade de 24 dos ícones do lucide. */
-function LetterGlyph() {
+function LetterGlyph({ className }: { className?: string }) {
   return (
-    <svg className={styles.glyph} data-glyph="letter" aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} data-glyph="letter" aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round">
       <path d="m4.5 20 7.5-16 7.5 16" />
       <path d="M7.3 14h9.4" />
     </svg>
   );
 }
 
+/** O desenho do tipo sozinho, sem as páginas: o da linha da lista de artefatos. */
+export function TypeGlyph({ type, className }: { type: string; className?: string }) {
+  const Icon = noteTypeIcon(type);
+  return Icon === FileText ? <LetterGlyph className={className} /> : <Icon className={className} aria-hidden />;
+}
+
 /**
  * O artefato como páginas empilhadas: onde a tarefa é um quadrado com o ícone
  * no meio, o artefato são duas páginas com o ícone do tipo no meio da página
  * da frente. A nota de texto, que não tem ícone de tipo, leva a
- * letra A no lugar dele. `list` é a da lista de artefatos, do tamanho do
- * quadrado da tarefa; `cite` é a compacta, para o artefato citado dentro de
+ * letra A no lugar dele. `list` é a do tamanho do quadrado da tarefa; `cite` é a compacta, para o artefato citado dentro de
  * uma tarefa.
  */
 export function NoteSheet({ type, size = "list", className }: { type: string; size?: keyof typeof SHEETS; className?: string }) {
@@ -72,7 +77,7 @@ export function NoteSheet({ type, size = "list", className }: { type: string; si
         <path d={sheet.front} />
         <path d={sheet.back} />
       </svg>
-      {isText ? <LetterGlyph /> : <Icon className={styles.glyph} />}
+      {isText ? <LetterGlyph className={styles.glyph} /> : <Icon className={styles.glyph} />}
     </span>
   );
 }

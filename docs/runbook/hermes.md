@@ -186,6 +186,7 @@ mcp_servers:
         - list_tracked_tasks
         - list_artifacts
         - list_recurrences
+        - search_places
         - get_task
         - get_artifact
         - get_recurrence
@@ -420,6 +421,7 @@ mcp_servers:
         - list_tracked_tasks
         - list_artifacts
         - list_recurrences
+        - search_places
         - get_task
         - get_artifact
         - get_recurrence
