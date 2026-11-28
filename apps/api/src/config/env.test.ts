@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { expect, test, vi } from "vitest";
 import { getDatabaseEnv, getJobsEnv, getServerEnv, isLoopbackHost } from "./env";
 
@@ -32,13 +33,12 @@ test("recognizes the hosts that keep the API off the network", () => {
   expect(isLoopbackHost("192.168.0.10")).toBe(false);
 });
 
-test("requires a PostgreSQL connection string", () => {
-  expect(
-    getDatabaseEnv({
-      DATABASE_URL: "postgresql://timeline:timeline@127.0.0.1:5432/timeline",
-    }).DATABASE_URL,
-  ).toBe("postgresql://timeline:timeline@127.0.0.1:5432/timeline");
-  expect(() => getDatabaseEnv({ DATABASE_URL: "" })).toThrow();
+test("puts the SQLite file of the API under the monorepo root unless told otherwise", () => {
+  const root = resolve(__dirname, "../../../..");
+  expect(getDatabaseEnv({}).API_DATABASE_PATH).toBe(resolve(root, ".data/api.sqlite"));
+  expect(getDatabaseEnv({ API_DATABASE_PATH: "" }).API_DATABASE_PATH).toBe(resolve(root, ".data/api.sqlite"));
+  expect(getDatabaseEnv({ API_DATABASE_PATH: "/data/api.sqlite" }).API_DATABASE_PATH).toBe("/data/api.sqlite");
+  expect(getDatabaseEnv({ API_DATABASE_PATH: "tmp/x.sqlite" }).API_DATABASE_PATH).toBe(resolve(root, "tmp/x.sqlite"));
 });
 
 test("queue config has defaults and bounds concurrency", () => {

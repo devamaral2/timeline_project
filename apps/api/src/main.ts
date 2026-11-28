@@ -6,7 +6,7 @@ import { TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES } from "@repo/contracts/device-
 import { AppModule } from "./app.module";
 import { DomainExceptionFilter } from "./common/domain-exception.filter";
 import { configureApiDocumentation } from "./common/openapi";
-import { getDatabaseEnv, getServerEnv, isLoopbackHost } from "./config/env";
+import { getServerEnv, isLoopbackHost } from "./config/env";
 import { loadRootEnv } from "./config/load-env";
 import { DAILY_READING_BODY_LIMIT_BYTES } from "./features/save-daily-reading/save-daily-reading.controller";
 
@@ -23,9 +23,6 @@ async function bootstrap(): Promise<void> {
   // chaves do OpenRouter no construtor, durante a criacao dos providers.
   loadRootEnv();
 
-  // DATABASE_URL passa a ser obrigatorio a partir daqui: falhar cedo, antes de
-  // criar o Nest, evita subir o processo so para falhar no primeiro request.
-  getDatabaseEnv();
 
   const { API_PORT, API_HOST } = getServerEnv();
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
