@@ -44,6 +44,7 @@
     "hermes:setup": "cross-env ONEPASSWORD_SCOPE=hermes-runtime node scripts/onepassword/exec.mjs docker compose -f infra/docker-compose.hermes.yml run --rm hermes setup",
     "hermes:logs": "docker logs -f braid-hermes",
     "hermes:down": "cross-env ONEPASSWORD_SCOPE=hermes-runtime node scripts/onepassword/exec.mjs docker compose -f infra/docker-compose.hermes.yml down",
+    "app:open": "bash scripts/worktree/open-app.sh",
     "worktree:stop-dev": "bash scripts/worktree/stop-dev.sh",
     "worktree:teardown": "node scripts/onepassword/exec.mjs bash scripts/worktree/teardown.sh"
   },
