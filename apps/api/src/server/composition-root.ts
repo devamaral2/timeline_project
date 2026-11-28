@@ -4,45 +4,65 @@ import { GenerateFoodUseCase } from "../api-core/artifacts/generate-food.usecase
 import { ArtifactBuilder } from "../api-core/artifacts/services/artifact-builder.service";
 import { MaterializeRecurrencesUseCase } from "../api-core/recurrences/materialize-recurrences.usecase";
 import { RequestOperations } from "../api-core/requests/request-operations";
-import { requestClock } from "../api-core/tasks/request-clock";
 import { CreateTaskUseCase } from "../api-core/tasks/create-task.usecase";
 import { OpenRouterFoodParsingGateway } from "../api-core/tasks/gateways/openrouter-food-parsing.gateway";
-import { PostgresTranscriptionRequests } from "../infrastructure/persistence/transcription/postgres-transcription-requests";
+import { requestClock } from "../api-core/tasks/request-clock";
 import type { LogSink } from "../common/logger";
 import { getDatabaseEnv, getJobsEnv, getServerEnv, type ServerEnv } from "../config/env";
-import type { ApiRoute } from "../http/api-route";
 import { cancelRequestRoute } from "../features/cancel-request/cancel-request.route";
+import { createArtifactRoute } from "../features/create-artifact/create-artifact.route";
+import { CreateArtifactUseCase } from "../features/create-artifact/create-artifact.usecase";
+import { createProjectRoute } from "../features/create-project/create-project.route";
+import { CreateProjectUseCase } from "../features/create-project/create-project.usecase";
+import { createRecurrenceRoute } from "../features/create-recurrence/create-recurrence.route";
+import { CreateRecurrenceUseCase } from "../features/create-recurrence/create-recurrence.usecase";
+import { createTaskRoute } from "../features/create-task/create-task.route";
+import { deleteArtifactRoute } from "../features/delete-artifact/delete-artifact.route";
+import { DeleteArtifactUseCase } from "../features/delete-artifact/delete-artifact.usecase";
+import { deleteRecurrenceRoute } from "../features/delete-recurrence/delete-recurrence.route";
+import { DeleteRecurrenceUseCase } from "../features/delete-recurrence/delete-recurrence.usecase";
+import { deleteTaskRoute } from "../features/delete-task/delete-task.route";
+import { DeleteTaskUseCase } from "../features/delete-task/delete-task.usecase";
+import { getArtifactRoute } from "../features/get-artifact/get-artifact.route";
+import { GetArtifactUseCase } from "../features/get-artifact/get-artifact.usecase";
 import { getModelOptionsRoute } from "../features/get-model-options/get-model-options.route";
+import { getRecurrenceRoute } from "../features/get-recurrence/get-recurrence.route";
+import { GetRecurrenceUseCase } from "../features/get-recurrence/get-recurrence.usecase";
 import { getRequestRoute } from "../features/get-request/get-request.route";
+import { getTaskRoute } from "../features/get-task/get-task.route";
+import { GetTaskUseCase } from "../features/get-task/get-task.usecase";
+import { listAgendaTasksRoute } from "../features/list-agenda-tasks/list-agenda-tasks.route";
+import { ListAgendaTasksUseCase } from "../features/list-agenda-tasks/list-agenda-tasks.usecase";
+import { listArtifactsRoute } from "../features/list-artifacts/list-artifacts.route";
+import { ListArtifactsUseCase } from "../features/list-artifacts/list-artifacts.usecase";
+import { listProjectsRoute } from "../features/list-projects/list-projects.route";
+import { ListProjectsUseCase } from "../features/list-projects/list-projects.usecase";
+import { listRecurrencesRoute } from "../features/list-recurrences/list-recurrences.route";
+import { ListRecurrencesUseCase } from "../features/list-recurrences/list-recurrences.usecase";
 import { listRequestsRoute } from "../features/list-requests/list-requests.route";
+import { listTrackedTasksRoute } from "../features/list-tracked-tasks/list-tracked-tasks.route";
+import { ListTrackedTasksUseCase } from "../features/list-tracked-tasks/list-tracked-tasks.usecase";
+import { CancelTranscriptionUseCase } from "../features/request-transcription/cancel-transcription.usecase";
+import { setTaskSituationRoute } from "../features/set-task-situation/set-task-situation.route";
+import { SetTaskSituationUseCase } from "../features/set-task-situation/set-task-situation.usecase";
 import { startEditRequestRoute } from "../features/start-edit-request/start-edit-request.route";
 import { startHermesRequestRoute } from "../features/start-hermes-request/start-hermes-request.route";
 import { startModelRequestRoute } from "../features/start-model-request/start-model-request.route";
 import { startRequestRoute } from "../features/start-request/start-request.route";
 import { startVoiceRequestRoute } from "../features/start-voice-request/start-voice-request.route";
-import { createProjectRoute } from "../features/create-project/create-project.route";
-import { createTaskRoute } from "../features/create-task/create-task.route";
-import { deleteTaskRoute } from "../features/delete-task/delete-task.route";
-import { getTaskRoute } from "../features/get-task/get-task.route";
-import { listAgendaTasksRoute } from "../features/list-agenda-tasks/list-agenda-tasks.route";
-import { listProjectsRoute } from "../features/list-projects/list-projects.route";
-import { listTrackedTasksRoute } from "../features/list-tracked-tasks/list-tracked-tasks.route";
-import { setTaskSituationRoute } from "../features/set-task-situation/set-task-situation.route";
+import { updateArtifactRoute } from "../features/update-artifact/update-artifact.route";
+import { UpdateArtifactUseCase } from "../features/update-artifact/update-artifact.usecase";
+import { updateRecurrenceRoute } from "../features/update-recurrence/update-recurrence.route";
+import { UpdateRecurrenceUseCase } from "../features/update-recurrence/update-recurrence.usecase";
 import { updateTaskRoute } from "../features/update-task/update-task.route";
-import { CancelTranscriptionUseCase } from "../features/request-transcription/cancel-transcription.usecase";
-import { CreateProjectUseCase } from "../features/create-project/create-project.usecase";
-import { DeleteTaskUseCase } from "../features/delete-task/delete-task.usecase";
-import { GetTaskUseCase } from "../features/get-task/get-task.usecase";
-import { ListAgendaTasksUseCase } from "../features/list-agenda-tasks/list-agenda-tasks.usecase";
-import { ListProjectsUseCase } from "../features/list-projects/list-projects.usecase";
-import { ListTrackedTasksUseCase } from "../features/list-tracked-tasks/list-tracked-tasks.usecase";
-import { SetTaskSituationUseCase } from "../features/set-task-situation/set-task-situation.usecase";
 import { UpdateTaskUseCase } from "../features/update-task/update-task.usecase";
+import type { ApiRoute } from "../http/api-route";
 import { AgentFilesBootstrap } from "../infrastructure/agent-files/agent-files.bootstrap";
 import { JobsService } from "../infrastructure/jobs/jobs.service";
 import { PostgresEntityBatchWriter } from "../infrastructure/persistence/agent-batch/postgres-entity-batch-writer";
 import { PostgresScopedSqlQuery } from "../infrastructure/persistence/agent-sql/postgres-scoped-sql.query";
 import { PostgresWorkoutCatalog } from "../infrastructure/persistence/artifacts/postgres-workout.catalog";
+import { PostgresArtifactTaskLinkQuery } from "../infrastructure/persistence/artifacts/queries/postgres-artifact-task-link.query";
 import { PostgresArtifactRepository } from "../infrastructure/persistence/artifacts/repositories/postgres-artifact.repository";
 import { PostgresDatabase } from "../infrastructure/persistence/database/postgres-database";
 import { PostgresIdempotencyStore } from "../infrastructure/persistence/idempotency/postgres-idempotency.store";
@@ -54,6 +74,7 @@ import { PostgresRequestStore } from "../infrastructure/persistence/requests/pos
 import { PostgresTaskCardQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-card.query";
 import { PostgresTaskRequestLinkQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-request-link.query";
 import { PostgresTaskRepository } from "../infrastructure/persistence/tasks/repositories/postgres-task.repository";
+import { PostgresTranscriptionRequests } from "../infrastructure/persistence/transcription/postgres-transcription-requests";
 import {
   createAgentFiles,
   createDailyReading,
@@ -112,6 +133,7 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
     const projectQuery = new PostgresProjectQuery(database.db);
     const projectRepository = new PostgresProjectRepository(database.db);
     const artifactRepository = new PostgresArtifactRepository(database.db);
+    const artifactTaskLinkQuery = new PostgresArtifactTaskLinkQuery(database.db);
     const recurrenceRepository = new PostgresRecurrenceRepository(database.db);
     const workoutCatalog = new PostgresWorkoutCatalog(database.db);
     const entityBatchWriter = new PostgresEntityBatchWriter(database.db);
@@ -132,6 +154,24 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
     const listTrackedTasks = new ListTrackedTasksUseCase(taskCardQuery, materializeRecurrences);
     const listProjects = new ListProjectsUseCase(projectQuery);
     const createProject = new CreateProjectUseCase(projectRepository);
+
+    const listArtifacts = new ListArtifactsUseCase(artifactRepository, artifactTaskLinkQuery);
+    const createArtifact = new CreateArtifactUseCase(artifactBuilder, taskRepository, entityBatchWriter);
+    const getArtifact = new GetArtifactUseCase(artifactRepository, artifactTaskLinkQuery);
+    const updateArtifact = new UpdateArtifactUseCase(
+      artifactRepository,
+      artifactTaskLinkQuery,
+      artifactBuilder,
+      taskRepository,
+      entityBatchWriter,
+    );
+    const deleteArtifact = new DeleteArtifactUseCase(artifactRepository);
+
+    const listRecurrences = new ListRecurrencesUseCase(recurrenceRepository);
+    const createRecurrence = new CreateRecurrenceUseCase(recurrenceRepository, createTask, taskRepository);
+    const getRecurrence = new GetRecurrenceUseCase(recurrenceRepository);
+    const updateRecurrence = new UpdateRecurrenceUseCase(recurrenceRepository, createTask, taskRepository);
+    const deleteRecurrence = new DeleteRecurrenceUseCase(recurrenceRepository);
 
     // O worker unico da fila em Postgres: uma instancia por processo, um registro por handler.
     const jobStore = new PostgresJobStore(database, jobsEnv.AI_JOBS_LEASE_MS, jobsEnv.AI_JOBS_MAX_ATTEMPTS);
@@ -179,6 +219,16 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
       deleteTaskRoute(deleteTask),
       listProjectsRoute(listProjects),
       createProjectRoute(createProject),
+      listArtifactsRoute(listArtifacts),
+      createArtifactRoute(createArtifact),
+      getArtifactRoute(getArtifact),
+      updateArtifactRoute(updateArtifact),
+      deleteArtifactRoute(deleteArtifact),
+      listRecurrencesRoute(listRecurrences),
+      createRecurrenceRoute(createRecurrence),
+      getRecurrenceRoute(getRecurrence),
+      updateRecurrenceRoute(updateRecurrence),
+      deleteRecurrenceRoute(deleteRecurrence),
       getModelOptionsRoute(),
       listRequestsRoute(requestOperations),
       startRequestRoute(requestOperations),

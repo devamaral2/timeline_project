@@ -24,6 +24,16 @@ const MIGRATED = [
   "set-task-situation",
   "create-project",
   "list-projects",
+  "create-artifact",
+  "get-artifact",
+  "update-artifact",
+  "delete-artifact",
+  "list-artifacts",
+  "create-recurrence",
+  "get-recurrence",
+  "update-recurrence",
+  "delete-recurrence",
+  "list-recurrences",
   "start-request",
   "start-edit-request",
   "start-hermes-request",
@@ -39,16 +49,6 @@ const MIGRATED = [
 const STILL_NEST = [
   "suggest-tags",
   "search-places",
-  "create-artifact",
-  "get-artifact",
-  "update-artifact",
-  "delete-artifact",
-  "list-artifacts",
-  "create-recurrence",
-  "get-recurrence",
-  "update-recurrence",
-  "delete-recurrence",
-  "list-recurrences",
 ];
 
 test("does not retain the old feature aggregators or artificial HTTP areas", () => {
