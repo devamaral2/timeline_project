@@ -15,7 +15,7 @@ Ao terminar este runbook, você deverá conseguir:
 
 1. iniciar um emulador Android ou conectar um aparelho físico;
 2. confirmar que o dispositivo aparece em `adb devices`;
-3. iniciar PostgreSQL, API e Auth localmente;
+3. iniciar API e Auth localmente;
 4. compilar e instalar o APK debug;
 5. abrir o Braid no dispositivo;
 6. fazer login e acessar a agenda usando o backend local.
@@ -27,7 +27,6 @@ O fluxo local usa estas portas por padrão:
 | Web | `3000` | Opcional; usado para comparar a experiência mobile |
 | API | `3001` | Eventos, tags e chat |
 | Auth | `3002` | Login, sessão, refresh e logout |
-| PostgreSQL | `54391` | Banco local do Auth (a API usa SQLite em `.data/api.sqlite`) |
 
 As portas da API e do Auth podem ser diferentes em uma worktree isolada. Nesse
 caso, o arquivo `.env.local` é a fonte de verdade.
@@ -75,7 +74,8 @@ terminal com permissão para instalar os shims do Corepack ou configure o pnpm
 
 ### 1.4 Docker
 
-O PostgreSQL local é iniciado pelo Docker Compose.
+O Docker não é necessário para a API nem para o Auth, que usam arquivos SQLite
+(ADR 0024 e 0025). Ele só serve ao Hermes e a serviços auxiliares.
 
 Instale e inicie o Docker Desktop (macOS/Windows) ou o Docker Engine com o
 plugin Compose (Linux). Confirme:
@@ -601,10 +601,9 @@ Esse comando:
 
 1. calcula portas livres;
 2. cria `.env.local` com essas portas;
-3. sobe um PostgreSQL isolado;
-4. cria a base separada do Auth;
-5. aplica as migrations da API e do Auth;
-6. executa o build dos packages.
+3. aplica as migrations da API e do Auth nos arquivos `.data/api.sqlite` e
+   `.data/auth.sqlite` da worktree;
+4. executa o build dos packages.
 
 O comando não provisiona a worktree principal por segurança. Não use
 `FORCE_MAIN=1` sem ter certeza de que deseja substituir o `.env.local` e o
@@ -614,51 +613,24 @@ Ao terminar, anote as portas exibidas no resumo do comando. Elas serão usadas
 automaticamente por `pnpm dev:mobile`, desde que o `.env.local` permaneça na
 raiz dessa mesma worktree.
 
-## 7. Subir PostgreSQL e aplicar migrations
+## 7. Aplicar migrations
 
 ### 7.1 Worktree principal
 
-Com `OP_SERVICE_ACCOUNT_TOKEN`, `OP_ENVIRONMENT_ID` e `.env.local` configurados,
-suba o PostgreSQL:
-
-```bash
-pnpm secrets:exec -- docker compose \
-  --env-file .env.local \
-  --project-name braid-main \
-  -f infra/docker-compose.local.yml up -d
-```
-
-Verifique o container:
-
-```bash
-pnpm secrets:exec -- docker compose \
-  --env-file .env.local \
-  --project-name braid-main \
-  -f infra/docker-compose.local.yml ps
-```
-
-O serviço `postgres` deve estar `running` e saudável.
-
-Aplique as migrations da API:
+A API e o Auth guardam tudo em arquivos SQLite na raiz do repositório,
+`.data/api.sqlite` e `.data/auth.sqlite` (ADR 0024 e 0025): não há banco para
+subir. Os dois aplicam as migrations pendentes sozinhos ao subir; para aplicar
+antes:
 
 ```bash
 pnpm secrets:exec -- pnpm db:migrate
-```
-
-Aplique as migrations do Auth:
-
-```bash
 pnpm secrets:exec -- pnpm --filter @repo/auth run db:migrate
 ```
-
-As duas migrations são obrigatórias. O Auth usa o PostgreSQL; a API guarda tudo
-num arquivo SQLite, `.data/api.sqlite` na raiz do repositório (ADR 0024), e
-também aplica as migrations pendentes sozinha ao subir.
 
 ### 7.2 Worktree secundária
 
 Se você executou `pnpm worktree:provision`, não repita os comandos desta seção:
-o provisionamento já subiu o PostgreSQL e aplicou as migrations.
+o provisionamento já aplicou as migrations.
 
 Se o provisionamento falhou antes das migrations, corrija a mensagem de erro e
 execute novamente:
@@ -723,13 +695,11 @@ Se os comandos retornarem erro de conexão:
 2. confira as portas em `.env.local`;
 3. confira o log do processo que falhou;
 4. valide novamente `pnpm secrets:check`;
-5. valide o PostgreSQL com:
+5. confira se os arquivos `.data/api.sqlite` e `.data/auth.sqlite` existem
+   (a API e o Auth os criam ao subir):
 
    ```bash
-   pnpm secrets:exec -- docker compose \
-     --env-file .env.local \
-     --project-name braid-main \
-     -f infra/docker-compose.local.yml ps
+   ls -l .data/
    ```
 
 ## 9. Configurar as URLs do app Kotlin
@@ -906,7 +876,6 @@ verdadeiros:
 - [ ] `java -version` e `javac -version` mostram JDK 21.
 - [ ] `adb version` funciona.
 - [ ] `adb devices` mostra pelo menos um dispositivo com estado `device`.
-- [ ] O PostgreSQL local está saudável.
 - [ ] As migrations da API foram aplicadas.
 - [ ] As migrations do Auth foram aplicadas.
 - [ ] API responde em `/docs`.
@@ -1037,26 +1006,11 @@ Verifique, nesta ordem:
 
 Não substitua uma chave ausente por valor aleatório.
 
-### `docker compose` não inicia o PostgreSQL
-
-1. Execute `docker info`.
-2. Confirme que `POSTGRES_USER`, `POSTGRES_PASSWORD` e `POSTGRES_DB` existem
-   no Environment do 1Password.
-3. Confirme `POSTGRES_HOST_PORT` em `.env.local`.
-4. Verifique se a porta já está ocupada.
-5. Inspecione os logs:
-
-   ```bash
-   pnpm secrets:exec -- docker compose \
-     --env-file .env.local \
-     --project-name braid-main \
-     -f infra/docker-compose.local.yml logs postgres
-   ```
-
 ### API ou Auth não iniciam
 
-1. Confirme que o PostgreSQL está saudável.
-2. Execute as migrations novamente.
+1. Execute as migrations novamente (o erro aparece no terminal se um arquivo
+   SQLite foi migrado por uma versão mais nova).
+2. Confirme que nenhum outro processo segura o mesmo arquivo `.data/*.sqlite`.
 3. Confirme `API_PORT` e `AUTH_PORT`.
 4. Verifique se outra aplicação já usa as portas.
 5. Leia a primeira mensagem de erro do terminal; erros posteriores podem ser

@@ -1,73 +1,72 @@
 # Banco do Auth
 
-## Credenciais
+O auth guarda tudo num arquivo SQLite ([ADR 0025](../adr/0025-auth-em-sqlite.md)), sobre o mesmo cliente da API
+(`packages/sqlite`).
 
-O serviço usa duas credenciais distintas no mesmo banco:
+| Onde | Arquivo |
+| --- | --- |
+| Produção | `/data/auth.sqlite`, no volume `auth-data` do pod `auth` |
+| Worktree local | `.data/auth.sqlite`, na raiz da worktree |
+| Outro caminho | `AUTH_DATABASE_PATH` |
 
-| Variável | Papel | Para quê |
-| --- | --- | --- |
-| `AUTH_DATABASE_MIGRATION_URL` | dono do schema | aplicar DDL |
-| `AUTH_DATABASE_URL` | `auth_runtime` | ler e escrever as tabelas em produção |
+Não há credencial de banco: o acesso ao arquivo é o acesso ao volume. O servidor e os CLIs (`create-admin`,
+`rotate-signing-key`, `device-key`, `password:update`, `cleanup-auth-data`) abrem o mesmo arquivo; o `BEGIN IMMEDIATE`
+faz uma escrita esperar a outra, inclusive entre processos.
 
-A credencial de runtime não é dona do schema: ela lê e escreve as tabelas, mas
-não executa DDL.
+## Migrations
 
-## Aplicar migrations
+O auth aplica as migrations pendentes ao abrir o banco, depois de copiar o arquivo para
+`<arquivo>.antes-de-<migration>.sqlite`. Em produção isso acontece a cada subida do pod; não há passo de migração no
+deploy. Para rodar sem subir o servidor:
 
-1. Faça backup e confirme para qual banco `AUTH_DATABASE_MIGRATION_URL` aponta.
-2. Rode:
+```bash
+pnpm --filter @repo/auth run db:migrate
+```
 
-   ```bash
-   pnpm --filter @repo/auth run db:migrate
-   ```
+Os arquivos ficam em `apps/auth/migrations/` e seguem as regras de `.agents/skills/db-migrations/SKILL.md`. Cada
+migration nova sobe `auth_schema_meta.version` e `AUTH_SCHEMA_VERSION` (`apps/auth/src/db/readiness.ts`) juntos; o
+deploy confere os dois com `ops/production/check-auth-schema.sh`.
 
-3. Se o banco é novo, aplique as permissões de runtime:
+## Virada do Postgres para o SQLite
 
-   ```bash
-   psql "$AUTH_DATABASE_MIGRATION_URL" -f apps/auth/ops/grant-runtime.sql
-   ```
+Uma vez, no primeiro deploy com o auth em SQLite, o `deploy-release.sh` faz sozinho:
 
-   Ajuste `public` e `auth_runtime` no arquivo quando o schema ou o papel forem
-   outros.
-4. Suba o serviço e confirme:
+1. o pod novo do auth sobe com o arquivo vazio, cria uma chave de assinatura e fica pronto;
+2. enquanto o Service `postgres` existir e o arquivo não tiver usuários, roda
+   `node apps/auth/dist/db/copy-from-postgres.cli.js --url-from-stdin` dentro do pod, com a URL do dono do banco
+   `braid_auth` pela entrada padrão;
+3. reinicia o auth.
 
-   ```bash
-   curl -fsS http://127.0.0.1:3002/health/ready
-   curl -fsS http://127.0.0.1:3002/.well-known/jwks.json
-   ```
+A cópia traz usuários (com o hash da senha), papéis, permissões, chaves de dispositivo, chaves de assinatura (troca a
+chave criada no passo 1: os tokens já emitidos continuam válidos) e a auditoria. Sessões, refresh tokens, convites e
+contadores de tentativa ficam de fora: todo mundo faz login de novo, e um convite em aberto é reemitido. É uma
+transação só, conferida tabela a tabela; um arquivo que já tem usuários é recusado sem gravar nada.
 
-O comando aplica os arquivos de `apps/auth/drizzle/` em ordem, pulando o que já
-consta em `applied_migrations` (dentro do schema `drizzle`). **Rodar de novo é
-seguro**: sem nada pendente, ele não faz nada. Cada arquivo roda na própria
-transação, junto com o registro de que foi aplicado.
+Para refazer à mão (por exemplo, numa worktree, do Postgres local para `.data/auth.sqlite`):
+
+```bash
+rm -f .data/auth.sqlite*   # só se o arquivo pode ser descartado
+pnpm secrets:exec -- pnpm --filter @repo/auth run db:copy-from-postgres
+```
 
 ## Sinais de que algo está errado
 
-- `GET /health/ready` responde **503**: ou o banco está fora, ou o schema está
-  atrás do código. `auth_schema_meta.version` precisa bater com
-  `AUTH_SCHEMA_VERSION` (`apps/auth/src/db/readiness.ts`). Rode `db:migrate`.
-- `GET /health/ready` responde 503 com o schema correto: não há chave de
-  assinatura ativa. Veja o runbook de rotação de chave.
-- Erro de permissão em runtime (`permission denied for table ...`): o passo 3
-  nunca rodou neste banco. Desde a migração `0005` o `grant-runtime.sql` também
-  define `ALTER DEFAULT PRIVILEGES`, então tabelas criadas por migrações
-  posteriores já nascem acessíveis ao `auth_runtime` — rode o arquivo uma vez e
-  o problema não volta.
+- `GET /health/ready` responde **503**: o arquivo não abriu, o schema não bate com `AUTH_SCHEMA_VERSION`, ou não há
+  chave de assinatura ativa (veja o runbook de rotação de chave).
+- O pod não sobe e o log diz `The database was migrated by a newer build`: uma imagem mais antiga abriu um arquivo que
+  uma mais nova migrou. Volte para a imagem nova ou restaure a cópia `antes-de-*`.
+- `database is locked` depois de 5 s: outro processo segura uma transação longa no mesmo arquivo. Veja se há um CLI
+  parado no meio.
+
+## Backup e restauração
+
+O `backup.sh` copia o arquivo com o banco no ar (`VACUUM INTO`), confere `PRAGMA integrity_check` e o guarda no pacote
+cifrado como `auth.sqlite`. Nunca copie o `.sqlite` e o `-wal` soltos. Para restaurar, pare o auth
+(`kubectl -n braid scale deployment/auth --replicas=0`), ponha a cópia em `/data/auth.sqlite` no volume, apague
+`auth.sqlite-wal` e `auth.sqlite-shm` e suba de novo.
 
 ## O que não fazer
 
-- Não rode migrations com a credencial de runtime.
-- Não edite uma migration já aplicada em qualquer ambiente compartilhado. Gere
-  outra em cima dela — `applied_migrations` registra o nome do arquivo, e
-  reescrever o conteúdo dele não reaplica nada.
-
-## Rollback
-
-Cada migração tem o par em `apps/auth/drizzle/rollback/`. Aplique o `.down.sql`
-correspondente com a credencial de migração e apague a linha de
-`applied_migrations`:
-
-```bash
-psql "$AUTH_DATABASE_MIGRATION_URL" -f apps/auth/drizzle/rollback/0002_authentication_sessions.down.sql
-psql "$AUTH_DATABASE_MIGRATION_URL" -c "DELETE FROM drizzle.applied_migrations WHERE filename = '0002_authentication_sessions.sql'"
-```
+- Não edite uma migration já aplicada: o migrador recusa o arquivo pelo checksum. Faça outra em cima dela.
+- Não aponte dois pods para o mesmo volume: o deployment é `Recreate` de propósito.
+- Não ponha o arquivo em sistema de arquivos de rede: o SQLite em WAL não funciona nele.
