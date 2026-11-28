@@ -4,6 +4,8 @@ import { Task, TaskValidationError } from "../../domain";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
 import { composeReadingArticle } from "../../api-core/tasks/daily-reading-article";
 import type { DailyReadingGate } from "../../api-core/tasks/daily-reading.gate";
+import { youtubeVideoLinkOf } from "@repo/contracts/youtube";
+import type { RequestTranscriptionUseCase } from "../request-transcription/request-transcription.usecase";
 
 /**
  * Guarda uma página lida na tarefa "Leitura diária" do dia, pela porta da
@@ -19,9 +21,16 @@ export class SaveDailyReadingUseCase {
   constructor(
     private readonly gate: Pick<DailyReadingGate, "place" | "now">,
     private readonly relations: TaskRelations,
+    /** A página de um vídeo do YouTube vira o pedido de transcrição, como a extensão já faz. */
+    private readonly transcribe?: Pick<RequestTranscriptionUseCase, "execute">,
   ) {}
 
   async execute(input: DailyReadingInput, actor: AuthenticatedUser): Promise<DailyReadingResult> {
+    if (this.transcribe && youtubeVideoLinkOf(input.url)) {
+      // Guardar o texto da página de um vídeo daria uma nota sem player nem transcrição: o documento é o do pedido.
+      const requested = await this.transcribe.execute({ url: input.url }, actor);
+      return { taskId: requested.taskId, artifactId: requested.artifactId, taskCreated: false, artifactCreated: requested.created };
+    }
     const article = composeReadingArticle(input);
     if (!article) throw new TaskValidationError("Invalid url");
 

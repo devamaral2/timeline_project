@@ -9,11 +9,11 @@ test("um link do YouTube sozinho na linha vira o player, com o link original emb
 
   const players = container.querySelectorAll("iframe");
   expect(players).toHaveLength(2);
-  expect(players[0]).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?start=90");
+  expect(players[0]).toHaveAttribute("src", "https://www.youtube.com/embed/dQw4w9WgXcQ?start=90");
   expect(players[0]).toHaveAttribute("title", "Vídeo do YouTube");
   expect(players[0]).toHaveAttribute("loading", "lazy");
   expect(players[0]).toHaveAttribute("referrerpolicy", "strict-origin-when-cross-origin");
-  expect(players[1]).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ");
+  expect(players[1]).toHaveAttribute("src", "https://www.youtube.com/embed/aqz-KE-bpKQ");
   expect(players[1]).toHaveAttribute("title", "Palestra");
   expect(screen.getByRole("link", { name: "Abrir no YouTube" })).toHaveAttribute("href", "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90");
   expect(screen.getByRole("link", { name: "Palestra" })).toHaveAttribute("href", "https://youtu.be/aqz-KE-bpKQ");

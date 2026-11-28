@@ -59,6 +59,8 @@ export class RequestEntityWorker {
       createTask: CreateTaskUseCase;
       sql: ScopedSqlQuery;
       places?: Places;
+      /** Pede a transcrição de um vídeo do YouTube para a pessoa e devolve o id do documento dele. */
+      transcribe?: (url: string, userId: string) => Promise<string>;
     },
   ) {}
 
@@ -70,7 +72,7 @@ export class RequestEntityWorker {
       );
       const started = performance.now();
       const { output, allowed, lookedUp } = await this.gather(request, step, signal);
-      const { entities, links } = await this.stage(session, output, allowed);
+      const { entities, links } = await this.stage(session, output, allowed, request.userId);
       timings.total = Math.round(performance.now() - started);
       if (signal?.aborted) throw new AgentRunCancelledError();
       // Nada a gravar: o que ele procurava nao apareceu na consulta, a mudanca pedida nao muda nada, ou nao havia o que criar.
@@ -126,9 +128,9 @@ export class RequestEntityWorker {
    * banco, mas e fruto de uma edicao.
    */
   private async stage(
-    session: AgentChangeSession, output: EntityOutput, allowed: Allowed,
+    session: AgentChangeSession, output: EntityOutput, allowed: Allowed, userId: string,
   ): Promise<{ entities: NewEntity[]; links: LinkRecord[] }> {
-    const { places } = this.deps;
+    const { places, transcribe } = this.deps;
     const seen = new Set<string>();
     const entities: NewEntity[] = [];
     /** O que a sessao preparou desde a ultima chamada: os criados e os alterados, com a operacao que o pedido mostra. */
@@ -144,9 +146,17 @@ export class RequestEntityWorker {
     };
 
     const tasks = await stageNewTasks(session, output.tasks, places);
-    const artifactLinks = await stageNewArtifacts(session, output.artifacts, tasks.ids, allowed.tasks);
+    const { links: artifactLinks, videos } = await stageNewArtifacts(
+      session, output.artifacts, tasks.ids, allowed.tasks, transcribe ? (url) => transcribe(url, userId) : undefined,
+    );
     await stageNewSeries(session, output.series, places);
     take("create");
+    // O documento do vídeo já foi gravado pelo pedido de transcrição; o pedido do chat o mostra como criado.
+    for (const id of videos) {
+      if (seen.has(`artifact:${id}`)) continue;
+      seen.add(`artifact:${id}`);
+      entities.push({ kind: "artifact", id, operation: "create" });
+    }
 
     await applyTaskEdits(session, output.taskEdits, places);
     await applyArtifactEdits(session, output.artifactEdits);

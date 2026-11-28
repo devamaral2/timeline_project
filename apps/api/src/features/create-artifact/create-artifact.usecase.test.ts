@@ -118,3 +118,36 @@ test.each(["news", "email_summary", "youtube_transcript"] as const)("an empty %s
   await expect(useCase.execute({ type, data: { body: "  " } }, actor)).rejects.toThrow("Text artifact requires a body");
   expect(database.artifacts).toEqual([]);
 });
+
+test("saving a YouTube video asks for its transcription instead of keeping the bare link", async () => {
+  const asked: { url: string; userId: string }[] = [];
+  const kit = createTasksKit({ tasks: [task("e1")] });
+  const transcribe = {
+    execute: async (input: { url: string }, who: { userId: string }) => {
+      asked.push({ url: input.url, userId: who.userId });
+      // O pedido grava o documento do vídeo ("Transcrição na fila") na Leitura diária.
+      await kit.artifactRepository.save(Artifact.create({ id: "video-doc", userId: who.userId, data: { body: "Transcrição na fila" } }));
+      return { requestId: "r1", taskId: "reading", artifactId: "video-doc", created: true };
+    },
+  };
+  const useCase = new CreateArtifactUseCase(kit.artifactBuilder, kit.taskRepository, kit.batchWriter, () => now, transcribe);
+
+  const { artifactId } = await useCase.execute({ data: { body: "Ver depois: https://youtu.be/dQw4w9WgXcQ" }, taskIds: ["e1"] }, actor);
+
+  expect(artifactId).toBe("video-doc");
+  expect(asked).toEqual([{ url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", userId: actor.userId }]);
+  expect(kit.batchWriter.commits.flatMap((commit) => commit.artifacts)).toEqual([]);
+  expect(await kit.taskRepository.findById("e1")).toMatchObject({ artifactLinks: [{ artifactId: "video-doc", relation: "creates" }] });
+});
+
+test("a note that is more than a video link is kept as a note", async () => {
+  let asked = 0;
+  const transcribe = { execute: async () => { asked += 1; return { requestId: "r", taskId: "t", artifactId: "a", created: true }; } };
+  const kit = createTasksKit();
+  const useCase = new CreateArtifactUseCase(kit.artifactBuilder, kit.taskRepository, kit.batchWriter, () => now, transcribe);
+
+  const { artifactId } = await useCase.execute({ data: { body: "Ideias para o quintal" } }, actor);
+
+  expect(asked).toBe(0);
+  expect(await kit.artifactRepository.findById(artifactId)).toMatchObject({ type: "text" });
+});

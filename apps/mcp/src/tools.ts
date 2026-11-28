@@ -32,8 +32,23 @@ const SUMMARY_BODY = [
   "Inside a group, write one '### Title' per item (one card each), or a bullet list for one-line items ('- **Sender:** what it says').",
   "In a card these lines are read as fields and leave the text: 'De: name · time' (sender), 'Prazo: text' (deadline; say 'hoje' when it is due today), 'Fontes: [name](url) · [name](url)' (sources); a paragraph made only of links, like '[Responder](url)', becomes the card's buttons.",
   "news: '## Section' (Economia, Cidade...) with one '### Headline' per story. email_summary: groups such as '## Pedem resposta', '## Para saber', '## Sem ação'.",
-  "youtube_transcript: first line 'Fonte: [YouTube](video url) · channel'; '## Resumo' as a list of '- [topic](#t-SECONDS) (MM:SS): one line'; the speech under '## Transcrição', one paragraph per turn starting with '{#t-SECONDS} [MM:SS](https://youtu.be/ID?t=SECONDS) **Speaker:**'.",
+  "news and email_summary MUST have '##' group headings: a body without them is refused.",
+  "youtube_transcript: never write it yourself. Send only the video link as the body (to save, transcribe or summarize a YouTube video): the app downloads and transcribes it and builds the document, with the player, in the Leitura diária.",
 ].join(" ");
+
+/** Os tipos que só existem como fichas: sem os grupos (`##`), a tela não teria o que montar. */
+const CARD_ONLY_TYPES = new Set(["news", "email_summary"]);
+const GROUP_HEADING = /^ {0,3}#{2,3}[ \t]+\S/m;
+
+/** Recusa o texto de notícias ou de resumo de e-mail que não viraria fichas (`docs/summary-cards.md`). */
+function assertCardBody(type: string, body: string): void {
+  if (CARD_ONLY_TYPES.has(type) && !GROUP_HEADING.test(body)) {
+    throw new ApiError(
+      400,
+      `A '${type}' body needs the card format: an opening paragraph, then '## Group' headings with one '### Title' per item (see the body description).`,
+    );
+  }
+}
 /** Os tipos de artefato que o dono cria e edita; os de configuracao do agente ficam de fora. */
 const ARTIFACT_TYPES = [...FREE_TEXT_ARTIFACT_TYPES, "food", "sleep", "training"] as const;
 
@@ -163,7 +178,7 @@ export function registerTools(server: McpServer, api: ApiClient): void {
           .enum(FREE_TEXT_ARTIFACT_TYPES)
           .optional()
           .describe(
-            "What the text is. 'text': a plain note (the default when omitted). 'news': a round-up of news. 'email_summary': the summary of an e-mail inbox. 'youtube_transcript': the transcript of a YouTube video.",
+            "What the text is. 'text': a plain note (the default when omitted). 'news': a round-up of news. 'email_summary': the summary of an e-mail inbox. 'youtube_transcript': a YouTube video to transcribe (body: just the video link).",
           ),
         body: z.string().min(1).describe(SUMMARY_BODY),
         tags,
@@ -173,7 +188,11 @@ export function registerTools(server: McpServer, api: ApiClient): void {
       annotations: CREATE_ONLY,
     },
     ({ idempotencyKey: key, body, type, ...artifact }) =>
-      guarded(() => api.post("/api/artifacts", { ...artifact, type: type ?? "text", data: { body } }, key)),
+      guarded(() => {
+        assertCardBody(type ?? "text", body);
+        // Um vídeo do YouTube guardado (só o link) a API transforma no pedido de transcrição.
+        return api.post("/api/artifacts", { ...artifact, type: type ?? "text", data: { body } }, key);
+      }),
   );
 
   server.registerTool(
@@ -348,6 +367,7 @@ function registerReadAndEditTools(server: McpServer, api: ApiClient): void {
         if (!(FREE_TEXT_ARTIFACT_TYPES as readonly string[]).includes(type)) {
           throw new ApiError(400, `Only free-text artifacts (${FREE_TEXT_ARTIFACT_TYPES.join(", ")}) take a new body; this one is '${type}'.`);
         }
+        assertCardBody(type, body);
         return api.patch(path, { ...patch, type, data: { body } });
       }),
   );

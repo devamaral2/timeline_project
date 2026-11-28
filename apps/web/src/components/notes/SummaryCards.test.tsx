@@ -77,7 +77,7 @@ test("a transcrição abre com o player, as partes e os mais assistidos, e o tex
   Element.prototype.scrollIntoView = scroll;
   const { container } = renderCards("youtube_transcript", YOUTUBE_TRANSCRIPT_SAMPLE);
 
-  expect(container.querySelector("iframe")).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
+  expect(container.querySelector("iframe")).toHaveAttribute("src", "https://www.youtube.com/embed/dQw4w9WgXcQ");
   expect(screen.getByText(/Corpo em Pauta/)).toBeInTheDocument();
   expect(screen.getByRole("img", { name: "Onde ficam no vídeo: 12:40–13:05, 37:20–38:00" })).toBeInTheDocument();
   expect(within(screen.getByRole("region", { name: "Comentários" })).getByText(/episódio só sobre cochilo/)).toBeInTheDocument();

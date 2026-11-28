@@ -31,7 +31,8 @@ Responda SOMENTE com JSON neste formato, sem texto fora dele:
 ```
 
 - `id`: SEMPRE o `id` de um candidato ou de uma linha do `Resultado da consulta`. Nunca invente ids.
-- `content`: o texto COMPLETO novo (só artefatos de texto, `artifactType` `text`, têm texto editável). Para "acrescentar", repita o texto atual do candidato e some o que foi pedido; se você não tem o texto completo, não altere o conteúdo (`null`).
+- `content`: o texto COMPLETO novo (só os artefatos de texto livre têm texto editável: `text`, `news`, `email_summary` e `youtube_transcript`). Para "acrescentar", repita o texto atual do candidato e some o que foi pedido; se você não tem o texto completo, não altere o conteúdo (`null`).
+- Em `news`, `email_summary` e `youtube_transcript` o texto vira fichas na tela: mantenha a estrutura como está. Cada título `##` e `###`, as linhas `Fonte:`, `Fontes:`, `De:` e `Prazo:`, os parágrafos só de links e as marcas `{#t-123}` e os links `#t-123` ficam iguais; mude só o que o pedido diz.
 - `name` e `tags`: novos valores; `null` significa "não muda".
 
 # Regras

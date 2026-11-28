@@ -3,6 +3,7 @@ import { Artifact, defaultTaskDurationMinutesFor, Task } from "../../domain";
 import { FastStageError } from "../agent/errors/agent.errors";
 import type { EditCandidate } from "./request-candidates";
 import { addStep, entityAnswer, setupRequest } from "./testing/request-test-kit";
+import { RequestEntityWorker } from "./request-entity-worker";
 
 const iso = (hour: number, minute = 0) => `2026-10-25T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00-03:00`;
 
@@ -263,6 +264,30 @@ describe("artefatos de texto novos", () => {
     expect(ctx.batchWriter.commits[0]?.artifacts[0]).toMatchObject({ entity: { type: "text", name: "Ideia", data: { body: "Visão semanal" } } });
     expect(ctx.database.tasks).toEqual([]);
     expect(await ctx.store.entities("r1")).toMatchObject([{ kind: "artifact", operation: "create", finalized: false, links: [] }]);
+  });
+
+  test("guardar um video do YouTube vira o pedido de transcricao, nao uma nota com o link", async () => {
+    const ctx = setupRequest("salva esse vídeo https://youtu.be/dQw4w9WgXcQ");
+    const asked: [string, string][] = [];
+    const worker = new RequestEntityWorker({
+      store: ctx.store, runner: ctx.runner, batchWriter: ctx.batchWriter, repositories: ctx.repositories,
+      createTask: ctx.createTask, places: ctx.places, sql: ctx.sql,
+      transcribe: async (url, userId) => {
+        asked.push([url, userId]);
+        const doc = Artifact.create({ userId, name: "Vídeo do YouTube (dQw4w9WgXcQ)", data: { body: "Transcrição na fila" } });
+        await ctx.artifactRepository.save(doc);
+        return doc.id;
+      },
+    });
+    const payload = await addStep(ctx, "s1", "entity");
+    ctx.gateway.outputs.set("entity", entityAnswer({ artifacts: [note({ name: "Vídeo", content: "Ver depois: https://youtu.be/dQw4w9WgXcQ" })] }));
+
+    await worker.run(payload);
+
+    expect(asked).toEqual([["https://www.youtube.com/watch?v=dQw4w9WgXcQ", ctx.request.userId]]);
+    expect(ctx.batchWriter.commits[0]?.artifacts).toEqual([]);
+    expect(ctx.store.stepRecords[0]?.status).toBe("completed");
+    expect(await ctx.store.entities("r1")).toMatchObject([{ kind: "artifact", operation: "create", summary: { name: "Vídeo do YouTube (dQw4w9WgXcQ)" } }]);
   });
 
   test("o agente liga o artefato a tarefa nova da mesma resposta, e a ligacao nasce no mesmo lote", async () => {

@@ -5,6 +5,7 @@ import type { ArtifactEdit, NewArtifact, NewSeries, NewTask, SeriesEdit, TaskEdi
 import { changesNothing, planSeriesEdit, RuleError, seriesInput } from "./request-recurrence";
 import { StepFailure, validInstant } from "./request-step-common";
 import type { LinkRecord } from "./request-store";
+import { youtubeSaveOf } from "../transcription/youtube-save";
 
 /**
  * O que um agente de escrita devolve, preparado na sessao de mudancas do passo: nada e gravado aqui. Quem usa e o
@@ -95,11 +96,21 @@ export async function stageNewArtifacts(
   artifacts: readonly NewArtifact[],
   newTaskIds: readonly string[],
   allowedTaskIds: ReadonlySet<string>,
-): Promise<LinkRecord[]> {
+  /**
+   * Pede a transcrição de um vídeo e devolve o id do documento dele. Um artefato que só guarda um vídeo do YouTube
+   * (`youtubeSaveOf`) vira esse pedido, como pela extensão, em vez de uma nota com o link.
+   */
+  transcribe?: (url: string) => Promise<string>,
+): Promise<{ links: LinkRecord[]; videos: string[] }> {
   const links: LinkRecord[] = [];
+  const videos: string[] = [];
   for (const item of artifacts) {
-    const created = await session.createArtifact({ name: item.name, content: item.content });
+    const video = transcribe ? youtubeSaveOf("text", item.content) : null;
+    const created = video && transcribe
+      ? { ok: true as const, id: await transcribe(video.url) }
+      : await session.createArtifact({ name: item.name, content: item.content });
     if (!created.ok) throw new StepFailure("rejected");
+    if (video) videos.push(created.id);
     if (item.taskIndex === null && item.taskId === null) continue;
     if (item.taskIndex !== null && item.taskId !== null) throw new StepFailure("rejected");
     const taskId = item.taskIndex !== null ? newTaskIds[item.taskIndex] : item.taskId;
@@ -109,7 +120,7 @@ export async function stageNewArtifacts(
     if (!linked.ok) throw new StepFailure("rejected");
     links.push(linkOf(created.id, taskId));
   }
-  return links;
+  return { links, videos };
 }
 
 /**

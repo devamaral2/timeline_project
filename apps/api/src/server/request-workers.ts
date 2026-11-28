@@ -51,6 +51,7 @@ import { SqliteCandidateQuery } from "../infrastructure/persistence/requests/sql
 import { PhotonPlaceSearchGateway } from "../infrastructure/places/photon-place-search.gateway";
 import { LlmUnavailableError } from "../api-core/agent/errors/agent.errors";
 import { FormatTranscriptionUseCase } from "../features/format-transcription/format-transcription.usecase";
+import type { RequestTranscriptionUseCase } from "../features/request-transcription/request-transcription.usecase";
 
 /** O modelo da configuracao editavel pertence ao dono configurado no ambiente (ADR 0004). */
 const configOwner = (env: ServerEnv) => env.AGENT_CONFIG_OWNER_USER_ID;
@@ -141,6 +142,8 @@ export interface RequestOperationsDeps {
   files: AgentFilesService;
   food: GenerateFoodUseCase;
   env: ServerEnv;
+  /** Guardar um vídeo do YouTube pelo chat vira o pedido de transcrição (o mesmo da extensão). */
+  transcribe?: Pick<RequestTranscriptionUseCase, "execute">;
 }
 
 /**
@@ -163,7 +166,11 @@ export function createRequestOperations(deps: RequestOperationsDeps): RequestOpe
     dispatcher: new RequestDispatcher(store, new JevClient(), {
       candidates: new SqliteCandidateQuery(deps.database), model: configModelFor,
     }),
-    entity: new RequestEntityWorker({ ...workers, sql: deps.sql }),
+    entity: new RequestEntityWorker({
+      ...workers,
+      sql: deps.sql,
+      ...(deps.transcribe ? { transcribe: transcribeWith(deps.transcribe) } : {}),
+    }),
     edit: new RequestEditWorker(workers),
     query: new RequestQueryWorker({ store, runner, sql: deps.sql }),
     finalizer: new RequestFinalizer({ store, runner }),
@@ -219,4 +226,9 @@ export function registerFormatTranscriptionJob(
       },
     },
   );
+}
+
+/** O pedido de transcrição como o agente do chat o usa: o vídeo, a pessoa e o id do documento que ele grava. */
+function transcribeWith(useCase: Pick<RequestTranscriptionUseCase, "execute">) {
+  return async (url: string, userId: string): Promise<string> => (await useCase.execute({ url }, { userId })).artifactId;
 }

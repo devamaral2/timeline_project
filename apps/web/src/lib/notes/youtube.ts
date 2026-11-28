@@ -30,13 +30,10 @@ function parseStart(value: string | null): number | undefined {
   return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
 }
 
-/**
- * O endereço do player. `youtube-nocookie.com` é o domínio do YouTube que não
- * grava cookies de rastreio antes de a pessoa dar o play.
- */
+/** O endereço do player oficial do YouTube (`youtube.com/embed`), o mesmo no web e no Android. */
 export function youtubeEmbedUrl(video: YouTubeVideo): string {
   const start = video.startSeconds ? `?start=${video.startSeconds}` : "";
-  return `https://www.youtube-nocookie.com/embed/${video.id}${start}`;
+  return `https://www.youtube.com/embed/${video.id}${start}`;
 }
 
 /**
