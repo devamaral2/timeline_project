@@ -43,6 +43,11 @@ const MIGRATED = [
   "list-requests",
   "get-request",
   "cancel-request",
+  "list-agent-files",
+  "read-agent-file",
+  "list-agent-file-backups",
+  "restore-agent-file",
+  "request-agent-file-edit",
 ];
 
 /** Operacoes que ainda respondem pelo Nest durante a coexistencia. */

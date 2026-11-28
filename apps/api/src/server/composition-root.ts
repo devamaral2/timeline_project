@@ -33,6 +33,8 @@ import { getTaskRoute } from "../features/get-task/get-task.route";
 import { GetTaskUseCase } from "../features/get-task/get-task.usecase";
 import { listAgendaTasksRoute } from "../features/list-agenda-tasks/list-agenda-tasks.route";
 import { ListAgendaTasksUseCase } from "../features/list-agenda-tasks/list-agenda-tasks.usecase";
+import { listAgentFileBackupsRoute } from "../features/list-agent-file-backups/list-agent-file-backups.route";
+import { listAgentFilesRoute } from "../features/list-agent-files/list-agent-files.route";
 import { listArtifactsRoute } from "../features/list-artifacts/list-artifacts.route";
 import { ListArtifactsUseCase } from "../features/list-artifacts/list-artifacts.usecase";
 import { listProjectsRoute } from "../features/list-projects/list-projects.route";
@@ -43,6 +45,9 @@ import { listRequestsRoute } from "../features/list-requests/list-requests.route
 import { listTrackedTasksRoute } from "../features/list-tracked-tasks/list-tracked-tasks.route";
 import { ListTrackedTasksUseCase } from "../features/list-tracked-tasks/list-tracked-tasks.usecase";
 import { CancelTranscriptionUseCase } from "../features/request-transcription/cancel-transcription.usecase";
+import { readAgentFileRoute } from "../features/read-agent-file/read-agent-file.route";
+import { requestAgentFileEditRoute } from "../features/request-agent-file-edit/request-agent-file-edit.route";
+import { restoreAgentFileRoute } from "../features/restore-agent-file/restore-agent-file.route";
 import { setTaskSituationRoute } from "../features/set-task-situation/set-task-situation.route";
 import { SetTaskSituationUseCase } from "../features/set-task-situation/set-task-situation.usecase";
 import { startEditRequestRoute } from "../features/start-edit-request/start-edit-request.route";
@@ -238,6 +243,11 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
       startVoiceRequestRoute(requestOperations),
       getRequestRoute(requestOperations),
       cancelRequestRoute(requestOperations, cancelTranscription),
+      listAgentFilesRoute(agentFiles),
+      readAgentFileRoute(agentFiles),
+      listAgentFileBackupsRoute(agentFiles),
+      restoreAgentFileRoute(agentFiles),
+      requestAgentFileEditRoute(agentFiles, requestOperations),
     ];
 
     const fastify = createFastifyInstance({ bodyLimit: options.bodyLimit });
