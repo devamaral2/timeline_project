@@ -2,7 +2,7 @@ import type { TokenUsage } from "../../agent/gateways/structured-completion.gate
 import type { ModelSelection, RequestQueryResult } from "@repo/contracts";
 import { canTransitionAgentStatus, isInProgressAgentStatus, isOpenAgentStatus, situationOnClose, stoppedStatusOf, type Artifact, type Task } from "../../../domain";
 import { newOrderedId } from "../../../infrastructure/persistence/requests/request-rows";
-import { requestTitleOf } from "../../../infrastructure/persistence/requests/postgres-request.store";
+import { requestTitleOf } from "../../../infrastructure/persistence/requests/sqlite-request.store";
 import { personalProjectOf } from "../../projects/testing/in-memory-project.query";
 import { stepLabel } from "../request-config";
 import { REQUEST_JOBS } from "../request-steps";
@@ -12,7 +12,7 @@ import type {
 } from "../request-store";
 
 /**
- * O `RequestStore` em memoria: o que o Postgres grava na mesma transacao aqui fica em listas conferiveis. O
+ * O `RequestStore` em memoria: o que o SQLite grava na mesma transacao aqui fica em listas conferiveis. O
  * resumo de cada entidade tocada e lido de `entities`, o mesmo banco em memoria dos testes de tarefas.
  */
 export class InMemoryRequestStore implements RequestStore {
@@ -21,7 +21,7 @@ export class InMemoryRequestStore implements RequestStore {
   /** As relacoes que partem de um passo (ou do pedido, na voz) para o que ele tocou. */
   readonly touched: Array<NewEntity & { requestId: string; stepId: string }> = [];
   readonly finalized: Array<{ kind: string; id: string; links: LinkRecord[] }> = [];
-  /** Os jobs que o Postgres enfileiraria: o que comeca o pedido, um por passo e um `finalize` por passo terminado. */
+  /** Os jobs que o SQLite enfileiraria: o que comeca o pedido, um por passo e um `finalize` por passo terminado. */
   readonly jobs: Array<{ kind: string; requestId: string; stepId?: string }> = [];
   private readonly accepted = new Map<string, string>();
 

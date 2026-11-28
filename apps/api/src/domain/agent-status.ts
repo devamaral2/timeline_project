@@ -84,7 +84,7 @@ export function agentStatusesBefore(to: AgentTaskStatus): AgentTaskStatus[] {
 
 /**
  * A politica de parar um pedido ou passo, num lugar so: o que estava `running` deixa `interrupted` (pode haver trabalho
- * pela metade), o que ainda nao comecou deixa `cancelled`. O SQL do Postgres e o store em memoria leem estas constantes.
+ * pela metade), o que ainda nao comecou deixa `cancelled`. O SQL do SQLite e o store em memoria leem estas constantes.
  */
 export const STOPPABLE_RUNNING_STATUS = "running" as const satisfies AgentTaskStatus;
 export const STOPPED_FROM_RUNNING = "interrupted" as const satisfies AgentTaskStatus;

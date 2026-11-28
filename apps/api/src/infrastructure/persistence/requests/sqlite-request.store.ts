@@ -1,6 +1,5 @@
 import type { TokenUsage } from "../../../api-core/agent/gateways/structured-completion.gateway";
 import { createHash } from "node:crypto";
-import { sql, type SQL } from "drizzle-orm";
 import type {
   AgentRequestKind,
   AgentTraceDto,
@@ -32,8 +31,10 @@ import type {
 } from "../../../api-core/requests/request-store";
 import type { EntryKind, EntryRole, Situation } from "../../../domain";
 import { enqueueJobInTransaction } from "../../jobs/job-context";
-import type { PostgresDatabase } from "../database/postgres-database";
-import type { Tx } from "../shared/tx";
+import { taskArtifactRelation, taskEntries, tasks, taskTaskRelation, type TaskEntryRow } from "../database/tables";
+import { c, rowDecoder } from "../sqlite/columns";
+import type { Db, SqlExecutor, Tx } from "../sqlite/database";
+import { jsonMerge, NOW, sql } from "../sqlite/sql";
 import { agentStatusesBefore, OPEN_AGENT_STATUSES } from "../../../domain/agent-status";
 import type { AgentTaskStatus } from "../../../domain/sets";
 import { sqlList } from "../database/schema/sets";
@@ -42,19 +43,63 @@ import { insertAgentTask, newOrderedId } from "./request-rows";
 
 type Row = Record<string, unknown>;
 
-/** Quem executa SQL: a transacao do escritor em lote, uma transacao propria ou a conexao solta. */
-interface Executor {
-  execute(query: SQL): Promise<{ rows: Row[] }>;
-}
+/** Quem executa SQL: a transacao do escritor em lote, uma transacao propria ou o banco solto. */
+type Executor = Pick<SqlExecutor, "execute">;
 
-interface EntryRow {
-  id: string;
-  taskId: string;
-  kind: EntryKind;
-  role: EntryRole | null;
-  content: string | null;
-  data: Row;
-}
+type EntryRow = TaskEntryRow;
+
+/** O pedido com o projeto e a sessao: as chaves sao os apelidos de `REQUEST_SELECT`. */
+const requestRow = rowDecoder({
+  id: tasks.columns.id,
+  userId: tasks.columns.userId,
+  kind: tasks.columns.kind,
+  status: tasks.columns.status,
+  situation: tasks.columns.situation,
+  name: tasks.columns.name,
+  data: tasks.columns.data,
+  createdAt: tasks.columns.createdAt,
+  updatedAt: tasks.columns.updatedAt,
+  finishedAt: tasks.columns.finishedAt,
+  sessionId: c.text.nullable(),
+  projectId: c.text,
+  projectName: c.text,
+  projectPersonal: c.boolean,
+});
+type RequestRow = ReturnType<typeof requestRow.decode>;
+type StepRow = ReturnType<typeof stepRow.decode>;
+
+const stepRow = rowDecoder({
+  id: tasks.columns.id,
+  status: tasks.columns.status,
+  name: tasks.columns.name,
+  data: tasks.columns.data,
+  startedAt: tasks.columns.startedAt,
+  finishedAt: tasks.columns.finishedAt,
+});
+
+/** Uma entidade tocada, vinda das duas consultas de `entities` (a tarefa e o artefato tem as mesmas colunas). */
+const touchedRow = rowDecoder({
+  sourceId: c.text,
+  step: c.boolean,
+  kind: c.oneOf(["task", "artifact"] as const),
+  id: c.text,
+  relation: c.text,
+  name: c.text,
+  taskKind: c.text.nullable(),
+  startedAt: c.timestamp.nullable(),
+  estimatedFinishAt: c.timestamp.nullable(),
+  series: c.boolean,
+  artifactType: c.text.nullable(),
+  preview: c.text.nullable(),
+});
+
+const finalizedRow = rowDecoder({
+  data: c.json<{ entity: { kind: string; id: string }; links?: LinkRecord[] }>(),
+});
+
+const acceptedRow = rowDecoder({ response: c.json<{ requestId?: unknown }>().nullable() });
+const ownerRow = rowDecoder({ userId: tasks.columns.userId });
+const idRow = rowDecoder({ id: c.text });
 
 /** A chave de idempotencia do reenvio da mesma mensagem (`idempotency_keys.scope`). */
 export const REQUEST_IDEMPOTENCY_SCOPE = "request";
@@ -74,26 +119,19 @@ export function requestTitleOf(text: string): string {
   return line.length <= TITLE_CHARS ? line : `${line.slice(0, TITLE_CHARS - 1)}…`;
 }
 
-const date = (value: unknown): Date | undefined =>
-  value === null || value === undefined ? undefined : new Date(value as string | Date);
-const iso = (value: unknown): string | undefined => date(value)?.toISOString();
-const json = (value: unknown) => JSON.stringify(value);
+const iso = (value: Date | null): string | undefined => value?.toISOString();
 
 /**
  * O pedido e os passos como tarefas de agente (ADR 0013). O que se acrescenta a eles sao entradas, o que um
  * passo tocou sao relacoes partindo dele, e os jobs entram sempre na mesma transacao que o estado.
  */
-export class PostgresRequestStore implements RequestStore {
-  constructor(private readonly database: PostgresDatabase) {}
-
-  private get db(): Executor {
-    return this.database.db as unknown as Executor;
-  }
+export class SqliteRequestStore implements RequestStore {
+  constructor(private readonly database: Db) {}
 
   /** A transacao do escritor em lote, ou uma nova. */
   private inTransaction<T>(tx: unknown | undefined, run: (tx: Tx) => Promise<T>): Promise<T> {
     if (tx) return run(tx as Tx);
-    return this.database.db.transaction((own) => run(own));
+    return this.database.transaction((own) => run(own));
   }
 
   async start(input: NewRequest): Promise<{ requestId: string; created: boolean }> {
@@ -104,14 +142,14 @@ export class PostgresRequestStore implements RequestStore {
         const hash = createHash("sha256").update(`${input.route}\n${input.text}`).digest("hex");
         const claimed = await tx.execute(sql`
           INSERT INTO idempotency_keys (user_id, scope, key, request_hash, response)
-          VALUES (${input.userId}, ${REQUEST_IDEMPOTENCY_SCOPE}, ${input.clientMessageId}, ${hash}, ${json({ requestId })}::jsonb)
+          VALUES (${input.userId}, ${REQUEST_IDEMPOTENCY_SCOPE}, ${input.clientMessageId}, ${hash}, ${sql.json({ requestId })})
           ON CONFLICT DO NOTHING
           RETURNING key`);
         if (claimed.rows.length === 0) {
-          const existing = await tx.execute<{ response: { requestId?: unknown } | null }>(sql`
+          const existing = await tx.get(sql`
             SELECT response FROM idempotency_keys
-            WHERE user_id = ${input.userId} AND scope = ${REQUEST_IDEMPOTENCY_SCOPE} AND key = ${input.clientMessageId}`);
-          const accepted = existing.rows[0]?.response?.requestId;
+            WHERE user_id = ${input.userId} AND scope = ${REQUEST_IDEMPOTENCY_SCOPE} AND key = ${input.clientMessageId}`, acceptedRow);
+          const accepted = existing?.response?.requestId;
           if (typeof accepted !== "string") throw new Error("Idempotency key without an accepted request");
           return { requestId: accepted, created: false };
         }
@@ -141,9 +179,7 @@ export class PostgresRequestStore implements RequestStore {
       });
       await this.append(tx, requestId, { kind: "message", role: "user", content: input.text });
       if (input.sessionId) {
-        await tx.execute(sql`
-          INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
-          VALUES (${input.sessionId}, ${requestId}, 'follow_up')`);
+        await tx.execute(taskTaskRelation.insert({ fromTaskId: input.sessionId, toTaskId: requestId, relation: "follow_up" }));
       }
       await enqueueJobInTransaction(tx, {
         kind: input.job, userId: input.userId, actorId: input.userId, taskId: requestId,
@@ -154,89 +190,89 @@ export class PostgresRequestStore implements RequestStore {
   }
 
   async find(id: string): Promise<RequestRecord | undefined> {
-    const { rows } = await this.database.pool.query<Row>(`${REQUEST_SELECT} WHERE e.id = $1 AND ${REQUEST_FILTER}`, [id]);
+    const rows = await this.database.all(sql`${REQUEST_SELECT} WHERE e.id = ${id} AND ${REQUEST_FILTER}`, requestRow);
     return (await this.hydrate(rows))[0];
   }
 
   async list(userId: string, limit: number): Promise<RequestRecord[]> {
-    const { rows } = await this.database.pool.query<Row>(
-      `${REQUEST_SELECT} WHERE e.user_id = $1 AND ${REQUEST_FILTER} ORDER BY e.id DESC LIMIT $2`, [userId, limit]);
+    const rows = await this.database.all(
+      sql`${REQUEST_SELECT} WHERE e.user_id = ${userId} AND ${REQUEST_FILTER} ORDER BY e.id DESC LIMIT ${limit}`, requestRow);
     return this.hydrate(rows);
   }
 
   async sessionTurns(userId: string, sessionId: string, limit: number): Promise<RequestRecord[]> {
-    const { rows } = await this.database.pool.query<Row>(
-      `${REQUEST_SELECT} WHERE e.user_id = $1 AND (e.id = $2 OR s.from_task_id = $2) AND ${REQUEST_FILTER}
-       ORDER BY e.id DESC LIMIT $3`, [userId, sessionId, limit]);
+    const rows = await this.database.all(sql`
+      ${REQUEST_SELECT} WHERE e.user_id = ${userId} AND (e.id = ${sessionId} OR s.from_task_id = ${sessionId}) AND ${REQUEST_FILTER}
+      ORDER BY e.id DESC LIMIT ${limit}`, requestRow);
     return (await this.hydrate(rows)).reverse();
   }
 
-  private async hydrate(rows: readonly Row[]): Promise<RequestRecord[]> {
-    const entries = await this.entriesOf(rows.map((row) => String(row.id)));
-    return rows.map((row) => toRequestRecord(row, entries.get(String(row.id)) ?? []));
+  private async hydrate(rows: readonly RequestRow[]): Promise<RequestRecord[]> {
+    const entries = await this.entriesOf(rows.map((row) => row.id));
+    return rows.map((row) => toRequestRecord(row, entries.get(row.id) ?? []));
   }
 
   async steps(requestId: string): Promise<StepRecord[]> {
-    const { rows } = await this.database.pool.query<Row>(
-      `SELECT s.id, s.status, s.name, s.data, s.started_at, s.finished_at
-       FROM task_task_relation r JOIN tasks s ON s.id = r.to_task_id
-       WHERE r.from_task_id = $1 AND r.relation = 'step' AND s.kind = 'step'
-       ORDER BY s.id`, [requestId]);
-    const entries = await this.entriesOf(rows.map((row) => String(row.id)));
-    return rows.map((row) => toStepRecord(requestId, row, entries.get(String(row.id)) ?? []));
+    const rows = await this.database.all(sql`
+      SELECT s.id AS id, s.status AS status, s.name AS name, s.data AS data, s.started_at AS "startedAt", s.finished_at AS "finishedAt"
+      FROM task_task_relation r JOIN tasks s ON s.id = r.to_task_id
+      WHERE r.from_task_id = ${requestId} AND r.relation = 'step' AND s.kind = 'step'
+      ORDER BY s.id`, stepRow);
+    const entries = await this.entriesOf(rows.map((row) => row.id));
+    return rows.map((row) => toStepRecord(requestId, row, entries.get(row.id) ?? []));
   }
 
   async entities(requestId: string): Promise<RequestEntityRecord[]> {
     // As relacoes partem dos passos; na voz e no alimento, do proprio pedido. A tarefa que um passo tocou tambem
     // ganha a relacao do pedido: com o mesmo instante, o passo vem antes e vale (`step DESC`).
-    const sources = `WITH sources AS (
-      SELECT $1::char(26) AS id, false AS step
+    const sources = sql`WITH sources AS (
+      SELECT ${requestId} AS id, 0 AS step
       UNION ALL
-      SELECT to_task_id, true FROM task_task_relation WHERE from_task_id = $1 AND relation = 'step')`;
+      SELECT to_task_id, 1 FROM task_task_relation WHERE from_task_id = ${requestId} AND relation = 'step')`;
     const [touched, finalized] = await Promise.all([
-      this.database.pool.query<Row>(
-        `${sources}
-         SELECT sources.id AS source_id, sources.step, 'task' AS kind, e.id, r.relation, e.name, e.kind AS task_kind,
-           e.started_at, e.estimated_finish_at, (e.recurrence_id IS NOT NULL AND NOT e.recurrence_detached) AS series,
-           NULL AS artifact_type, NULL AS preview, r.created_at
-         FROM sources
-         JOIN task_task_relation r ON r.from_task_id = sources.id AND r.relation IN ('generates', 'updates', 'deletes')
-         JOIN tasks e ON e.id = r.to_task_id
-         UNION ALL
-         SELECT sources.id, sources.step, 'artifact', a.id, r.relation, a.name, NULL, NULL, NULL, false, a.type,
-           left(COALESCE(a.data->>'body', a.data->>'description', ''), ${TEXT_PREVIEW_CHARS}), r.created_at
-         FROM sources
-         JOIN task_artifact_relation r ON r.task_id = sources.id
-         JOIN artifacts a ON a.id = r.artifact_id
-         ORDER BY created_at, step DESC, source_id, id`, [requestId]),
-      this.database.pool.query<{ data: { entity: { kind: string; id: string }; links: LinkRecord[] } }>(
-        `${sources}
-         SELECT n.data FROM sources JOIN task_entries n ON n.task_id = sources.id
-         WHERE n.kind = 'result' AND n.data->>'type' = 'finalized' ORDER BY n.id`, [requestId]),
+      this.database.all(sql`
+        ${sources}
+        SELECT sources.id AS "sourceId", sources.step AS step, 'task' AS kind, e.id AS id, r.relation AS relation,
+          e.name AS name, e.kind AS "taskKind", e.started_at AS "startedAt", e.estimated_finish_at AS "estimatedFinishAt",
+          (e.recurrence_id IS NOT NULL AND NOT e.recurrence_detached) AS series,
+          NULL AS "artifactType", NULL AS preview, r.created_at AS "createdAt"
+        FROM sources
+        JOIN task_task_relation r ON r.from_task_id = sources.id AND r.relation IN ('generates', 'updates', 'deletes')
+        JOIN tasks e ON e.id = r.to_task_id
+        UNION ALL
+        SELECT sources.id, sources.step, 'artifact', a.id, r.relation, a.name, NULL, NULL, NULL, 0, a.type,
+          substr(COALESCE(a.data->>'body', a.data->>'description', ''), 1, ${TEXT_PREVIEW_CHARS}), r.created_at
+        FROM sources
+        JOIN task_artifact_relation r ON r.task_id = sources.id
+        JOIN artifacts a ON a.id = r.artifact_id
+        ORDER BY "createdAt", step DESC, "sourceId", id`, touchedRow),
+      this.database.all(sql`
+        ${sources}
+        SELECT n.data AS data FROM sources JOIN task_entries n ON n.task_id = sources.id
+        WHERE n.kind = 'result' AND n.data->>'type' = 'finalized' ORDER BY n.id`, finalizedRow),
     ]);
 
     const key = (kind: string, id: string) => `${kind}:${id}`;
     const records = new Map<string, RequestEntityRecord>();
-    for (const row of touched.rows) {
-      const kind = row.kind as RequestEntityRecord["kind"];
-      const id = String(row.id);
+    for (const row of touched) {
+      const { kind, id } = row;
       // A mesma entidade tocada por dois passos conta uma vez: vale o primeiro.
       if (records.has(key(kind, id))) continue;
       const summary: EntitySummary = kind === "task"
         ? {
-          name: String(row.name), taskKind: String(row.task_kind),
-          ...(row.started_at ? { startedAt: iso(row.started_at) } : {}),
-          ...(row.estimated_finish_at ? { estimatedFinishAt: iso(row.estimated_finish_at) } : {}),
+          name: row.name, taskKind: String(row.taskKind),
+          ...(row.startedAt ? { startedAt: iso(row.startedAt) } : {}),
+          ...(row.estimatedFinishAt ? { estimatedFinishAt: iso(row.estimatedFinishAt) } : {}),
           ...(row.series ? { series: true } : {}),
         }
-        : { name: String(row.name), artifactType: String(row.artifact_type), ...(row.preview ? { text: String(row.preview) } : {}) };
+        : { name: row.name, artifactType: String(row.artifactType), ...(row.preview ? { text: row.preview } : {}) };
       records.set(key(kind, id), {
-        requestId, kind, id, stepId: String(row.source_id), operation: OPERATION[String(row.relation)] ?? "update",
+        requestId, kind, id, stepId: row.sourceId, operation: OPERATION[row.relation] ?? "update",
         // O que o proprio pedido tocou (voz, alimento) nao passa pela finalizacao.
         summary, finalized: !row.step, links: [],
       });
     }
-    for (const { data } of finalized.rows) {
+    for (const { data } of finalized) {
       const record = records.get(key(data.entity.kind, data.entity.id));
       if (record) record.finalized = true;
       // A ligacao vale para os dois lados: as duas pontas a enxergam.
@@ -248,14 +284,14 @@ export class PostgresRequestStore implements RequestStore {
   }
 
   async markStarting(requestId: string): Promise<void> {
-    await this.db.execute(sql`
-      UPDATE tasks SET status = 'starting', updated_at = now()
+    await this.database.execute(sql`
+      UPDATE tasks SET status = 'starting', updated_at = ${NOW}
       WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${before("starting")}`);
   }
 
   async markRunning(requestId: string): Promise<void> {
-    await this.db.execute(sql`
-      UPDATE tasks SET status = 'running', updated_at = now()
+    await this.database.execute(sql`
+      UPDATE tasks SET status = 'running', updated_at = ${NOW}
       WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${before("running")}`);
   }
 
@@ -310,7 +346,7 @@ export class PostgresRequestStore implements RequestStore {
       ...(dispatch ? { dispatch: choices } : {}),
     };
     await tx.execute(sql`
-      UPDATE tasks SET status = ${patch.status ?? sql`status`}, updated_at = now(), data = data || ${json(data)}::jsonb
+      UPDATE tasks SET status = ${patch.status ?? sql`status`}, updated_at = ${NOW}, data = ${jsonMerge(sql.raw("data"), data)}
       WHERE id = ${requestId}`);
     if (dispatch) {
       await this.append(tx, requestId, {
@@ -320,13 +356,15 @@ export class PostgresRequestStore implements RequestStore {
     }
   }
 
-  /** O dono do pedido, com a linha travada; nada se o pedido nao existe ou nao esta num dos status `from`. */
+  /**
+   * O dono do pedido; nada se o pedido nao existe ou nao esta num dos status `from`. Sem trava de linha: a transacao
+   * `IMMEDIATE` e o escritor unico ja seguram o pedido ate o commit.
+   */
   private async lockRequest(tx: Tx, requestId: string, from: readonly AgentTaskStatus[]): Promise<string | undefined> {
-    const found = await tx.execute<{ user_id: string }>(sql`
-      SELECT user_id FROM tasks
-      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN (${sqlList(from)})
-      FOR UPDATE`);
-    return found.rows[0]?.user_id;
+    const found = await tx.get(sql`
+      SELECT user_id AS "userId" FROM tasks
+      WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN (${sqlList(from)})`, ownerRow);
+    return found?.userId;
   }
 
   private async insertSteps(tx: Tx, requestId: string, userId: string, steps: readonly NewStep[]): Promise<void> {
@@ -337,9 +375,7 @@ export class PostgresRequestStore implements RequestStore {
         data: { agent: step.agent, expected: step.expected },
         project: { requestId },
       });
-      await tx.execute(sql`
-        INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
-        VALUES (${requestId}, ${step.id}, 'step')`);
+      await tx.execute(taskTaskRelation.insert({ fromTaskId: requestId, toTaskId: step.id, relation: "step" }));
       // O insumo e onde o texto do usuario pode aparecer num passo: os candidatos, o retrato do alvo.
       if (Object.keys(input).length > 0) await this.append(tx, step.id, { kind: "input", data: { ...input } });
       await enqueueJobInTransaction(tx, {
@@ -350,20 +386,20 @@ export class PostgresRequestStore implements RequestStore {
   }
 
   async markStepRunning(stepId: string): Promise<void> {
-    await this.db.execute(sql`
-      UPDATE tasks SET status = 'running', updated_at = now(),
-        started_at = CASE WHEN status = 'queued' THEN now() ELSE started_at END
+    await this.database.execute(sql`
+      UPDATE tasks SET status = 'running', updated_at = ${NOW},
+        started_at = CASE WHEN status = 'queued' THEN ${NOW} ELSE started_at END
       WHERE id = ${stepId} AND kind = 'step' AND status IN ${IN_PROGRESS}`);
   }
 
   async recordThought(stepId: string, thought: StepThought): Promise<void> {
-    await this.append(this.db, stepId, {
+    await this.append(this.database, stepId, {
       kind: "thought", content: thought.text, data: { at: thought.at, ...(thought.model ? { model: thought.model } : {}) },
     });
   }
 
   async recordUsage(stepId: string, usage: TokenUsage): Promise<void> {
-    await this.append(this.db, stepId, { kind: "trace", data: { stage: "usage", input: usage.input, output: usage.output } });
+    await this.append(this.database, stepId, { kind: "trace", data: { stage: "usage", input: usage.input, output: usage.output } });
   }
 
   async recordStepSuccess(tx: unknown, input: {
@@ -380,15 +416,16 @@ export class PostgresRequestStore implements RequestStore {
         if (entity.kind === "task") {
           // O passo e o pedido apontam para a tarefa: a tarefa mostra o pedido ("criado por", "atualizado
           // por") sem descer pelos passos, e cada pedido que o altera deixa a sua propria relacao.
+          const relation = TASK_RELATION[entity.operation];
           await run.execute(sql`
-            INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
-            VALUES (${input.stepId}, ${entity.id}, ${TASK_RELATION[entity.operation]}),
-                   (${input.requestId}, ${entity.id}, ${TASK_RELATION[entity.operation]})
+            ${taskTaskRelation.insert([
+              { fromTaskId: input.stepId, toTaskId: entity.id, relation },
+              { fromTaskId: input.requestId, toTaskId: entity.id, relation },
+            ])}
             ON CONFLICT (from_task_id, relation, to_task_id) DO NOTHING`);
         } else {
           await run.execute(sql`
-            INSERT INTO task_artifact_relation (task_id, artifact_id, relation)
-            VALUES (${input.stepId}, ${entity.id}, ${ARTIFACT_RELATION[entity.operation]})
+            ${taskArtifactRelation.insert({ taskId: input.stepId, artifactId: entity.id, relation: ARTIFACT_RELATION[entity.operation] })}
             ON CONFLICT (task_id, artifact_id) DO NOTHING`);
         }
       }
@@ -425,12 +462,12 @@ export class PostgresRequestStore implements RequestStore {
     status: "completed" | "failed",
     detail: { timings?: Record<string, number>; errorCode?: string } = {},
   ): Promise<string | undefined> {
-    const closed = await tx.execute<{ user_id: string }>(sql`
-      UPDATE tasks SET status = ${status}, finished_at = now(), updated_at = now(),
-        data = data || ${json(detail.errorCode ? { errorCode: detail.errorCode } : {})}::jsonb
+    const closed = await tx.execute(sql`
+      UPDATE tasks SET status = ${status}, finished_at = ${NOW}, updated_at = ${NOW},
+        data = ${jsonMerge(sql.raw("data"), detail.errorCode ? { errorCode: detail.errorCode } : {})}
       WHERE id = ${stepId} AND kind = 'step' AND status IN ${before(status)}
-      RETURNING user_id`);
-    const userId = closed.rows[0]?.user_id;
+      RETURNING user_id AS "userId"`, ownerRow);
+    const userId = closed.rows[0]?.userId;
     if (userId && (detail.timings || detail.errorCode)) {
       await this.append(tx, stepId, {
         kind: "trace",
@@ -453,7 +490,7 @@ export class PostgresRequestStore implements RequestStore {
     entity: Pick<RequestEntityRecord, "kind" | "id" | "stepId">,
     links: readonly LinkRecord[],
   ): Promise<void> {
-    await this.append((tx as Executor | undefined) ?? this.db, entity.stepId, {
+    await this.append((tx as Executor | undefined) ?? this.database, entity.stepId, {
       kind: "result", data: { type: "finalized", entity: { kind: entity.kind, id: entity.id }, links },
     });
   }
@@ -464,9 +501,7 @@ export class PostgresRequestStore implements RequestStore {
 
   async completeVoice(tx: unknown, input: { requestId: string; taskId: string }): Promise<void> {
     await this.inTransaction(tx, async (run) => {
-      await run.execute(sql`
-        INSERT INTO task_task_relation (from_task_id, to_task_id, relation)
-        VALUES (${input.requestId}, ${input.taskId}, 'generates')`);
+      await run.execute(taskTaskRelation.insert({ fromTaskId: input.requestId, toTaskId: input.taskId, relation: "generates" }));
       await this.append(run, input.requestId, { kind: "result", data: { type: "voice", taskId: input.taskId } });
       // O pedido foi cancelado enquanto o modelo trabalhava: o erro desfaz a tarefa.
       if (!(await this.closeRequest(run, input.requestId, "completed", {}))) throw new Error("Request is no longer open");
@@ -480,8 +515,8 @@ export class PostgresRequestStore implements RequestStore {
       ...(outcome.errorCode ? { errorCode: outcome.errorCode } : {}),
     };
     const closed = await tx.execute(sql`
-      UPDATE tasks SET status = ${status}, situation = ${ON_CLOSE_SITUATION}, finished_at = now(), updated_at = now(),
-        data = data || ${json(patch)}::jsonb
+      UPDATE tasks SET status = ${status}, situation = ${ON_CLOSE_SITUATION}, finished_at = ${NOW}, updated_at = ${NOW},
+        data = ${jsonMerge(sql.raw("data"), patch)}
       WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${before(status)}
       RETURNING id`);
     if (closed.rows.length === 0) return false;
@@ -503,19 +538,19 @@ export class PostgresRequestStore implements RequestStore {
   async cancel(requestId: string): Promise<string[]> {
     return this.inTransaction(undefined, async (tx) => {
       const cancelled = await tx.execute(sql`
-        UPDATE tasks SET status = ${STOPPED_STATUS}, situation = ${ON_CLOSE_SITUATION}, finished_at = now(), updated_at = now(),
-          data = data || ${json({ errorCode: "cancelled" satisfies RequestErrorCode })}::jsonb
+        UPDATE tasks SET status = ${STOPPED_STATUS}, situation = ${ON_CLOSE_SITUATION}, finished_at = ${NOW}, updated_at = ${NOW},
+          data = ${jsonMerge(sql.raw("data"), { errorCode: "cancelled" satisfies RequestErrorCode })}
         WHERE id = ${requestId} AND actor = 'agent' AND kind <> 'step' AND status IN ${OPEN_REQUEST}
         RETURNING id`);
       if (cancelled.rows.length === 0) return [];
       await tx.execute(sql`
-        UPDATE tasks s SET status = ${STOPPED_STATUS_OF_STEP}, finished_at = now(), updated_at = now()
+        UPDATE tasks AS s SET status = ${STOPPED_STATUS_OF_STEP}, finished_at = ${NOW}, updated_at = ${NOW}
         FROM task_task_relation r
         WHERE r.from_task_id = ${requestId} AND r.relation = 'step' AND r.to_task_id = s.id
           AND s.kind = 'step' AND s.status IN ${IN_PROGRESS}`);
-      const steps = await tx.execute<{ id: string }>(sql`
-        SELECT to_task_id AS id FROM task_task_relation WHERE from_task_id = ${requestId} AND relation = 'step'`);
-      return [requestId, ...steps.rows.map((row) => row.id)];
+      const steps = await tx.all(sql`
+        SELECT to_task_id AS id FROM task_task_relation WHERE from_task_id = ${requestId} AND relation = 'step'`, idRow);
+      return [requestId, ...steps.map((row) => row.id)];
     });
   }
 
@@ -528,31 +563,31 @@ export class PostgresRequestStore implements RequestStore {
     await executor.execute(sql`
       INSERT INTO task_entries (id, task_id, user_id, kind, role, content, data)
       SELECT ${newOrderedId()}, e.id, e.user_id, ${entry.kind}, ${entry.role ?? null}, ${entry.content ?? null},
-        ${json(entry.data ?? {})}::jsonb
+        ${sql.json(entry.data ?? {})}
       FROM tasks e WHERE e.id = ${taskId}`);
   }
 
   private async entriesOf(taskIds: readonly string[]): Promise<Map<string, EntryRow[]>> {
     const byTask = new Map<string, EntryRow[]>();
     if (taskIds.length === 0) return byTask;
-    const { rows } = await this.database.pool.query<EntryRow>(
-      `SELECT id, task_id AS "taskId", kind, role, content, data FROM task_entries
-       WHERE task_id = ANY($1::char(26)[]) ORDER BY id`, [taskIds]);
+    const rows = await this.database.all(sql`
+      SELECT ${taskEntries.select()} FROM task_entries WHERE task_id IN ${sql.in(taskIds)} ORDER BY id`, taskEntries);
     for (const row of rows) byTask.set(row.taskId, [...(byTask.get(row.taskId) ?? []), row]);
     return byTask;
   }
 }
 
 // `tasks_requests_idx`: pedidos do usuario, nunca passos.
-const REQUEST_FILTER = "e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL";
-const REQUEST_SELECT = `
-  SELECT e.id, e.user_id, e.kind, e.status, e.situation, e.name, e.data, e.created_at, e.updated_at, e.finished_at,
-    s.from_task_id AS session_id, p.id AS project_id, p.name AS project_name, p.personal AS project_personal
+const REQUEST_FILTER = sql`e.actor = 'agent' AND e.kind <> 'step' AND e.deleted_at IS NULL`;
+const REQUEST_SELECT = sql`
+  SELECT e.id AS id, e.user_id AS "userId", e.kind AS kind, e.status AS status, e.situation AS situation, e.name AS name,
+    e.data AS data, e.created_at AS "createdAt", e.updated_at AS "updatedAt", e.finished_at AS "finishedAt",
+    s.from_task_id AS "sessionId", p.id AS "projectId", p.name AS "projectName", p.personal AS "projectPersonal"
   FROM tasks e
   JOIN projects p ON p.id = e.project_id
   LEFT JOIN task_task_relation s ON s.to_task_id = e.id AND s.relation = 'follow_up'`;
 
-function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord {
+function toRequestRecord(row: RequestRow, entries: readonly EntryRow[]): RequestRecord {
   const data = (row.data ?? {}) as {
     route?: RequestRoute; context?: RequestScreenContext; target?: RequestTarget; forceFallback?: boolean; model?: ModelSelection;
     dispatch?: DispatchRecord; failedSteps?: FailedStep[]; errorCode?: RequestErrorCode;
@@ -574,23 +609,23 @@ function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord 
     };
   }
   return {
-    id: String(row.id),
-    userId: String(row.user_id),
+    id: row.id,
+    userId: row.userId,
     kind: row.kind as AgentRequestKind,
     route: data.route ?? "steps",
     status: row.status as RequestRecord["status"],
-    title: String(row.name),
-    project: { id: String(row.project_id), name: String(row.project_name), personal: Boolean(row.project_personal) },
+    title: row.name,
+    project: { id: row.projectId, name: row.projectName, personal: row.projectPersonal },
     ...(row.situation ? { situation: row.situation as Situation } : {}),
     prompt: messages.find((entry) => entry.role === "user")?.content ?? "",
     ...(data.context ? { context: data.context } : {}),
     ...(data.target ? { target: data.target } : {}),
     ...(data.forceFallback ? { forceFallback: true } : {}),
-    ...(row.session_id ? { sessionId: String(row.session_id) } : {}),
+    ...(row.sessionId ? { sessionId: row.sessionId } : {}),
     ...(data.model ? { model: data.model } : {}),
-    createdAt: new Date(row.created_at as string | Date),
-    updatedAt: new Date(row.updated_at as string | Date),
-    ...(row.finished_at ? { finishedAt: date(row.finished_at) } : {}),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    ...(row.finishedAt ? { finishedAt: row.finishedAt } : {}),
     ...(data.dispatch
       ? { dispatch: { ...data.dispatch, ...(measured?.model ? { model: measured.model } : {}), ...(measured?.latencyMs !== undefined ? { latencyMs: measured.latencyMs } : {}) } }
       : {}),
@@ -602,7 +637,7 @@ function toRequestRecord(row: Row, entries: readonly EntryRow[]): RequestRecord 
   };
 }
 
-function toStepRecord(requestId: string, row: Row, entries: readonly EntryRow[]): StepRecord {
+function toStepRecord(requestId: string, row: StepRow, entries: readonly EntryRow[]): StepRecord {
   const data = (row.data ?? {}) as { agent: RequestAgent; expected: StepRecord["expected"]; errorCode?: string };
   const given = entries.find((entry) => entry.kind === "input");
   const input: StepInput = (given?.data ?? {}) as StepInput;
@@ -618,17 +653,17 @@ function toStepRecord(requestId: string, row: Row, entries: readonly EntryRow[])
     | (RequestQueryResult & { type?: string })
     | undefined;
   return {
-    id: String(row.id),
+    id: row.id,
     requestId,
     agent: data.agent,
-    label: String(row.name),
+    label: row.name,
     expected: data.expected,
     status: row.status as StepRecord["status"],
     ...(data.errorCode ? { errorCode: data.errorCode } : {}),
     ...(Object.keys(input).length > 0 ? { input } : {}),
     ...(query ? { result: { columns: query.columns, rows: query.rows, truncated: query.truncated } } : {}),
-    ...(row.started_at ? { startedAt: date(row.started_at) } : {}),
-    ...(row.finished_at ? { finishedAt: date(row.finished_at) } : {}),
+    ...(row.startedAt ? { startedAt: row.startedAt } : {}),
+    ...(row.finishedAt ? { finishedAt: row.finishedAt } : {}),
     ...(timings ? { timings } : {}),
     ...(thoughts.length > 0 ? { thoughts } : {}),
     ...(usage ? { usage } : {}),

@@ -10,7 +10,7 @@ test("todos os modulos de funcionalidade compartilham um so registro de handlers
   expect(ApiCoreModule.forRoot()).toBe(ApiCoreModule.forRoot());
   const register = vi.fn();
   const module = await Test.createTestingModule({ imports: [ApiCoreModule.forRoot()] })
-    .overrideProvider(DATABASE).useValue({ db: {}, pool: {} })
+    .overrideProvider(DATABASE).useValue({})
     .overrideProvider(JobsService).useValue({ register })
     .compile();
   const app = module.createNestApplication({ logger: false });

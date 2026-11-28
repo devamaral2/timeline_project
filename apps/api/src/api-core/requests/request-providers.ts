@@ -18,7 +18,7 @@ import { OpenAIStructuredCompletionGateway } from "../../infrastructure/model-ag
 import { OpenRouterProvider } from "../../infrastructure/model-agent/openrouter-provider";
 import { HermesClient } from "../../infrastructure/hermes/hermes.client";
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
-import type { PostgresDatabase } from "../../infrastructure/persistence/database/postgres-database";
+import type { SqliteDatabase } from "../../infrastructure/persistence/sqlite/database";
 import {
   ARTIFACT_REPOSITORY,
   DATABASE,
@@ -27,8 +27,8 @@ import {
   RECURRENCE_REPOSITORY,
   SCOPED_SQL_QUERY,
 } from "../../infrastructure/persistence/persistence.module";
-import { PostgresCandidateQuery } from "../../infrastructure/persistence/requests/postgres-candidate.query";
-import { PostgresRequestStore } from "../../infrastructure/persistence/requests/postgres-request.store";
+import { SqliteCandidateQuery } from "../../infrastructure/persistence/requests/sqlite-candidate.query";
+import { SqliteRequestStore } from "../../infrastructure/persistence/requests/sqlite-request.store";
 import { AgentFileArtifactsReconciler } from "../agent/config/agent-file-artifacts.reconciler";
 import { AgentFilesService } from "../agent/config/agent-files.service";
 import {
@@ -89,21 +89,21 @@ export const REQUEST_PROVIDERS: Provider[] = [
       new GenerateFoodUseCase(foods, parsing),
   },
   {
-    provide: PostgresRequestStore,
+    provide: SqliteRequestStore,
     inject: [DATABASE],
-    useFactory: (database: PostgresDatabase) => new PostgresRequestStore(database),
+    useFactory: (database: SqliteDatabase) => new SqliteRequestStore(database),
   },
   {
     provide: RequestOperations,
     inject: [
-      JobsService, PostgresRequestStore, ENTITY_BATCH_WRITER, TASK_REPOSITORY, ARTIFACT_REPOSITORY,
+      JobsService, SqliteRequestStore, ENTITY_BATCH_WRITER, TASK_REPOSITORY, ARTIFACT_REPOSITORY,
       RECURRENCE_REPOSITORY, CreateTaskUseCase, SCOPED_SQL_QUERY, DATABASE, OpenRouterFoodParsingGateway,
       OpenRouterTaskCommandParsingGateway, ArtifactBuilder, AgentFilesService, GenerateFoodUseCase,
     ],
     useFactory: (
-      jobs: JobsService, store: PostgresRequestStore, batchWriter: EntityBatchWriter, tasks: TaskRepository,
+      jobs: JobsService, store: SqliteRequestStore, batchWriter: EntityBatchWriter, tasks: TaskRepository,
       artifacts: ArtifactRepository, recurrences: RecurrenceRepository, createTask: CreateTaskUseCase,
-      sql: ScopedSqlQuery, database: PostgresDatabase, foodParsing: OpenRouterFoodParsingGateway,
+      sql: ScopedSqlQuery, database: SqliteDatabase, foodParsing: OpenRouterFoodParsingGateway,
       commandParsing: OpenRouterTaskCommandParsingGateway, artifactBuilder: ArtifactBuilder, files: AgentFilesService,
       food: GenerateFoodUseCase,
     ) => {
@@ -116,7 +116,7 @@ export const REQUEST_PROVIDERS: Provider[] = [
       const deps = { store, runner, batchWriter, repositories, createTask, places };
       return new RequestOperations(jobs, store, {
         dispatcher: new RequestDispatcher(store, new JevClient(), {
-          candidates: new PostgresCandidateQuery(database), model: configModelFor,
+          candidates: new SqliteCandidateQuery(database), model: configModelFor,
         }),
         entity: new RequestEntityWorker({ ...deps, sql }),
         edit: new RequestEditWorker(deps),
