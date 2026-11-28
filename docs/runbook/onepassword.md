@@ -25,7 +25,8 @@ no [runbook de deploy k3s](./deploy-k3s.md), sem reutilizar senhas locais.
 
 Os scopes de produção são:
 
-- `api-runtime`: `DATABASE_URL`, `AUTH_SERVICE_URL`, `AUTH_INTERNAL_SERVICE_KEY`
+- `api-runtime`: `AUTH_SERVICE_URL`, `AUTH_INTERNAL_SERVICE_KEY` (o banco é um
+  arquivo SQLite no volume do pod, sem segredo; ADR 0024)
   e, se usados, a chave e os modelos do OpenRouter. A fila de jobs de IA é uma
   tabela do próprio banco ([ai-jobs.md](./ai-jobs.md)): não há URL de broker nem
   prefixo de fila; `AI_JOBS_CONCURRENCY`, `AI_JOBS_LEASE_MS`,
