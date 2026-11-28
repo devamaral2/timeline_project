@@ -5,7 +5,7 @@ import { ensureSigningKeyActive } from "./signing-key-startup";
 const now = new Date("2026-01-02T03:04:05.000Z");
 
 describe("signing key startup", () => {
-  it("guarantees the active key before traffic with the startup audit event", async () => {
+  it("guarantees the active key before traffic with the startup audit record", async () => {
     const calls: Array<{ now: Date; audit: unknown }> = [];
     const key = { kid: "kid-1" };
 

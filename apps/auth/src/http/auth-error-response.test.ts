@@ -32,7 +32,7 @@ describe("auth error to HTTP response", () => {
       headers: { "X-Correlation-Id": CORRELATION_ID },
       body: undefined,
     });
-    expect(logger.events).toEqual([
+    expect(logger.records).toEqual([
       {
         correlationId: CORRELATION_ID,
         status: 401,
@@ -47,7 +47,7 @@ describe("auth error to HTTP response", () => {
 
     expect(response.status).toBe(403);
     expect(response.body).toBeUndefined();
-    expect(logger.events).toEqual([]);
+    expect(logger.records).toEqual([]);
   });
 
   it("translates the rate limit with the Retry-After ceiling", () => {
@@ -56,7 +56,7 @@ describe("auth error to HTTP response", () => {
     expect(response.status).toBe(429);
     expect(response.headers["Retry-After"]).toBe("43");
     expect(response.body).toBeUndefined();
-    expect(logger.events).toEqual([
+    expect(logger.records).toEqual([
       {
         correlationId: CORRELATION_ID,
         status: 429,
@@ -74,7 +74,7 @@ describe("auth error to HTTP response", () => {
     const { response, logger } = map(new SemanticInputError("password_compromised"));
 
     expect(response).toMatchObject({ status: 422, body: { code: "password_compromised" } });
-    expect(logger.events).toEqual([]);
+    expect(logger.records).toEqual([]);
   });
 
   it("serializes only the allowlisted conflict code", () => {
@@ -93,7 +93,7 @@ describe("auth error to HTTP response", () => {
     const { response, logger } = map(new RequiredDependencyUnavailableError("leak-probe: provider down"));
 
     expect(response).toMatchObject({ status: 503, body: { code: "service_unavailable" } });
-    expect(logger.events).toEqual([
+    expect(logger.records).toEqual([
       {
         correlationId: CORRELATION_ID,
         status: 503,
@@ -142,7 +142,7 @@ describe("auth error to HTTP response", () => {
       body: { code: "internal_error", correlationId: CORRELATION_ID },
     });
     expect(JSON.stringify(response.body)).not.toContain("leak-probe");
-    expect(logger.events).toEqual([
+    expect(logger.records).toEqual([
       {
         correlationId: CORRELATION_ID,
         status: 500,

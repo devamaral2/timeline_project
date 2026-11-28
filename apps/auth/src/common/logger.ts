@@ -31,6 +31,6 @@ export class ConsoleAuthLogger extends AuthLogger {
 
 /** Para testes: o evento e guardado, nunca impresso. */
 export class RecordingAuthLogger extends AuthLogger {
-  readonly events: AuthLogEvent[] = [];
-  error(event: AuthLogEvent): void { this.events.push(event); }
+  readonly records: AuthLogEvent[] = [];
+  error(event: AuthLogEvent): void { this.records.push(event); }
 }

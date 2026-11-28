@@ -138,7 +138,7 @@ describe("Auth Fastify server", () => {
     expect(text).not.toContain(LEAK_PROBE);
     expect(JSON.parse(text)).toEqual({ code: "internal_error", correlationId: "trace-500" });
 
-    expect(logger.events.map((event) => event.status)).toEqual([401, 503, 500]);
+    expect(logger.records.map((record) => record.status)).toEqual([401, 503, 500]);
   });
 
   it("answers unmatched requests with the safe 404 and normalizes the trailing slash", async () => {

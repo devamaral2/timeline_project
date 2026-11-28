@@ -142,8 +142,8 @@ export const EXCECOES_DE_LINHA: { motivo: string; linha: RegExp; palavras: RegEx
     palavras: /^(Event|CustomEvent)$/,
   },
   {
-    motivo: "eventos de protocolos externos: campo `event` do stream do Hermes (`tool.started`, `run.failed`), a rota `/v1/runs/{id}/events` e os `events` do Kubernetes (`kubectl get events`)",
-    linha: /(^|[^\w])"?event"?:\s*(["'`][a-z]+\.[a-z_]+["'`]|\$\{)|\/v1\/runs\/\S*\/events|kubectl\b.*\bget events\b|\bEvents do pod\b/,
+    motivo: "eventos de protocolos externos e da plataforma: campo `event` do stream do Hermes (`tool.started`, `run.failed`), a rota `/v1/runs/{id}/events`, os `events` do Kubernetes (`kubectl get events`) e o modulo `node:events` do Node",
+    linha: /(^|[^\w])"?event"?:\s*(["'`][a-z]+\.[a-z_]+["'`]|\$\{)|\/v1\/runs\/\S*\/events|kubectl\b.*\bget events\b|\bEvents do pod\b|\bfrom\s+["']node:events["']/,
     palavras: /^(event|events|Events)$/,
   },
   {

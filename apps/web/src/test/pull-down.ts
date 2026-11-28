@@ -1,9 +1,9 @@
 import { act } from "@testing-library/react";
 
 function touch(type: string, target: EventTarget, point?: { x: number; y: number }) {
-  const event = new Event(type, { bubbles: true });
-  Object.defineProperty(event, "touches", { value: point ? [{ clientX: point.x, clientY: point.y }] : [] });
-  target.dispatchEvent(event);
+  const toque = new Event(type, { bubbles: true });
+  Object.defineProperty(toque, "touches", { value: point ? [{ clientX: point.x, clientY: point.y }] : [] });
+  target.dispatchEvent(toque);
 }
 
 /**
