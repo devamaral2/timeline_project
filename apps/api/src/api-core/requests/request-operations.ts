@@ -1,8 +1,8 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, type OnModuleInit } from "@nestjs/common";
 import type {
   RequestDto, StartModelRequestInput, StartEditRequestInput, StartHermesRequestInput, StartRequestInput,
   StartVoiceRequestInput,
 } from "@repo/contracts";
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from "../../common/http-errors";
 import type { FoodGenerationPayload } from "../../domain/ports";
 import { isInProgressAgentStatus } from "../../domain/agent-status";
 import type { AuthenticatedUser } from "../../http/request-identity/authenticated-user";
@@ -49,15 +49,18 @@ export interface RequestWorkers {
 }
 
 /** Registra os handlers da fila dos pedidos e expoe o que o transporte precisa: iniciar, acompanhar e cancelar. */
-@Injectable()
-export class RequestOperations implements OnModuleInit {
+export class RequestOperations {
+  private started = false;
+
   constructor(
     private readonly jobs: Pick<JobsService, "register" | "cancelOfTasks" | "progressOfTask">,
     private readonly store: RequestStore,
     private readonly workers: RequestWorkers,
   ) {}
 
-  onModuleInit(): void {
+  /** Registra cada handler uma vez; o lifecycle do processo chama antes de o worker comecar a pegar jobs. */
+  startHandlers(): void {
+    if (this.started) return;
     const { workers } = this;
     // Um `.md` que falta ou quebrou derruba a subida, em vez de virar "erro interno" na primeira edicao.
     for (const agent of [...STEP_AGENTS, "failure-explainer"]) loadAgentDefinition(agent);
@@ -98,6 +101,7 @@ export class RequestOperations implements OnModuleInit {
         await workers.food.fail(raw as FoodGenerationPayload);
       },
     });
+    this.started = true;
   }
 
   /** O passo roda no worker do agente dele. */
@@ -170,7 +174,7 @@ export class RequestOperations implements OnModuleInit {
 
   /** `POST /api/requests/hermes`: a mensagem vai para o Hermes (ADR 004). O Hermes e do dono: so ele fala com o proprio. */
   async startHermes(input: StartHermesRequestInput, actor: AuthenticatedUser): Promise<RequestDto> {
-    if (input.userId !== actor.userId) throw new ForbiddenException();
+    if (input.userId !== actor.userId) throw new ForbiddenError();
     await this.assertSession(input.sessionId, actor);
     const { requestId } = await this.store.start({
       userId: input.userId, route: "hermes", text: input.text, sessionId: input.sessionId,
@@ -186,7 +190,7 @@ export class RequestOperations implements OnModuleInit {
    * proprio. Quem confere se o provedor e o modelo valem neste ambiente e a rota, antes daqui.
    */
   async startModel(input: StartModelRequestInput, actor: AuthenticatedUser, owner?: string): Promise<RequestDto> {
-    if (input.userId !== actor.userId || (owner !== undefined && actor.userId !== owner)) throw new ForbiddenException();
+    if (input.userId !== actor.userId || (owner !== undefined && actor.userId !== owner)) throw new ForbiddenError();
     await this.assertSession(input.sessionId, actor);
     const { requestId } = await this.store.start({
       userId: input.userId, route: "model", text: input.text, sessionId: input.sessionId,
@@ -221,7 +225,7 @@ export class RequestOperations implements OnModuleInit {
    */
   async cancel(id: string, actor: AuthenticatedUser): Promise<RequestDto> {
     const request = await this.owned(id, actor);
-    if (request.route === "food") throw new ConflictException("Delete the food artifact to stop its generation");
+    if (request.route === "food") throw new ConflictError("Delete the food artifact to stop its generation");
     const taskIds = await this.store.cancel(request.id);
     await this.jobs.cancelOfTasks(taskIds, request.userId);
     return this.view(id, actor);
@@ -243,19 +247,19 @@ export class RequestOperations implements OnModuleInit {
   /** Pedido de outro usuario recebe o mesmo 404 de um id que nao existe. */
   private async owned(id: string, actor: AuthenticatedUser): Promise<RequestRecord> {
     const request = await this.store.find(id);
-    if (!request || request.userId !== actor.userId) throw new NotFoundException("Request not found");
+    if (!request || request.userId !== actor.userId) throw new NotFoundError("Request not found");
     return request;
   }
 
   private assertSelf(userId: string, actor: AuthenticatedUser): void {
-    if (userId !== actor.userId) throw new ForbiddenException("Sem permissão para acessar os dados deste usuário");
+    if (userId !== actor.userId) throw new ForbiddenError("Sem permissão para acessar os dados deste usuário");
   }
 
   /** A sessao e o primeiro pedido dela: precisa ser do usuario e nao ser, ela mesma, uma continuacao. */
   private async assertSession(sessionId: string | undefined, actor: AuthenticatedUser): Promise<void> {
     if (!sessionId) return;
     const first = await this.store.find(sessionId);
-    if (!first || first.userId !== actor.userId) throw new NotFoundException("Session not found");
-    if (first.sessionId) throw new BadRequestException("sessionId must be the first request of the session");
+    if (!first || first.userId !== actor.userId) throw new NotFoundError("Session not found");
+    if (first.sessionId) throw new BadRequestError("sessionId must be the first request of the session");
   }
 }

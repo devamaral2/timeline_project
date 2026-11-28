@@ -1,4 +1,4 @@
-import { Logger } from "@nestjs/common";
+import { Logger } from "../../common/logger";
 import type { ModelSelection } from "@repo/contracts";
 import { isAccepted, JevUnavailableError, type JevClient, type JevResult } from "./jev.client";
 import type { CandidateQuery } from "./request-candidates";

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-# Imagem do servico de autenticacao (NestJS).
+# Imagem do servico de autenticacao (Fastify).
 #
 #   docker build -f apps/auth/Dockerfile -t timeline-auth .
 #

@@ -1,0 +1,119 @@
+import { documentedOperations } from "../common/openapi-operations";
+import { cancelRequestOperation } from "../features/cancel-request/cancel-request.route";
+import { createArtifactOperation } from "../features/create-artifact/create-artifact.route";
+import { createProjectOperation } from "../features/create-project/create-project.route";
+import { createRecurrenceOperation } from "../features/create-recurrence/create-recurrence.route";
+import { createTaskOperation } from "../features/create-task/create-task.route";
+import { deliverTranscriptionOperation } from "../features/deliver-transcription/deliver-transcription.route";
+import { deleteArtifactOperation } from "../features/delete-artifact/delete-artifact.route";
+import { deleteRecurrenceOperation } from "../features/delete-recurrence/delete-recurrence.route";
+import { deleteTaskOperation } from "../features/delete-task/delete-task.route";
+import { getArtifactOperation } from "../features/get-artifact/get-artifact.route";
+import { getModelOptionsOperation } from "../features/get-model-options/get-model-options.route";
+import { getRecurrenceOperation } from "../features/get-recurrence/get-recurrence.route";
+import { getRequestOperation } from "../features/get-request/get-request.route";
+import { getTaskOperation } from "../features/get-task/get-task.route";
+import { listAgendaTasksOperation } from "../features/list-agenda-tasks/list-agenda-tasks.route";
+import { listAgentFileBackupsOperation } from "../features/list-agent-file-backups/list-agent-file-backups.route";
+import { listAgentFilesOperation } from "../features/list-agent-files/list-agent-files.route";
+import { listArtifactsOperation } from "../features/list-artifacts/list-artifacts.route";
+import { listProjectsOperation } from "../features/list-projects/list-projects.route";
+import { listRecurrencesOperation } from "../features/list-recurrences/list-recurrences.route";
+import { listRequestsOperation } from "../features/list-requests/list-requests.route";
+import { listTrackedTasksOperation } from "../features/list-tracked-tasks/list-tracked-tasks.route";
+import { readAgentFileOperation } from "../features/read-agent-file/read-agent-file.route";
+import { renewTranscriptionLeaseOperation } from "../features/renew-transcription-lease/renew-transcription-lease.route";
+import { requestAgentFileEditOperation } from "../features/request-agent-file-edit/request-agent-file-edit.route";
+import { requestTranscriptionOperation } from "../features/request-transcription/request-transcription.route";
+import { reserveTranscriptionOperation } from "../features/reserve-transcription/reserve-transcription.route";
+import { restoreAgentFileOperation } from "../features/restore-agent-file/restore-agent-file.route";
+import { saveDailyReadingOperation } from "../features/save-daily-reading/save-daily-reading.route";
+import { searchPlacesOperation } from "../features/search-places/search-places.route";
+import { setTaskSituationOperation } from "../features/set-task-situation/set-task-situation.route";
+import { startEditRequestOperation } from "../features/start-edit-request/start-edit-request.route";
+import { startHermesRequestOperation } from "../features/start-hermes-request/start-hermes-request.route";
+import { startModelRequestOperation } from "../features/start-model-request/start-model-request.route";
+import { startRequestOperation } from "../features/start-request/start-request.route";
+import { startVoiceRequestOperation } from "../features/start-voice-request/start-voice-request.route";
+import { suggestTagsOperation } from "../features/suggest-tags/suggest-tags.route";
+import { updateArtifactOperation } from "../features/update-artifact/update-artifact.route";
+import { updateRecurrenceOperation } from "../features/update-recurrence/update-recurrence.route";
+import { updateTaskOperation } from "../features/update-task/update-task.route";
+import type { ApiRouteOperation } from "../http/api-route";
+
+/**
+ * As operacoes que ja respondem pelo Fastify, na ordem em que sao registradas.
+ * As estaticas vem antes das parametrizadas. O catalogo OpenAPI e os testes de
+ * arquitetura usam esta lista para nao depender de reflection dos controllers.
+ */
+export const DECLARED_API_OPERATIONS: readonly ApiRouteOperation[] = [
+  listTrackedTasksOperation,
+  listAgendaTasksOperation,
+  createTaskOperation,
+  // A Leitura diaria e o pedido de transcricao sao estaticas: vem antes de `/api/tasks/:taskId`.
+  saveDailyReadingOperation,
+  requestTranscriptionOperation,
+  reserveTranscriptionOperation,
+  renewTranscriptionLeaseOperation,
+  deliverTranscriptionOperation,
+  getTaskOperation,
+  updateTaskOperation,
+  setTaskSituationOperation,
+  deleteTaskOperation,
+  listProjectsOperation,
+  createProjectOperation,
+  suggestTagsOperation,
+  searchPlacesOperation,
+  listArtifactsOperation,
+  createArtifactOperation,
+  getArtifactOperation,
+  updateArtifactOperation,
+  deleteArtifactOperation,
+  listRecurrencesOperation,
+  createRecurrenceOperation,
+  getRecurrenceOperation,
+  updateRecurrenceOperation,
+  deleteRecurrenceOperation,
+  getModelOptionsOperation,
+  listRequestsOperation,
+  startRequestOperation,
+  startEditRequestOperation,
+  startHermesRequestOperation,
+  startModelRequestOperation,
+  startVoiceRequestOperation,
+  getRequestOperation,
+  cancelRequestOperation,
+  listAgentFilesOperation,
+  readAgentFileOperation,
+  listAgentFileBackupsOperation,
+  restoreAgentFileOperation,
+  requestAgentFileEditOperation,
+];
+
+/**
+ * O composition root chama isto antes de servir: as rotas que ele monta precisam
+ * ser exatamente as desta lista, na mesma ordem, e o catalogo nao pode descrever
+ * nem esquecer nenhuma delas. Uma divergencia derruba o processo no startup, em
+ * vez de sumir uma rota do documento ou registrar uma rota sem documentacao.
+ */
+export function assertDeclaredOperations(registered: readonly Pick<ApiRouteOperation, "method" | "path">[]): void {
+  const declared = DECLARED_API_OPERATIONS.map(declaredOperationKey);
+  const actual = registered.map(declaredOperationKey);
+  if (declared.join("|") !== actual.join("|")) {
+    throw new Error(`As rotas registradas divergem das declaradas:\ndeclaradas: ${declared.join(", ")}\nregistradas: ${actual.join(", ")}`);
+  }
+  const documented = Object.keys(documentedOperations).sort();
+  if (documented.join("|") !== [...declared].sort().join("|")) {
+    throw new Error(`O catalogo OpenAPI divergiu das rotas declaradas:\ndocumentadas: ${documented.join(", ")}\ndeclaradas: ${declared.join(", ")}`);
+  }
+}
+
+/** O caminho na forma do documento OpenAPI (`/api/tasks/:taskId` -> `/api/tasks/{taskId}`). */
+export function openApiPath(path: string): string {
+  return path.replace(/:(\w+)/g, "{$1}");
+}
+
+/** A chave da operacao no catalogo (`METODO /caminho`). */
+export function declaredOperationKey(operation: Pick<ApiRouteOperation, "method" | "path">): string {
+  return `${operation.method} ${openApiPath(operation.path)}`;
+}

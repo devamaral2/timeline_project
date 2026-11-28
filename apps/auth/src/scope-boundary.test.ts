@@ -47,27 +47,29 @@ describe("stage 1 scope boundary", () => {
     expect(repositoryPorts).toEqual([]);
   });
 
-  it("gives each HTTP feature one controller and one operation route", () => {
+  it("gives each HTTP feature one declarative route with method, path and status", () => {
     const routes = {
-      "login-with-password": '@Post("login")',
-      "refresh-token": "@Post('token/refresh')",
-      logout: "@Post('logout')",
-      "logout-all": "@Post('logout-all')",
-      "current-user": "@Get('me')",
-      "inspect-invite": "@Post('inspect')",
-      "accept-invite": "@Post('accept')",
-      "create-invite": '@Post("invites")',
+      "login-with-password": { file: "login-with-password.routes.ts", method: 'method: "POST"', path: 'path: "/auth/login"', status: "status: 201" },
+      "refresh-token": { file: "refresh-token.routes.ts", method: "method: \"POST\"", path: 'path: "/auth/token/refresh"', status: "status: 200" },
+      logout: { file: "logout.routes.ts", method: "method: \"POST\"", path: 'path: "/auth/logout"', status: "status: 204" },
+      "logout-all": { file: "logout-all.routes.ts", method: "method: \"POST\"", path: 'path: "/auth/logout-all"', status: "status: 204" },
+      "current-user": { file: "current-user.routes.ts", method: "method: \"GET\"", path: 'path: "/auth/me"', status: "status: 200" },
+      "inspect-invite": { file: "inspect-invite.routes.ts", method: "method: \"POST\"", path: 'path: "/auth/invites/inspect"', status: "status: 201" },
+      "accept-invite": { file: "accept-invite.routes.ts", method: "method: \"POST\"", path: 'path: "/auth/invites/accept"', status: "status: 201" },
+      "create-invite": { file: "create-invite.routes.ts", method: "method: \"POST\"", path: 'path: "/auth/admin/invites"', status: "status: 201" },
     } as const;
 
     for (const [feature, route] of Object.entries(routes)) {
       const directory = resolve(authRoot, "src/features", feature, "http");
-      const controllers = sourceFiles(directory).filter((file) => file.endsWith(".controller.ts"));
-      expect(controllers, `controller for ${feature}`).toHaveLength(1);
-      const controller = controllers[0];
-      if (!controller) throw new Error(`controller for ${feature} is missing`);
-      const source = readFileSync(controller, "utf8");
-      expect(source, `route for ${feature}`).toContain(route);
-      expect((source.match(/@Controller\(/g) ?? []).length, `single controller for ${feature}`).toBe(1);
+      const routeFiles = sourceFiles(directory).filter((file) => file.endsWith(".routes.ts"));
+      expect(routeFiles, `route declaration for ${feature}`).toHaveLength(1);
+      const routeFile = routeFiles[0];
+      if (!routeFile) throw new Error(`route declaration for ${feature} is missing`);
+      const source = readFileSync(routeFile, "utf8");
+      expect(source, `method for ${feature}`).toContain(route.method);
+      expect(source, `path for ${feature}`).toContain(route.path);
+      expect(source, `status for ${feature}`).toContain(route.status);
+      expect(source, `Nest controller in ${feature}`).not.toContain("@Controller(");
     }
   });
 });

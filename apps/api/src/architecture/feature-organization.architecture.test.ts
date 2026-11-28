@@ -13,6 +13,50 @@ function filesUnder(directory: string): string[] {
   });
 }
 
+/** Cada operacao declara a rota no Fastify, sem controller. */
+const MIGRATED = [
+  "create-task",
+  "get-task",
+  "update-task",
+  "delete-task",
+  "list-agenda-tasks",
+  "list-tracked-tasks",
+  "set-task-situation",
+  "create-project",
+  "list-projects",
+  "create-artifact",
+  "get-artifact",
+  "update-artifact",
+  "delete-artifact",
+  "list-artifacts",
+  "create-recurrence",
+  "get-recurrence",
+  "update-recurrence",
+  "delete-recurrence",
+  "list-recurrences",
+  "start-request",
+  "start-edit-request",
+  "start-hermes-request",
+  "start-model-request",
+  "get-model-options",
+  "start-voice-request",
+  "list-requests",
+  "get-request",
+  "cancel-request",
+  "save-daily-reading",
+  "request-transcription",
+  "reserve-transcription",
+  "renew-transcription-lease",
+  "deliver-transcription",
+  "list-agent-files",
+  "read-agent-file",
+  "list-agent-file-backups",
+  "restore-agent-file",
+  "request-agent-file-edit",
+  "suggest-tags",
+  "search-places",
+];
+
 test("does not retain the old feature aggregators or artificial HTTP areas", () => {
   for (const name of ["tasks", "artifacts", "recurrences", "agent", "request-identity", "notes", "catalog"]) {
     expect(existsSync(join(features, name)), name).toBe(false);
@@ -31,40 +75,25 @@ test("has one folder per operation on tasks, artifacts and recurrences, and none
   );
   expect(retired).toEqual([]);
 
-  for (const name of [
-    "create-task",
-    "get-task",
-    "update-task",
-    "delete-task",
-    "list-agenda-tasks",
-    "list-tracked-tasks",
-    "suggest-tags",
-    "search-places",
-    "create-artifact",
-    "get-artifact",
-    "update-artifact",
-    "delete-artifact",
-    "list-artifacts",
-    "create-recurrence",
-    "get-recurrence",
-    "update-recurrence",
-    "delete-recurrence",
-    "list-recurrences",
-  ]) {
+  for (const name of MIGRATED) {
     expect(folders, name).toContain(name);
-    expect(filesUnder(join(features, name)).some((path) => path.endsWith(".controller.ts")), name).toBe(true);
+  }
+  expect(folders.filter((name) => filesUnder(join(features, name)).some((path) => path.endsWith(".controller.ts")))).toEqual([]);
+});
+
+test("cada feature declara a sua rota sem Nest e sem Fastify, e nao guarda controller", () => {
+  for (const name of MIGRATED) {
+    const files = filesUnder(join(features, name));
+    const routes = files.filter((path) => path.endsWith(".route.ts"));
+    expect(routes, name).toHaveLength(1);
+    expect(files.some((path) => path.endsWith(".controller.ts")), name).toBe(false);
+
+    const source = readFileSync(routes[0] as string, "utf8");
+    expect(source, routes[0]).not.toMatch(/@nestjs\/|from\s+["']fastify["']/);
   }
 });
 
-test("each Nest controller source declares one public route operation", () => {
-  const controllers = filesUnder(features).filter((path) => path.endsWith(".controller.ts"));
-  expect(controllers.length).toBeGreaterThan(0);
-  for (const path of controllers) {
-    const source = readFileSync(path, "utf8");
-    const routeDecorators = source.match(/@(Get|Post|Put|Patch|Delete)\s*(?:\([^)]*\))?/g) ?? [];
-    expect(routeDecorators, path).toHaveLength(1);
-  }
-});
+
 
 test("features do not import another feature and transport stays outside features", () => {
   const featureFiles = filesUnder(features).filter((path) => path.endsWith(".ts"));

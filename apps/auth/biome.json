@@ -1,11 +1,6 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.13/schema.json",
 	"extends": "//",
-	"javascript": {
-		"parser": {
-			"unsafeParameterDecoratorsEnabled": true
-		}
-	},
 	"linter": {
 		"rules": {
 			"style": {

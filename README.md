@@ -5,15 +5,15 @@ Monorepo Turborepo + pnpm workspace.
 ```
 apps/web              Next.js 16 — frontend web (porta 3000)
 apps/mobile           Android nativo em Kotlin + Jetpack Compose
-apps/api              NestJS — backend (porta 3001, so loopback por padrao)
-apps/auth             NestJS — identidade, convite, login, sessao e RBAC
+apps/api              Fastify — backend (porta 3001, so loopback por padrao)
+apps/auth             Fastify — identidade, convite, login, sessao e RBAC
 packages/contracts    @repo/contracts — contratos de dados compartilhados
 packages/timeline     @repo/timeline — datas, janelas e agrupamento da timeline
 packages/theme        @repo/theme — os tokens de cor do design system
 ```
 
 O backend nao e exposto para fora do servidor: web e back rodam na mesma
-maquina, e o Next repassa `/api/*` para o Nest via `rewrites`. Nenhum dos dois
+maquina, e o Next repassa `/api/*` para o backend via `rewrites`. Nenhum dos dois
 frontends tem regra de negocio — do backend eles importam apenas tipos
 (`@repo/contracts`). O dominio e a persistencia da API ficam em
 `apps/api/src/domain` e `apps/api/src/infrastructure/persistence`; controllers,
@@ -54,7 +54,9 @@ Environment.
 pnpm dev
 ```
 
-Sobe o Nest em `http://127.0.0.1:3001` e o Next em `http://localhost:3000`.
+Sobe a API em `http://127.0.0.1:3001` e o Next em `http://localhost:3000`.
+A referência interativa da API fica em `http://127.0.0.1:3001/docs`
+(OpenAPI JSON em `/openapi.json`).
 
 ## App mobile
 

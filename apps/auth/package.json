@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "nest start --watch",
-    "build": "nest build",
+    "dev": "tsx watch src/main.ts",
+    "build": "node scripts/build.mjs",
     "start": "node dist/main.js",
     "lint": "biome lint .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -18,24 +18,15 @@
     "cleanup-auth-data": "tsx src/cli/cleanup-auth-data.cli.ts"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.0",
-    "@nestjs/core": "^11.0.0",
-    "@nestjs/platform-express": "^11.0.0",
     "@repo/contracts": "workspace:*",
-    "@scalar/nestjs-api-reference": "^1.2.17",
+    "@scalar/client-side-rendering": "^0.3.10",
     "drizzle-orm": "^0.44.0",
-    "express": "^5.2.1",
+    "fastify": "^5.12.8",
     "pg": "^8.13.0",
-    "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1",
     "ulid": "^3.0.1",
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@nestjs/cli": "^11.0.0",
-    "@nestjs/schematics": "^11.0.0",
-    "@nestjs/testing": "^11.0.0",
-    "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.11.0",
     "drizzle-kit": "^0.31.0",

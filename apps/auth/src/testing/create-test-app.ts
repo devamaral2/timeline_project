@@ -1,38 +1,23 @@
-import { Controller, Get, HttpException, HttpStatus, Param, Req, type INestApplication } from "@nestjs/common";
-import { Test } from "@nestjs/testing";
-import type { Request } from "express";
+import type { Server } from "node:http";
 import { randomBytes } from "node:crypto";
-import { AppModule } from "../app.module";
+import { startAuth, type AuthCore } from "../composition-root";
 import { AccessDeniedError, AuthenticationFailedError, ConflictError, NotFoundError, RateLimitedError, RequiredDependencyUnavailableError, SemanticInputError } from "../common/errors";
 import { RecordingAuthLogger } from "../common/logger";
 import { getRuntimeEnv, type EnvSource } from "../config/env";
-import { HttpPwnedPasswordsGateway } from "../auth-core/password/http-pwned-passwords.gateway";
 import type { PwnedPasswordsGateway } from "../auth-core/password/pwned-passwords.gateway";
-import { PostgresDeviceKeyRepository, type DeviceKeyRepository } from "../auth-core/persistence/postgres-device-key.repository";
-import { configureHttpShell } from "../http/request-context.middleware";
-import { configureApiDocumentation } from "../http/openapi";
+import type { DeviceKeyRepository } from "../auth-core/persistence/postgres-device-key.repository";
+import type { AuthRoute } from "../server/routes";
 
 /** O segredo que os testes de redacao procuram na resposta. */
 export const LEAK_PROBE = "leak-probe-9d3f";
 
-@Controller("testing")
-class TestContextController {
-  @Get("request-context")
-  requestContext(@Req() request: Request) {
-    return request.context;
-  }
-
-  @Get("generic-rate-limit")
-  genericRateLimit(): never {
-    throw new HttpException("rate limited", HttpStatus.TOO_MANY_REQUESTS);
-  }
-
-  /**
-   * Uma rota por ramo do filtro. Cada erro carrega `LEAK_PROBE` no lugar que
-   * nunca pode sair na resposta -- `internalReason`, `message` ou `cause`.
-   */
-  @Get("raise/:kind")
-  raise(@Param("kind") kind: string): never {
+/**
+ * As sondas de contrato viajam como rotas declarativas, no mesmo servidor
+ * Fastify das features. Elas existem só nos testes: nenhuma monta o processo de
+ * produção, e nenhuma depende de framework para ler a request.
+ */
+function errorProbes(): AuthRoute[] {
+  const raise = (kind: string): never => {
     switch (kind) {
       case "authentication": throw new AuthenticationFailedError(`unknown email ${LEAK_PROBE}`);
       case "access": throw new AccessDeniedError(`missing permission ${LEAK_PROBE}`);
@@ -43,12 +28,37 @@ class TestContextController {
       case "dependency": throw new RequiredDependencyUnavailableError(`provider down ${LEAK_PROBE}`);
       default: throw new Error(`unhandled failure ${LEAK_PROBE}`);
     }
-  }
+  };
+
+  return [
+    {
+      method: "GET",
+      path: "/testing/request-context",
+      handler: async (request) => request.authContext,
+    },
+    {
+      method: "GET",
+      path: "/testing/generic-rate-limit",
+      handler: async () => {
+        throw Object.assign(new Error("rate limited"), { statusCode: 429 });
+      },
+    },
+    {
+      // Uma rota por ramo do filtro. Cada erro carrega `LEAK_PROBE` no lugar
+      // que nunca pode sair na resposta -- `internalReason`, `message` ou `cause`.
+      method: "GET",
+      path: "/testing/raise/:kind",
+      handler: async (request) => raise((request.params as { kind: string }).kind),
+    },
+  ];
 }
 
 export interface TestApp {
   url: string;
-  app: INestApplication;
+  /** O grafo do processo, para os testes de startup acionarem a chave. */
+  core: AuthCore;
+  /** O socket do Fastify, usado pelos testes de upgrade e teardown. */
+  server: Server;
   logger: RecordingAuthLogger;
   close(): Promise<void>;
 }
@@ -63,6 +73,11 @@ export interface TestAppOptions {
   pwnedPasswords?: PwnedPasswordsGateway;
   /** Troca o repositorio de chaves de dispositivo, que iria ao Postgres. */
   deviceKeys?: DeviceKeyRepository;
+  /**
+   * Espelha o bootstrap real, que garante a chave ativa antes do listen. O
+   * teste de startup desliga para observar o processo ainda sem chave.
+   */
+  ensureSigningKey?: boolean;
 }
 
 function testEnv(overrides: EnvSource = {}) {
@@ -78,29 +93,30 @@ function testEnv(overrides: EnvSource = {}) {
   });
 }
 
+/**
+ * Sobe o processo real do Auth numa porta efêmera. O logger do filtro guarda o
+ * evento em memória em vez de imprimir, para não sujar a saída que o `test:ai`
+ * promete manter limpa.
+ */
 export async function createTestApp(overrides: EnvSource = {}, options: TestAppOptions = {}): Promise<TestApp> {
-  const builder = Test.createTestingModule({
-    imports: [AppModule.forRoot(testEnv(overrides))],
-    controllers: [TestContextController],
-  })
-    .overrideProvider(HttpPwnedPasswordsGateway)
-    .useValue(options.pwnedPasswords ?? { isCompromised: async () => false });
-  if (options.deviceKeys) builder.overrideProvider(PostgresDeviceKeyRepository).useValue(options.deviceKeys);
-  const module = await builder.compile();
-  const app = module.createNestApplication({ bodyParser: false });
-  // O logger do filtro guarda o evento em memoria em vez de imprimir: o Logger
-  // do Nest escapa do `silent` do Vitest e sujaria a saida do `test:ai`.
   const logger = new RecordingAuthLogger();
-  configureHttpShell(app, logger);
-  configureApiDocumentation(app);
-  await app.listen(0, "127.0.0.1");
-  const address = app.getHttpServer().address();
-  if (!address || typeof address === "string") throw new Error("Test server did not expose a TCP address");
+  const runtime = await startAuth(testEnv(overrides), {
+    port: 0,
+    host: "127.0.0.1",
+    ensureSigningKey: options.ensureSigningKey ?? false,
+    overrides: {
+      pwnedPasswords: options.pwnedPasswords ?? { isCompromised: async () => false },
+      deviceKeys: options.deviceKeys,
+    },
+    logger,
+    routes: errorProbes(),
+  });
 
   return {
-    url: `http://127.0.0.1:${address.port}`,
-    app,
+    url: runtime.url,
+    core: runtime.core,
+    server: runtime.http.server,
     logger,
-    close: () => app.close(),
+    close: () => runtime.close(),
   };
 }

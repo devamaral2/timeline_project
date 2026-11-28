@@ -1,8 +1,19 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { AddressInfo } from "node:net";
 
-export interface FakeHttpRequest { method: string; path: string; headers: Record<string, string | string[] | undefined> }
-export type FakeHttpHandler = (request: FakeHttpRequest) => { status: number; body: string } | Promise<{ status: number; body: string }>;
+export interface FakeHttpRequest {
+  method: string;
+  path: string;
+  headers: Record<string, string | string[] | undefined>;
+  /** O corpo cru recebido, para o teste provar o que o proxy encaminhou. */
+  body: string;
+}
+export interface FakeHttpResponse {
+  status: number;
+  body: string;
+  headers?: Record<string, string>;
+}
+export type FakeHttpHandler = (request: FakeHttpRequest) => FakeHttpResponse | Promise<FakeHttpResponse>;
 
 export interface FakeHttpServer {
   url: string;
@@ -26,11 +37,23 @@ export async function startFakeHttpServer(initial: FakeHttpHandler): Promise<Fak
   let handler = initial;
   const requests: FakeHttpRequest[] = [];
   const server: Server = createServer((incoming: IncomingMessage, response: ServerResponse) => {
-    const request: FakeHttpRequest = { method: incoming.method ?? "GET", path: incoming.url ?? "/", headers: incoming.headers };
-    requests.push(request);
-    void Promise.resolve(handler(request))
-      .then((result) => { response.writeHead(result.status, { "content-type": "text/plain" }); response.end(result.body); })
-      .catch(() => { response.writeHead(500); response.end(); });
+    const chunks: Buffer[] = [];
+    incoming.on("data", (chunk: Buffer) => chunks.push(chunk));
+    incoming.on("end", () => {
+      const request: FakeHttpRequest = {
+        method: incoming.method ?? "GET",
+        path: incoming.url ?? "/",
+        headers: incoming.headers,
+        body: Buffer.concat(chunks).toString(),
+      };
+      requests.push(request);
+      void Promise.resolve(handler(request))
+        .then((result) => {
+          response.writeHead(result.status, { "content-type": "text/plain", ...result.headers });
+          response.end(result.body);
+        })
+        .catch(() => { response.writeHead(500); response.end(); });
+    });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address() as AddressInfo;

@@ -1,13 +1,8 @@
-import "reflect-metadata";
-import { GUARDS_METADATA, HTTP_CODE_METADATA } from "@nestjs/common/constants";
-import { BadRequestException } from "@nestjs/common";
 import { describe, expect, test } from "vitest";
 import { Task, TaskNotFoundError, TaskSituationNotAllowedError, type TaskCreateProps } from "../../domain";
 import { InMemoryTaskCardQuery } from "../../api-core/tasks/testing/in-memory-task-card.query";
 import { InMemoryTaskDatabase } from "../../api-core/tasks/testing/in-memory-task-database";
 import { InMemoryTaskRepository } from "../../api-core/tasks/testing/in-memory-task.repository";
-import { GatewayIdentityGuard } from "../../http/request-identity/gateway-identity.guard";
-import { SetTaskSituationController } from "./set-task-situation.controller";
 import { SetTaskSituationUseCase } from "./set-task-situation.usecase";
 
 const actor = { userId: "auth-user-1" };
@@ -20,7 +15,7 @@ function agent(id: string, props: Partial<TaskCreateProps> = {}): Task {
 function setup(tasks: Task[]) {
   const database = new InMemoryTaskDatabase(tasks);
   const useCase = new SetTaskSituationUseCase(new InMemoryTaskRepository(database), new InMemoryTaskCardQuery(database));
-  return { database, useCase, controller: new SetTaskSituationController(useCase) };
+  return { database, useCase };
 }
 
 describe("definir a situacao", () => {
@@ -70,21 +65,5 @@ describe("definir a situacao", () => {
     const { useCase } = setup([task]);
 
     await expect(useCase.execute({ taskId: task.id, situation: "reviewed" }, actor)).rejects.toBeInstanceOf(TaskSituationNotAllowedError);
-  });
-});
-
-describe("PUT /api/tasks/:taskId/situation", () => {
-  test("o corpo so tem situacao, e um valor desconhecido e recusado", async () => {
-    const { controller } = setup([agent("r1")]);
-
-    await expect(controller.execute("r1", { situation: "reviewed" }, actor)).resolves.toMatchObject({ situation: "reviewed" });
-    expect(() => controller.execute("r1", { situation: "archived" } as never, actor)).toThrow(BadRequestException);
-    expect(() => controller.execute("r1", { situation: "reviewed", expectedRevision: 1 } as never, actor)).toThrow(BadRequestException);
-    expect(() => controller.execute("r1", {} as never, actor)).toThrow(BadRequestException);
-  });
-
-  test("responde 200 e fica atras da identidade do gateway", () => {
-    expect(Reflect.getMetadata(HTTP_CODE_METADATA, SetTaskSituationController.prototype.execute)).toBe(200);
-    expect(Reflect.getMetadata(GUARDS_METADATA, SetTaskSituationController.prototype.execute)).toContain(GatewayIdentityGuard);
   });
 });

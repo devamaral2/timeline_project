@@ -1,14 +1,7 @@
-import "reflect-metadata";
-import { Logger } from "@nestjs/common";
-import { NestFactory } from "@nestjs/core";
-import type { NestExpressApplication } from "@nestjs/platform-express";
-import { TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES } from "@repo/contracts/device-key";
-import { AppModule } from "./app.module";
-import { DomainExceptionFilter } from "./common/domain-exception.filter";
-import { configureApiDocumentation } from "./common/openapi";
-import { getDatabaseEnv, getServerEnv, isLoopbackHost } from "./config/env";
+import { Logger } from "./common/logger";
+import { getDatabaseEnv, getServerEnv } from "./config/env";
 import { loadRootEnv } from "./config/load-env";
-import { DAILY_READING_BODY_LIMIT_BYTES } from "./features/save-daily-reading/save-daily-reading.controller";
+import { createApiRuntime } from "./server/composition-root";
 
 /**
  * Bind em 127.0.0.1 por padrao: em producao o backend nao e exposto para fora
@@ -16,7 +9,8 @@ import { DAILY_READING_BODY_LIMIT_BYTES } from "./features/save-daily-reading/sa
  * /api/*.
  *
  * `API_HOST=0.0.0.0` abre a API para a rede local. E o modo de desenvolvimento
- * do app mobile: o celular nao consegue alcancar o loopback da sua maquina.
+ * do app mobile: o celular nao consegue alcancar o loopback da sua maquina, e
+ * e nesse modo que o CORS liga.
  */
 async function bootstrap(): Promise<void> {
   // Antes de qualquer coisa que leia process.env — os gateways resolvem as
@@ -24,26 +18,28 @@ async function bootstrap(): Promise<void> {
   loadRootEnv();
 
   // DATABASE_URL passa a ser obrigatorio a partir daqui: falhar cedo, antes de
-  // criar o Nest, evita subir o processo so para falhar no primeiro request.
-  getDatabaseEnv();
+  // criar o servidor, evita subir o processo so para falhar no primeiro request.
+  const databaseUrl = getDatabaseEnv().DATABASE_URL;
 
-  const { API_PORT, API_HOST } = getServerEnv();
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  // O markdown de uma pagina lida e a entrega do servico de transcricao passam
-  // dos 100 kB padrao. A API so ouve o gateway, que ja segura cada rota no teto
-  // dela; aqui o teto e um so, o da maior (a entrega).
-  app.useBodyParser("json", { limit: Math.max(DAILY_READING_BODY_LIMIT_BYTES, TRANSCRIPTION_DELIVERY_BODY_LIMIT_BYTES) });
-  app.useGlobalFilters(new DomainExceptionFilter());
-  app.enableShutdownHooks();
-  configureApiDocumentation(app);
+  const { API_PORT, API_HOST, AUTH_INTERNAL_SERVICE_KEY } = getServerEnv();
+  const runtime = await createApiRuntime({ databaseUrl, authInternalServiceKey: AUTH_INTERNAL_SERVICE_KEY });
 
-  // Clientes nativos nao aplicam a politica de origem. Quem precisa e o alvo
-  // web, util para depurar telas no navegador — e ele so existe quando a API
-  // ja esta aberta na rede.
-  if (!isLoopbackHost(API_HOST)) app.enableCors();
+  const shutdown = async (): Promise<void> => {
+    await runtime.close();
+    process.exit(0);
+  };
+  process.once("SIGINT", () => void shutdown());
+  process.once("SIGTERM", () => void shutdown());
 
-  await app.listen(API_PORT, API_HOST);
-  Logger.log(`API ouvindo em http://${API_HOST}:${API_PORT}`, "Bootstrap");
+  try {
+    await runtime.start();
+    await runtime.fastify.listen({ port: API_PORT, host: API_HOST });
+  } catch (error) {
+    // Uma falha no startup fecha o que ja subiu, em vez de deixar o processo de pe.
+    await runtime.close().catch(() => undefined);
+    throw error;
+  }
+  new Logger("Bootstrap").log(`API ouvindo em http://${API_HOST}:${API_PORT}`);
 }
 
 void bootstrap();
