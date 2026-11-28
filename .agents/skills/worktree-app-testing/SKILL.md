@@ -17,11 +17,11 @@ Este monorepo tem um unico `.env`/`.env.local` na raiz e, por padrao, portas
 fixas (web 3000, api 3001, auth 3002, Postgres 54391). Se varias worktrees
 rodarem a app ao mesmo tempo sem isolamento, uma pisa na porta e no banco da
 outra. `scripts/worktree/` resolve isso: cada worktree ganha seu proprio
-`.env.local` com portas livres calculadas na hora, bases proprias para a API
-(`<worktree>`) e para o Auth (`<worktree>_auth`) dentro do Postgres
-compartilhado (porta 54391) e o dominio `<worktree>.braid.local` (Caddy,
-HTTPS na porta 8443). A fila de jobs de IA e a tabela `jobs` da base da API, entao ja
-nasce isolada por worktree.
+`.env.local` com portas livres calculadas na hora, o banco SQLite da API em
+`.data/api.sqlite` da propria worktree (ADR 0024), a base do Auth
+(`<worktree>_auth`) dentro do Postgres compartilhado (porta 54391) e o dominio
+`<worktree>.braid.local` (Caddy, HTTPS na porta 8443). A fila de jobs de IA e a
+tabela `jobs` do banco da API, entao ja nasce isolada por worktree.
 
 ## Passo a passo
 

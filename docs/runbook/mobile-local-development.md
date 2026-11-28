@@ -27,7 +27,7 @@ O fluxo local usa estas portas por padrão:
 | Web | `3000` | Opcional; usado para comparar a experiência mobile |
 | API | `3001` | Eventos, tags e chat |
 | Auth | `3002` | Login, sessão, refresh e logout |
-| PostgreSQL | `54391` | Banco local da API e do Auth |
+| PostgreSQL | `54391` | Banco local do Auth (a API usa SQLite em `.data/api.sqlite`) |
 
 As portas da API e do Auth podem ser diferentes em uma worktree isolada. Nesse
 caso, o arquivo `.env.local` é a fonte de verdade.
@@ -651,8 +651,9 @@ Aplique as migrations do Auth:
 pnpm secrets:exec -- pnpm --filter @repo/auth run db:migrate
 ```
 
-As duas migrations são obrigatórias. A API e o Auth usam schemas e tabelas
-independentes no PostgreSQL.
+As duas migrations são obrigatórias. O Auth usa o PostgreSQL; a API guarda tudo
+num arquivo SQLite, `.data/api.sqlite` na raiz do repositório (ADR 0024), e
+também aplica as migrations pendentes sozinha ao subir.
 
 ### 7.2 Worktree secundária
 

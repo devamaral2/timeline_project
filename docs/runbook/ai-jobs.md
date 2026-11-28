@@ -1,4 +1,4 @@
-# AI jobs: the single queue in PostgreSQL
+# AI jobs: the single queue in the API database
 
 AI work runs from one table, `jobs`, in the API database
 ([ADR 0013](../adr/0013-ia-sem-tabelas-proprias-e-fila-unica.md)). There is no
@@ -6,10 +6,11 @@ broker and no outbox table: the worker lives inside the API process
 (`apps/api/src/infrastructure/jobs/jobs.service.ts`) and reads the table
 directly (`apps/api/src/infrastructure/persistence/jobs/postgres-job.store.ts`).
 
-Nothing has to be provisioned besides the database. The table is created by the
-API migration (`apps/api/drizzle/0000_initial.sql`), so every environment and
-every worktree gets its own queue with its own database, and dropping the
-database drops the queue.
+Nothing has to be provisioned besides the database, a SQLite file
+([ADR 0024](../adr/0024-api-em-sqlite-sem-orm.md)). The table is created by the
+API migration (`apps/api/migrations/0000_inicial.sql`), so every environment and
+every worktree gets its own queue with its own file, and deleting the file
+deletes the queue.
 
 The job is disposable. The source of truth is the task the job points to
 (`jobs.task_id`: the request or the step it executes) and that task's
@@ -35,8 +36,10 @@ All optional; the API validates them at boot (`apps/api/src/config/env.ts`).
    job that already exists.
 2. **Claim.** Every `AI_JOBS_POLL_MS` the worker takes up to its free slots of
    jobs that are `queued`, have `available_at <= now()` and are of a kind it has
-   a handler for, oldest `available_at` first, with `FOR UPDATE SKIP LOCKED`.
-   Two API instances on the same database never take the same job. The claim
+   a handler for, oldest `available_at` first, in one `BEGIN IMMEDIATE`
+   transaction on the single writer connection: two claims never take the same
+   job. There is one API instance per database file (the deployment uses
+   `strategy: Recreate`), so this holds for the whole queue. The claim
    sets `running`, adds one to `attempts` and writes a new `lease_token` and
    `lease_until`.
 3. **One at a time per key.** A job with a `concurrency_key` is only claimed
@@ -89,13 +92,18 @@ On shutdown the API stops polling, aborts the handlers in progress and waits
 for them. A handler that did not finish is never marked as succeeded: its lease
 expires and another worker picks the job up.
 
-If PostgreSQL is unreachable the worker logs
-`Job queue unavailable; jobs remain queued in PostgreSQL` and tries again with
-a growing wait (up to 60 s). There is nothing to repair afterwards.
+If the database cannot be read or written (disk full, file locked by another
+process) the worker logs `Job queue unavailable` and tries again with a growing
+wait (up to 60 s). There is nothing to repair afterwards.
 
 ## Diagnose
 
-Connect to the API database (the `DATABASE_URL` of the environment) with `psql`.
+Open the API database read-only. Locally it is `.data/api.sqlite` at the root
+of the worktree; in production, `/data/api.sqlite` in the `api` pod
+(`kubectl -n braid exec -it deploy/api -- node`, then
+`const db = new (process.getBuiltinModule("node:sqlite").DatabaseSync)(process.env.API_DATABASE_PATH, { readOnly: true })`
+and `db.prepare("<sql>").all()`). Times are ISO-8601 UTC text, so they compare
+with `strftime('%Y-%m-%dT%H:%M:%fZ', 'now')`.
 
 Overview by status and kind:
 
@@ -110,7 +118,7 @@ Queued jobs, and whether each is ready or waiting for a retry:
 
 ```sql
 SELECT id, kind, task_id, attempts, error, available_at,
-       available_at <= now() AS ready, concurrency_key, created_at
+       available_at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') AS ready, concurrency_key, created_at
 FROM jobs
 WHERE status = 'queued'
 ORDER BY available_at, id
@@ -124,8 +132,8 @@ is running, the instance has no handler for that `kind` (older build), all
 
 ```sql
 SELECT concurrency_key,
-       count(*) FILTER (WHERE status = 'running') AS running,
-       count(*) FILTER (WHERE status = 'queued') AS queued,
+       sum(status = 'running') AS running,
+       sum(status = 'queued') AS queued,
        min(created_at) AS oldest
 FROM jobs
 WHERE concurrency_key IS NOT NULL AND status IN ('queued', 'running')
@@ -137,13 +145,13 @@ Running jobs and their leases:
 
 ```sql
 SELECT id, kind, task_id, attempts, lease_until,
-       lease_until <= clock_timestamp() AS lease_expired, progress, updated_at
+       lease_until <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now') AS lease_expired, progress, updated_at
 FROM jobs
 WHERE status = 'running'
 ORDER BY lease_until;
 ```
 
-A row with `lease_expired = true` that stays there means no worker is polling:
+A row with `lease_expired = 1` that stays there means no worker is polling:
 the first pass of any live API instance returns it to the queue.
 
 Jobs that failed (kept for 7 days):
@@ -181,7 +189,8 @@ ORDER BY j.created_at, j.id;
   cancelled jobs do not restart by themselves, and the task already shows the
   failure to the user, who sends the request again.
 - **A retry is waiting and you do not want to wait.** `UPDATE jobs SET
-  available_at = now() WHERE id = '<id>' AND status = 'queued';` is safe.
+  available_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = '<id>' AND
+  status = 'queued';` is safe (open the file read-write for this one).
 - **Do not** set a `failed` or `cancelled` job back to `queued` by hand (its
   task was already closed as failed or cancelled), and do not delete `running`
   rows: let the lease expire or cancel the request through the API.
