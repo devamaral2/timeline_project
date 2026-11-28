@@ -23,7 +23,11 @@ function patternOf(path: string): RegExp {
 
 function matcherOf(routes: readonly ApiRoute[]): (method: string, path: string) => boolean {
   const compiled = routes.map((route) => ({ method: route.method, pattern: patternOf(route.path) }));
-  return (method, path) => compiled.some((route) => route.method === method && route.pattern.test(path));
+  return (method, path) =>
+    compiled.some(
+      (route) =>
+        (route.method === method || (method === "HEAD" && route.method === "GET")) && route.pattern.test(path),
+    );
 }
 
 /**

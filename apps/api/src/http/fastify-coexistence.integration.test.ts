@@ -104,6 +104,10 @@ describe("coexistencia", () => {
     expect(slash.status).toBe(200);
     expect(slash.json).toEqual({ items: [] });
 
+    const head = await call("HEAD", "/api/tasks", { headers: session(user) });
+    expect(head.status).toBe(200);
+    expect(head.text).toBe("");
+
     const preflight = await call("OPTIONS", "/api/tasks", {
       headers: { origin: ORIGIN, "access-control-request-method": "GET" },
     });
