@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, test } from "vitest";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { SqliteIdempotencyStore } from "../idempotency/sqlite-idempotency.store";
 import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 

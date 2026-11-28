@@ -28,7 +28,7 @@ import {
   textArtifact,
   trackedTask,
 } from "../testing/fixtures";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 const uses = (artifactId: string, fromRecurrence = false): ArtifactLink => ({ artifactId, relation: "uses", fromRecurrence });

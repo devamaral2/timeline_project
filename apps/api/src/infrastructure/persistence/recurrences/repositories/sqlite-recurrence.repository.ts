@@ -9,7 +9,7 @@ import {
 } from "../../../../domain";
 import type { RecurrenceRepository } from "../../../../domain/ports";
 import { recurrenceExceptions, recurrences, taskTaskRelation } from "../../database/tables";
-import { sql } from "../../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { writeArtifacts } from "../../artifacts/repositories/sqlite-artifact.repository";
 import { resolveProjectId, type ProjectScope } from "../../projects/resolve-project";
 import { insertTaskAggregate } from "../../tasks/repositories/sqlite-task.repository";

@@ -15,7 +15,7 @@ import { SqliteJobStore } from "../../infrastructure/persistence/jobs/sqlite-job
 import { SqliteRecurrenceRepository } from "../../infrastructure/persistence/recurrences/repositories/sqlite-recurrence.repository";
 import { SqliteCandidateQuery } from "../../infrastructure/persistence/requests/sqlite-candidate.query";
 import { SqliteRequestStore } from "../../infrastructure/persistence/requests/sqlite-request.store";
-import { sql } from "../../infrastructure/persistence/sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { trackedTask } from "../../infrastructure/persistence/testing/fixtures";
 import { createSqliteTestContext, type SqliteTestContext } from "../../infrastructure/persistence/testing/sqlite-test-context";
 import { FastStageError } from "../agent/errors/agent.errors";

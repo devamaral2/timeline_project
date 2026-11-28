@@ -1,5 +1,5 @@
 import { ulid } from "ulid";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { tags } from "../database/tables";
 import type { Tx } from "./tx";
 

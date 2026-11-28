@@ -14,7 +14,7 @@ import type {
 } from "../../../../domain/ports";
 import { artifactArtifactRelation, artifacts, artifactTags } from "../../database/tables";
 import { sqlList } from "../../database/schema/sets";
-import { NOW, sql, type SqlFragment } from "../../sqlite/sql";
+import { NOW, sql, type SqlFragment } from "@repo/sqlite";
 import { agentStatusesBefore, REVIEW_SITUATION_ON_CLOSE } from "../../../../domain/agent-status";
 import { completeCurrentJob } from "../../../jobs/job-context";
 import { appendEntry } from "../../requests/request-rows";

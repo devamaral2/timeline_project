@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { DatabaseSync } from "../sqlite/node-sqlite";
+import { DatabaseSync } from "@repo/sqlite";
 import { SQL_DIALECT_DESCRIPTION, createTableSql, describeLogicalSchema, logicalTables } from "./logical-schema";
 
 describe("logical schema", () => {

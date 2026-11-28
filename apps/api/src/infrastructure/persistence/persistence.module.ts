@@ -16,7 +16,7 @@ import type {
 } from "../../domain/ports";
 import { getDatabaseEnv } from "../../config/env";
 import { openApiDatabase } from "./database/api-database";
-import type { SqliteDatabase } from "./sqlite/database";
+import type { SqliteDatabase } from "@repo/sqlite";
 import { SqliteEntityBatchWriter } from "./agent-batch/sqlite-entity-batch-writer";
 import { SqliteProjectQuery } from "./projects/sqlite-project.query";
 import { SqliteProjectRepository } from "./projects/sqlite-project.repository";

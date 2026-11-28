@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { monotonicFactory } from "ulid";
-import type { Tx } from "../persistence/sqlite/database";
-import { NOW, sql } from "../persistence/sqlite/sql";
+import { NOW, sql, type Tx } from "@repo/sqlite";
 
 /** O que a fila precisa de uma transacao: executar SQL nela. */
 export type JobTransaction = Pick<Tx, "execute">;

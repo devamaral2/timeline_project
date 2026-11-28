@@ -18,6 +18,7 @@ const packageAliases = {
   "@repo/contracts": resolve("./packages/contracts/src/index.ts"),
   "@repo/theme": resolve("./packages/theme/src/index.ts"),
   "@repo/timeline": resolve("./packages/timeline/src/index.ts"),
+  "@repo/sqlite": resolve("./packages/sqlite/src/index.ts"),
 };
 
 export default defineWorkspace([
@@ -119,6 +120,14 @@ export default defineWorkspace([
     test: {
       name: "timeline",
       root: "./packages/timeline",
+      environment: "node",
+      include: ["src/**/*.{test,spec}.ts"],
+    },
+  },  {
+    resolve: { alias: packageAliases },
+    test: {
+      name: "sqlite",
+      root: "./packages/sqlite",
       environment: "node",
       include: ["src/**/*.{test,spec}.ts"],
     },

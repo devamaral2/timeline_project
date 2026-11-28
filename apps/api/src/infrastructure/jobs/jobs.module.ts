@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { getJobsEnv } from "../../config/env";
 import { DATABASE, PersistenceModule } from "../persistence/persistence.module";
-import type { SqliteDatabase } from "../persistence/sqlite/database";
+import type { SqliteDatabase } from "@repo/sqlite";
 import { SqliteJobStore } from "../persistence/jobs/sqlite-job.store";
 import { JobsService } from "./jobs.service";
 

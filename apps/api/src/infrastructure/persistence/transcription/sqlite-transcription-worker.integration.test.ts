@@ -16,7 +16,7 @@ import { SqliteTaskCardQuery } from "../tasks/queries/sqlite-task-card.query";
 import { SqliteTaskRelations } from "../tasks/relations/sqlite-task-relations";
 import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
 import { OTHER_USER, USER, countRows, selectRows } from "../testing/fixtures";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 import { SqliteTranscriptionRequests } from "./sqlite-transcription-requests";
 

@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openApiDatabase } from "../database/api-database";
-import type { SqliteDatabase } from "../sqlite/database";
+import type { SqliteDatabase } from "@repo/sqlite";
 import type { Db } from "../shared/tx";
 
 export interface SqliteTestContext {

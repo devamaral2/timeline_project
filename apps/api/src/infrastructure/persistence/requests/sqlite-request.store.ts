@@ -32,9 +32,7 @@ import type {
 import type { EntryKind, EntryRole, Situation } from "../../../domain";
 import { enqueueJobInTransaction } from "../../jobs/job-context";
 import { taskArtifactRelation, taskEntries, tasks, taskTaskRelation, type TaskEntryRow } from "../database/tables";
-import { c, rowDecoder } from "../sqlite/columns";
-import type { Db, SqlExecutor, Tx } from "../sqlite/database";
-import { jsonMerge, NOW, sql } from "../sqlite/sql";
+import { c, type Db, jsonMerge, NOW, rowDecoder, sql, type SqlExecutor, type Tx } from "@repo/sqlite";
 import { agentStatusesBefore, OPEN_AGENT_STATUSES } from "../../../domain/agent-status";
 import type { AgentTaskStatus } from "../../../domain/sets";
 import { sqlList } from "../database/schema/sets";

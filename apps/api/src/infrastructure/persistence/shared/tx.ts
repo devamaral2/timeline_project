@@ -1,1 +1,1 @@
-export type { Db, Tx, SqlExecutor } from "../sqlite/database";
+export type { Db, Tx, SqlExecutor } from "@repo/sqlite";

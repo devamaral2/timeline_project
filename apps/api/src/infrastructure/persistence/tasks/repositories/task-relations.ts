@@ -1,7 +1,7 @@
 import { TaskValidationError, SUBTASK_RELATION, type Task } from "../../../../domain/index";
 import type { SubtaskChange } from "../../../../domain/ports";
 import { taskArtifactRelation, taskTaskRelation } from "../../database/tables";
-import { sql } from "../../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import type { Tx } from "../../shared/tx";
 
 /**

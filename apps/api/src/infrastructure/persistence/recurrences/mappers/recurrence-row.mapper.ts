@@ -1,5 +1,5 @@
 import { Recurrence, type RecurrenceRule } from "../../../../domain";
-import type { InsertOf } from "../../sqlite/columns";
+import type { InsertOf } from "@repo/sqlite";
 import type { recurrences, RecurrenceRow } from "../../database/tables";
 
 export type { RecurrenceRow };

@@ -64,6 +64,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # raiz do monorepo por caminho relativo a __dirname.
 COPY --from=builder /app/packages/contracts/dist ./packages/contracts/dist
 COPY --from=builder /app/packages/timeline/dist ./packages/timeline/dist
+COPY --from=builder /app/packages/sqlite/dist ./packages/sqlite/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 # As migrations rodam na subida (ADR 0024): o migrador as le de apps/api/migrations.
 COPY --from=pruner /app/apps/api/migrations ./apps/api/migrations

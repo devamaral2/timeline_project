@@ -13,8 +13,7 @@ import {
 import type { TaskRepository } from "../../../../domain/ports";
 import { recurrenceExceptions, tasks, taskTags } from "../../database/tables";
 import { sqlList } from "../../database/schema/sets";
-import { c, rowDecoder } from "../../sqlite/columns";
-import { NOW, sql } from "../../sqlite/sql";
+import { c, NOW, rowDecoder, sql } from "@repo/sqlite";
 import { resolveProjectId, type ProjectScope } from "../../projects/resolve-project";
 import { writeArtifacts } from "../../artifacts/repositories/sqlite-artifact.repository";
 import { occurrenceColumnsOf } from "../../recurrences/mappers/occurrence-columns";

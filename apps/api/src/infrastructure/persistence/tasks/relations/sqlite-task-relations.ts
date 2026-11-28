@@ -1,5 +1,5 @@
 import type { TaskRelation, TaskRelations } from "../../../../api-core/tasks/task-relations";
-import { sql } from "../../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import type { Tx } from "../../shared/tx";
 
 /** Grava a relação entre tarefas na transação do escritor em lote (`task_task_relation`). */

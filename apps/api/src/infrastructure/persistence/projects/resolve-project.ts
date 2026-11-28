@@ -1,7 +1,7 @@
 import { ulid } from "ulid";
 import { ProjectNotFoundError } from "../../../domain";
 import { PERSONAL_PROJECT_NAME, projects } from "../database/tables";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import type { Tx } from "../shared/tx";
 
 /**

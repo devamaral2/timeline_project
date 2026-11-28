@@ -26,7 +26,7 @@ import {
   selectRows,
   trackedTask,
 } from "../testing/fixtures";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 interface ProjectRow extends Record<string, unknown> {

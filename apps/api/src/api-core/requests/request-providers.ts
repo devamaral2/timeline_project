@@ -18,7 +18,7 @@ import { OpenAIStructuredCompletionGateway } from "../../infrastructure/model-ag
 import { OpenRouterProvider } from "../../infrastructure/model-agent/openrouter-provider";
 import { HermesClient } from "../../infrastructure/hermes/hermes.client";
 import { JobsService } from "../../infrastructure/jobs/jobs.service";
-import type { SqliteDatabase } from "../../infrastructure/persistence/sqlite/database";
+import type { SqliteDatabase } from "@repo/sqlite";
 import {
   ARTIFACT_REPOSITORY,
   DATABASE,

@@ -1,7 +1,10 @@
 import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { Logger } from "@nestjs/common";
-import { SqliteDatabase } from "../sqlite/database";
-import { migrateDatabase, type Migration } from "../sqlite/migrate";
+import { loadMigrations, migrateDatabase, SqliteDatabase, type Migration } from "@repo/sqlite";
+
+/** As migrations da API, em `apps/api/migrations` (a partir de `src` ou de `dist`). */
+export const API_MIGRATIONS_DIR = resolve(__dirname, "../../../../migrations");
 
 export interface OpenApiDatabaseOptions {
   migrations?: readonly Migration[];
@@ -18,7 +21,7 @@ export function openApiDatabase(path: string, options: OpenApiDatabaseOptions = 
   const database = SqliteDatabase.open(path, { memory: options.memory });
   try {
     const applied = migrateDatabase(database.handle, {
-      migrations: options.migrations,
+      migrations: options.migrations ?? loadMigrations(API_MIGRATIONS_DIR),
       beforeApply: (pending) => {
         if (options.memory) return;
         const { count } = database.handle.prepare("SELECT count(*) AS count FROM schema_migrations").get() as {

@@ -1,7 +1,12 @@
 import { defineWorkspace } from "vitest/config";
+import { fileURLToPath } from "node:url";
+
+// O cliente SQLite compartilhado (ADR 0024) vem do fonte, como no workspace unitario: sem depender de um `dist` antigo.
+const sqliteAlias = { "@repo/sqlite": fileURLToPath(new URL("./packages/sqlite/src/index.ts", import.meta.url)) };
 
 export default defineWorkspace([
   {
+    resolve: { alias: sqliteAlias },
     test: {
       name: "api-integration",
       root: "./apps/api",
@@ -14,6 +19,7 @@ export default defineWorkspace([
     },
   },
   {
+    resolve: { alias: sqliteAlias },
     test: {
       name: "auth-integration",
       root: "./apps/auth",

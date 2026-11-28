@@ -1,4 +1,4 @@
-import { sql, type SqlFragment } from "../../sqlite/sql";
+import { sql, type SqlFragment } from "@repo/sqlite";
 
 export * from "../../../../domain/sets";
 
