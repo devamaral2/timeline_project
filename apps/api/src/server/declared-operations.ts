@@ -1,3 +1,4 @@
+import { documentedOperations } from "../common/openapi-operations";
 import { cancelRequestOperation } from "../features/cancel-request/cancel-request.route";
 import { createArtifactOperation } from "../features/create-artifact/create-artifact.route";
 import { createProjectOperation } from "../features/create-project/create-project.route";
@@ -27,12 +28,14 @@ import { requestTranscriptionOperation } from "../features/request-transcription
 import { reserveTranscriptionOperation } from "../features/reserve-transcription/reserve-transcription.route";
 import { restoreAgentFileOperation } from "../features/restore-agent-file/restore-agent-file.route";
 import { saveDailyReadingOperation } from "../features/save-daily-reading/save-daily-reading.route";
+import { searchPlacesOperation } from "../features/search-places/search-places.route";
 import { setTaskSituationOperation } from "../features/set-task-situation/set-task-situation.route";
 import { startEditRequestOperation } from "../features/start-edit-request/start-edit-request.route";
 import { startHermesRequestOperation } from "../features/start-hermes-request/start-hermes-request.route";
 import { startModelRequestOperation } from "../features/start-model-request/start-model-request.route";
 import { startRequestOperation } from "../features/start-request/start-request.route";
 import { startVoiceRequestOperation } from "../features/start-voice-request/start-voice-request.route";
+import { suggestTagsOperation } from "../features/suggest-tags/suggest-tags.route";
 import { updateArtifactOperation } from "../features/update-artifact/update-artifact.route";
 import { updateRecurrenceOperation } from "../features/update-recurrence/update-recurrence.route";
 import { updateTaskOperation } from "../features/update-task/update-task.route";
@@ -59,6 +62,8 @@ export const DECLARED_API_OPERATIONS: readonly ApiRouteOperation[] = [
   deleteTaskOperation,
   listProjectsOperation,
   createProjectOperation,
+  suggestTagsOperation,
+  searchPlacesOperation,
   listArtifactsOperation,
   createArtifactOperation,
   getArtifactOperation,
@@ -84,6 +89,24 @@ export const DECLARED_API_OPERATIONS: readonly ApiRouteOperation[] = [
   restoreAgentFileOperation,
   requestAgentFileEditOperation,
 ];
+
+/**
+ * O composition root chama isto antes de servir: as rotas que ele monta precisam
+ * ser exatamente as desta lista, na mesma ordem, e o catalogo nao pode descrever
+ * nem esquecer nenhuma delas. Uma divergencia derruba o processo no startup, em
+ * vez de sumir uma rota do documento ou registrar uma rota sem documentacao.
+ */
+export function assertDeclaredOperations(registered: readonly Pick<ApiRouteOperation, "method" | "path">[]): void {
+  const declared = DECLARED_API_OPERATIONS.map(declaredOperationKey);
+  const actual = registered.map(declaredOperationKey);
+  if (declared.join("|") !== actual.join("|")) {
+    throw new Error(`As rotas registradas divergem das declaradas:\ndeclaradas: ${declared.join(", ")}\nregistradas: ${actual.join(", ")}`);
+  }
+  const documented = Object.keys(documentedOperations).sort();
+  if (documented.join("|") !== [...declared].sort().join("|")) {
+    throw new Error(`O catalogo OpenAPI divergiu das rotas declaradas:\ndocumentadas: ${documented.join(", ")}\ndeclaradas: ${declared.join(", ")}`);
+  }
+}
 
 /** O caminho na forma do documento OpenAPI (`/api/tasks/:taskId` -> `/api/tasks/{taskId}`). */
 export function openApiPath(path: string): string {

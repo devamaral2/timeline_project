@@ -8,10 +8,9 @@ import { createApiTestApp, type ApiTestApp } from "../../testing/create-api-test
 import { API_HTTP_OPERATIONS, operationKey } from "./api-http-operations";
 
 /**
- * A linha de base do comportamento HTTP da API, rodando contra a implementação
- * Nest atual. Cada expectativa aqui é uma fotografia do que os clientes veem
- * hoje; depois da migração para Fastify, esta mesma suíte precisa continuar
- * verde sem mudar nenhuma expectativa.
+ * A linha de base do comportamento HTTP da API, rodando contra o servidor
+ * Fastify. Cada expectativa aqui é uma fotografia do que os clientes viam antes
+ * da migração, e continua verde sem mudar nenhuma expectativa.
  */
 
 const GATEWAY_KEY = "baseline-gateway-key-with-32-characters";
@@ -163,7 +162,7 @@ describe("status de sucesso", () => {
     expect(response.json).toEqual({ items: [] });
   });
 
-  test("201 é a criação padrão do Nest e também o 201 implícito de /api/ai/config/restore", async () => {
+  test("201 é a criação padrão e também o 201 que o restore herdou do POST do Express", async () => {
     const user = newUser();
     const task = await call("POST", "/api/tasks", { headers: sessionHeaders(user), body: { name: "tarefa" } });
     expect(task.status).toBe(201);
@@ -173,7 +172,7 @@ describe("status de sucesso", () => {
     expect(project.status).toBe(201);
     expect(project.json).toMatchObject({ name: "casa", personal: false });
 
-    // Restore não declara @HttpCode: o 201 vem do padrão do Nest para POST.
+    // O restore não declara status: o 201 é o padrão do POST, herdado da linha de base.
     const restore = await call("POST", "/api/ai/config/restore", {
       headers: sessionHeaders(OWNER),
       body: { path: "hermes/skills/foo/SKILL.md", backupId: "20260101T000000000Z.bak" },
@@ -332,7 +331,7 @@ describe("compatibilidade HTTP", () => {
     expect(ignored.json).toEqual({ items: [] });
   });
 
-  test("JSON malformado é 400 e content-type incompatível reproduz o 500 atual da Nest", async () => {
+  test("JSON malformado é 400 e content-type incompatível reproduz o 500 da linha de base", async () => {
     const malformed = await call("POST", "/api/tasks", { headers: sessionHeaders(newUser()), raw: "{oops" });
     expect(malformed.status).toBe(400);
     expect(malformed.json).toEqual({

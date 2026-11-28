@@ -9,7 +9,7 @@ import { OpenRouterFoodParsingGateway } from "../api-core/tasks/gateways/openrou
 import { requestClock } from "../api-core/tasks/request-clock";
 import { TranscriptionWorkerUseCase } from "../api-core/transcription/transcription-worker.usecase";
 import type { LogSink } from "../common/logger";
-import { getDatabaseEnv, getJobsEnv, getServerEnv, type ServerEnv } from "../config/env";
+import { getDatabaseEnv, getJobsEnv, getServerEnv, isLoopbackHost, type ServerEnv } from "../config/env";
 import { cancelRequestRoute } from "../features/cancel-request/cancel-request.route";
 import { createArtifactRoute } from "../features/create-artifact/create-artifact.route";
 import { CreateArtifactUseCase } from "../features/create-artifact/create-artifact.usecase";
@@ -56,8 +56,12 @@ import { renewTranscriptionLeaseRoute } from "../features/renew-transcription-le
 import { reserveTranscriptionRoute } from "../features/reserve-transcription/reserve-transcription.route";
 import { saveDailyReadingRoute } from "../features/save-daily-reading/save-daily-reading.route";
 import { SaveDailyReadingUseCase } from "../features/save-daily-reading/save-daily-reading.usecase";
+import { searchPlacesRoute } from "../features/search-places/search-places.route";
+import { SearchPlacesUseCase } from "../features/search-places/search-places.usecase";
 import { setTaskSituationRoute } from "../features/set-task-situation/set-task-situation.route";
 import { SetTaskSituationUseCase } from "../features/set-task-situation/set-task-situation.usecase";
+import { suggestTagsRoute } from "../features/suggest-tags/suggest-tags.route";
+import { SuggestTagsUseCase } from "../features/suggest-tags/suggest-tags.usecase";
 import { startEditRequestRoute } from "../features/start-edit-request/start-edit-request.route";
 import { startHermesRequestRoute } from "../features/start-hermes-request/start-hermes-request.route";
 import { startModelRequestRoute } from "../features/start-model-request/start-model-request.route";
@@ -87,7 +91,9 @@ import { PostgresRequestStore } from "../infrastructure/persistence/requests/pos
 import { PostgresTaskCardQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-card.query";
 import { PostgresTaskRequestLinkQuery } from "../infrastructure/persistence/tasks/queries/postgres-task-request-link.query";
 import { PostgresTaskRelations } from "../infrastructure/persistence/tasks/relations/postgres-task-relations";
+import { PostgresTagRepository } from "../infrastructure/persistence/tasks/repositories/postgres-tag.repository";
 import { PostgresTaskRepository } from "../infrastructure/persistence/tasks/repositories/postgres-task.repository";
+import { PhotonPlaceSearchGateway } from "../infrastructure/places/photon-place-search.gateway";
 import { PostgresTranscriptionRequests } from "../infrastructure/persistence/transcription/postgres-transcription-requests";
 import {
   createAgentFiles,
@@ -95,7 +101,8 @@ import {
   createRequestOperations,
   registerFormatTranscriptionJob,
 } from "./request-workers";
-import { createFastifyInstance, registerApiRoutes } from "./route-registrar";
+import { assertDeclaredOperations } from "./declared-operations";
+import { createFastifyInstance, registerApiRoutes, registerDocumentation } from "./route-registrar";
 import { createRuntimeLifecycle } from "./runtime-lifecycle";
 
 export interface ApiRuntime {
@@ -142,6 +149,8 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
   const database = PostgresDatabase.connect(databaseUrl);
   try {
     const taskRepository = new PostgresTaskRepository(database.db);
+    const tagRepository = new PostgresTagRepository(database.db);
+    const placeSearch = new PhotonPlaceSearchGateway();
     const taskCardQuery = new PostgresTaskCardQuery(database.db);
     const taskRequestLinkQuery = new PostgresTaskRequestLinkQuery(database.db);
     const projectQuery = new PostgresProjectQuery(database.db);
@@ -168,6 +177,8 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
     const listAgendaTasks = new ListAgendaTasksUseCase(taskCardQuery, materializeRecurrences);
     const listTrackedTasks = new ListTrackedTasksUseCase(taskCardQuery, materializeRecurrences);
     const listProjects = new ListProjectsUseCase(projectQuery);
+    const suggestTags = new SuggestTagsUseCase(tagRepository);
+    const searchPlaces = new SearchPlacesUseCase(placeSearch);
     const createProject = new CreateProjectUseCase(projectRepository);
 
     const listArtifacts = new ListArtifactsUseCase(artifactRepository, artifactTaskLinkQuery);
@@ -245,6 +256,8 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
       deleteTaskRoute(deleteTask),
       listProjectsRoute(listProjects),
       createProjectRoute(createProject),
+      suggestTagsRoute(suggestTags),
+      searchPlacesRoute(searchPlaces),
       listArtifactsRoute(listArtifacts),
       createArtifactRoute(createArtifact),
       getArtifactRoute(getArtifact),
@@ -271,12 +284,15 @@ export async function createApiRuntime(options: CreateApiRuntimeOptions = {}): P
       requestAgentFileEditRoute(agentFiles, requestOperations),
     ];
 
-    const fastify = createFastifyInstance({ bodyLimit: options.bodyLimit });
+    // Fora do loopback a API e alcancavel pela rede local: o CORS liga, como no Express.
+    assertDeclaredOperations(routes);
+    const fastify = createFastifyInstance({ bodyLimit: options.bodyLimit, cors: !isLoopbackHost(serverEnv.API_HOST) });
     registerApiRoutes(fastify, routes, {
       authInternalServiceKey,
       idempotencyStore,
       logger: options.logger,
     });
+    await registerDocumentation(fastify, routes);
 
     const lifecycle = createRuntimeLifecycle({
       registerHandlers: () => {

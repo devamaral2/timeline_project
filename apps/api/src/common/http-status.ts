@@ -27,9 +27,9 @@ import {
 import { HttpError } from "./http-errors";
 
 /**
- * Traduz o erro para o status HTTP. Independente do transporte: o filtro do
- * Nest hoje e o error handler do Fastify depois chamam a mesma tabela, na mesma
- * ordem. O 500 e a reserva: erro inesperado nunca vira 401.
+ * Traduz o erro para o status HTTP. Independente do transporte: o error handler
+ * do Fastify chama esta tabela, na mesma ordem da linha de base. O 500 e a
+ * reserva: erro inesperado nunca vira 401.
  */
 export function httpStatusFor(error: unknown): number {
   if (error instanceof HttpError) return error.status;

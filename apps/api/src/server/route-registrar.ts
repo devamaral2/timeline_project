@@ -4,9 +4,10 @@ import { BadRequestError, ConflictError, HttpError } from "../common/http-errors
 import { httpStatusFor } from "../common/http-status";
 import { Logger, type LogSink } from "../common/logger";
 import type { IdempotencyStore } from "../domain/ports";
-import type { ApiRoute } from "../http/api-route";
+import type { ApiRoute, ApiRouteOperation } from "../http/api-route";
 import { IDEMPOTENCY_KEY_FORMAT, idempotencyRequestHash } from "../http/idempotency/idempotency-key";
 import { authenticateRequest } from "../http/request-identity/gateway-identity";
+import { documentationFor } from "./api-documentation";
 
 export interface RegisterApiRoutesOptions {
   /** A chave interna que o gateway Auth apresenta; lida uma vez no composition root. */
@@ -17,14 +18,56 @@ export interface RegisterApiRoutesOptions {
 
 const BODY_TOO_LARGE = "FST_ERR_CTP_BODY_TOO_LARGE";
 
-/** O servidor Fastify da API, com as opcoes que preservam a linha de base HTTP. */
-export function createFastifyInstance(options: { bodyLimit?: number } = {}): FastifyInstance {
-  return Fastify({
+const CORS_METHODS = "GET,HEAD,PUT,PATCH,POST,DELETE";
+
+/** O preflight do CORS: o navegador manda `OPTIONS` com o metodo que quer usar. */
+function isCorsPreflight(request: FastifyRequest): boolean {
+  return request.method === "OPTIONS" && Boolean(request.headers["access-control-request-method"]);
+}
+
+/** As respostas do CORS do Express: a origem liberada e, no preflight, metodo e headers. */
+function applyCors(request: FastifyRequest, reply: FastifyReply): void {
+  reply.header("access-control-allow-origin", "*");
+  if (!isCorsPreflight(request)) return;
+  reply.header("access-control-allow-methods", CORS_METHODS);
+  const requestedHeaders = request.headers["access-control-request-headers"];
+  if (requestedHeaders) {
+    reply.header("access-control-allow-headers", requestedHeaders);
+    reply.header("vary", "Access-Control-Request-Headers");
+  }
+}
+
+/**
+ * O servidor Fastify da API, com as opcoes que preservam a linha de base HTTP.
+ *
+ * O CORS liga so fora do loopback, onde a API e alcancavel pela rede local. O
+ * preflight nao casa com nenhuma rota (nao ha rota `OPTIONS`), entao ele e
+ * respondido pelo 404 handler — como o middleware do Express respondia antes da
+ * autenticacao.
+ */
+export function createFastifyInstance(options: { bodyLimit?: number; cors?: boolean } = {}): FastifyInstance {
+  const app = Fastify({
     bodyLimit: options.bodyLimit ?? API_BODY_LIMIT_BYTES,
-    // O Express (e o Nest) tratam `/api/tasks/` como `/api/tasks`.
+    // O Express tratava `/api/tasks/` como `/api/tasks`.
     routerOptions: { ignoreTrailingSlash: true },
     logger: false,
   });
+  if (options.cors) {
+    app.addHook("onRequest", (request, reply, done) => {
+      applyCors(request, reply);
+      done();
+    });
+  }
+  // Rota desconhecida e metodo nao registrado mantem o 404 do Express e o mesmo corpo `{ error }`.
+  app.setNotFoundHandler((request, reply) => {
+    if (options.cors && isCorsPreflight(request)) {
+      applyCors(request, reply);
+      void reply.code(204).send();
+      return;
+    }
+    void reply.code(404).send({ error: `Cannot ${request.method} ${request.url}` });
+  });
+  return app;
 }
 
 /**
@@ -92,6 +135,24 @@ export function registerApiRoutes(
       handler: (request, reply) => handleRoute(route, request, reply, options),
     });
   }
+}
+
+/**
+ * A documentacao do servidor: o documento e a referencia interativa saem das
+ * rotas registradas, sem reflection. As duas rotas sao publicas e ficam fora da
+ * autenticacao do gateway.
+ */
+export async function registerDocumentation(
+  app: FastifyInstance,
+  routes: readonly ApiRouteOperation[],
+): Promise<void> {
+  const documentation = await documentationFor(routes);
+  app.get("/openapi.json", (_request, reply) => {
+    void reply.type("application/json; charset=utf-8").send(documentation.document);
+  });
+  app.get("/docs", (_request, reply) => {
+    void reply.type("text/html; charset=utf-8").send(documentation.html);
+  });
 }
 
 async function handleRoute(

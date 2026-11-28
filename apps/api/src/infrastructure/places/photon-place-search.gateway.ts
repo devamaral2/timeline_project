@@ -11,8 +11,6 @@ export interface PlaceSearchGateway {
   search(query: string, limit: number): Promise<FoundPlace[]>;
 }
 
-export const PLACE_SEARCH_GATEWAY = Symbol("PLACE_SEARCH_GATEWAY");
-
 interface PhotonFeature {
   properties?: {
     name?: string;
