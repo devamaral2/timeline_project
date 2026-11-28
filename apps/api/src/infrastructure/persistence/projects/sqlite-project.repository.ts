@@ -2,7 +2,7 @@ import { ulid } from "ulid";
 import { ProjectNameTakenError, type ProjectRef } from "../../../domain";
 import type { ProjectRepository } from "../../../domain/ports";
 import { projects } from "../database/tables";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import type { Db } from "../shared/tx";
 import { ensurePersonalProject } from "./resolve-project";
 

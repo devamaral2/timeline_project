@@ -8,8 +8,7 @@ import type {
 } from "../../../../domain/ports";
 import { recurrences as recurrencesTable, tasks as tasksTable } from "../../database/tables";
 import { sqlList } from "../../database/schema/sets";
-import { c, rowDecoder } from "../../sqlite/columns";
-import { sql, type SqlFragment } from "../../sqlite/sql";
+import { c, rowDecoder, sql, type SqlFragment } from "@repo/sqlite";
 import { ARTIFACT_TYPES } from "../../../../domain/sets";
 import { mapRecurrenceRow } from "../../recurrences/mappers/recurrence-row.mapper";
 import type { Db } from "../../shared/tx";

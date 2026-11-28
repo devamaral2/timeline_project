@@ -1,6 +1,5 @@
 import type { TaskRequestLink, TaskRequestLinkQuery, TaskRequestRelationKind } from "../../../../domain/ports";
-import { c, rowDecoder } from "../../sqlite/columns";
-import { sql } from "../../sqlite/sql";
+import { c, rowDecoder, sql } from "@repo/sqlite";
 import type { Db } from "../../shared/tx";
 
 const linkRow = rowDecoder({

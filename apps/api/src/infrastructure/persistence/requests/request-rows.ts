@@ -1,7 +1,7 @@
 import { monotonicFactory } from "ulid";
 import type { AgentTaskKind, AgentTaskStatus, EntryKind, EntryRole } from "../../../domain";
 import { taskEntries, tasks } from "../database/tables";
-import { NOW } from "../sqlite/sql";
+import { NOW } from "@repo/sqlite";
 import { resolveProjectId, type ProjectScope } from "../projects/resolve-project";
 import type { Tx } from "../shared/tx";
 

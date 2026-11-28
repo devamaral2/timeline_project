@@ -1,7 +1,6 @@
 import { ArtifactValidationError, type WorkoutCategory, type WorkoutCode } from "../../../domain";
 import type { WorkoutCatalog, WorkoutDefinition } from "../../../domain/ports";
-import { c, rowDecoder } from "../sqlite/columns";
-import { sql } from "../sqlite/sql";
+import { c, rowDecoder, sql } from "@repo/sqlite";
 import type { Db } from "../shared/tx";
 
 const workoutRow = rowDecoder({

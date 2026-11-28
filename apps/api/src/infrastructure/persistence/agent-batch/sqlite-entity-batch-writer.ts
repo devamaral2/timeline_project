@@ -30,8 +30,7 @@ import {
   insertRecurrenceAggregate,
   updateRecurrenceAggregate,
 } from "../recurrences/repositories/sqlite-recurrence.repository";
-import { c, rowDecoder } from "../sqlite/columns";
-import { sql } from "../sqlite/sql";
+import { c, rowDecoder, sql } from "@repo/sqlite";
 import type { Db, Tx } from "../shared/tx";
 
 type TargetTable = "tasks" | "artifacts";

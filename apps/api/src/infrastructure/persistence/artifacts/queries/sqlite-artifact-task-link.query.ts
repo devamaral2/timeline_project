@@ -1,7 +1,6 @@
 import { ACTORS, TASK_ARTIFACT_RELATIONS, TASK_KINDS } from "../../../../domain/sets";
 import type { ArtifactTaskLink, ArtifactTaskLinkQuery } from "../../../../domain/ports";
-import { c, rowDecoder } from "../../sqlite/columns";
-import { sql } from "../../sqlite/sql";
+import { c, rowDecoder, sql } from "@repo/sqlite";
 import type { Db } from "../../shared/tx";
 
 const linkRow = rowDecoder({

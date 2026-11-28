@@ -1,11 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
-import type { SqliteDatabase } from "../persistence/sqlite/database";
+import { NOW, sql, type SqliteDatabase } from "@repo/sqlite";
 import type { JobsEnv } from "../../config/env";
 import { SqliteTaskRepository } from "../persistence/tasks/repositories/sqlite-task.repository";
 import { SqliteJobStore, type Job } from "../persistence/jobs/sqlite-job.store";
 import { OTHER_USER, USER, agentTask, countRows, selectRows } from "../persistence/testing/fixtures";
 import { createSqliteTestContext, type SqliteTestContext } from "../persistence/testing/sqlite-test-context";
-import { NOW, sql } from "../persistence/sqlite/sql";
 import { completeCurrentJob, getCurrentJob, type EnqueueJobInput } from "./job-context";
 import { JobsService, RetryableJobError, type JobHandlerContext } from "./jobs.service";
 

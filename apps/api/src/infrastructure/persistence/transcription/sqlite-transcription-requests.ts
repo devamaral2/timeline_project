@@ -18,8 +18,7 @@ import {
 } from "../../../api-core/transcription/transcription-requests";
 import type { AgentTaskStatus } from "../../../domain";
 import { enqueueJobInTransaction, type JobTransaction } from "../../jobs/job-context";
-import { c, rowDecoder } from "../sqlite/columns";
-import { jsonMerge, NOW, sql } from "../sqlite/sql";
+import { c, jsonMerge, NOW, rowDecoder, sql } from "@repo/sqlite";
 import { IN_PROGRESS, ON_CLOSE_SITUATION, STOPPED_STATUS } from "../requests/agent-status-sql";
 import { appendEntry } from "../requests/request-rows";
 import type { Db, Tx } from "../shared/tx";

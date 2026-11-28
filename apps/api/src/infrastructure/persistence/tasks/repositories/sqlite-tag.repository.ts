@@ -1,5 +1,5 @@
 import type { TagRepository, TagSuggestionDto } from "../../../../domain/ports";
-import { sql } from "../../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import type { Db } from "../../shared/tx";
 
 function escapeLikePrefix(value: string): string {

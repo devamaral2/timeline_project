@@ -17,6 +17,8 @@ const packageAliases = {
   "@repo/contracts": resolve("./packages/contracts/src/index.ts"),
   "@repo/theme": resolve("./packages/theme/src/index.ts"),
   "@repo/timeline": resolve("./packages/timeline/src/index.ts"),
+  // O cliente SQLite compartilhado (ADR 0024).
+  "@repo/sqlite": resolve("./packages/sqlite/src/index.ts"),
 };
 
 export default defineWorkspace([

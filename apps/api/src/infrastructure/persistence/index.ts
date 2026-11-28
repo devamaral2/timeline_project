@@ -1,6 +1,5 @@
 export * from "./database/api-database";
-export * from "./sqlite/database";
-export * from "./sqlite/sql";
+export * from "@repo/sqlite";
 export * from "./tasks/mappers/task-row.mapper";
 export * from "./tasks/repositories/sqlite-task.repository";
 export * from "./tasks/repositories/sqlite-tag.repository";

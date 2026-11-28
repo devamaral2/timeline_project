@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import type { DatabaseSync } from "./node-sqlite";
 
 /**
@@ -15,10 +15,9 @@ import type { DatabaseSync } from "./node-sqlite";
  * - **recusa um banco de versao mais nova**: uma migration registrada que este build nao conhece para tudo;
  * - **recusa uma migration editada** depois de aplicada (checksum diferente).
  *
- * Os arquivos `NNNN_nome.sql` de `apps/api/migrations` sao imutaveis depois de mergeados: a correcao e um arquivo novo.
+ * Os arquivos `NNNN_nome.sql` de cada app (`apps/api/migrations`, `apps/auth/migrations`) sao imutaveis depois de
+ * mergeados: a correcao e um arquivo novo.
  */
-
-export const MIGRATIONS_DIR = resolve(__dirname, "../../../../migrations");
 
 const FILE_PATTERN = /^\d{4}_[a-z0-9_]+\.sql$/;
 
@@ -34,7 +33,7 @@ export class MigrationError extends Error {
   }
 }
 
-export function loadMigrations(dir = MIGRATIONS_DIR): Migration[] {
+export function loadMigrations(dir: string): Migration[] {
   return readdirSync(dir)
     .filter((file) => FILE_PATTERN.test(file))
     .sort()
@@ -85,14 +84,14 @@ export function pendingMigrations(db: DatabaseSync, migrations: readonly Migrati
 }
 
 export interface MigrateOptions {
-  migrations?: readonly Migration[];
+  migrations: readonly Migration[];
   /** Chamado com o que falta, antes de aplicar: o backup antes de mudar o schema. */
   beforeApply?: (pending: readonly Migration[]) => void;
 }
 
 /** Aplica as migrations pendentes. Devolve os nomes aplicados. */
-export function migrateDatabase(db: DatabaseSync, options: MigrateOptions = {}): string[] {
-  const migrations = options.migrations ?? loadMigrations();
+export function migrateDatabase(db: DatabaseSync, options: MigrateOptions): string[] {
+  const { migrations } = options;
   const pending = pendingMigrations(db, migrations);
   if (pending.length === 0) return [];
   options.beforeApply?.(pending);

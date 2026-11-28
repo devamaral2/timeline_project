@@ -1,5 +1,5 @@
 import type { Db } from "../shared/tx";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { Artifact, Task, Recurrence, type TaskCreateProps, type FoodData, type RecurrenceRule } from "../../../domain";
 
 /** Os dois usuarios dos testes de integracao: o dono dos dados e um estranho. */

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { SqliteScopedSqlQuery } from "../agent-sql/sqlite-scoped-sql.query";
 import { logicalTables } from "../agent-sql/logical-schema";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { GLOBAL_WORKOUT_ID } from "../testing/fixtures";
 import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 

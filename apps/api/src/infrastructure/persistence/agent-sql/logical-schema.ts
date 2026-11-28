@@ -1,4 +1,4 @@
-import { type SqlFragment, sql } from "../sqlite/sql";
+import { type SqlFragment, sql } from "@repo/sqlite";
 
 /**
  * As tabelas que a query do agente enxerga. E a fonte unica de duas coisas que

@@ -1,4 +1,4 @@
-import { c, defineTable, type RowOf } from "../sqlite/columns";
+import { c, defineTable, type RowOf } from "@repo/sqlite";
 import {
   ACTORS,
   ARTIFACT_ARTIFACT_RELATIONS,

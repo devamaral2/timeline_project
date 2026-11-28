@@ -1,8 +1,7 @@
 import type { ProjectRef } from "../../../domain";
 import type { ProjectQuery } from "../../../domain/ports";
 import { projects, type ProjectRow } from "../database/tables";
-import { rowDecoder, c } from "../sqlite/columns";
-import { sql } from "../sqlite/sql";
+import { c, rowDecoder, sql } from "@repo/sqlite";
 import type { Db } from "../shared/tx";
 import { ensurePersonalProject } from "./resolve-project";
 

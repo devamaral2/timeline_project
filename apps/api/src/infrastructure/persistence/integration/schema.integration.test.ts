@@ -2,7 +2,7 @@ import { ulid } from "ulid";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { Task, TaskValidationError } from "../../../domain";
 import { SqliteJobStore } from "../jobs/sqlite-job.store";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 type Row = Record<string, unknown>;

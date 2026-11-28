@@ -4,7 +4,7 @@ import { SetTaskSituationUseCase } from "../../../features/set-task-situation/se
 import { SqliteTaskCardQuery } from "../tasks/queries/sqlite-task-card.query";
 import { SqliteTaskRepository } from "../tasks/repositories/sqlite-task.repository";
 import { OTHER_USER, USER, agentTask, trackedTask } from "../testing/fixtures";
-import { sql } from "../sqlite/sql";
+import { sql } from "@repo/sqlite";
 import { createSqliteTestContext, type SqliteTestContext } from "../testing/sqlite-test-context";
 
 describe("definir a situacao de um pedido de agente, no SQLite", () => {
